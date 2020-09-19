@@ -1,0 +1,6 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=5f88f30b_002Df22a_002D4e7c_002Db4b8_002D0e97cca07506/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="HubsAreMockableViaDynamic" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;TestAncestor&gt;
+    &lt;TestId&gt;xUnit::8FA8D3BE-FC98-45F6-98FC-07F70DD2483B::net5.0::osu.Server.Spectator.Tests.SpectatorFlowTests.SendNotification&lt;/TestId&gt;
+  &lt;/TestAncestor&gt;
+&lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
