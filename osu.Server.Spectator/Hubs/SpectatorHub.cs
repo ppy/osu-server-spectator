@@ -9,7 +9,14 @@ namespace osu.Server.Spectator.Hubs
     {
         public async Task BeginPlaySession(int userId)
         {
+            // let's broadcast to every player temporarily. probably won't stay this way.
             await Clients.All.UserBeganPlaying(userId);
+        }
+
+        public async Task EndPlaySession(int userId)
+        {
+            await Clients.All.UserFinishedPlaying(userId);
+
         }
     }
 }

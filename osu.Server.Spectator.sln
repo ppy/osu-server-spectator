@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Server.Spectator", "osu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Server.Spectator.Tests", "osu.Server.Spectator.Tests\osu.Server.Spectator.Tests.csproj", "{8FA8D3BE-FC98-45F6-98FC-07F70DD2483B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleSpectatorClient", "SampleSpectatorClient\SampleSpectatorClient.csproj", "{E126B79F-50B9-4448-8DE6-564BB820EE9D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{8FA8D3BE-FC98-45F6-98FC-07F70DD2483B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8FA8D3BE-FC98-45F6-98FC-07F70DD2483B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8FA8D3BE-FC98-45F6-98FC-07F70DD2483B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -4,6 +4,7 @@ namespace osu.Server.Spectator.Hubs
 {
     public interface ISpectatorServer
     {
-        Task BeginPlaySession(int userId);
+        Task BeginPlaySession(int beatmapId);
+        Task EndPlaySession(int beatmapId);
     }
 }
