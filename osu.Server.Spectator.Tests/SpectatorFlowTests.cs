@@ -15,13 +15,19 @@ namespace osu.Server.Spectator.Tests
             Mock<ISpectatorClient> mockClientProxy = new Mock<ISpectatorClient>();
             mockClients.Setup(clients => clients.All).Returns(mockClientProxy.Object);
 
-            SpectatorHub hub = new SpectatorHub { Clients = mockClients.Object };
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+            mockContext.Setup(context => context.ConnectionId).Returns("1234");
+            
+            SpectatorHub hub = new SpectatorHub
+            {
+                Context = mockContext.Object,
+                Clients = mockClients.Object
+            };
 
             await hub.BeginPlaySession(55);
 
             mockClients.Verify(clients => clients.All, Times.Once);
-
-            mockClientProxy.Verify(clients => clients.UserBeganPlaying(55), Times.Once);
+            mockClientProxy.Verify(clients => clients.UserBeganPlaying("1234", 55), Times.Once);
         }
     }
 }

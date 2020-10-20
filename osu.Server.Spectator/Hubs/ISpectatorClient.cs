@@ -4,8 +4,10 @@ namespace osu.Server.Spectator.Hubs
 {
     public interface ISpectatorClient
     {
-        Task UserBeganPlaying(int userId);
+        Task UserBeganPlaying(string userId, int beatmapId);
 
-        Task UserFinishedPlaying(int userId);
+        Task UserFinishedPlaying(string userId, int beatmapId);
+
+        Task UserSentFrames(string userId, FrameDataBundle data);
     }
 }
