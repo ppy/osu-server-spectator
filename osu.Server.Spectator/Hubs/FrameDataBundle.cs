@@ -1,12 +1,15 @@
+using System;
+
 namespace osu.Server.Spectator.Hubs
 {
+    [Serializable]
     public class FrameDataBundle
     {
-        public readonly string Data;
+        public string data { get; set; }
 
         public FrameDataBundle(string data)
         {
-            this.Data = data;
+            this.data = data;
         }
     }
 }

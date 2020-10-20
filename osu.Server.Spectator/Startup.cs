@@ -11,8 +11,7 @@ namespace osu.Server.Spectator
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
-            services.AddSignalR();
+            services.AddSignalR().AddMessagePackProtocol();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -27,10 +26,7 @@ namespace osu.Server.Spectator
 
             app.UseWebSockets();
 
-            app.UseEndpoints(endpoints => {
-                endpoints.MapControllers();
-                endpoints.MapHub<SpectatorHub>("/spectator");
-            });
+            app.UseEndpoints(endpoints => { endpoints.MapHub<SpectatorHub>("/spectator"); });
         }
     }
 }

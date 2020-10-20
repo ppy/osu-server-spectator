@@ -43,6 +43,12 @@ namespace SampleSpectatorClient
         {
             connection = new HubConnectionBuilder()
                 .WithUrl("http://localhost:5009/spectator")
+                .AddMessagePackProtocol()
+                .ConfigureLogging(logging =>
+                {
+                    logging.AddConsole();
+                    logging.SetMinimumLevel(LogLevel.Debug);
+                })
                 .Build();
 
             var client = new SpectatorClient(connection);
