@@ -12,6 +12,7 @@ namespace osu.Server.Spectator
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSignalR().AddMessagePackProtocol();
+            services.AddDistributedMemoryCache(); // replace with redis
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

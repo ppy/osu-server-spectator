@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Distributed;
 using Moq;
 using osu.Server.Spectator.Hubs;
 using Xunit;
@@ -17,8 +18,10 @@ namespace osu.Server.Spectator.Tests
 
             Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(context => context.ConnectionId).Returns("1234");
+
+            Mock<IDistributedCache> cache = new Mock<IDistributedCache>();
             
-            SpectatorHub hub = new SpectatorHub
+            SpectatorHub hub = new SpectatorHub(cache.Object)
             {
                 Context = mockContext.Object,
                 Clients = mockClients.Object
