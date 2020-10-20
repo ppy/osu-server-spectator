@@ -44,24 +44,12 @@ namespace SampleSpectatorClient
             return Task.CompletedTask;
         }
 
-        public void BeginPlaying(int beatmapId)
-        {
-            connection.SendAsync(nameof(ISpectatorServer.BeginPlaySession), beatmapId).Wait();
-        }
+        public Task BeginPlaying(int beatmapId) => connection.SendAsync(nameof(ISpectatorServer.BeginPlaySession), beatmapId);
 
-        public void SendFrames(FrameDataBundle data)
-        {
-            connection.SendAsync(nameof(ISpectatorServer.SendFrameData), data).Wait();
-        }
+        public Task SendFrames(FrameDataBundle data) => connection.SendAsync(nameof(ISpectatorServer.SendFrameData), data);
 
-        public void EndPlaying(int beatmapId)
-        {
-            connection.SendAsync(nameof(ISpectatorServer.EndPlaySession), beatmapId).Wait();
-        }
+        public Task EndPlaying(int beatmapId) => connection.SendAsync(nameof(ISpectatorServer.EndPlaySession), beatmapId);
 
-        private void WatchUser(string userId)
-        {
-            connection.SendAsync(nameof(ISpectatorServer.StartWatchingUser), userId).Wait();
-        }
+        private Task WatchUser(string userId) => connection.SendAsync(nameof(ISpectatorServer.StartWatchingUser), userId);
     }
 }
