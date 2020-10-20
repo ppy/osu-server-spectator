@@ -14,6 +14,7 @@ namespace SampleSpectatorClient
             this.connection = connection;
 
             // this is kind of SILLY
+            // https://github.com/dotnet/aspnetcore/issues/15198
             connection.On<string, int>(nameof(ISpectatorClient.UserBeganPlaying), ((ISpectatorClient)this).UserBeganPlaying);
             connection.On<string, FrameDataBundle>(nameof(ISpectatorClient.UserSentFrames), ((ISpectatorClient)this).UserSentFrames);
             connection.On<string, int>(nameof(ISpectatorClient.UserFinishedPlaying), ((ISpectatorClient)this).UserFinishedPlaying);
