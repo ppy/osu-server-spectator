@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using osu.Framework.Utils;
 using osu.Server.Spectator.Hubs;
 
@@ -13,11 +15,10 @@ namespace SampleSpectatorClient
 
         static void Main()
         {
-            var _ = getConnectedClient();
-            Console.WriteLine("client 1 connected");
+            for (int i = 0; i < 5; i++)
+                getConnectedClient();
 
             var client2 = getConnectedClient();
-            Console.WriteLine("client 2 connected");
 
             while (true)
             {
@@ -25,7 +26,8 @@ namespace SampleSpectatorClient
                 Thread.Sleep(1000);
 
                 Console.WriteLine("Writer starting playing..");
-                for (int i = 0; i < 100; i++)
+
+                for (int i = 0; i < 50; i++)
                 {
                     client2.SendFrames(new FrameDataBundle(RNG.Next(0, 100).ToString()));
                     Thread.Sleep(50);
@@ -34,6 +36,8 @@ namespace SampleSpectatorClient
                 Console.WriteLine("Writer ending playing..");
 
                 client2.EndPlaying(88);
+
+                Thread.Sleep(1000);
             }
 
             // ReSharper disable once FunctionNeverReturns
@@ -44,11 +48,7 @@ namespace SampleSpectatorClient
             connection = new HubConnectionBuilder()
                 .WithUrl("http://localhost:5009/spectator")
                 .AddMessagePackProtocol()
-                .ConfigureLogging(logging =>
-                {
-                    logging.AddConsole();
-                    logging.SetMinimumLevel(LogLevel.Debug);
-                })
+                .ConfigureLogging(logging => { logging.AddConsole(); })
                 .Build();
 
             var client = new SpectatorClient(connection);
@@ -74,8 +74,11 @@ namespace SampleSpectatorClient
                 }
                 catch
                 {
+                    // try until connected
                 }
             }
+
+            Console.WriteLine($"client {connection.ConnectionId} connected!");
 
             return client;
         }

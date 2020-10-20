@@ -40,28 +40,28 @@ namespace SampleSpectatorClient
 
         Task ISpectatorClient.UserSentFrames(string userId, FrameDataBundle data)
         {
-            Console.WriteLine($"{connection.ConnectionId} Received frames from {userId}: {data.Data}");
+            Console.WriteLine($"{connection.ConnectionId} Received frames from {userId}: {data.data}");
             return Task.CompletedTask;
         }
 
         public void BeginPlaying(int beatmapId)
         {
-            connection.SendAsync(nameof(ISpectatorServer.BeginPlaySession), beatmapId);
+            connection.SendAsync(nameof(ISpectatorServer.BeginPlaySession), beatmapId).Wait();
         }
 
         public void SendFrames(FrameDataBundle data)
         {
-            connection.SendAsync(nameof(ISpectatorServer.SendFrameData), data);
+            connection.SendAsync(nameof(ISpectatorServer.SendFrameData), data).Wait();
         }
 
         public void EndPlaying(int beatmapId)
         {
-            connection.SendAsync(nameof(ISpectatorServer.EndPlaySession), beatmapId);
+            connection.SendAsync(nameof(ISpectatorServer.EndPlaySession), beatmapId).Wait();
         }
 
         private void WatchUser(string userId)
         {
-            connection.SendAsync(nameof(ISpectatorServer.StartWatchingUser), userId);
+            connection.SendAsync(nameof(ISpectatorServer.StartWatchingUser), userId).Wait();
         }
     }
 }
