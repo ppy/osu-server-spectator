@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using osu.Server.Spectator.Hubs;
@@ -8,6 +9,8 @@ namespace SampleSpectatorClient
     public class SpectatorClient : ISpectatorClient
     {
         private readonly HubConnection connection;
+
+        private List<string> watchingUsers = new List<string>();
 
         public SpectatorClient(HubConnection connection)
         {
@@ -22,12 +25,22 @@ namespace SampleSpectatorClient
 
         Task ISpectatorClient.UserBeganPlaying(string userId, int beatmapId)
         {
-            Console.WriteLine($"{connection.ConnectionId} Received user playing event {beatmapId}");
-
             if (connection.ConnectionId != userId)
             {
-                Console.WriteLine($"{connection.ConnectionId} watching other user {userId}");
-                WatchUser(userId);
+                if (watchingUsers.Contains(userId))
+                {
+                    Console.WriteLine($"{connection.ConnectionId} received began playing for already watched user {userId}");
+                }
+                else
+                {
+                    Console.WriteLine($"{connection.ConnectionId} requesting watch other user {userId}");
+                    WatchUser(userId);
+                    watchingUsers.Add(userId);
+                }
+            }
+            else
+            {
+                Console.WriteLine($"{connection.ConnectionId} Received user playing event for self {beatmapId}");
             }
 
             return Task.CompletedTask;
