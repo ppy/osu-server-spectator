@@ -1,9 +1,11 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
+using osu.Game.Online.Spectator;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -31,7 +33,7 @@ namespace osu.Server.Spectator.Hubs
         {
             var state = await getStateFromUser(Context.UserIdentifier);
 
-            Console.WriteLine($"Receiving frame data (beatmap {state})..");
+            Console.WriteLine($"Receiving frame data (beatmap {state} {data.Frames.First().ToString()})..");
             await Clients.Group(GetGroupId(Context.UserIdentifier)).UserSentFrames(Context.UserIdentifier, data);
         }
 

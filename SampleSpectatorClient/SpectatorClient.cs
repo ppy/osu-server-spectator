@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
+using osu.Game.Online.Spectator;
 using osu.Server.Spectator.Hubs;
 
 namespace SampleSpectatorClient
@@ -54,7 +56,7 @@ namespace SampleSpectatorClient
 
         Task ISpectatorClient.UserSentFrames(string userId, FrameDataBundle data)
         {
-            Console.WriteLine($"{connection.ConnectionId} Received frames from {userId}: {data.data}");
+            Console.WriteLine($"{connection.ConnectionId} Received frames from {userId}: {data.Frames.First().ToString()}");
             return Task.CompletedTask;
         }
 

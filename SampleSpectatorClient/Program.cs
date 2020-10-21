@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using osu.Framework.Utils;
+using osu.Game.Online.Spectator;
+using osu.Game.Replays.Legacy;
+using osu.Game.Rulesets.Replays;
 using osu.Server.Spectator.Hubs;
 
 namespace SampleSpectatorClient
@@ -31,7 +34,10 @@ namespace SampleSpectatorClient
 
                 for (int i = 0; i < 50; i++)
                 {
-                    sendingClient.SendFrames(new FrameDataBundle(RNG.Next(0, 100).ToString()));
+                    sendingClient.SendFrames(new FrameDataBundle(new[]
+                    {
+                        new LegacyReplayFrame(i, RNG.Next(0, 512), RNG.Next(0, 512), ReplayButtonState.None)
+                    }));
                     Thread.Sleep(50);
                 }
 
@@ -50,7 +56,7 @@ namespace SampleSpectatorClient
             var connection = new HubConnectionBuilder()
                 .WithUrl("http://localhost:5009/spectator")
                 .AddMessagePackProtocol()
-                .ConfigureLogging(logging => { logging.AddConsole(); })
+                // .ConfigureLogging(logging => { logging.AddConsole(); })
                 .Build();
 
             var client = new SpectatorClient(connection);

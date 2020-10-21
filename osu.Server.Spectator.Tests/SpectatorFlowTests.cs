@@ -7,6 +7,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using osu.Game.Replays.Legacy;
 using osu.Game.Rulesets.Replays;
 using osu.Server.Spectator.Hubs;
 using Xunit;
@@ -53,7 +54,7 @@ namespace osu.Server.Spectator.Tests
             var state = await cache.GetStringAsync(SpectatorHub.GetStateId(streamer_id));
             Assert.Equal(beatmap_id.ToString(), state);
 
-            var data = new FrameDataBundle(new[] { new ReplayFrame(1234) });
+            var data = new FrameDataBundle(new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) });
 
             // check streaming data is propagating to watchers
             await hub.SendFrameData(data);
