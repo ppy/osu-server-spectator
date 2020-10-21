@@ -16,13 +16,19 @@ namespace osu.Server.Spectator
 
             services.AddDistributedMemoryCache(); // replace with redis
 
+            ConfigureAuthentication(services);
+            
+            services.AddAuthorization();
+        }
+
+        protected virtual void ConfigureAuthentication(IServiceCollection services)
+        {
             services.AddAuthentication(config =>
             {
                 config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 config.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer();
 
-            services.AddAuthorization();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

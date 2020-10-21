@@ -22,8 +22,18 @@ namespace osu.Server.Spectator
             CreateHostBuilder(args).Build().Run();
         }
 
-        private static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
+        private static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            return Host.CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+#if DEBUG
+                    //todo: figure correct way to get dev environment state
+                    webBuilder.UseStartup<StartupDevelopment>();
+#else
+                    webBuilder.UseStartup<Startup>();
+#endif
+                });
+        }
     }
 }
