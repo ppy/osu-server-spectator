@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using osu.Game.Rulesets.Replays;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -51,7 +53,7 @@ namespace osu.Server.Spectator.Tests
             var state = await cache.GetStringAsync(SpectatorHub.GetStateId(streamer_id));
             Assert.Equal(beatmap_id.ToString(), state);
 
-            var data = new FrameDataBundle("test");
+            var data = new FrameDataBundle(new[] { new ReplayFrame(1234) });
 
             // check streaming data is propagating to watchers
             await hub.SendFrameData(data);
@@ -63,6 +65,8 @@ namespace osu.Server.Spectator.Tests
         [InlineData(true)]
         public async Task NewUserBeginsWatchingStream(bool ongoing)
         {
+            string connectionId = Guid.NewGuid().ToString();
+
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockCaller = new Mock<ISpectatorClient>();
             mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
@@ -71,6 +75,7 @@ namespace osu.Server.Spectator.Tests
 
             Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(context => context.UserIdentifier).Returns(watcher_id);
+            mockContext.Setup(context => context.ConnectionId).Returns(connectionId);
 
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
@@ -81,8 +86,8 @@ namespace osu.Server.Spectator.Tests
 
             await hub.StartWatchingUser(streamer_id);
 
-            mockGroups.Verify(groups => groups.AddToGroupAsync(watcher_id, SpectatorHub.GetGroupId(streamer_id), default));
-            
+            mockGroups.Verify(groups => groups.AddToGroupAsync(connectionId, SpectatorHub.GetGroupId(streamer_id), default));
+
             mockCaller.Verify(clients => clients.UserBeganPlaying(streamer_id, beatmap_id), ongoing ? Times.Once : Times.Never);
         }
     }

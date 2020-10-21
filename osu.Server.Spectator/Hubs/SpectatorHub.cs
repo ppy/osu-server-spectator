@@ -51,12 +51,12 @@ namespace osu.Server.Spectator.Hubs
             if (state.HasValue)
                 await Clients.Caller.UserBeganPlaying(userId, state.Value);
 
-            await Groups.AddToGroupAsync(Context.UserIdentifier, GetGroupId(userId));
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(userId));
         }
 
         public async Task EndWatchingUser(string userId)
         {
-            await Groups.RemoveFromGroupAsync(Context.UserIdentifier, GetGroupId(userId));
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(userId));
         }
 
         public override async Task OnDisconnectedAsync(Exception exception)
@@ -85,7 +85,7 @@ namespace osu.Server.Spectator.Hubs
         }
 
         public static string GetStateId(string userId) => $"state:{userId}";
-        
+
         public static string GetGroupId(string userId) => $"watch:{userId}";
     }
 }
