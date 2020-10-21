@@ -32,12 +32,12 @@ namespace osu.Server.Spectator.Hubs
             var state = await getStateFromUser(Context.UserIdentifier);
 
             Console.WriteLine($"Receiving frame data (beatmap {state})..");
-            await Clients.Group(getGroupId(Context.UserIdentifier)).UserSentFrames(Context.UserIdentifier, data);
+            await Clients.Group(GetGroupId(Context.UserIdentifier)).UserSentFrames(Context.UserIdentifier, data);
         }
 
         public async Task EndPlaySession(int beatmapId)
         {
-            await cache.RemoveAsync(getStateId(Context.UserIdentifier));
+            await cache.RemoveAsync(GetStateId(Context.UserIdentifier));
             await Clients.All.UserFinishedPlaying(Context.UserIdentifier, beatmapId);
         }
 
@@ -51,12 +51,12 @@ namespace osu.Server.Spectator.Hubs
             if (state.HasValue)
                 await Clients.Caller.UserBeganPlaying(userId, state.Value);
 
-            await Groups.AddToGroupAsync(Context.UserIdentifier, getGroupId(userId));
+            await Groups.AddToGroupAsync(Context.UserIdentifier, GetGroupId(userId));
         }
 
         public async Task EndWatchingUser(string userId)
         {
-            await Groups.RemoveFromGroupAsync(Context.UserIdentifier, getGroupId(userId));
+            await Groups.RemoveFromGroupAsync(Context.UserIdentifier, GetGroupId(userId));
         }
 
         public override async Task OnDisconnectedAsync(Exception exception)
@@ -72,11 +72,11 @@ namespace osu.Server.Spectator.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        private async Task updateUserState(int beatmapId) => await cache.SetStringAsync(getStateId(Context.UserIdentifier), beatmapId.ToString());
+        private async Task updateUserState(int beatmapId) => await cache.SetStringAsync(GetStateId(Context.UserIdentifier), beatmapId.ToString());
 
         private async Task<int?> getStateFromUser(string userId)
         {
-            var state = await cache.GetStringAsync(getStateId(userId));
+            var state = await cache.GetStringAsync(GetStateId(userId));
 
             if (int.TryParse(state, out var intState))
                 return intState;
@@ -84,7 +84,8 @@ namespace osu.Server.Spectator.Hubs
             return null;
         }
 
-        private static string getStateId(string userId) => $"state:{userId}";
-        private static string getGroupId(string userId) => $"watch:{userId}";
+        public static string GetStateId(string userId) => $"state:{userId}";
+        
+        public static string GetGroupId(string userId) => $"watch:{userId}";
     }
 }
