@@ -23,27 +23,27 @@ namespace osu.Server.Spectator.Hubs
             await updateUserState(beatmapId);
 
             // let's broadcast to every player temporarily. probably won't stay this way.
-            await Clients.All.UserBeganPlaying(Context.ConnectionId, beatmapId);
+            await Clients.All.UserBeganPlaying(Context.UserIdentifier, beatmapId);
         }
 
 
         public async Task SendFrameData(FrameDataBundle data)
         {
-            var state = await getStateFromUser(Context.ConnectionId);
+            var state = await getStateFromUser(Context.UserIdentifier);
 
             Console.WriteLine($"Receiving frame data (beatmap {state})..");
-            await Clients.Group(getGroupId(Context.ConnectionId)).UserSentFrames(Context.ConnectionId, data);
+            await Clients.Group(getGroupId(Context.UserIdentifier)).UserSentFrames(Context.UserIdentifier, data);
         }
 
         public async Task EndPlaySession(int beatmapId)
         {
-            await cache.RemoveAsync(getStateId(Context.ConnectionId));
-            await Clients.All.UserFinishedPlaying(Context.ConnectionId, beatmapId);
+            await cache.RemoveAsync(getStateId(Context.UserIdentifier));
+            await Clients.All.UserFinishedPlaying(Context.UserIdentifier, beatmapId);
         }
 
         public async Task StartWatchingUser(string userId)
         {
-            Console.WriteLine($"User {Context.ConnectionId} watching {userId}");
+            Console.WriteLine($"User {Context.UserIdentifier} watching {userId}");
 
             // send the user's state if exists
             var state = await getStateFromUser(userId);
@@ -51,17 +51,17 @@ namespace osu.Server.Spectator.Hubs
             if (state.HasValue)
                 await Clients.Caller.UserBeganPlaying(userId, state.Value);
 
-            await Groups.AddToGroupAsync(Context.ConnectionId, getGroupId(userId));
+            await Groups.AddToGroupAsync(Context.UserIdentifier, getGroupId(userId));
         }
 
         public async Task EndWatchingUser(string userId)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, getGroupId(userId));
+            await Groups.RemoveFromGroupAsync(Context.UserIdentifier, getGroupId(userId));
         }
 
         public override async Task OnDisconnectedAsync(Exception exception)
         {
-            var state = await getStateFromUser(Context.ConnectionId);
+            var state = await getStateFromUser(Context.UserIdentifier);
 
             if (state.HasValue)
             {
@@ -72,7 +72,7 @@ namespace osu.Server.Spectator.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        private async Task updateUserState(int beatmapId) => await cache.SetStringAsync(getStateId(Context.ConnectionId), beatmapId.ToString());
+        private async Task updateUserState(int beatmapId) => await cache.SetStringAsync(getStateId(Context.UserIdentifier), beatmapId.ToString());
 
         private async Task<int?> getStateFromUser(string userId)
         {
