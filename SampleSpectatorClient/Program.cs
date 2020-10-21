@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -11,31 +12,32 @@ namespace SampleSpectatorClient
 {
     static class Program
     {
-        private static HubConnection connection;
-
         static void Main()
         {
-            for (int i = 0; i < 5; i++)
-                getConnectedClient();
+            // ReSharper disable once CollectionNeverQueried.Local
+            var clients = new List<SpectatorClient>();
 
-            var client2 = getConnectedClient();
+            for (int i = 0; i < 5; i++)
+                clients.Add(getConnectedClient());
+
+            var sendingClient = getConnectedClient();
 
             while (true)
             {
-                client2.BeginPlaying(88);
+                sendingClient.BeginPlaying(88);
                 Thread.Sleep(1000);
 
                 Console.WriteLine("Writer starting playing..");
 
                 for (int i = 0; i < 50; i++)
                 {
-                    client2.SendFrames(new FrameDataBundle(RNG.Next(0, 100).ToString()));
+                    sendingClient.SendFrames(new FrameDataBundle(RNG.Next(0, 100).ToString()));
                     Thread.Sleep(50);
                 }
 
                 Console.WriteLine("Writer ending playing..");
 
-                client2.EndPlaying(88);
+                sendingClient.EndPlaying(88);
 
                 Thread.Sleep(1000);
             }
@@ -45,7 +47,7 @@ namespace SampleSpectatorClient
 
         private static SpectatorClient getConnectedClient()
         {
-            connection = new HubConnectionBuilder()
+            var connection = new HubConnectionBuilder()
                 .WithUrl("http://localhost:5009/spectator")
                 .AddMessagePackProtocol()
                 .ConfigureLogging(logging => { logging.AddConsole(); })
