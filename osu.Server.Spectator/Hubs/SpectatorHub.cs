@@ -21,33 +21,35 @@ namespace osu.Server.Spectator.Hubs
             this.cache = cache;
         }
 
+        private int currentContextUserId => int.Parse(Context.UserIdentifier);
+
         public async Task BeginPlaySession(SpectatorState state)
         {
             await updateUserState(state);
 
-            Console.WriteLine($"User {Context.UserIdentifier} beginning play session ({state})");
+            Console.WriteLine($"User {currentContextUserId} beginning play session ({state})");
 
             // let's broadcast to every player temporarily. probably won't stay this way.
-            await Clients.All.UserBeganPlaying(Context.UserIdentifier, state);
+            await Clients.All.UserBeganPlaying(currentContextUserId, state);
         }
 
         public async Task SendFrameData(FrameDataBundle data)
         {
             Console.WriteLine($"Receiving frame data ({data.Frames.First()})..");
-            await Clients.Group(GetGroupId(Context.UserIdentifier)).UserSentFrames(Context.UserIdentifier, data);
+            await Clients.Group(GetGroupId(currentContextUserId)).UserSentFrames(currentContextUserId, data);
         }
 
         public async Task EndPlaySession(SpectatorState state)
         {
-            Console.WriteLine($"User {Context.UserIdentifier} ending play session ({state})");
+            Console.WriteLine($"User {currentContextUserId} ending play session ({state})");
 
-            await cache.RemoveAsync(GetStateId(Context.UserIdentifier));
-            await Clients.All.UserFinishedPlaying(Context.UserIdentifier, state);
+            await cache.RemoveAsync(GetStateId(currentContextUserId));
+            await Clients.All.UserFinishedPlaying(currentContextUserId, state);
         }
 
-        public async Task StartWatchingUser(string userId)
+        public async Task StartWatchingUser(int userId)
         {
-            Console.WriteLine($"User {Context.UserIdentifier} watching {userId}");
+            Console.WriteLine($"User {currentContextUserId} watching {userId}");
 
             // send the user's state if exists
             var state = await getStateFromUser(userId);
@@ -60,22 +62,22 @@ namespace osu.Server.Spectator.Hubs
             await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(userId));
         }
 
-        public async Task EndWatchingUser(string userId)
+        public async Task EndWatchingUser(int userId)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(userId));
         }
 
         public override Task OnConnectedAsync()
         {
-            Console.WriteLine($"User {Context.UserIdentifier} connected!");
+            Console.WriteLine($"User {currentContextUserId} connected!");
             return base.OnConnectedAsync();
         }
 
         public override async Task OnDisconnectedAsync(Exception exception)
         {
-            Console.WriteLine($"User {Context.UserIdentifier} disconnected!");
+            Console.WriteLine($"User {currentContextUserId} disconnected!");
 
-            var state = await getStateFromUser(Context.UserIdentifier);
+            var state = await getStateFromUser(currentContextUserId);
 
             if (state != null)
             {
@@ -88,10 +90,10 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task updateUserState(SpectatorState state)
         {
-            await cache.SetStringAsync(GetStateId(Context.UserIdentifier), JsonConvert.SerializeObject(state));
+            await cache.SetStringAsync(GetStateId(currentContextUserId), JsonConvert.SerializeObject(state));
         }
 
-        private async Task<SpectatorState?> getStateFromUser(string userId)
+        private async Task<SpectatorState?> getStateFromUser(int userId)
         {
             var jsonString = await cache.GetStringAsync(GetStateId(userId));
 
@@ -104,8 +106,8 @@ namespace osu.Server.Spectator.Hubs
             return state;
         }
 
-        public static string GetStateId(string userId) => $"state:{userId}";
+        public static string GetStateId(int userId) => $"state:{userId}";
 
-        public static string GetGroupId(string userId) => $"watch:{userId}";
+        public static string GetGroupId(int userId) => $"watch:{userId}";
     }
 }

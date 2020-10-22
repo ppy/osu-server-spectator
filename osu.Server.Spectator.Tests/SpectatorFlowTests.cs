@@ -18,7 +18,7 @@ namespace osu.Server.Spectator.Tests
         private readonly MemoryDistributedCache cache;
         private readonly SpectatorHub hub;
 
-        private const string streamer_id = "1234";
+        private const int streamer_id = 1234;
         private const string watcher_id = "8000";
 
         private static readonly SpectatorState state = new SpectatorState(88, null);
@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Tests
 
             Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
 
-            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id);
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 

@@ -11,7 +11,7 @@ namespace SampleSpectatorClient
     {
         private readonly HubConnection connection;
 
-        private readonly List<string> watchingUsers = new List<string>();
+        private readonly List<int> watchingUsers = new List<int>();
 
         public SpectatorClient(HubConnection connection)
         {
@@ -19,41 +19,34 @@ namespace SampleSpectatorClient
 
             // this is kind of SILLY
             // https://github.com/dotnet/aspnetcore/issues/15198
-            connection.On<string, SpectatorState>(nameof(ISpectatorClient.UserBeganPlaying), ((ISpectatorClient)this).UserBeganPlaying);
-            connection.On<string, FrameDataBundle>(nameof(ISpectatorClient.UserSentFrames), ((ISpectatorClient)this).UserSentFrames);
-            connection.On<string, SpectatorState>(nameof(ISpectatorClient.UserFinishedPlaying), ((ISpectatorClient)this).UserFinishedPlaying);
+            connection.On<int, SpectatorState>(nameof(ISpectatorClient.UserBeganPlaying), ((ISpectatorClient)this).UserBeganPlaying);
+            connection.On<int, FrameDataBundle>(nameof(ISpectatorClient.UserSentFrames), ((ISpectatorClient)this).UserSentFrames);
+            connection.On<int, SpectatorState>(nameof(ISpectatorClient.UserFinishedPlaying), ((ISpectatorClient)this).UserFinishedPlaying);
         }
 
-        Task ISpectatorClient.UserBeganPlaying(string userId, SpectatorState state)
+        Task ISpectatorClient.UserBeganPlaying(int userId, SpectatorState state)
         {
-            if (connection.ConnectionId != userId)
+            if (watchingUsers.Contains(userId))
             {
-                if (watchingUsers.Contains(userId))
-                {
-                    Console.WriteLine($"{connection.ConnectionId} received began playing for already watched user {userId}");
-                }
-                else
-                {
-                    Console.WriteLine($"{connection.ConnectionId} requesting watch other user {userId}");
-                    WatchUser(userId);
-                    watchingUsers.Add(userId);
-                }
+                Console.WriteLine($"{connection.ConnectionId} received began playing for already watched user {userId}");
             }
             else
             {
-                Console.WriteLine($"{connection.ConnectionId} Received user playing event for self {state}");
+                Console.WriteLine($"{connection.ConnectionId} requesting watch other user {userId}");
+                WatchUser(userId);
+                watchingUsers.Add(userId);
             }
 
             return Task.CompletedTask;
         }
 
-        Task ISpectatorClient.UserFinishedPlaying(string userId, SpectatorState state)
+        Task ISpectatorClient.UserFinishedPlaying(int userId, SpectatorState state)
         {
             Console.WriteLine($"{connection.ConnectionId} Received user finished event {state}");
             return Task.CompletedTask;
         }
 
-        Task ISpectatorClient.UserSentFrames(string userId, FrameDataBundle data)
+        Task ISpectatorClient.UserSentFrames(int userId, FrameDataBundle data)
         {
             Console.WriteLine($"{connection.ConnectionId} Received frames from {userId}: {data.Frames.First()}");
             return Task.CompletedTask;
@@ -65,6 +58,6 @@ namespace SampleSpectatorClient
 
         public Task EndPlaying(SpectatorState state) => connection.SendAsync(nameof(ISpectatorServer.EndPlaySession), state);
 
-        public Task WatchUser(string userId) => connection.SendAsync(nameof(ISpectatorServer.StartWatchingUser), userId);
+        public Task WatchUser(int userId) => connection.SendAsync(nameof(ISpectatorServer.StartWatchingUser), userId);
     }
 }
