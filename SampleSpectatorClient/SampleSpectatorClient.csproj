@@ -7,12 +7,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="3.1.9"/>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="3.1.9"/>
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="3.1.9" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="3.1.9" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.1.9" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\osu\osu.Game\osu.Game.csproj"/>
+        <ProjectReference Include="..\..\osu\osu.Game\osu.Game.csproj" />
     </ItemGroup>
 
 </Project>

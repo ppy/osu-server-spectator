@@ -11,7 +11,7 @@ namespace SampleSpectatorClient
     {
         private readonly HubConnection connection;
 
-        private List<string> watchingUsers = new List<string>();
+        private readonly List<string> watchingUsers = new List<string>();
 
         public SpectatorClient(HubConnection connection)
         {
@@ -19,12 +19,12 @@ namespace SampleSpectatorClient
 
             // this is kind of SILLY
             // https://github.com/dotnet/aspnetcore/issues/15198
-            connection.On<string, int>(nameof(ISpectatorClient.UserBeganPlaying), ((ISpectatorClient)this).UserBeganPlaying);
+            connection.On<string, SpectatorState>(nameof(ISpectatorClient.UserBeganPlaying), ((ISpectatorClient)this).UserBeganPlaying);
             connection.On<string, FrameDataBundle>(nameof(ISpectatorClient.UserSentFrames), ((ISpectatorClient)this).UserSentFrames);
-            connection.On<string, int>(nameof(ISpectatorClient.UserFinishedPlaying), ((ISpectatorClient)this).UserFinishedPlaying);
+            connection.On<string, SpectatorState>(nameof(ISpectatorClient.UserFinishedPlaying), ((ISpectatorClient)this).UserFinishedPlaying);
         }
 
-        Task ISpectatorClient.UserBeganPlaying(string userId, int beatmapId)
+        Task ISpectatorClient.UserBeganPlaying(string userId, SpectatorState state)
         {
             if (connection.ConnectionId != userId)
             {
@@ -41,30 +41,30 @@ namespace SampleSpectatorClient
             }
             else
             {
-                Console.WriteLine($"{connection.ConnectionId} Received user playing event for self {beatmapId}");
+                Console.WriteLine($"{connection.ConnectionId} Received user playing event for self {state}");
             }
 
             return Task.CompletedTask;
         }
 
-        Task ISpectatorClient.UserFinishedPlaying(string userId, int beatmapId)
+        Task ISpectatorClient.UserFinishedPlaying(string userId, SpectatorState state)
         {
-            Console.WriteLine($"{connection.ConnectionId} Received user finished event {beatmapId}");
+            Console.WriteLine($"{connection.ConnectionId} Received user finished event {state}");
             return Task.CompletedTask;
         }
 
         Task ISpectatorClient.UserSentFrames(string userId, FrameDataBundle data)
         {
-            Console.WriteLine($"{connection.ConnectionId} Received frames from {userId}: {data.Frames.First().ToString()}");
+            Console.WriteLine($"{connection.ConnectionId} Received frames from {userId}: {data.Frames.First()}");
             return Task.CompletedTask;
         }
 
-        public Task BeginPlaying(int beatmapId) => connection.SendAsync(nameof(ISpectatorServer.BeginPlaySession), beatmapId);
+        public Task BeginPlaying(SpectatorState state) => connection.SendAsync(nameof(ISpectatorServer.BeginPlaySession), state);
 
         public Task SendFrames(FrameDataBundle data) => connection.SendAsync(nameof(ISpectatorServer.SendFrameData), data);
 
-        public Task EndPlaying(int beatmapId) => connection.SendAsync(nameof(ISpectatorServer.EndPlaySession), beatmapId);
+        public Task EndPlaying(SpectatorState state) => connection.SendAsync(nameof(ISpectatorServer.EndPlaySession), state);
 
-        private Task WatchUser(string userId) => connection.SendAsync(nameof(ISpectatorServer.StartWatchingUser), userId);
+        public Task WatchUser(string userId) => connection.SendAsync(nameof(ISpectatorServer.StartWatchingUser), userId);
     }
 }

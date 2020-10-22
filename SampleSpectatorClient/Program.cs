@@ -4,15 +4,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using osu.Framework.Utils;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 
 namespace SampleSpectatorClient
 {
-    static class Program
+    internal static class Program
     {
-        static void Main()
+        public static void Main()
         {
             // ReSharper disable once CollectionNeverQueried.Local
             var clients = new List<SpectatorClient>();
@@ -24,7 +25,7 @@ namespace SampleSpectatorClient
 
             while (true)
             {
-                sendingClient.BeginPlaying(88);
+                sendingClient.BeginPlaying(new SpectatorState { BeatmapID = 88 });
                 Thread.Sleep(1000);
 
                 Console.WriteLine("Writer starting playing..");
@@ -40,7 +41,7 @@ namespace SampleSpectatorClient
 
                 Console.WriteLine("Writer ending playing..");
 
-                sendingClient.EndPlaying(88);
+                sendingClient.EndPlaying(new SpectatorState { BeatmapID = 88 });
 
                 Thread.Sleep(1000);
             }
@@ -51,10 +52,10 @@ namespace SampleSpectatorClient
         private static SpectatorClient getConnectedClient()
         {
             var connection = new HubConnectionBuilder()
-                .WithUrl("http://localhost:5009/spectator")
-                .AddMessagePackProtocol()
-                // .ConfigureLogging(logging => { logging.AddConsole(); })
-                .Build();
+                             .WithUrl("http://localhost:5009/spectator")
+                             .AddMessagePackProtocol()
+                             .ConfigureLogging(logging => { logging.AddConsole(); })
+                             .Build();
 
             var client = new SpectatorClient(connection);
 
@@ -70,6 +71,7 @@ namespace SampleSpectatorClient
                 Console.WriteLine($"Connected with id:{id}");
                 return Task.CompletedTask;
             };
+
             while (true)
             {
                 try

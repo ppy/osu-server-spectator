@@ -1,15 +1,13 @@
 using System;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using Newtonsoft.Json;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
-using osu.Game.Rulesets.Replays;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -22,14 +20,14 @@ namespace osu.Server.Spectator.Tests
 
         private const string streamer_id = "1234";
         private const string watcher_id = "8000";
-        private const int beatmap_id = 88;
+
+        private static readonly SpectatorState state = new SpectatorState(88, null);
 
         public SpectatorFlowTests()
         {
             cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
             hub = new SpectatorHub(cache);
         }
-
 
         [Fact]
         public async Task NewUserConnectsAndStreamsData()
@@ -45,15 +43,15 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            await hub.BeginPlaySession(88);
+            await hub.BeginPlaySession(new SpectatorState(88));
 
             // check all other users were informed that streaming began
             mockClients.Verify(clients => clients.All, Times.Once);
-            mockReceiver.Verify(clients => clients.UserBeganPlaying(streamer_id, beatmap_id), Times.Once);
+            mockReceiver.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state))), Times.Once());
 
             // check state data was added
-            var state = await cache.GetStringAsync(SpectatorHub.GetStateId(streamer_id));
-            Assert.Equal(beatmap_id.ToString(), state);
+            var cacheState = await cache.GetStringAsync(SpectatorHub.GetStateId(streamer_id));
+            Assert.Equal(state, JsonConvert.DeserializeObject<SpectatorState>(cacheState));
 
             var data = new FrameDataBundle(new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) });
 
@@ -84,13 +82,13 @@ namespace osu.Server.Spectator.Tests
             hub.Groups = mockGroups.Object;
 
             if (ongoing)
-                await cache.SetStringAsync(SpectatorHub.GetStateId(streamer_id), beatmap_id.ToString());
+                await cache.SetStringAsync(SpectatorHub.GetStateId(streamer_id), JsonConvert.SerializeObject(state));
 
             await hub.StartWatchingUser(streamer_id);
 
             mockGroups.Verify(groups => groups.AddToGroupAsync(connectionId, SpectatorHub.GetGroupId(streamer_id), default));
 
-            mockCaller.Verify(clients => clients.UserBeganPlaying(streamer_id, beatmap_id), ongoing ? Times.Once : Times.Never);
+            mockCaller.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state))), ongoing ? Times.Once : Times.Never);
         }
     }
 }

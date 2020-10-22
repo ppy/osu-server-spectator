@@ -22,7 +22,7 @@ namespace osu.Server.Spectator
     [UsedImplicitly]
     public class LocalAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
-        private static int user_id_counter = 2;
+        private static int userIDCounter = 2;
 
         /// <summary>
         /// The name of the authorisation scheme that this handler will respond to.
@@ -41,7 +41,7 @@ namespace osu.Server.Spectator
         /// </summary>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            string userIdString = Interlocked.Increment(ref user_id_counter).ToString();
+            string userIdString = Interlocked.Increment(ref userIDCounter).ToString();
 
             var claim = new Claim(ClaimTypes.NameIdentifier, userIdString);
 

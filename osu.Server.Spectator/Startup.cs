@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator
@@ -16,8 +17,17 @@ namespace osu.Server.Spectator
 
             services.AddDistributedMemoryCache(); // replace with redis
 
+            services.AddLogging(logging =>
+            {
+                // logging.AddFilter("Microsoft.AspNetCore.SignalR", LogLevel.Debug);
+                // logging.AddFilter("Microsoft.AspNetCore.Http.Connections", LogLevel.Debug);
+
+                logging.ClearProviders();
+                logging.AddConsole();
+            });
+
             ConfigureAuthentication(services);
-            
+
             services.AddAuthorization();
         }
 
@@ -28,7 +38,6 @@ namespace osu.Server.Spectator
                 config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 config.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer();
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
