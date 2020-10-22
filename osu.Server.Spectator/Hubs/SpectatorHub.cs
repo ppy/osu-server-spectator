@@ -24,6 +24,8 @@ namespace osu.Server.Spectator.Hubs
         {
             await updateUserState(beatmapId);
 
+            Console.WriteLine($"User {Context.UserIdentifier} beginning play session ({beatmapId})");
+
             // let's broadcast to every player temporarily. probably won't stay this way.
             await Clients.All.UserBeganPlaying(Context.UserIdentifier, beatmapId);
         }
@@ -33,12 +35,14 @@ namespace osu.Server.Spectator.Hubs
         {
             var state = await getStateFromUser(Context.UserIdentifier);
 
-            Console.WriteLine($"Receiving frame data (beatmap {state} {data.Frames.First().ToString()})..");
+            Console.WriteLine($"Receiving frame data (beatmap {state} {data.Frames.First()})..");
             await Clients.Group(GetGroupId(Context.UserIdentifier)).UserSentFrames(Context.UserIdentifier, data);
         }
 
         public async Task EndPlaySession(int beatmapId)
         {
+            Console.WriteLine($"User {Context.UserIdentifier} ending play session ({beatmapId})");
+
             await cache.RemoveAsync(GetStateId(Context.UserIdentifier));
             await Clients.All.UserFinishedPlaying(Context.UserIdentifier, beatmapId);
         }
@@ -61,8 +65,16 @@ namespace osu.Server.Spectator.Hubs
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(userId));
         }
 
+        public override Task OnConnectedAsync()
+        {
+            Console.WriteLine($"User {Context.UserIdentifier} connected!");
+            return base.OnConnectedAsync();
+        }
+
         public override async Task OnDisconnectedAsync(Exception exception)
         {
+            Console.WriteLine($"User {Context.UserIdentifier} disconnected!");
+
             var state = await getStateFromUser(Context.UserIdentifier);
 
             if (state.HasValue)
