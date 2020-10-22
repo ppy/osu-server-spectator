@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using osu.Framework.Utils;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
@@ -13,7 +15,7 @@ namespace SampleSpectatorClient
 {
     internal static class Program
     {
-        public static void Main()
+        public static async Task Main()
         {
             // ReSharper disable once CollectionNeverQueried.Local
             var clients = new List<SpectatorClient>();
@@ -25,14 +27,15 @@ namespace SampleSpectatorClient
 
             while (true)
             {
-                sendingClient.BeginPlaying(new SpectatorState { BeatmapID = 88 });
+                await sendingClient.BeginPlaying(new SpectatorState { BeatmapID = 88 });
+
                 Thread.Sleep(1000);
 
                 Console.WriteLine("Writer starting playing..");
 
                 for (int i = 0; i < 50; i++)
                 {
-                    sendingClient.SendFrames(new FrameDataBundle(new[]
+                    await sendingClient.SendFrames(new FrameDataBundle(new[]
                     {
                         new LegacyReplayFrame(i, RNG.Next(0, 512), RNG.Next(0, 512), ReplayButtonState.None)
                     }));
@@ -41,7 +44,7 @@ namespace SampleSpectatorClient
 
                 Console.WriteLine("Writer ending playing..");
 
-                sendingClient.EndPlaying(new SpectatorState { BeatmapID = 88 });
+                await sendingClient.EndPlaying(new SpectatorState { BeatmapID = 88 });
 
                 Thread.Sleep(1000);
             }
@@ -52,9 +55,13 @@ namespace SampleSpectatorClient
         private static SpectatorClient getConnectedClient()
         {
             var connection = new HubConnectionBuilder()
+                             .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; })
                              .WithUrl("http://localhost:5009/spectator")
-                             .AddMessagePackProtocol()
-                             .ConfigureLogging(logging => { logging.AddConsole(); })
+                             .ConfigureLogging(logging =>
+                             {
+                                 logging.AddFilter("Microsoft.AspNetCore.SignalR", LogLevel.Debug);
+                                 logging.AddConsole();
+                             })
                              .Build();
 
             var client = new SpectatorClient(connection);

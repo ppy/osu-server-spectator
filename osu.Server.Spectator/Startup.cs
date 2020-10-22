@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator
@@ -13,7 +14,8 @@ namespace osu.Server.Spectator
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSignalR().AddMessagePackProtocol();
+            services.AddSignalR()
+                    .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; });
 
             services.AddDistributedMemoryCache(); // replace with redis
 
