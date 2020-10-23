@@ -24,7 +24,7 @@ namespace osu.Server.Spectator.Tests
         private const int streamer_id = 1234;
         private const string watcher_id = "8000";
 
-        private static readonly SpectatorState state = new SpectatorState(88, null);
+        private static readonly SpectatorState state = new SpectatorState { BeatmapID = 88 };
 
         public SpectatorFlowTests()
         {
@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            await hub.BeginPlaySession(new SpectatorState(88));
+            await hub.BeginPlaySession(new SpectatorState { BeatmapID = 88 });
 
             // check all other users were informed that streaming began
             mockClients.Verify(clients => clients.All, Times.Once);
