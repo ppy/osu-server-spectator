@@ -34,7 +34,7 @@ namespace osu.Server.Spectator
                            //todo: figure correct way to get dev environment state
                            webBuilder.UseStartup<StartupDevelopment>();
 #else
-                    webBuilder.UseStartup<Startup>();
+                           webBuilder.UseStartup<Startup>();
 #endif
 
                            webBuilder.UseUrls(urls: new[] { "http://*:80", "https://*:443" });
