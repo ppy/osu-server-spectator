@@ -20,5 +20,12 @@
         <ProjectReference Include="..\SampleSpectatorClient\SampleSpectatorClient.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Remove="oauth-public.key" />
+      <Content Include="oauth-public.key">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
 
 </Project>
