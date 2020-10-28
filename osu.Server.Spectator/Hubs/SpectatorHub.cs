@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -18,6 +19,8 @@ namespace osu.Server.Spectator.Hubs
     public class SpectatorHub : Hub<ISpectatorClient>, ISpectatorServer
     {
         private readonly IDistributedCache cache;
+
+        private static readonly ConcurrentDictionary<int, SpectatorState> active_states = new ConcurrentDictionary<int, SpectatorState>();
 
         public SpectatorHub(IDistributedCache cache)
         {
@@ -46,6 +49,8 @@ namespace osu.Server.Spectator.Hubs
         {
             Console.WriteLine($"User {currentContextUserId} ending play session ({state})");
 
+            active_states.TryRemove(currentContextUserId, out var _);
+
             await cache.RemoveAsync(GetStateId(currentContextUserId));
             await Clients.All.UserFinishedPlaying(currentContextUserId, state);
         }
@@ -70,10 +75,16 @@ namespace osu.Server.Spectator.Hubs
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(userId));
         }
 
-        public override Task OnConnectedAsync()
+        public override async Task OnConnectedAsync()
         {
             Console.WriteLine($"User {currentContextUserId} connected!");
-            return base.OnConnectedAsync();
+
+            // for now, send *all* player states to users on connect.
+            // we don't want this for long, but while the lazer user base is small it should be okay.
+            foreach (var kvp in active_states)
+                await Clients.Caller.UserBeganPlaying(kvp.Key, kvp.Value);
+
+            await base.OnConnectedAsync();
         }
 
         public override async Task OnDisconnectedAsync(Exception exception)
@@ -93,6 +104,9 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task updateUserState(SpectatorState state)
         {
+            active_states.TryRemove(currentContextUserId, out var _);
+            active_states.TryAdd(currentContextUserId, state);
+
             await cache.SetStringAsync(GetStateId(currentContextUserId), JsonConvert.SerializeObject(state));
         }
 
