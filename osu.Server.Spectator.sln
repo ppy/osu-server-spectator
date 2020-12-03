@@ -6,8 +6,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Server.Spectator.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleSpectatorClient", "SampleSpectatorClient\SampleSpectatorClient.csproj", "{E126B79F-50B9-4448-8DE6-564BB820EE9D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game", "..\osu\osu.Game\osu.Game.csproj", "{26B06147-66E4-45E9-A107-6078739C241F}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,9 +24,5 @@ Global
 		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{26B06147-66E4-45E9-A107-6078739C241F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{26B06147-66E4-45E9-A107-6078739C241F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{26B06147-66E4-45E9-A107-6078739C241F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{26B06147-66E4-45E9-A107-6078739C241F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
