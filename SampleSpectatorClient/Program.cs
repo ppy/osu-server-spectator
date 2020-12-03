@@ -68,7 +68,7 @@ namespace SampleSpectatorClient
 
             var client = new SpectatorClient(connection);
 
-            connection.Closed += async (error) =>
+            connection.Closed += async error =>
             {
                 Console.WriteLine($"Connection closed with error:{error}");
 
