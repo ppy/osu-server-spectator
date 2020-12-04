@@ -58,7 +58,7 @@ namespace SampleSpectatorClient
         {
             var connection = new HubConnectionBuilder()
                              .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; })
-                             .WithUrl("http://localhost:5009/spectator")
+                             .WithUrl("http://localhost:80/spectator")
                              .ConfigureLogging(logging =>
                              {
                                  logging.AddFilter("Microsoft.AspNetCore.SignalR", LogLevel.Debug);
