@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Hubs
         {
             Console.WriteLine($"User {CurrentContextUserId} disconnected!");
 
-            var state = await GetStateFromUser(CurrentContextUserId);
+            var state = await GetLocalUserState();
 
             await OnDisconnectedAsync(exception, state);
 
@@ -67,6 +67,8 @@ namespace osu.Server.Spectator.Hubs
 
             await Cache.SetStringAsync(GetStateId(CurrentContextUserId), JsonConvert.SerializeObject(state));
         }
+
+        protected Task<TUserState?> GetLocalUserState() => GetStateFromUser(CurrentContextUserId);
 
         protected async Task RemoveLocalUserState()
         {
