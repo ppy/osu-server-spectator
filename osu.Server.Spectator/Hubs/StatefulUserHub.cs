@@ -4,12 +4,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 
 namespace osu.Server.Spectator.Hubs
 {
+    [UsedImplicitly]
+    [Authorize]
     public abstract class StatefulUserHub<TClient, TUserState> : Hub<TClient>
         where TUserState : class
         where TClient : class

@@ -5,14 +5,11 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Online.Spectator;
 
 namespace osu.Server.Spectator.Hubs
 {
-    [UsedImplicitly]
-    [Authorize]
     public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorState>, ISpectatorServer
     {
         public SpectatorHub([NotNull] IDistributedCache cache)
