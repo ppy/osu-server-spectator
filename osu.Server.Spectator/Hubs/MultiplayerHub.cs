@@ -43,13 +43,12 @@ namespace osu.Server.Spectator.Hubs
             }
 
             // add the user to the room.
-            room.Join(CurrentContextUserId);
+            var user = room.Join(CurrentContextUserId);
 
             await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
 
-            // todo: let others in the room know that this user joined.
-
+            await Clients.Group(GetGroupId(roomId)).UserJoined(user);
             return true;
         }
 
@@ -68,10 +67,14 @@ namespace osu.Server.Spectator.Hubs
                     return;
             }
 
-            room.Leave(CurrentContextUserId);
+            var user = room.Leave(CurrentContextUserId);
+
+            if (user == null)
+                return;
 
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(roomId));
             await RemoveLocalUserState();
+            await Clients.Group(GetGroupId(roomId)).UserLeft(user);
         }
 
         public static string GetGroupId(long roomId) => $"room:{roomId}";
