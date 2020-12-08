@@ -53,20 +53,7 @@ namespace osu.Server.Spectator.Tests
             setUserContext(mockContextUser1);
         }
 
-        [Fact]
-        public async Task UserCantJoinWhenAlreadyJoined()
-        {
-            await hub.JoinRoom(room_id);
-
-            // ensure the same user can't join a room if already in a room.
-            await Assert.ThrowsAsync<UserAlreadyInMultiplayerRoom>(() => hub.JoinRoom(room_id));
-
-            // but can join once first leaving.
-            await hub.LeaveRoom();
-            await hub.JoinRoom(room_id);
-
-            await hub.LeaveRoom();
-        }
+        #region Host assignment and transfer
 
         [Fact]
         public async Task FirstUserBecomesHost()
@@ -105,6 +92,25 @@ namespace osu.Server.Spectator.Tests
 
             mockReceiver.Verify(r => r.HostChanged(user_id_2), Times.Once);
             Assert.True(room.Host?.UserID == user_id_2);
+        }
+
+        #endregion
+
+        #region Joining and leaving
+
+        [Fact]
+        public async Task UserCantJoinWhenAlreadyJoined()
+        {
+            await hub.JoinRoom(room_id);
+
+            // ensure the same user can't join a room if already in a room.
+            await Assert.ThrowsAsync<UserAlreadyInMultiplayerRoom>(() => hub.JoinRoom(room_id));
+
+            // but can join once first leaving.
+            await hub.LeaveRoom();
+            await hub.JoinRoom(room_id);
+
+            await hub.LeaveRoom();
         }
 
         [Fact]
@@ -156,6 +162,10 @@ namespace osu.Server.Spectator.Tests
             mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id_2)), Times.Exactly(2));
         }
 
+        #endregion
+
+        #region Room Settings
+
         [Fact]
         public async Task UserCantChangeSettingsWhenNotJoinedRoom()
         {
@@ -176,6 +186,8 @@ namespace osu.Server.Spectator.Tests
 
             mockReceiver.Verify(r => r.SettingsChanged(testSettings), Times.Once);
         }
+
+        #endregion
 
         private void setUserContext(Mock<HubCallerContext> context) => hub.Context = context.Object;
     }
