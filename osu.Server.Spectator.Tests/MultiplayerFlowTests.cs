@@ -51,9 +51,10 @@ namespace osu.Server.Spectator.Tests
             Assert.False(await hub.JoinRoom(room_id));
 
             // but can join once first leaving.
-            Assert.True(await hub.LeaveRoom(room_id));
+            await hub.LeaveRoom();
             Assert.True(await hub.JoinRoom(room_id));
-            Assert.True(await hub.LeaveRoom(room_id));
+
+            await hub.LeaveRoom();
         }
 
         [Fact]
@@ -64,13 +65,13 @@ namespace osu.Server.Spectator.Tests
 
             mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id)), Times.Once);
 
-            await hub.LeaveRoom(room_id);
+            await hub.LeaveRoom();
             mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id)), Times.Once);
 
             await hub.JoinRoom(room_id);
             mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id)), Times.Exactly(2));
 
-            await hub.LeaveRoom(room_id);
+            await hub.LeaveRoom();
             mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id)), Times.Exactly(2));
         }
 

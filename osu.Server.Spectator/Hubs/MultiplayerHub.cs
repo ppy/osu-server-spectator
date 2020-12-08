@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
@@ -64,30 +65,33 @@ namespace osu.Server.Spectator.Hubs
             return true;
         }
 
-        public async Task<bool> LeaveRoom(long roomId)
+        public async Task LeaveRoom()
         {
             var state = await GetLocalUserState();
 
             if (state == null)
-                return false;
+                throw new NotJoinedRoomException();
+
+            long roomId = state.CurrentRoomID;
 
             MultiplayerRoom? room;
 
             lock (active_rooms)
             {
                 if (!active_rooms.TryGetValue(roomId, out room))
-                    return false;
+                    throw new InvalidStateException("User is in a room this hub is not aware of.");
             }
 
             var user = room.Leave(CurrentContextUserId);
 
             if (user == null)
-                return false;
+                throw new InvalidStateException("User was not in the expected room.");
 
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(roomId));
             await RemoveLocalUserState();
             await Clients.Group(GetGroupId(roomId)).UserLeft(user);
-            return true;
+        }
+
         public async Task ChangeSettings(MultiplayerRoomSettings settings)
         {
             var state = await GetLocalUserState();
