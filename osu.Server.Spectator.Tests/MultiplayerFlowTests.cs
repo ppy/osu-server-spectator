@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
@@ -190,6 +191,9 @@ namespace osu.Server.Spectator.Tests
             await Assert.ThrowsAsync<InvalidStateChange>(() => hub.ChangeState(reservedState));
         }
 
+        /// <summary>
+        /// Tests a full game flow with one user in the room.
+        /// </summary>
         [Fact]
         public async Task SingleUserMatchFlow()
         {
@@ -228,6 +232,36 @@ namespace osu.Server.Spectator.Tests
             // players return back to idle state as they please.
             await hub.ChangeState(MultiplayerUserState.Idle);
             Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+        }
+
+        [Fact]
+        public async void NotReadyUsersDontGetLoadRequest()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser1);
+
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+
+            // one user enters a ready state.
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.Idle));
+            Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.Ready));
+
+            Assert.Equal(MultiplayerRoomState.Open, room.State);
+
+            // host requests the start of the match.
+            await hub.StartMatch();
+
+            mockGameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            mockReceiver.Verify(r => r.LoadRequested(), Times.Never);
+
+            Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad));
+            Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.Idle));
         }
 
         #endregion
