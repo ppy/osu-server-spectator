@@ -158,6 +158,24 @@ namespace osu.Server.Spectator.Hubs
             await Clients.Group(GetGroupId(room.RoomID)).HostChanged(userId);
         }
 
+        public async Task ChangeState(MultiplayerUserState newState)
+        {
+            var room = await getLocalUserRoom();
+
+            room.PerformUpdate(r =>
+            {
+                var user = r.Users.Find(u => u.UserID == CurrentContextUserId);
+
+                if (user == null)
+                    failWithInvalidState("Local user was not found in the expected room");
+
+                ensureValidStateSwitch(r, user.State, newState);
+                user.State = newState;
+            });
+
+            await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(CurrentContextUserId, newState);
+        }
+
         public async Task ChangeSettings(MultiplayerRoomSettings settings)
         {
             var state = await GetLocalUserState();
@@ -177,6 +195,51 @@ namespace osu.Server.Spectator.Hubs
         }
 
         public static string GetGroupId(long roomId) => $"room:{roomId}";
+
+        /// <summary>
+        /// Given a room and a state transition, throw if there's an issue with the sequence of events.
+        /// </summary>
+        /// <param name="room">The room.</param>
+        /// <param name="oldState">The old state.</param>
+        /// <param name="newState">The new state.</param>
+        private void ensureValidStateSwitch(MultiplayerRoom room, MultiplayerUserState oldState, MultiplayerUserState newState)
+        {
+            switch (newState)
+            {
+                case MultiplayerUserState.Idle:
+                    // any state can return to idle.
+                    break;
+
+                case MultiplayerUserState.Ready:
+                    if (oldState != MultiplayerUserState.Idle)
+                        throw new InvalidStateChange(oldState, newState);
+
+                    break;
+
+                case MultiplayerUserState.WaitingForLoad:
+                    // playing state is managed by the server.
+                    throw new InvalidStateChange(oldState, newState);
+
+                case MultiplayerUserState.Loaded:
+                    if (oldState != MultiplayerUserState.WaitingForLoad)
+                        throw new InvalidStateChange(oldState, newState);
+
+                    break;
+
+                case MultiplayerUserState.Playing:
+                    // playing state is managed by the server.
+                    throw new InvalidStateChange(oldState, newState);
+
+                case MultiplayerUserState.Results:
+                    if (oldState != MultiplayerUserState.Playing)
+                        throw new InvalidStateChange(oldState, newState);
+
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
+            }
+        }
 
         /// <summary>
         /// Retrieve the <see cref="MultiplayerRoom"/> for the local context user.

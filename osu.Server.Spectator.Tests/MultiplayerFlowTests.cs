@@ -164,6 +164,26 @@ namespace osu.Server.Spectator.Tests
 
         #endregion
 
+        #region User State
+
+        [Fact]
+        public async Task UserStateChangeNotifiesOtherUsers()
+        {
+            await hub.JoinRoom(room_id);
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Ready), Times.Once);
+        }
+
+        [Fact]
+        public async Task UserDoesntChangeOwnStateToPlaying()
+        {
+            await hub.JoinRoom(room_id);
+            await Assert.ThrowsAsync<InvalidStateChange>(() => hub.ChangeState(MultiplayerUserState.Playing));
+        }
+
+        #endregion
+
         #region Room Settings
 
         [Fact]
