@@ -73,18 +73,18 @@ namespace osu.Server.Spectator.Hubs
             // add the user to the room.
             var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
-            room.PerformUpdate(r =>
+            using (room.LockForUpdate())
             {
-                r.Users.Add(roomUser);
+                room.Users.Add(roomUser);
 
                 if (shouldBecomeHost)
-                    r.Host = roomUser;
-            });
+                    room.Host = roomUser;
 
-            await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
+                await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
+                await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
+            }
+
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
-
-            await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
             return room;
         }
@@ -93,15 +93,14 @@ namespace osu.Server.Spectator.Hubs
         {
             var room = await getLocalUserRoom();
 
-            MultiplayerRoomUser? user = null;
+            await RemoveLocalUserState();
 
-            MultiplayerRoomUser? newHost = null;
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID));
 
-            bool roomDisbanded = false;
-
-            room.PerformUpdate(r =>
+            using (room.LockForUpdate())
             {
-                user = r.Users.Find(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
                     failWithInvalidState("User was not in the expected room.");
@@ -110,66 +109,54 @@ namespace osu.Server.Spectator.Hubs
 
                 if (room.Users.Count == 0)
                 {
-                    roomDisbanded = true;
+                    lock (active_rooms)
+                        active_rooms.Remove(room.RoomID);
                     return;
                 }
+
+                var clients = Clients.Group(GetGroupId(room.RoomID));
 
                 // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
                 if (room.Host?.Equals(user) == true)
                 {
-                    newHost = room.Users.FirstOrDefault();
+                    var newHost = room.Users.FirstOrDefault();
 
                     if (newHost != null)
-                        r.Host = newHost;
+                    {
+                        room.Host = newHost;
+                        await clients.HostChanged(newHost.UserID);
+                    }
                 }
-            });
 
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID));
-
-            if (roomDisbanded)
-            {
-                lock (active_rooms)
-                    active_rooms.Remove(room.RoomID);
-            }
-            else
-            {
-                var clients = Clients.Group(GetGroupId(room.RoomID));
-
-                if (newHost != null)
-                    await clients.HostChanged(newHost.UserID);
                 await clients.UserLeft(user);
             }
-
-            await RemoveLocalUserState();
         }
 
         public async Task TransferHost(long userId)
         {
             var room = await getLocalUserRoom();
 
-            ensureIsHost(room);
-
-            room.PerformUpdate(r =>
+            using (room.LockForUpdate())
             {
-                var newHost = r.Users.Find(u => u.UserID == userId);
+                ensureIsHost(room);
+
+                var newHost = room.Users.Find(u => u.UserID == userId);
 
                 if (newHost == null)
                     throw new Exception("Target user is not in the current room");
 
-                r.Host = newHost;
-            });
-
-            await Clients.Group(GetGroupId(room.RoomID)).HostChanged(userId);
+                room.Host = newHost;
+                await Clients.Group(GetGroupId(room.RoomID)).HostChanged(userId);
+            }
         }
 
         public async Task ChangeState(MultiplayerUserState newState)
         {
             var room = await getLocalUserRoom();
 
-            room.PerformUpdate(r =>
+            using (room.LockForUpdate())
             {
-                var user = r.Users.Find(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
                     failWithInvalidState("Local user was not found in the expected room");
@@ -177,51 +164,25 @@ namespace osu.Server.Spectator.Hubs
                 if (user.State == newState)
                     return;
 
-                ensureValidStateSwitch(r, user.State, newState);
+                ensureValidStateSwitch(room, user.State, newState);
                 user.State = newState;
-            });
 
-            // handle whether this user should be receiving gameplay messages or not.
-            switch (newState)
-            {
-                case MultiplayerUserState.Idle:
-                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
-                    break;
+                // handle whether this user should be receiving gameplay messages or not.
+                switch (newState)
+                {
+                    case MultiplayerUserState.Idle:
+                        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
+                        break;
 
-                case MultiplayerUserState.Ready:
-                    await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
-                    break;
+                    case MultiplayerUserState.Ready:
+                        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
+                        break;
+                }
+
+                await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(CurrentContextUserId, newState);
+
+                await updateRoomStateIfRequired(room);
             }
-
-            //check whether a room state change is required.
-            switch (room.State)
-            {
-                case MultiplayerRoomState.WaitingForLoad:
-                    if (room.Users.All(u => u.State != MultiplayerUserState.WaitingForLoad))
-                    {
-                        foreach (var user in room.Users)
-                            user.State = MultiplayerUserState.Playing;
-                        await Clients.Group(GetGroupId(room.RoomID)).MatchStarted();
-
-                        await changeRoomState(room, MultiplayerRoomState.Playing);
-                    }
-
-                    break;
-
-                case MultiplayerRoomState.Playing:
-                    if (room.Users.All(u => u.State != MultiplayerUserState.Playing))
-                    {
-                        foreach (var user in room.Users)
-                            user.State = MultiplayerUserState.Results;
-
-                        await changeRoomState(room, MultiplayerRoomState.Open);
-                        await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
-                    }
-
-                    break;
-            }
-
-            await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(CurrentContextUserId, newState);
         }
 
         public async Task StartMatch()
@@ -230,21 +191,15 @@ namespace osu.Server.Spectator.Hubs
 
             ensureIsHost(room);
 
-            room.PerformUpdate(r =>
+            using (room.LockForUpdate())
             {
                 changeRoomState(room, MultiplayerRoomState.WaitingForLoad).Wait(); // todo: fix
 
-                foreach (var user in r.Users)
+                foreach (var user in room.Users)
                     user.State = MultiplayerUserState.WaitingForLoad;
-            });
 
-            await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
-        }
-
-        private async Task changeRoomState(MultiplayerRoom room, MultiplayerRoomState newState)
-        {
-            room.State = newState;
-            await Clients.Group(GetGroupId(room.RoomID)).RoomStateChanged(MultiplayerRoomState.WaitingForLoad);
+                await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
+            }
         }
 
         public async Task ChangeSettings(MultiplayerRoomSettings settings)
@@ -262,9 +217,11 @@ namespace osu.Server.Spectator.Hubs
 
             // todo: check this user has permission to change the settings of this room.
 
-            room.PerformUpdate(r => r.Settings = settings);
-
-            await Clients.Group(GetGroupId(roomID)).SettingsChanged(settings);
+            using (room.LockForUpdate())
+            {
+                room.Settings = settings;
+                await Clients.Group(GetGroupId(roomID)).SettingsChanged(settings);
+            }
         }
 
         /// <summary>
@@ -273,6 +230,49 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="roomId">The databased room ID.</param>
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
+
+        /// <summary>
+        /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.
+        /// </summary>
+        private async Task updateRoomStateIfRequired(MultiplayerRoom room)
+        {
+            //check whether a room state change is required.
+            switch (room.State)
+            {
+                case MultiplayerRoomState.WaitingForLoad:
+                    if (room.Users.All(u => u.State != MultiplayerUserState.WaitingForLoad))
+                    {
+                        foreach (var u in room.Users)
+                            u.State = MultiplayerUserState.Playing;
+                        await Clients.Group(GetGroupId(room.RoomID)).MatchStarted();
+
+                        await changeRoomState(room, MultiplayerRoomState.Playing);
+                    }
+
+                    break;
+
+                case MultiplayerRoomState.Playing:
+                    if (room.Users.All(u => u.State != MultiplayerUserState.Playing))
+                    {
+                        foreach (var u in room.Users)
+                            u.State = MultiplayerUserState.Results;
+
+                        await changeRoomState(room, MultiplayerRoomState.Open);
+                        await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
+                    }
+
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Changes the provided room's state and notifies all users.
+        /// </summary>
+        private async Task changeRoomState(MultiplayerRoom room, MultiplayerRoomState newState)
+        {
+            room.State = newState;
+            await Clients.Group(GetGroupId(room.RoomID)).RoomStateChanged(newState);
+        }
 
         /// <summary>
         /// Given a room and a state transition, throw if there's an issue with the sequence of events.

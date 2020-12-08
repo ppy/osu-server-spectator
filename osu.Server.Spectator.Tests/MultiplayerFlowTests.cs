@@ -191,7 +191,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async Task StandardMatchFlow()
+        public async Task SingleUserMatchFlow()
         {
             var room = await hub.JoinRoom(room_id);
             Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
