@@ -84,8 +84,16 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task RoomSettingsUpdateNotifiesOtherUsers()
         {
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                BeatmapID = 1234567,
+                RulesetID = 2
+            };
+
             await hub.JoinRoom(room_id);
-            await hub.ChangeSettings(new MultiplayerRoomSettings());
+            await hub.ChangeSettings(testSettings);
+
+            mockReceiver.Verify(r => r.SettingsChanged(testSettings), Times.Once);
         }
     }
 }
