@@ -200,6 +200,8 @@ namespace osu.Server.Spectator.Tests
             await hub.ChangeState(MultiplayerUserState.Ready);
             Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
 
+            Assert.Equal(MultiplayerRoomState.Open, room.State);
+
             // host requests the start of the match.
             await hub.StartMatch();
 
@@ -209,6 +211,7 @@ namespace osu.Server.Spectator.Tests
 
             // all users finish loading.
             await hub.ChangeState(MultiplayerUserState.Loaded);
+            Assert.Equal(MultiplayerRoomState.Playing, room.State);
 
             // server requests users start playing.
             mockReceiver.Verify(r => r.MatchStarted(), Times.Once);
@@ -216,6 +219,7 @@ namespace osu.Server.Spectator.Tests
 
             // all users finish playing.
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            Assert.Equal(MultiplayerRoomState.Open, room.State);
 
             // server lets players know that results are ready for consumption (all players have finished).
             mockReceiver.Verify(r => r.ResultsReady(), Times.Once);
