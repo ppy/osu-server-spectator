@@ -103,7 +103,7 @@ namespace osu.Server.Spectator.Hubs
 
             // todo: check this user has permission to change the settings of this room.
 
-            room.Settings = settings;
+            room.PerformUpdate(r => r.Settings = settings);
 
             await Clients.Group(GetGroupId(roomID)).SettingsChanged(settings);
         }
