@@ -2,8 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Online.RealtimeMultiplayer;
 
@@ -14,9 +14,21 @@ namespace osu.Server.Spectator.Hubs
         // for the time being rooms will be maintained in memory and not distributed.
         private static readonly Dictionary<long, MultiplayerRoom> active_rooms = new Dictionary<long, MultiplayerRoom>();
 
-        public MultiplayerHub([NotNull] IDistributedCache cache)
+        public MultiplayerHub([JetBrains.Annotations.NotNull] IDistributedCache cache)
             : base(cache)
         {
+        }
+
+        /// <summary>
+        /// Retrieve a room instance from a provided room ID, if tracked by this hub.
+        /// </summary>
+        /// <param name="roomId">The lookup ID.</param>
+        /// <param name="room">The room instance, or null if not tracked.</param>
+        /// <returns>Whether the room could be found.</returns>
+        public bool TryGetRoom(long roomId, [MaybeNullWhen(false)] out MultiplayerRoom room)
+        {
+            lock (active_rooms)
+                return active_rooms.TryGetValue(roomId, out room);
         }
 
         public async Task<bool> JoinRoom(long roomId)
@@ -35,7 +47,7 @@ namespace osu.Server.Spectator.Hubs
             {
                 // check whether we are already aware of this match.
 
-                if (!active_rooms.TryGetValue(roomId, out room))
+                if (!TryGetRoom(roomId, out room))
                 {
                     // TODO: get details of the room from the database. hard abort if non existent.
                     active_rooms.Add(roomId, room = new MultiplayerRoom());
@@ -52,29 +64,30 @@ namespace osu.Server.Spectator.Hubs
             return true;
         }
 
-        public async Task LeaveRoom(long roomId)
+        public async Task<bool> LeaveRoom(long roomId)
         {
             var state = await GetLocalUserState();
 
             if (state == null)
-                return;
+                return false;
 
             MultiplayerRoom? room;
 
             lock (active_rooms)
             {
                 if (!active_rooms.TryGetValue(roomId, out room))
-                    return;
+                    return false;
             }
 
             var user = room.Leave(CurrentContextUserId);
 
             if (user == null)
-                return;
+                return false;
 
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(roomId));
             await RemoveLocalUserState();
             await Clients.Group(GetGroupId(roomId)).UserLeft(user);
+            return true;
         }
 
         public static string GetGroupId(long roomId) => $"room:{roomId}";
