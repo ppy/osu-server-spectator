@@ -193,7 +193,7 @@ namespace osu.Server.Spectator.Hubs
 
             using (room.LockForUpdate())
             {
-                changeRoomState(room, MultiplayerRoomState.WaitingForLoad).Wait(); // todo: fix
+                await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
                 foreach (var user in room.Users)
                     user.State = MultiplayerUserState.WaitingForLoad;
