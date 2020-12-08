@@ -7,6 +7,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using osu.Game.Online.RealtimeMultiplayer;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -30,12 +31,17 @@ namespace osu.Server.Spectator.Tests
         public async Task NewUserConnectsAndJoinsMatch()
         {
             Mock<IGroupManager> mockGroups = new Mock<IGroupManager>();
-            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
 
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(context => context.UserIdentifier).Returns(user_id.ToString());
+
+            Mock<IHubCallerClients<IMultiplayerClient>> mockClients = new Mock<IHubCallerClients<IMultiplayerClient>>();
+            Mock<IMultiplayerClient> mockReceiver = new Mock<IMultiplayerClient>();
+            mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id))).Returns(mockReceiver.Object);
 
             hub.Context = mockContext.Object;
             hub.Groups = mockGroups.Object;
+            hub.Clients = mockClients.Object;
 
             Assert.True(await hub.JoinRoom(room_id));
 
