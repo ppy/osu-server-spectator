@@ -55,12 +55,14 @@ namespace osu.Server.Spectator.Hubs
             }
 
             // add the user to the room.
-            var user = room.Join(CurrentContextUserId);
+            var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
+
+            room.PerformUpdate(r => { r.Users.Add(roomUser); });
 
             await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
 
-            await Clients.Group(GetGroupId(roomId)).UserJoined(user);
+            await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
         }
 
         public async Task LeaveRoom()
@@ -80,9 +82,17 @@ namespace osu.Server.Spectator.Hubs
                     failWithInvalidState("User is in a room this hub is not aware of.");
             }
 
-            var user = room.Leave(CurrentContextUserId);
-            if (user == null)
-                failWithInvalidState("User was not in the expected room.");
+            MultiplayerRoomUser? user = null;
+
+            room.PerformUpdate(r =>
+            {
+                user = r.Users.Find(u => u.UserID == CurrentContextUserId);
+
+                if (user == null)
+                    failWithInvalidState("User was not in the expected room.");
+
+                room.Users.Remove(user);
+            });
 
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(roomId));
             await RemoveLocalUserState();
