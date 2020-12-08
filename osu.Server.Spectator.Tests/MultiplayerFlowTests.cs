@@ -48,10 +48,17 @@ namespace osu.Server.Spectator.Tests
             // ensure the same user can't join a room if already in a room.
             Assert.False(await hub.JoinRoom(room_id));
 
+            mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id)), Times.Once);
+
             await hub.LeaveRoom(room_id);
+            mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id)), Times.Once);
 
             // ensure we can join a new room after first leaving the last one.
             Assert.True(await hub.JoinRoom(room_id));
+            mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id)), Times.Exactly(2));
+
+            await hub.LeaveRoom(room_id);
+            mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id)), Times.Exactly(2));
         }
     }
 }
