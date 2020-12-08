@@ -204,9 +204,8 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task ChangeSettings(MultiplayerRoomSettings settings)
         {
-            // todo: check the room isn't playing
-
             var state = await GetLocalUserState();
+
             if (state == null)
                 throw new NotJoinedRoomException();
 
@@ -214,6 +213,9 @@ namespace osu.Server.Spectator.Hubs
 
             if (!TryGetRoom(roomID, out var room))
                 failWithInvalidState("User is in a room this hub is not aware of.");
+
+            if (room.State != MultiplayerRoomState.Open)
+                throw new InvalidStateException("Attempted to change settings while game is active");
 
             // todo: check this user has permission to change the settings of this room.
 

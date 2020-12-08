@@ -340,6 +340,20 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task UserCantChangeSettingsWhenGameIsActive()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            await hub.StartMatch();
+
+            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(new MultiplayerRoomSettings()));
+        }
+
+
+        [Fact]
         public async Task RoomSettingsUpdateNotifiesOtherUsers()
         {
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
