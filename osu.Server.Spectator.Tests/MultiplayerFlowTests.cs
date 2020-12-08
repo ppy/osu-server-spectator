@@ -72,14 +72,7 @@ namespace osu.Server.Spectator.Tests
         public async Task FirstUserBecomesHost()
         {
             var room = await hub.JoinRoom(room_id);
-
             Assert.True(room.Host?.UserID == user_id);
-
-            // but can join once first leaving.
-            await hub.LeaveRoom();
-            await hub.JoinRoom(room_id);
-
-            await hub.LeaveRoom();
         }
 
         [Fact]
@@ -115,6 +108,28 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task LastUserLeavingCausesRoomDisband()
+        {
+            setUserContext(mockContextUser1);
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser1);
+            await hub.LeaveRoom();
+
+            // room still exists even though the original host left
+            Assert.True(hub.TryGetRoom(room_id, out var _));
+
+            setUserContext(mockContextUser2);
+            await hub.LeaveRoom();
+
+            // room is gone.
+            Assert.False(hub.TryGetRoom(room_id, out var _));
+        }
+
+        [Fact]
         public async Task UserCantLeaveWhenNotAlreadyJoined()
         {
             await Assert.ThrowsAsync<NotJoinedRoomException>(() => hub.LeaveRoom());
@@ -123,19 +138,22 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task UserJoinLeaveNotifiesOtherUsers()
         {
+            await hub.JoinRoom(room_id); // join an arbitrary first user (listener).
+
+            setUserContext(mockContextUser2);
             await hub.JoinRoom(room_id);
             await Assert.ThrowsAsync<UserAlreadyInMultiplayerRoom>(() => hub.JoinRoom(room_id)); // invalid join
 
-            mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id)), Times.Once);
+            mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id_2)), Times.Once);
 
             await hub.LeaveRoom();
-            mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id)), Times.Once);
+            mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id_2)), Times.Once);
 
             await hub.JoinRoom(room_id);
-            mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id)), Times.Exactly(2));
+            mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id_2)), Times.Exactly(2));
 
             await hub.LeaveRoom();
-            mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id)), Times.Exactly(2));
+            mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id_2)), Times.Exactly(2));
         }
 
         [Fact]

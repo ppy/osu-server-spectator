@@ -97,6 +97,8 @@ namespace osu.Server.Spectator.Hubs
 
             MultiplayerRoomUser? newHost = null;
 
+            bool roomDisbanded = false;
+
             room.PerformUpdate(r =>
             {
                 user = r.Users.Find(u => u.UserID == CurrentContextUserId);
@@ -105,6 +107,12 @@ namespace osu.Server.Spectator.Hubs
                     failWithInvalidState("User was not in the expected room.");
 
                 room.Users.Remove(user);
+
+                if (room.Users.Count == 0)
+                {
+                    roomDisbanded = true;
+                    return;
+                }
 
                 // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
                 if (room.Host?.Equals(user) == true)
@@ -118,9 +126,17 @@ namespace osu.Server.Spectator.Hubs
 
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID));
 
-            if (newHost != null)
-                await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
-            await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
+            if (roomDisbanded)
+            {
+                lock (active_rooms)
+                    active_rooms.Remove(room.RoomID);
+            }
+            else
+            {
+                if (newHost != null)
+                    await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
+                await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
+            }
 
             await RemoveLocalUserState();
         }
