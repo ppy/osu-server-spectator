@@ -58,6 +58,12 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task UserCantLeaveWhenNotAlreadyJoined()
+        {
+            await Assert.ThrowsAsync<NotJoinedRoomException>(() => hub.LeaveRoom());
+        }
+
+        [Fact]
         public async Task UserJoinLeaveNotifiesOtherUsers()
         {
             await hub.JoinRoom(room_id);
