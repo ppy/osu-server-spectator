@@ -195,7 +195,7 @@ namespace osu.Server.Spectator.Hubs
             {
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
-                foreach (var user in room.Users)
+                foreach (var user in room.Users.Where(u => u.State == MultiplayerUserState.Ready))
                     user.State = MultiplayerUserState.WaitingForLoad;
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
