@@ -73,5 +73,18 @@ namespace osu.Server.Spectator.Tests
             await hub.LeaveRoom(room_id);
             mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id)), Times.Exactly(2));
         }
+
+        [Fact]
+        public async Task UserCantChangeSettingsWhenNotJoinedRoom()
+        {
+            await Assert.ThrowsAsync<MultiplayerHub.NotJoinedRoomException>(() => hub.ChangeSettings(new MultiplayerRoomSettings()));
+        }
+
+        [Fact]
+        public async Task RoomSettingsUpdateNotifiesOtherUsers()
+        {
+            await hub.JoinRoom(room_id);
+            await hub.ChangeSettings(new MultiplayerRoomSettings());
+        }
     }
 }

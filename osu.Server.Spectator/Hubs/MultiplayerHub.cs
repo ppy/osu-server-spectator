@@ -88,6 +88,38 @@ namespace osu.Server.Spectator.Hubs
             await RemoveLocalUserState();
             await Clients.Group(GetGroupId(roomId)).UserLeft(user);
             return true;
+        public async Task ChangeSettings(MultiplayerRoomSettings settings)
+        {
+            var state = await GetLocalUserState();
+            if (state == null)
+                throw new NotJoinedRoomException();
+
+            long roomID = state.CurrentRoomID;
+
+            if (!TryGetRoom(roomID, out var room))
+                throw new InvalidStateException("User is in a room this hub is not aware of.");
+
+            // todo: check this user has permission to change the settings of this room.
+
+            room.Settings = settings;
+
+            await Clients.Group(GetGroupId(roomID)).SettingsChanged(settings);
+        }
+
+        public class InvalidStateException : Exception
+        {
+            public InvalidStateException(string message)
+                : base(message)
+            {
+            }
+        }
+
+        public class NotJoinedRoomException : Exception
+        {
+            public NotJoinedRoomException()
+                : base("This user has not yet joined a multiplayer room.")
+            {
+            }
         }
 
         public static string GetGroupId(long roomId) => $"room:{roomId}";
