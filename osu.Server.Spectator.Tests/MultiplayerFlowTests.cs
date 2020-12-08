@@ -58,6 +58,20 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task FirstUserBecomesHost()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            Assert.True(room.Host.UserID == user_id);
+
+            // but can join once first leaving.
+            await hub.LeaveRoom();
+            await hub.JoinRoom(room_id);
+
+            await hub.LeaveRoom();
+        }
+
+        [Fact]
         public async Task UserCantLeaveWhenNotAlreadyJoined()
         {
             await Assert.ThrowsAsync<NotJoinedRoomException>(() => hub.LeaveRoom());

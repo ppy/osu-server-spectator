@@ -31,7 +31,7 @@ namespace osu.Server.Spectator.Hubs
                 return active_rooms.TryGetValue(roomId, out room);
         }
 
-        public async Task JoinRoom(long roomId)
+        public async Task<MultiplayerRoom> JoinRoom(long roomId)
         {
             var state = await GetLocalUserState();
 
@@ -43,6 +43,8 @@ namespace osu.Server.Spectator.Hubs
 
             MultiplayerRoom? room;
 
+            bool shouldBecomeHost = false;
+
             lock (active_rooms)
             {
                 // check whether we are already aware of this match.
@@ -51,18 +53,27 @@ namespace osu.Server.Spectator.Hubs
                 {
                     // TODO: get details of the room from the database. hard abort if non existent.
                     active_rooms.Add(roomId, room = new MultiplayerRoom());
+                    shouldBecomeHost = true;
                 }
             }
 
             // add the user to the room.
             var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
-            room.PerformUpdate(r => { r.Users.Add(roomUser); });
+            room.PerformUpdate(r =>
+            {
+                r.Users.Add(roomUser);
+
+                if (shouldBecomeHost)
+                    r.Host = roomUser;
+            });
 
             await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
 
             await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
+
+            return room;
         }
 
         public async Task LeaveRoom()
