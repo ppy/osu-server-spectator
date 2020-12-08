@@ -23,6 +23,7 @@ namespace osu.Server.Spectator.Tests
         private const long room_id = 8888;
 
         private readonly Mock<IMultiplayerClient> mockReceiver;
+        private readonly Mock<IMultiplayerClient> mockGameplayReceiver;
 
         private readonly Mock<HubCallerContext> mockContextUser1;
         private readonly Mock<HubCallerContext> mockContextUser2;
@@ -44,8 +45,12 @@ namespace osu.Server.Spectator.Tests
             mockContextUser2.Setup(context => context.UserIdentifier).Returns(user_id_2.ToString());
 
             Mock<IHubCallerClients<IMultiplayerClient>> mockClients = new Mock<IHubCallerClients<IMultiplayerClient>>();
+
             mockReceiver = new Mock<IMultiplayerClient>();
-            mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id))).Returns(mockReceiver.Object);
+            mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id, false))).Returns(mockReceiver.Object);
+
+            mockGameplayReceiver = new Mock<IMultiplayerClient>();
+            mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id, true))).Returns(mockGameplayReceiver.Object);
 
             hub.Groups = mockGroups.Object;
             hub.Clients = mockClients.Object;
@@ -183,6 +188,42 @@ namespace osu.Server.Spectator.Tests
         {
             await hub.JoinRoom(room_id);
             await Assert.ThrowsAsync<InvalidStateChange>(() => hub.ChangeState(reservedState));
+        }
+
+        [Fact]
+        public async Task StandardMatchFlow()
+        {
+            var room = await hub.JoinRoom(room_id);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+
+            // some users enter a ready state.
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
+
+            // host requests the start of the match.
+            await hub.StartMatch();
+
+            // server requests the all users start loading.
+            mockGameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
+
+            // all users finish loading.
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+
+            // server requests users start playing.
+            mockReceiver.Verify(r => r.MatchStarted(), Times.Once);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
+
+            // all users finish playing.
+            await hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            // server lets players know that results are ready for consumption (all players have finished).
+            mockReceiver.Verify(r => r.ResultsReady(), Times.Once);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Results, u.State));
+
+            // players return back to idle state as they please.
+            await hub.ChangeState(MultiplayerUserState.Idle);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
         }
 
         #endregion
