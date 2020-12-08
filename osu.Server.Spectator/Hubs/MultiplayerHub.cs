@@ -77,13 +77,12 @@ namespace osu.Server.Spectator.Hubs
             lock (active_rooms)
             {
                 if (!active_rooms.TryGetValue(roomId, out room))
-                    throw new InvalidStateException("User is in a room this hub is not aware of.");
+                    failWithInvalidState("User is in a room this hub is not aware of.");
             }
 
             var user = room.Leave(CurrentContextUserId);
-
             if (user == null)
-                throw new InvalidStateException("User was not in the expected room.");
+                failWithInvalidState("User was not in the expected room.");
 
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(roomId));
             await RemoveLocalUserState();
@@ -99,7 +98,7 @@ namespace osu.Server.Spectator.Hubs
             long roomID = state.CurrentRoomID;
 
             if (!TryGetRoom(roomID, out var room))
-                throw new InvalidStateException("User is in a room this hub is not aware of.");
+                failWithInvalidState("User is in a room this hub is not aware of.");
 
             // todo: check this user has permission to change the settings of this room.
 
@@ -109,6 +108,9 @@ namespace osu.Server.Spectator.Hubs
         }
 
         public static string GetGroupId(long roomId) => $"room:{roomId}";
+
+        [ExcludeFromCodeCoverage]
+        [DoesNotReturn]
+        private void failWithInvalidState(string message) => throw new InvalidStateException(message);
     }
 }
-
