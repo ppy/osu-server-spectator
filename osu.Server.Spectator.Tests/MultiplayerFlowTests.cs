@@ -175,11 +175,14 @@ namespace osu.Server.Spectator.Tests
             mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Ready), Times.Once);
         }
 
-        [Fact]
-        public async Task UserDoesntChangeOwnStateToPlaying()
+        [Theory]
+        [InlineData(MultiplayerUserState.WaitingForLoad)]
+        [InlineData(MultiplayerUserState.Playing)]
+        [InlineData(MultiplayerUserState.Results)]
+        public async Task UserCantChangeStateToReservedStates(MultiplayerUserState reservedState)
         {
             await hub.JoinRoom(room_id);
-            await Assert.ThrowsAsync<InvalidStateChange>(() => hub.ChangeState(MultiplayerUserState.Playing));
+            await Assert.ThrowsAsync<InvalidStateChange>(() => hub.ChangeState(reservedState));
         }
 
         #endregion
