@@ -18,9 +18,14 @@ namespace osu.Server.Spectator.Tests
         private readonly MultiplayerHub hub;
 
         private const int user_id = 1234;
+        private const int user_id_2 = 2345;
+
         private const long room_id = 8888;
 
         private readonly Mock<IMultiplayerClient> mockReceiver;
+
+        private readonly Mock<HubCallerContext> mockContextUser1;
+        private readonly Mock<HubCallerContext> mockContextUser2;
 
         public MultiplayerFlowTests()
         {
@@ -30,16 +35,20 @@ namespace osu.Server.Spectator.Tests
 
             Mock<IGroupManager> mockGroups = new Mock<IGroupManager>();
 
-            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
-            mockContext.Setup(context => context.UserIdentifier).Returns(user_id.ToString());
+            mockContextUser1 = new Mock<HubCallerContext>();
+            mockContextUser1.Setup(context => context.UserIdentifier).Returns(user_id.ToString());
+
+            mockContextUser2 = new Mock<HubCallerContext>();
+            mockContextUser2.Setup(context => context.UserIdentifier).Returns(user_id_2.ToString());
 
             Mock<IHubCallerClients<IMultiplayerClient>> mockClients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             mockReceiver = new Mock<IMultiplayerClient>();
             mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id))).Returns(mockReceiver.Object);
 
-            hub.Context = mockContext.Object;
             hub.Groups = mockGroups.Object;
             hub.Clients = mockClients.Object;
+
+            setUserContext(mockContextUser1);
         }
 
         [Fact]
@@ -62,13 +71,45 @@ namespace osu.Server.Spectator.Tests
         {
             var room = await hub.JoinRoom(room_id);
 
-            Assert.True(room.Host.UserID == user_id);
+            Assert.True(room.Host?.UserID == user_id);
 
             // but can join once first leaving.
             await hub.LeaveRoom();
             await hub.JoinRoom(room_id);
 
             await hub.LeaveRoom();
+        }
+
+        [Fact]
+        public async Task HostTransfer()
+        {
+            setUserContext(mockContextUser1);
+            var room = await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            Assert.Equal(room, await hub.JoinRoom(room_id));
+
+            setUserContext(mockContextUser1);
+            await hub.TransferHost(user_id_2);
+
+            mockReceiver.Verify(r => r.HostChanged(user_id_2), Times.Once);
+            Assert.True(room.Host?.UserID == user_id_2);
+        }
+
+        [Fact]
+        public async Task HostLeavingCausesHostTransfer()
+        {
+            setUserContext(mockContextUser1);
+            var room = await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser1);
+            await hub.LeaveRoom();
+
+            mockReceiver.Verify(r => r.HostChanged(user_id_2), Times.Once);
+            Assert.True(room.Host?.UserID == user_id_2);
         }
 
         [Fact]
@@ -115,5 +156,7 @@ namespace osu.Server.Spectator.Tests
 
             mockReceiver.Verify(r => r.SettingsChanged(testSettings), Times.Once);
         }
+
+        private void setUserContext(Mock<HubCallerContext> context) => hub.Context = context.Object;
     }
 }
