@@ -45,14 +45,14 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task UserCantJoinWhenAlreadyJoined()
         {
-            Assert.True(await hub.JoinRoom(room_id));
+            await hub.JoinRoom(room_id);
 
             // ensure the same user can't join a room if already in a room.
-            Assert.False(await hub.JoinRoom(room_id));
+            await Assert.ThrowsAsync<UserAlreadyInMultiplayerRoom>(() => hub.JoinRoom(room_id));
 
             // but can join once first leaving.
             await hub.LeaveRoom();
-            Assert.True(await hub.JoinRoom(room_id));
+            await hub.JoinRoom(room_id);
 
             await hub.LeaveRoom();
         }
@@ -61,7 +61,7 @@ namespace osu.Server.Spectator.Tests
         public async Task UserJoinLeaveNotifiesOtherUsers()
         {
             await hub.JoinRoom(room_id);
-            await hub.JoinRoom(room_id); // invalid join
+            await Assert.ThrowsAsync<UserAlreadyInMultiplayerRoom>(() => hub.JoinRoom(room_id)); // invalid join
 
             mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id)), Times.Once);
 
@@ -78,7 +78,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task UserCantChangeSettingsWhenNotJoinedRoom()
         {
-            await Assert.ThrowsAsync<MultiplayerHub.NotJoinedRoomException>(() => hub.ChangeSettings(new MultiplayerRoomSettings()));
+            await Assert.ThrowsAsync<NotJoinedRoomException>(() => hub.ChangeSettings(new MultiplayerRoomSettings()));
         }
 
         [Fact]

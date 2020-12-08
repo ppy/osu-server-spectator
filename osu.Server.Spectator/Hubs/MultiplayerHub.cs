@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
@@ -32,14 +31,14 @@ namespace osu.Server.Spectator.Hubs
                 return active_rooms.TryGetValue(roomId, out room);
         }
 
-        public async Task<bool> JoinRoom(long roomId)
+        public async Task JoinRoom(long roomId)
         {
             var state = await GetLocalUserState();
 
             if (state != null)
             {
                 // if the user already has a state, it means they are already in a room and can't join another without first leaving.
-                return false;
+                throw new UserAlreadyInMultiplayerRoom();
             }
 
             MultiplayerRoom? room;
@@ -62,7 +61,6 @@ namespace osu.Server.Spectator.Hubs
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
 
             await Clients.Group(GetGroupId(roomId)).UserJoined(user);
-            return true;
         }
 
         public async Task LeaveRoom()
@@ -110,22 +108,7 @@ namespace osu.Server.Spectator.Hubs
             await Clients.Group(GetGroupId(roomID)).SettingsChanged(settings);
         }
 
-        public class InvalidStateException : Exception
-        {
-            public InvalidStateException(string message)
-                : base(message)
-            {
-            }
-        }
-
-        public class NotJoinedRoomException : Exception
-        {
-            public NotJoinedRoomException()
-                : base("This user has not yet joined a multiplayer room.")
-            {
-            }
-        }
-
         public static string GetGroupId(long roomId) => $"room:{roomId}";
     }
 }
+
