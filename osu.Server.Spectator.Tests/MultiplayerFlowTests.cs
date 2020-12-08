@@ -29,6 +29,8 @@ namespace osu.Server.Spectator.Tests
 
         public MultiplayerFlowTests()
         {
+            MultiplayerHub.Reset();
+
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
             hub = new MultiplayerHub(cache);
