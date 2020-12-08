@@ -234,6 +234,71 @@ namespace osu.Server.Spectator.Tests
             Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
         }
 
+        /// <summary>
+        /// Tests a full game flow with two users in the room.
+        /// Focuses on the interactions during loading sections.
+        /// </summary>
+        [Fact]
+        public async Task MultiUserMatchFlow()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+
+            // both users become ready.
+            setUserContext(mockContextUser1);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            setUserContext(mockContextUser2);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
+
+            // host requests the start of the match.
+            setUserContext(mockContextUser1);
+            await hub.StartMatch();
+
+            // server requests the all users start loading.
+            mockGameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
+
+            // first user finishes loading.
+            setUserContext(mockContextUser1);
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+
+            // room is still waiting for second user to load.
+            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+            mockReceiver.Verify(r => r.MatchStarted(), Times.Never);
+
+            // second user finishes loading, which triggers gameplay to start.
+            setUserContext(mockContextUser2);
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+
+            Assert.Equal(MultiplayerRoomState.Playing, room.State);
+            mockReceiver.Verify(r => r.MatchStarted(), Times.Once);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
+
+            // first user finishes playing.
+            setUserContext(mockContextUser1);
+            await hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            // room is still waiting for second user to finish playing.
+            Assert.Equal(MultiplayerRoomState.Playing, room.State);
+            mockReceiver.Verify(r => r.ResultsReady(), Times.Never);
+
+            // second user finishes playing.
+            setUserContext(mockContextUser2);
+            await hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            // server lets players know that results are ready for consumption (all players have finished).
+            mockReceiver.Verify(r => r.ResultsReady(), Times.Once);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Results, u.State));
+
+            Assert.Equal(MultiplayerRoomState.Open, room.State);
+        }
+
         [Fact]
         public async void NotReadyUsersDontGetLoadRequest()
         {
