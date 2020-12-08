@@ -59,9 +59,9 @@ namespace osu.Server.Spectator
 
     public class LocalIdentity : IIdentity
     {
-        public string? AuthenticationType => LocalAuthenticationHandler.AUTH_SCHEME;
+        public string AuthenticationType => LocalAuthenticationHandler.AUTH_SCHEME;
         public bool IsAuthenticated => true;
-        public string? Name { get; }
+        public string Name { get; }
 
         public LocalIdentity(string name)
         {
