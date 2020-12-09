@@ -214,7 +214,7 @@ namespace osu.Server.Spectator.Hubs
                 ensureIsHost(room);
 
                 room.Settings = settings;
-                await Clients.Group(GetGroupId(roomID)).SettingsChanged(settings);
+                await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(settings);
             }
         }
 
