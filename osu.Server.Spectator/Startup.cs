@@ -92,6 +92,7 @@ namespace osu.Server.Spectator
             app.UseWebSockets();
 
             app.UseEndpoints(endpoints => { endpoints.MapHub<SpectatorHub>("/spectator"); });
+            app.UseEndpoints(endpoints => { endpoints.MapHub<MultiplayerHub>("/multiplayer"); });
         }
 
         /// <summary>
