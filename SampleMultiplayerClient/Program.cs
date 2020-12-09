@@ -73,7 +73,7 @@ namespace SampleMultiplayerClient
                             break;
 
                         case "changestate":
-                            await targetClient.ChangeState(Enum.Parse<MultiplayerUserState>(args[0]));
+                            await targetClient.ChangeState(Enum.Parse<MultiplayerUserState>(args[0], true));
                             break;
 
                         case "startmatch":
