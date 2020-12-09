@@ -38,8 +38,10 @@ namespace SampleMultiplayerClient
 
         public MultiplayerRoom? Room { get; private set; }
 
-        public async Task<MultiplayerRoom> JoinRoom(long roomId) =>
+        public async Task JoinRoom(long roomId)
+        {
             Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.JoinRoom), roomId);
+        }
 
         public async Task LeaveRoom()
         {
