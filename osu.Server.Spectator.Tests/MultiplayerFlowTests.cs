@@ -66,6 +66,10 @@ namespace osu.Server.Spectator.Tests
         {
             var room = await hub.JoinRoom(room_id);
             Assert.True(room.Host?.UserID == user_id);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+            Assert.True(room.Host?.UserID == user_id);
         }
 
         [Fact]
@@ -351,7 +355,6 @@ namespace osu.Server.Spectator.Tests
 
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(new MultiplayerRoomSettings()));
         }
-
 
         [Fact]
         public async Task RoomSettingsUpdateNotifiesOtherUsers()
