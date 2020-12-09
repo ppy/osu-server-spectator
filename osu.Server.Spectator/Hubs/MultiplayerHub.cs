@@ -202,9 +202,14 @@ namespace osu.Server.Spectator.Hubs
                 if (room.State != MultiplayerRoomState.Open)
                     throw new InvalidStateException("Can't start match when already in a running state.");
 
+                var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
+
+                if (readyUsers.Length == 0)
+                    throw new InvalidStateException("Can't start match when no users are ready.");
+
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
-                foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready))
+                foreach (var u in readyUsers)
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
