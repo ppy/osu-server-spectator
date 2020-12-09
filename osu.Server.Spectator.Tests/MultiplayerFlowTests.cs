@@ -216,10 +216,12 @@ namespace osu.Server.Spectator.Tests
 
             // server requests the all users start loading.
             mockGameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.WaitingForLoad), Times.Once);
             Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
 
             // all users finish loading.
             await hub.ChangeState(MultiplayerUserState.Loaded);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Playing), Times.Once);
             Assert.Equal(MultiplayerRoomState.Playing, room.State);
 
             // server requests users start playing.
@@ -232,6 +234,7 @@ namespace osu.Server.Spectator.Tests
 
             // server lets players know that results are ready for consumption (all players have finished).
             mockReceiver.Verify(r => r.ResultsReady(), Times.Once);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Results), Times.Once);
             Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Results, u.State));
 
             // players return back to idle state as they please.
@@ -268,6 +271,8 @@ namespace osu.Server.Spectator.Tests
             // server requests the all users start loading.
             mockGameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
             Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.WaitingForLoad), Times.Once);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.WaitingForLoad), Times.Once);
 
             // first user finishes loading.
             setUserContext(mockContextUser1);
@@ -284,6 +289,8 @@ namespace osu.Server.Spectator.Tests
             Assert.Equal(MultiplayerRoomState.Playing, room.State);
             mockReceiver.Verify(r => r.MatchStarted(), Times.Once);
             Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Playing), Times.Once);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.Playing), Times.Once);
 
             // first user finishes playing.
             setUserContext(mockContextUser1);
@@ -291,6 +298,8 @@ namespace osu.Server.Spectator.Tests
 
             // room is still waiting for second user to finish playing.
             Assert.Equal(MultiplayerRoomState.Playing, room.State);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.FinishedPlay), Times.Once);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.Playing), Times.Once);
             mockReceiver.Verify(r => r.ResultsReady(), Times.Never);
 
             // second user finishes playing.
@@ -300,6 +309,8 @@ namespace osu.Server.Spectator.Tests
             // server lets players know that results are ready for consumption (all players have finished).
             mockReceiver.Verify(r => r.ResultsReady(), Times.Once);
             Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Results, u.State));
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Results), Times.Once);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.Results), Times.Once);
 
             Assert.Equal(MultiplayerRoomState.Open, room.State);
         }
