@@ -37,7 +37,7 @@ namespace SampleMultiplayerClient
                 }
 
                 Console.WriteLine("Usage: <client_id> <command> [params]");
-                Console.WriteLine("Valid commands [ JoinRoom LeaveRoom TransferHost ChangeSettings ChangeState ]");
+                Console.WriteLine("Valid commands [ JoinRoom LeaveRoom TransferHost ChangeSettings ChangeState StartMatch ]");
 
                 Console.Write(">");
 
@@ -74,6 +74,10 @@ namespace SampleMultiplayerClient
 
                         case "changestate":
                             await targetClient.ChangeState(Enum.Parse<MultiplayerUserState>(args[0]));
+                            break;
+
+                        case "startmatch":
+                            await targetClient.StartMatch();
                             break;
 
                         default:
