@@ -23,6 +23,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public static void Reset()
         {
+            Console.WriteLine("Resetting ALL tracked rooms.");
             lock (active_rooms)
                 active_rooms.Clear();
         }
@@ -65,6 +66,7 @@ namespace osu.Server.Spectator.Hubs
                 if (!TryGetRoom(roomId, out room))
                 {
                     // TODO: get details of the room from the database. hard abort if non existent.
+                    Console.WriteLine($"Tracking new room {roomId}.");
                     active_rooms.Add(roomId, room = new MultiplayerRoom(roomId));
                     shouldBecomeHost = true;
                 }
@@ -110,7 +112,11 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Users.Count == 0)
                 {
                     lock (active_rooms)
+                    {
+                        Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
                         active_rooms.Remove(room.RoomID);
+                    }
+
                     return;
                 }
 
