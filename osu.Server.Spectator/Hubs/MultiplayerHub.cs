@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="roomId">The lookup ID.</param>
         /// <param name="room">The room instance, or null if not tracked.</param>
         /// <returns>Whether the room could be found.</returns>
-        public bool TryGetRoom(long roomId, [MaybeNullWhen(false)] out MultiplayerRoom room)
+        protected bool TryGetRoom(long roomId, [MaybeNullWhen(false)] out MultiplayerRoom room)
         {
             lock (active_rooms)
                 return active_rooms.TryGetValue(roomId, out room);

@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -16,7 +17,7 @@ namespace osu.Server.Spectator.Tests
 {
     public class MultiplayerFlowTests
     {
-        private readonly MultiplayerHub hub;
+        private readonly TestMultiplayerHub hub;
 
         private const int user_id = 1234;
         private const int user_id_2 = 2345;
@@ -35,7 +36,7 @@ namespace osu.Server.Spectator.Tests
 
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
-            hub = new MultiplayerHub(cache);
+            hub = new TestMultiplayerHub(cache);
 
             Mock<IGroupManager> mockGroups = new Mock<IGroupManager>();
 
@@ -374,5 +375,16 @@ namespace osu.Server.Spectator.Tests
         #endregion
 
         private void setUserContext(Mock<HubCallerContext> context) => hub.Context = context.Object;
+
+        public class TestMultiplayerHub : MultiplayerHub
+        {
+            public TestMultiplayerHub(MemoryDistributedCache cache)
+                : base(cache)
+            {
+            }
+
+            public new bool TryGetRoom(long roomId, [MaybeNullWhen(false)] out MultiplayerRoom room)
+                => base.TryGetRoom(roomId, out room);
+        }
     }
 }
