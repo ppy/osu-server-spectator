@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Hubs
             if (state != null)
             {
                 // if the user already has a state, it means they are already in a room and can't join another without first leaving.
-                throw new AlreadyInRoomException();
+                throw new InvalidStateException("Can't join a room when already in another room");
             }
 
             MultiplayerRoom? room;
@@ -199,9 +199,20 @@ namespace osu.Server.Spectator.Hubs
 
             using (room.LockForUpdate())
             {
+                if (room.State != MultiplayerRoomState.Open)
+                    throw new InvalidStateException("Can't start match when already in a running state.");
+
+                var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
+
+                if (readyUsers.Length == 0)
+                    throw new InvalidStateException("Can't start match when no users are ready.");
+
+                if (room.Host != null && room.Host.State != MultiplayerUserState.Ready)
+                    throw new InvalidStateException("Can't start match when the host is not ready.");
+
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
-                foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready))
+                foreach (var u in readyUsers)
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
@@ -222,6 +233,14 @@ namespace osu.Server.Spectator.Hubs
                 room.Settings = settings;
                 await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(settings);
             }
+        }
+
+        protected override Task OnDisconnectedAsync(Exception exception, MultiplayerClientState? state)
+        {
+            if (state != null)
+                return LeaveRoom();
+
+            return base.OnDisconnectedAsync(exception, state);
         }
 
         /// <summary>

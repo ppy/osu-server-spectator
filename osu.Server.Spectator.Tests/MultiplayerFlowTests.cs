@@ -115,7 +115,7 @@ namespace osu.Server.Spectator.Tests
             await hub.JoinRoom(room_id);
 
             // ensure the same user can't join a room if already in a room.
-            await Assert.ThrowsAsync<AlreadyInRoomException>(() => hub.JoinRoom(room_id));
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.JoinRoom(room_id));
 
             // but can join once first leaving.
             await hub.LeaveRoom();
@@ -159,7 +159,7 @@ namespace osu.Server.Spectator.Tests
 
             setUserContext(mockContextUser2);
             await hub.JoinRoom(room_id);
-            await Assert.ThrowsAsync<AlreadyInRoomException>(() => hub.JoinRoom(room_id)); // invalid join
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.JoinRoom(room_id)); // invalid join
 
             mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id_2)), Times.Once);
 
@@ -194,6 +194,51 @@ namespace osu.Server.Spectator.Tests
         {
             await hub.JoinRoom(room_id);
             await Assert.ThrowsAsync<InvalidStateChangeException>(() => hub.ChangeState(reservedState));
+        }
+
+        /// <summary>
+        /// Tests a full game flow with one user in the room.
+        /// </summary>
+        [Fact]
+        public async Task StartingMatchWithNoReadyUsersFails()
+        {
+            await hub.JoinRoom(room_id);
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
+        }
+
+        /// <summary>
+        /// Tests a full game flow with one user in the room.
+        /// </summary>
+        [Fact]
+        public async Task StartingMatchWithHostNotReadyFails()
+        {
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser1);
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
+        }
+
+        /// <summary>
+        /// Tests a full game flow with one user in the room.
+        /// </summary>
+        [Fact]
+        public async Task StartingAlreadyStartedMatchFails()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            Assert.Equal(MultiplayerRoomState.Open, room.State);
+
+            await hub.StartMatch();
+
+            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
         }
 
         /// <summary>
