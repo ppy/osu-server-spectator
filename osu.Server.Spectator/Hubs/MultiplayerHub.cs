@@ -51,7 +51,7 @@ namespace osu.Server.Spectator.Hubs
             if (state != null)
             {
                 // if the user already has a state, it means they are already in a room and can't join another without first leaving.
-                throw new UserAlreadyInMultiplayerRoom();
+                throw new AlreadyInRoomException();
             }
 
             MultiplayerRoom? room;
@@ -284,33 +284,33 @@ namespace osu.Server.Spectator.Hubs
 
                 case MultiplayerUserState.Ready:
                     if (oldState != MultiplayerUserState.Idle)
-                        throw new InvalidStateChange(oldState, newState);
+                        throw new InvalidStateChangeException(oldState, newState);
 
                     break;
 
                 case MultiplayerUserState.WaitingForLoad:
                     // playing state is managed by the server.
-                    throw new InvalidStateChange(oldState, newState);
+                    throw new InvalidStateChangeException(oldState, newState);
 
                 case MultiplayerUserState.Loaded:
                     if (oldState != MultiplayerUserState.WaitingForLoad)
-                        throw new InvalidStateChange(oldState, newState);
+                        throw new InvalidStateChangeException(oldState, newState);
 
                     break;
 
                 case MultiplayerUserState.Playing:
                     // playing state is managed by the server.
-                    throw new InvalidStateChange(oldState, newState);
+                    throw new InvalidStateChangeException(oldState, newState);
 
                 case MultiplayerUserState.FinishedPlay:
                     if (oldState != MultiplayerUserState.Playing)
-                        throw new InvalidStateChange(oldState, newState);
+                        throw new InvalidStateChangeException(oldState, newState);
 
                     break;
 
                 case MultiplayerUserState.Results:
                     // playing state is managed by the server.
-                    throw new InvalidStateChange(oldState, newState);
+                    throw new InvalidStateChangeException(oldState, newState);
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(newState), newState, null);

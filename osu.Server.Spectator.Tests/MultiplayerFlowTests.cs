@@ -114,7 +114,7 @@ namespace osu.Server.Spectator.Tests
             await hub.JoinRoom(room_id);
 
             // ensure the same user can't join a room if already in a room.
-            await Assert.ThrowsAsync<UserAlreadyInMultiplayerRoom>(() => hub.JoinRoom(room_id));
+            await Assert.ThrowsAsync<AlreadyInRoomException>(() => hub.JoinRoom(room_id));
 
             // but can join once first leaving.
             await hub.LeaveRoom();
@@ -158,7 +158,7 @@ namespace osu.Server.Spectator.Tests
 
             setUserContext(mockContextUser2);
             await hub.JoinRoom(room_id);
-            await Assert.ThrowsAsync<UserAlreadyInMultiplayerRoom>(() => hub.JoinRoom(room_id)); // invalid join
+            await Assert.ThrowsAsync<AlreadyInRoomException>(() => hub.JoinRoom(room_id)); // invalid join
 
             mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id_2)), Times.Once);
 
@@ -192,7 +192,7 @@ namespace osu.Server.Spectator.Tests
         public async Task UserCantChangeStateToReservedStates(MultiplayerUserState reservedState)
         {
             await hub.JoinRoom(room_id);
-            await Assert.ThrowsAsync<InvalidStateChange>(() => hub.ChangeState(reservedState));
+            await Assert.ThrowsAsync<InvalidStateChangeException>(() => hub.ChangeState(reservedState));
         }
 
         /// <summary>
