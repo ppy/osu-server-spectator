@@ -8,7 +8,10 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using Microsoft.Extensions.Caching.Distributed;
+using Newtonsoft.Json;
+using osu.Game.Online.API;
 using osu.Game.Online.RealtimeMultiplayer;
 
 namespace osu.Server.Spectator.Hubs
@@ -52,36 +55,29 @@ namespace osu.Server.Spectator.Hubs
             if (state != null)
             {
                 // if the user already has a state, it means they are already in a room and can't join another without first leaving.
-                throw new InvalidStateException("Can't join a room when already in another room");
-            }
-
-            MultiplayerRoom? room;
-
-            bool shouldBecomeHost = false;
-
-            lock (active_rooms)
-            {
-                // check whether we are already aware of this match.
-
-                if (!TryGetRoom(roomId, out room))
-                {
-                    // TODO: get details of the room from the database. hard abort if non existent.
-                    Console.WriteLine($"Tracking new room {roomId}.");
-                    active_rooms.Add(roomId, room = new MultiplayerRoom(roomId));
-                    shouldBecomeHost = true;
-                }
+                throw new InvalidStateException("Can't join a room when already in another room.");
             }
 
             // add the user to the room.
             var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
+            // check whether we are already aware of this match.
+            if (!TryGetRoom(roomId, out var room))
+            {
+                room = await RetrieveRoom(roomId);
+
+                room.Host = roomUser;
+
+                lock (active_rooms)
+                {
+                    Console.WriteLine($"Tracking new room {roomId}.");
+                    active_rooms.Add(roomId, room);
+                }
+            }
+
             using (room.LockForUpdate())
             {
                 room.Users.Add(roomUser);
-
-                if (shouldBecomeHost)
-                    room.Host = roomUser;
-
                 await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                 await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
             }
@@ -89,6 +85,40 @@ namespace osu.Server.Spectator.Hubs
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
 
             return room;
+        }
+
+        /// <summary>
+        /// Attempt to construct and a room based on a room ID specification.
+        /// This will check the database backing to ensure things are in a consistent state.
+        /// </summary>
+        /// <param name="roomId">The proposed room ID.</param>
+        /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
+        protected virtual async Task<MultiplayerRoom> RetrieveRoom(long roomId)
+        {
+            using (var conn = Database.GetConnection())
+            {
+                var databaseRoom = await conn.QueryFirstOrDefaultAsync("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @roomId", new { roomId });
+                if (databaseRoom == null)
+                    throw new InvalidStateException("Specified match does not exist.");
+
+                if (databaseRoom.ends_at != null)
+                    throw new InvalidStateException("Match has already ended.");
+
+                if (databaseRoom.user_id != CurrentContextUserId)
+                    throw new InvalidStateException("Non-host is attempting to join match before host");
+
+                var playlistItem = await conn.QuerySingleAsync("SELECT * FROM multiplayer_playlist_items WHERE room_id = @roomId", new { roomId });
+
+                return new MultiplayerRoom(roomId)
+                {
+                    Settings = new MultiplayerRoomSettings
+                    {
+                        BeatmapID = playlistItem.beatmap_id,
+                        RulesetID = playlistItem.ruleset_id,
+                        Mods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods),
+                    }
+                };
+            }
         }
 
         public async Task LeaveRoom()
