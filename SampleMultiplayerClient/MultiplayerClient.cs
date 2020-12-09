@@ -10,7 +10,7 @@ using osu.Game.Online.RealtimeMultiplayer;
 
 namespace SampleMultiplayerClient
 {
-    public class MultiplayerClient : IMultiplayerClient
+    public class MultiplayerClient : IStatefulMultiplayerClient
     {
         private readonly HubConnection connection;
 
@@ -38,9 +38,9 @@ namespace SampleMultiplayerClient
 
         public MultiplayerRoom? Room { get; private set; }
 
-        public async Task JoinRoom(long roomId)
+        public async Task<MultiplayerRoom> JoinRoom(long roomId)
         {
-            Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.JoinRoom), roomId);
+            return Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.JoinRoom), roomId);
         }
 
         public async Task LeaveRoom()
