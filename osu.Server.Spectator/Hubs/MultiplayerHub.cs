@@ -235,6 +235,14 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        protected override Task OnDisconnectedAsync(Exception exception, MultiplayerClientState? state)
+        {
+            if (state != null)
+                return LeaveRoom();
+
+            return base.OnDisconnectedAsync(exception, state);
+        }
+
         /// <summary>
         /// Get the group ID to be used for multiplayer messaging.
         /// </summary>
