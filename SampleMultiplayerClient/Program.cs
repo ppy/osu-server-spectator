@@ -82,7 +82,7 @@ namespace SampleMultiplayerClient
 
                         default:
                             Console.WriteLine("Unknown command");
-                            break;
+                            continue;
                     }
                 }
                 catch (HubException e)
