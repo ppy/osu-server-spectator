@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -88,6 +89,9 @@ namespace SampleMultiplayerClient
                 {
                     Console.WriteLine($"Error performing action: {e}");
                 }
+
+                Thread.Sleep(50);
+                Console.WriteLine("Success!");
             }
 
             // ReSharper disable once FunctionNeverReturns
