@@ -309,10 +309,8 @@ namespace osu.Server.Spectator.Hubs
                     break;
 
                 case MultiplayerUserState.Results:
-                    if (oldState != MultiplayerUserState.Playing)
-                        throw new InvalidStateChange(oldState, newState);
-
-                    break;
+                    // playing state is managed by the server.
+                    throw new InvalidStateChange(oldState, newState);
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
