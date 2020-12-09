@@ -200,6 +200,25 @@ namespace osu.Server.Spectator.Tests
         /// Tests a full game flow with one user in the room.
         /// </summary>
         [Fact]
+        public async Task StartingAlreadyStartedMatchFails()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            Assert.Equal(MultiplayerRoomState.Open, room.State);
+
+            await hub.StartMatch();
+
+            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
+        }
+
+        /// <summary>
+        /// Tests a full game flow with one user in the room.
+        /// </summary>
+        [Fact]
         public async Task SingleUserMatchFlow()
         {
             var room = await hub.JoinRoom(room_id);

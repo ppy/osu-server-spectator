@@ -199,6 +199,9 @@ namespace osu.Server.Spectator.Hubs
 
             using (room.LockForUpdate())
             {
+                if (room.State != MultiplayerRoomState.Open)
+                    throw new InvalidStateException("Can't start match when already in a running state.");
+
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
                 foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready))
