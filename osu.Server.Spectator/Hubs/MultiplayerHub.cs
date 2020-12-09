@@ -201,8 +201,8 @@ namespace osu.Server.Spectator.Hubs
             {
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
-                foreach (var user in room.Users.Where(u => u.State == MultiplayerUserState.Ready))
-                    user.State = MultiplayerUserState.WaitingForLoad;
+                foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready))
+                    await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
             }
@@ -243,7 +243,8 @@ namespace osu.Server.Spectator.Hubs
                     if (room.Users.All(u => u.State != MultiplayerUserState.WaitingForLoad))
                     {
                         foreach (var u in room.Users)
-                            u.State = MultiplayerUserState.Playing;
+                            await changeAndBroadcastUserState(room, u, MultiplayerUserState.Playing);
+
                         await Clients.Group(GetGroupId(room.RoomID)).MatchStarted();
 
                         await changeRoomState(room, MultiplayerRoomState.Playing);
@@ -255,7 +256,7 @@ namespace osu.Server.Spectator.Hubs
                     if (room.Users.All(u => u.State != MultiplayerUserState.Playing))
                     {
                         foreach (var u in room.Users)
-                            u.State = MultiplayerUserState.Results;
+                            await changeAndBroadcastUserState(room, u, MultiplayerUserState.Results);
 
                         await changeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
@@ -263,6 +264,12 @@ namespace osu.Server.Spectator.Hubs
 
                     break;
             }
+        }
+
+        private Task changeAndBroadcastUserState(MultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
+        {
+            user.State = state;
+            return Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(user.UserID, user.State);
         }
 
         /// <summary>
