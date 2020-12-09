@@ -343,7 +343,7 @@ namespace osu.Server.Spectator.Hubs
             lock (active_rooms)
             {
                 if (!active_rooms.TryGetValue(roomId, out room))
-                    failWithInvalidState("User is in a room this hub is not aware of.");
+                    failWithInvalidState($"User ({CurrentContextUserId}) is in a room ({roomId}) this hub is not aware of.");
             }
 
             return room;
