@@ -196,9 +196,6 @@ namespace osu.Server.Spectator.Tests
             await Assert.ThrowsAsync<InvalidStateChangeException>(() => hub.ChangeState(reservedState));
         }
 
-        /// <summary>
-        /// Tests a full game flow with one user in the room.
-        /// </summary>
         [Fact]
         public async Task StartingMatchWithNoReadyUsersFails()
         {
@@ -206,9 +203,6 @@ namespace osu.Server.Spectator.Tests
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
         }
 
-        /// <summary>
-        /// Tests a full game flow with one user in the room.
-        /// </summary>
         [Fact]
         public async Task StartingMatchWithHostNotReadyFails()
         {
@@ -222,9 +216,6 @@ namespace osu.Server.Spectator.Tests
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
         }
 
-        /// <summary>
-        /// Tests a full game flow with one user in the room.
-        /// </summary>
         [Fact]
         public async Task StartingAlreadyStartedMatchFails()
         {
