@@ -275,6 +275,25 @@ namespace osu.Server.Spectator.Tests
             Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
         }
 
+        [Fact]
+        public async Task OnlyFinishedUsersTransitionToResults()
+        {
+            var room = await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser1);
+
+            await hub.StartMatch();
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+            await hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Results);
+            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
+        }
+
         /// <summary>
         /// Tests a full game flow with one user in the room.
         /// </summary>

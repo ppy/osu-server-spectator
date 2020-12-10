@@ -283,7 +283,7 @@ namespace osu.Server.Spectator.Hubs
                 case MultiplayerRoomState.Playing:
                     if (room.Users.All(u => u.State != MultiplayerUserState.Playing))
                     {
-                        foreach (var u in room.Users)
+                        foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.FinishedPlay))
                             await changeAndBroadcastUserState(room, u, MultiplayerUserState.Results);
 
                         await changeRoomState(room, MultiplayerRoomState.Open);
