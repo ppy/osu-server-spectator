@@ -232,6 +232,29 @@ namespace osu.Server.Spectator.Tests
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
         }
 
+        [Fact]
+        public async Task AllUsersBackingOutFromLoadCancelsTransitionToPlay()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser1);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            await hub.StartMatch();
+
+            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+
+            await hub.ChangeState(MultiplayerUserState.Idle);
+            setUserContext(mockContextUser2);
+            await hub.ChangeState(MultiplayerUserState.Idle);
+
+            Assert.Equal(MultiplayerRoomState.Open, room.State);
+        }
+
         /// <summary>
         /// Tests a full game flow with one user in the room.
         /// </summary>

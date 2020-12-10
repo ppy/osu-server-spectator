@@ -261,6 +261,13 @@ namespace osu.Server.Spectator.Hubs
                 case MultiplayerRoomState.WaitingForLoad:
                     if (room.Users.All(u => u.State != MultiplayerUserState.WaitingForLoad))
                     {
+                        if (room.Users.All(u => u.State != MultiplayerUserState.Loaded))
+                        {
+                            // all users have bailed from the load sequence. cancel the game start.
+                            await changeRoomState(room, MultiplayerRoomState.Open);
+                            return;
+                        }
+
                         foreach (var u in room.Users)
                             await changeAndBroadcastUserState(room, u, MultiplayerUserState.Playing);
 
