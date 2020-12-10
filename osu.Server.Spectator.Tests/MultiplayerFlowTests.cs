@@ -196,9 +196,6 @@ namespace osu.Server.Spectator.Tests
             await Assert.ThrowsAsync<InvalidStateChangeException>(() => hub.ChangeState(reservedState));
         }
 
-        /// <summary>
-        /// Tests a full game flow with one user in the room.
-        /// </summary>
         [Fact]
         public async Task StartingMatchWithNoReadyUsersFails()
         {
@@ -206,9 +203,6 @@ namespace osu.Server.Spectator.Tests
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
         }
 
-        /// <summary>
-        /// Tests a full game flow with one user in the room.
-        /// </summary>
         [Fact]
         public async Task StartingMatchWithHostNotReadyFails()
         {
@@ -222,9 +216,6 @@ namespace osu.Server.Spectator.Tests
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
         }
 
-        /// <summary>
-        /// Tests a full game flow with one user in the room.
-        /// </summary>
         [Fact]
         public async Task StartingAlreadyStartedMatchFails()
         {
@@ -239,6 +230,68 @@ namespace osu.Server.Spectator.Tests
             Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
 
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
+        }
+
+        [Fact]
+        public async Task AllUsersBackingOutFromLoadCancelsTransitionToPlay()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser1);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            await hub.StartMatch();
+
+            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+
+            await hub.ChangeState(MultiplayerUserState.Idle);
+            setUserContext(mockContextUser2);
+            await hub.ChangeState(MultiplayerUserState.Idle);
+
+            Assert.Equal(MultiplayerRoomState.Open, room.State);
+        }
+
+        [Fact]
+        public async Task OnlyReadiedUpUsersTransitionToPlay()
+        {
+            var room = await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser1);
+            await hub.StartMatch();
+            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+            Assert.Single(room.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
+            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
+
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Playing);
+            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
+        }
+
+        [Fact]
+        public async Task OnlyFinishedUsersTransitionToResults()
+        {
+            var room = await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser1);
+
+            await hub.StartMatch();
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+            await hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Results);
+            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
         }
 
         /// <summary>
