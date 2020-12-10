@@ -261,14 +261,16 @@ namespace osu.Server.Spectator.Hubs
                 case MultiplayerRoomState.WaitingForLoad:
                     if (room.Users.All(u => u.State != MultiplayerUserState.WaitingForLoad))
                     {
-                        if (room.Users.All(u => u.State != MultiplayerUserState.Loaded))
+                        var loadedUsers = room.Users.Where(u => u.State == MultiplayerUserState.Loaded).ToArray();
+
+                        if (loadedUsers.Length == 0)
                         {
                             // all users have bailed from the load sequence. cancel the game start.
                             await changeRoomState(room, MultiplayerRoomState.Open);
                             return;
                         }
 
-                        foreach (var u in room.Users)
+                        foreach (var u in loadedUsers)
                             await changeAndBroadcastUserState(room, u, MultiplayerUserState.Playing);
 
                         await Clients.Group(GetGroupId(room.RoomID)).MatchStarted();
