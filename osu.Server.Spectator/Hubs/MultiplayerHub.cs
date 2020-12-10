@@ -321,7 +321,7 @@ namespace osu.Server.Spectator.Hubs
                     break;
 
                 case MultiplayerUserState.WaitingForLoad:
-                    // playing state is managed by the server.
+                    // state is managed by the server.
                     throw new InvalidStateChangeException(oldState, newState);
 
                 case MultiplayerUserState.Loaded:
@@ -331,7 +331,7 @@ namespace osu.Server.Spectator.Hubs
                     break;
 
                 case MultiplayerUserState.Playing:
-                    // playing state is managed by the server.
+                    // state is managed by the server.
                     throw new InvalidStateChangeException(oldState, newState);
 
                 case MultiplayerUserState.FinishedPlay:
@@ -341,7 +341,7 @@ namespace osu.Server.Spectator.Hubs
                     break;
 
                 case MultiplayerUserState.Results:
-                    // playing state is managed by the server.
+                    // state is managed by the server.
                     throw new InvalidStateChangeException(oldState, newState);
 
                 default:
