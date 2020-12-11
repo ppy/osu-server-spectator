@@ -13,6 +13,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.RealtimeMultiplayer;
+using osu.Server.Spectator.DatabaseModels;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -97,7 +98,7 @@ namespace osu.Server.Spectator.Hubs
         {
             using (var conn = Database.GetConnection())
             {
-                var databaseRoom = await conn.QueryFirstOrDefaultAsync("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @roomId", new { roomId });
+                var databaseRoom = await conn.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @roomId", new { roomId });
                 if (databaseRoom == null)
                     throw new InvalidStateException("Specified match does not exist.");
 
@@ -107,7 +108,7 @@ namespace osu.Server.Spectator.Hubs
                 if (databaseRoom.user_id != CurrentContextUserId)
                     throw new InvalidStateException("Non-host is attempting to join match before host");
 
-                var playlistItem = await conn.QuerySingleAsync("SELECT * FROM multiplayer_playlist_items WHERE room_id = @roomId", new { roomId });
+                var playlistItem = await conn.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @roomId", new { roomId });
 
                 return new MultiplayerRoom(roomId)
                 {
@@ -115,7 +116,7 @@ namespace osu.Server.Spectator.Hubs
                     {
                         BeatmapID = playlistItem.beatmap_id,
                         RulesetID = playlistItem.ruleset_id,
-                        Mods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods),
+                        Mods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>()
                     }
                 };
             }
