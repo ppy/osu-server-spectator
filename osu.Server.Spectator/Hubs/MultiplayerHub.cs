@@ -153,7 +153,7 @@ namespace osu.Server.Spectator.Hubs
                     }
 
                     using (var conn = Database.GetConnection())
-                        await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", room);
+                        await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new { room.RoomID });
 
                     return;
                 }
