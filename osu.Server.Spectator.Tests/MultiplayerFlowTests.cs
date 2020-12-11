@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
@@ -446,6 +447,23 @@ namespace osu.Server.Spectator.Tests
         #endregion
 
         #region Room Settings
+
+        [Fact]
+        public async Task ChangingSettingsUpdatesModel()
+        {
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                Name = "bestest room ever",
+            };
+
+            await hub.JoinRoom(room_id);
+            await hub.ChangeSettings(testSettings);
+
+            Assert.True(hub.TryGetRoom(room_id, out var room));
+
+            Debug.Assert(room != null);
+            Assert.Equal(testSettings.Name, room.Settings.Name);
+        }
 
         [Fact]
         public async Task UserCantChangeSettingsWhenNotJoinedRoom()
