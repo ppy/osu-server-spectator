@@ -29,7 +29,6 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task SendFrameData(FrameDataBundle data)
         {
-            Console.WriteLine($"Receiving frame data ({data.Frames.First()})..");
             await Clients.Group(GetGroupId(CurrentContextUserId)).UserSentFrames(CurrentContextUserId, data);
         }
 
