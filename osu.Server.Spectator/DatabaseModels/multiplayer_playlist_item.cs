@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.DatabaseModels
         public long id { get; set; }
         public long room_id { get; set; }
         public int beatmap_id { get; set; }
-        public short? ruleset_id { get; set; }
+        public short ruleset_id { get; set; }
         public short? playlist_order { get; set; }
         public string? allowed_mods { get; set; }
         public string? required_mods { get; set; }
@@ -36,7 +36,7 @@ namespace osu.Server.Spectator.DatabaseModels
             room_id = room.RoomID;
 
             beatmap_id = room.Settings.BeatmapID;
-            ruleset_id = (short?)room.Settings.RulesetID;
+            ruleset_id = (short)room.Settings.RulesetID;
             required_mods = JsonConvert.SerializeObject(room.Settings.Mods);
             updated_at = DateTimeOffset.Now;
         }
