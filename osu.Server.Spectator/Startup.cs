@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -67,9 +68,27 @@ namespace osu.Server.Spectator
 
                 options.Events = new JwtBearerEvents
                 {
+                    OnTokenValidated = async context =>
+                    {
+                        var jwtToken = (JwtSecurityToken)context.SecurityToken;
+                        int tokenUserId = int.Parse(jwtToken.Subject);
+
+                        using (var conn = Database.GetConnection())
+                        {
+                            // check expiry/revocation against database
+                            var userId = await conn.QueryFirstOrDefaultAsync<int?>("SELECT user_id FROM oauth_access_tokens WHERE revoked = false AND expires_at > now() AND id = @id",
+                                new { id = jwtToken.Id });
+
+                            if (userId != tokenUserId)
+                            {
+                                Console.WriteLine("Token revoked or expired");
+                                context.Fail("Token has expired or been revoked");
+                            }
+                        }
+                    },
                     OnAuthenticationFailed = context =>
                     {
-                        Console.WriteLine("Failed auth");
+                        Console.WriteLine("Token authentication failed");
                         return Task.CompletedTask;
                     },
                 };
