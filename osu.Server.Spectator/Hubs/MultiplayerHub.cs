@@ -81,6 +81,8 @@ namespace osu.Server.Spectator.Hubs
                 room.Users.Add(roomUser);
                 await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                 await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
+
+                await updateDatabaseParticipants(room);
             }
 
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
@@ -140,6 +142,8 @@ namespace osu.Server.Spectator.Hubs
 
                 room.Users.Remove(user);
 
+                await updateDatabaseParticipants(room);
+
                 if (room.Users.Count == 0)
                 {
                     lock (active_rooms)
@@ -147,6 +151,9 @@ namespace osu.Server.Spectator.Hubs
                         Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
                         active_rooms.Remove(room.RoomID);
                     }
+
+                    using (var conn = Database.GetConnection())
+                        await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", room);
 
                     return;
                 }
@@ -262,6 +269,15 @@ namespace osu.Server.Spectator.Hubs
                 ensureIsHost(room);
 
                 room.Settings = settings;
+
+                using (var conn = Database.GetConnection())
+                {
+                    var dbPlaylistItem = new multiplayer_playlist_item(room);
+
+                    await conn.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new { room.Settings.Name, room.RoomID });
+                    await conn.ExecuteAsync("UPDATE multiplayer_playlist_items SET beatmap_id = @beatmap_id, ruleset_id = @ruleset_id, required_mods = @required_mods, updated_at = NOW() WHERE room_id = @room_id", dbPlaylistItem);
+                }
+
                 await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(settings);
             }
         }
@@ -280,6 +296,25 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="roomId">The databased room ID.</param>
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
+
+        private async Task updateDatabaseParticipants(MultiplayerRoom room)
+        {
+            using (var conn = Database.GetConnection())
+            {
+                using (var transaction = await conn.BeginTransactionAsync())
+                {
+                    // This should be considered *very* temporary, and for display purposes only!
+                    await conn.ExecuteAsync("DELETE FROM multiplayer_rooms_high WHERE room_id = @RoomID", new { room.RoomID, room.Users.Count }, transaction);
+
+                    foreach (var u in room.Users)
+                        await conn.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id) VALUES (@RoomID, @UserID)", new { room.RoomID, u.UserID }, transaction);
+
+                    await transaction.CommitAsync();
+                }
+
+                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new { room.RoomID, room.Users.Count });
+            }
+        }
 
         /// <summary>
         /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.

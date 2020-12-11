@@ -8,6 +8,7 @@ using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.DatabaseModels
 {
+    [Serializable]
     public class multiplayer_room
     {
         public long id { get; set; }

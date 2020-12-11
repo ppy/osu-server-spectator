@@ -2,11 +2,14 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using Newtonsoft.Json;
+using osu.Game.Online.RealtimeMultiplayer;
 
 // ReSharper disable InconsistentNaming (matches database table)
 
 namespace osu.Server.Spectator.DatabaseModels
 {
+    [Serializable]
     public class multiplayer_playlist_item
     {
         public long id { get; set; }
@@ -18,5 +21,24 @@ namespace osu.Server.Spectator.DatabaseModels
         public string? required_mods { get; set; }
         public DateTimeOffset? created_at { get; set; }
         public DateTimeOffset? updated_at { get; set; }
+
+        // for deserialization
+        public multiplayer_playlist_item()
+        {
+        }
+
+        /// <summary>
+        /// Create a playlist item model from the latest settings in a room.
+        /// </summary>
+        /// <param name="room">The room to retrieve settings from.</param>
+        public multiplayer_playlist_item(MultiplayerRoom room)
+        {
+            room_id = room.RoomID;
+
+            beatmap_id = room.Settings.BeatmapID;
+            ruleset_id = (short?)room.Settings.RulesetID;
+            required_mods = JsonConvert.SerializeObject(room.Settings.Mods);
+            updated_at = DateTimeOffset.Now;
+        }
     }
 }
