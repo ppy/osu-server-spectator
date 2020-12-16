@@ -10,7 +10,7 @@ using osu.Game.Online.RealtimeMultiplayer;
 
 namespace SampleMultiplayerClient
 {
-    public class MultiplayerClient : IStatefulMultiplayerClient
+    public class MultiplayerClient : IMultiplayerClient, IMultiplayerServer
     {
         private readonly HubConnection connection;
 
