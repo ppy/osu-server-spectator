@@ -100,7 +100,11 @@ namespace osu.Server.Spectator.Hubs
         {
             using (var conn = Database.GetConnection())
             {
-                var databaseRoom = await conn.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @roomId", new { roomId });
+                var databaseRoom = await conn.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @RoomID", new
+                {
+                    RoomID = roomId
+                });
+
                 if (databaseRoom == null)
                     throw new InvalidStateException("Specified match does not exist.");
 
@@ -110,7 +114,10 @@ namespace osu.Server.Spectator.Hubs
                 if (databaseRoom.user_id != CurrentContextUserId)
                     throw new InvalidStateException("Non-host is attempting to join match before host");
 
-                var playlistItem = await conn.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @roomId", new { roomId });
+                var playlistItem = await conn.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
+                {
+                    RoomID = roomId
+                });
 
                 return new MultiplayerRoom(roomId)
                 {
@@ -154,7 +161,12 @@ namespace osu.Server.Spectator.Hubs
                     }
 
                     using (var conn = Database.GetConnection())
-                        await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new { room.RoomID });
+                    {
+                        await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
+                        {
+                            RoomID = room.RoomID
+                        });
+                    }
 
                     return;
                 }
@@ -275,7 +287,12 @@ namespace osu.Server.Spectator.Hubs
                 {
                     var dbPlaylistItem = new multiplayer_playlist_item(room);
 
-                    await conn.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new { room.Settings.Name, room.RoomID });
+                    await conn.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new
+                    {
+                        RoomID = room.RoomID,
+                        Name = room.Settings.Name
+                    });
+
                     await conn.ExecuteAsync("UPDATE multiplayer_playlist_items SET beatmap_id = @beatmap_id, ruleset_id = @ruleset_id, required_mods = @required_mods, updated_at = NOW() WHERE room_id = @room_id", dbPlaylistItem);
                 }
 
@@ -305,15 +322,28 @@ namespace osu.Server.Spectator.Hubs
                 using (var transaction = await conn.BeginTransactionAsync())
                 {
                     // This should be considered *very* temporary, and for display purposes only!
-                    await conn.ExecuteAsync("DELETE FROM multiplayer_rooms_high WHERE room_id = @RoomID", new { room.RoomID, room.Users.Count }, transaction);
+                    await conn.ExecuteAsync("DELETE FROM multiplayer_rooms_high WHERE room_id = @RoomID", new
+                    {
+                        RoomID = room.RoomID
+                    }, transaction);
 
                     foreach (var u in room.Users)
-                        await conn.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id) VALUES (@RoomID, @UserID)", new { room.RoomID, u.UserID }, transaction);
+                    {
+                        await conn.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id) VALUES (@RoomID, @UserID)", new
+                        {
+                            RoomID = room.RoomID,
+                            UserID = u.UserID
+                        }, transaction);
+                    }
 
                     await transaction.CommitAsync();
                 }
 
-                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new { room.RoomID, room.Users.Count });
+                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
+                {
+                    RoomID = room.RoomID,
+                    Count = room.Users.Count
+                });
             }
         }
 
