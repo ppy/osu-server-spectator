@@ -65,7 +65,7 @@ namespace SampleMultiplayerClient
                             break;
 
                         case "transferhost":
-                            await targetClient.TransferHost(long.Parse(args[0]));
+                            await targetClient.TransferHost(int.Parse(args[0]));
                             break;
 
                         case "changesettings":

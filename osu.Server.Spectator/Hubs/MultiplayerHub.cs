@@ -183,7 +183,7 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task TransferHost(long userId)
+        public async Task TransferHost(int userId)
         {
             var room = await getLocalUserRoom();
 
