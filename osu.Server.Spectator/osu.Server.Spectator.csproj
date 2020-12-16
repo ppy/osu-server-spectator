@@ -10,8 +10,8 @@
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.9" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="3.1.9" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.1.9" />
-        <PackageReference Include="ppy.osu.Game" Version="2020.1128.0" />
-        <PackageReference Include="ppy.osu.Server.OsuQueueProcessor" Version="2020.902.0" />
+        <PackageReference Include="ppy.osu.Game" Version="2020.1216.0" />
+        <PackageReference Include="ppy.osu.Server.OsuQueueProcessor" Version="2020.1126.0" />
         <PackageReference Include="System.IO.FileSystem" Version="4.3.0" />
         <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0" />
     </ItemGroup>
