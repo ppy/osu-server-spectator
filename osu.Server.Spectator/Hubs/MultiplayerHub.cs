@@ -82,7 +82,7 @@ namespace osu.Server.Spectator.Hubs
                 await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                 await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
-                await updateDatabaseParticipants(room);
+                await UpdateDatabaseParticipants(room);
             }
 
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
@@ -150,7 +150,7 @@ namespace osu.Server.Spectator.Hubs
 
                 room.Users.Remove(user);
 
-                await updateDatabaseParticipants(room);
+                await UpdateDatabaseParticipants(room);
 
                 if (room.Users.Count == 0)
                 {
@@ -160,13 +160,7 @@ namespace osu.Server.Spectator.Hubs
                         active_rooms.Remove(room.RoomID);
                     }
 
-                    using (var conn = Database.GetConnection())
-                    {
-                        await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
-                        {
-                            RoomID = room.RoomID
-                        });
-                    }
+                    await EndDatabaseMatch(room);
 
                     return;
                 }
@@ -283,18 +277,7 @@ namespace osu.Server.Spectator.Hubs
 
                 room.Settings = settings;
 
-                using (var conn = Database.GetConnection())
-                {
-                    var dbPlaylistItem = new multiplayer_playlist_item(room);
-
-                    await conn.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new
-                    {
-                        RoomID = room.RoomID,
-                        Name = room.Settings.Name
-                    });
-
-                    await conn.ExecuteAsync("UPDATE multiplayer_playlist_items SET beatmap_id = @beatmap_id, ruleset_id = @ruleset_id, required_mods = @required_mods, updated_at = NOW() WHERE room_id = @room_id", dbPlaylistItem);
-                }
+                await UpdateDatabaseSettings(room);
 
                 await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(settings);
             }
@@ -315,7 +298,34 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
-        private async Task updateDatabaseParticipants(MultiplayerRoom room)
+        protected virtual async Task UpdateDatabaseSettings(MultiplayerRoom room)
+        {
+            using (var conn = Database.GetConnection())
+            {
+                var dbPlaylistItem = new multiplayer_playlist_item(room);
+
+                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new
+                {
+                    RoomID = room.RoomID,
+                    Name = room.Settings.Name
+                });
+
+                await conn.ExecuteAsync("UPDATE multiplayer_playlist_items SET beatmap_id = @beatmap_id, ruleset_id = @ruleset_id, required_mods = @required_mods, updated_at = NOW() WHERE room_id = @room_id", dbPlaylistItem);
+            }
+        }
+
+        protected virtual async Task EndDatabaseMatch(MultiplayerRoom room)
+        {
+            using (var conn = Database.GetConnection())
+            {
+                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
+                {
+                    RoomID = room.RoomID
+                });
+            }
+        }
+
+        protected virtual async Task UpdateDatabaseParticipants(MultiplayerRoom room)
         {
             using (var conn = Database.GetConnection())
             {
