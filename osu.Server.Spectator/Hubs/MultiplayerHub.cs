@@ -8,8 +8,12 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using Microsoft.Extensions.Caching.Distributed;
+using Newtonsoft.Json;
+using osu.Game.Online.API;
 using osu.Game.Online.RealtimeMultiplayer;
+using osu.Server.Spectator.DatabaseModels;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -52,43 +56,80 @@ namespace osu.Server.Spectator.Hubs
             if (state != null)
             {
                 // if the user already has a state, it means they are already in a room and can't join another without first leaving.
-                throw new InvalidStateException("Can't join a room when already in another room");
-            }
-
-            MultiplayerRoom? room;
-
-            bool shouldBecomeHost = false;
-
-            lock (active_rooms)
-            {
-                // check whether we are already aware of this match.
-
-                if (!TryGetRoom(roomId, out room))
-                {
-                    // TODO: get details of the room from the database. hard abort if non existent.
-                    Console.WriteLine($"Tracking new room {roomId}.");
-                    active_rooms.Add(roomId, room = new MultiplayerRoom(roomId));
-                    shouldBecomeHost = true;
-                }
+                throw new InvalidStateException("Can't join a room when already in another room.");
             }
 
             // add the user to the room.
             var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
+            // check whether we are already aware of this match.
+            if (!TryGetRoom(roomId, out var room))
+            {
+                room = await RetrieveRoom(roomId);
+
+                room.Host = roomUser;
+
+                lock (active_rooms)
+                {
+                    Console.WriteLine($"Tracking new room {roomId}.");
+                    active_rooms.Add(roomId, room);
+                }
+            }
+
             using (room.LockForUpdate())
             {
                 room.Users.Add(roomUser);
-
-                if (shouldBecomeHost)
-                    room.Host = roomUser;
-
                 await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                 await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
+
+                await UpdateDatabaseParticipants(room);
             }
 
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
 
             return room;
+        }
+
+        /// <summary>
+        /// Attempt to construct and a room based on a room ID specification.
+        /// This will check the database backing to ensure things are in a consistent state.
+        /// </summary>
+        /// <param name="roomId">The proposed room ID.</param>
+        /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
+        protected virtual async Task<MultiplayerRoom> RetrieveRoom(long roomId)
+        {
+            using (var conn = Database.GetConnection())
+            {
+                var databaseRoom = await conn.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @RoomID", new
+                {
+                    RoomID = roomId
+                });
+
+                if (databaseRoom == null)
+                    throw new InvalidStateException("Specified match does not exist.");
+
+                if (databaseRoom.ends_at != null)
+                    throw new InvalidStateException("Match has already ended.");
+
+                if (databaseRoom.user_id != CurrentContextUserId)
+                    throw new InvalidStateException("Non-host is attempting to join match before host");
+
+                var playlistItem = await conn.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
+                {
+                    RoomID = roomId
+                });
+
+                return new MultiplayerRoom(roomId)
+                {
+                    Settings = new MultiplayerRoomSettings
+                    {
+                        BeatmapID = playlistItem.beatmap_id,
+                        RulesetID = playlistItem.ruleset_id,
+                        Name = databaseRoom.name,
+                        Mods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>()
+                    }
+                };
+            }
         }
 
         public async Task LeaveRoom()
@@ -109,6 +150,8 @@ namespace osu.Server.Spectator.Hubs
 
                 room.Users.Remove(user);
 
+                await UpdateDatabaseParticipants(room);
+
                 if (room.Users.Count == 0)
                 {
                     lock (active_rooms)
@@ -116,6 +159,8 @@ namespace osu.Server.Spectator.Hubs
                         Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
                         active_rooms.Remove(room.RoomID);
                     }
+
+                    await EndDatabaseMatch(room);
 
                     return;
                 }
@@ -231,6 +276,9 @@ namespace osu.Server.Spectator.Hubs
                 ensureIsHost(room);
 
                 room.Settings = settings;
+
+                await UpdateDatabaseSettings(room);
+
                 await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(settings);
             }
         }
@@ -249,6 +297,65 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="roomId">The databased room ID.</param>
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
+
+        protected virtual async Task UpdateDatabaseSettings(MultiplayerRoom room)
+        {
+            using (var conn = Database.GetConnection())
+            {
+                var dbPlaylistItem = new multiplayer_playlist_item(room);
+
+                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new
+                {
+                    RoomID = room.RoomID,
+                    Name = room.Settings.Name
+                });
+
+                await conn.ExecuteAsync("UPDATE multiplayer_playlist_items SET beatmap_id = @beatmap_id, ruleset_id = @ruleset_id, required_mods = @required_mods, updated_at = NOW() WHERE room_id = @room_id", dbPlaylistItem);
+            }
+        }
+
+        protected virtual async Task EndDatabaseMatch(MultiplayerRoom room)
+        {
+            using (var conn = Database.GetConnection())
+            {
+                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
+                {
+                    RoomID = room.RoomID
+                });
+            }
+        }
+
+        protected virtual async Task UpdateDatabaseParticipants(MultiplayerRoom room)
+        {
+            using (var conn = Database.GetConnection())
+            {
+                using (var transaction = await conn.BeginTransactionAsync())
+                {
+                    // This should be considered *very* temporary, and for display purposes only!
+                    await conn.ExecuteAsync("DELETE FROM multiplayer_rooms_high WHERE room_id = @RoomID", new
+                    {
+                        RoomID = room.RoomID
+                    }, transaction);
+
+                    foreach (var u in room.Users)
+                    {
+                        await conn.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id) VALUES (@RoomID, @UserID)", new
+                        {
+                            RoomID = room.RoomID,
+                            UserID = u.UserID
+                        }, transaction);
+                    }
+
+                    await transaction.CommitAsync();
+                }
+
+                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
+                {
+                    RoomID = room.RoomID,
+                    Count = room.Users.Count
+                });
+            }
+        }
 
         /// <summary>
         /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.

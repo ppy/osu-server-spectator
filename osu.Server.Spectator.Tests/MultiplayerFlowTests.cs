@@ -510,6 +510,19 @@ namespace osu.Server.Spectator.Tests
             {
             }
 
+            protected override Task UpdateDatabaseParticipants(MultiplayerRoom room) => Task.CompletedTask;
+            protected override Task UpdateDatabaseSettings(MultiplayerRoom room) => Task.CompletedTask;
+            protected override Task EndDatabaseMatch(MultiplayerRoom room) => Task.CompletedTask;
+
+            protected override Task<MultiplayerRoom> RetrieveRoom(long roomId)
+            {
+                // bypass database for testing.
+                return Task.FromResult(new MultiplayerRoom(roomId)
+                {
+                    Host = new MultiplayerRoomUser(CurrentContextUserId)
+                });
+            }
+
             public new bool TryGetRoom(long roomId, [MaybeNullWhen(false)] out MultiplayerRoom room)
                 => base.TryGetRoom(roomId, out room);
         }
