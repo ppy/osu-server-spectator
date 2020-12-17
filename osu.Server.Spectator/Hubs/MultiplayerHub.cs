@@ -171,13 +171,10 @@ namespace osu.Server.Spectator.Hubs
                 // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
                 if (room.Host?.Equals(user) == true)
                 {
-                    var newHost = room.Users.FirstOrDefault();
+                    // there *has* to still be at least one user in the room (see user check above).
+                    var newHost = room.Users.First();
 
-                    if (newHost != null)
-                    {
-                        room.Host = newHost;
-                        await clients.HostChanged(newHost.UserID);
-                    }
+                    await setNewHost(room, newHost);
                 }
 
                 await clients.UserLeft(user);
@@ -197,11 +194,7 @@ namespace osu.Server.Spectator.Hubs
                 if (newHost == null)
                     throw new Exception("Target user is not in the current room");
 
-                room.Host = newHost;
-
-                await UpdateDatabaseHost(room);
-
-                await Clients.Group(GetGroupId(room.RoomID)).HostChanged(userId);
+                await setNewHost(room, newHost);
             }
         }
 
@@ -373,6 +366,15 @@ namespace osu.Server.Spectator.Hubs
                     Count = room.Users.Count
                 });
             }
+        }
+
+        private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
+        {
+            room.Host = newHost;
+
+            await UpdateDatabaseHost(room);
+
+            await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
         }
 
         /// <summary>
