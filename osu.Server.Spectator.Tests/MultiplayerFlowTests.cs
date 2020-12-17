@@ -512,6 +512,7 @@ namespace osu.Server.Spectator.Tests
 
             protected override Task UpdateDatabaseParticipants(MultiplayerRoom room) => Task.CompletedTask;
             protected override Task UpdateDatabaseSettings(MultiplayerRoom room) => Task.CompletedTask;
+            protected override Task UpdateDatabaseHost(MultiplayerRoom room) => Task.CompletedTask;
             protected override Task EndDatabaseMatch(MultiplayerRoom room) => Task.CompletedTask;
 
             protected override Task<MultiplayerRoom> RetrieveRoom(long roomId)
