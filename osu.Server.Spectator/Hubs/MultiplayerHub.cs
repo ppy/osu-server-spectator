@@ -306,7 +306,7 @@ namespace osu.Server.Spectator.Hubs
             // eventually we will want to increment to a new playlist item rather than reusing the same one.
             using (var conn = Database.GetConnection())
             {
-                long playlistItemId = await conn.QuerySingleAsync<long>("SELECT playlist_item_id FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
+                long playlistItemId = await conn.QuerySingleAsync<long>("SELECT id FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
                 {
                     RoomID = room.RoomID,
                 });
