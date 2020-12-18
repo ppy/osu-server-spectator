@@ -120,10 +120,16 @@ namespace osu.Server.Spectator.Hubs
                     RoomID = roomId
                 });
 
+                var beatmapChecksum = await conn.QuerySingleAsync<string>("SELECT checksum from osu_beatmaps where beatmap_id = @BeatmapID", new
+                {
+                    BeatmapId = playlistItem.beatmap_id
+                });
+
                 return new MultiplayerRoom(roomId)
                 {
                     Settings = new MultiplayerRoomSettings
                     {
+                        BeatmapChecksum = beatmapChecksum,
                         BeatmapID = playlistItem.beatmap_id,
                         RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
