@@ -120,10 +120,16 @@ namespace osu.Server.Spectator.Hubs
                     RoomID = roomId
                 });
 
+                var beatmapChecksum = await conn.QuerySingleAsync<string>("SELECT checksum from osu_beatmaps where beatmap_id = @BeatmapID", new
+                {
+                    BeatmapId = playlistItem.beatmap_id
+                });
+
                 return new MultiplayerRoom(roomId)
                 {
                     Settings = new MultiplayerRoomSettings
                     {
+                        BeatmapChecksum = beatmapChecksum,
                         BeatmapID = playlistItem.beatmap_id,
                         RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
@@ -181,7 +187,7 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task TransferHost(long userId)
+        public async Task TransferHost(int userId)
         {
             var room = await getLocalUserRoom();
 
@@ -275,7 +281,14 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureIsHost(room);
 
+                if (room.Settings.Equals(settings))
+                    return;
+
                 room.Settings = settings;
+
+                // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
+                foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
+                    await changeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
 
                 await UpdateDatabaseSettings(room);
 

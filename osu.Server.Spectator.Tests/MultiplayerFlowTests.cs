@@ -498,6 +498,28 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task ChangingSettingsMarksReadyUsersAsIdle()
+        {
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                Name = "bestest room ever",
+            };
+
+            await hub.JoinRoom(room_id);
+
+            Assert.True(hub.TryGetRoom(room_id, out var room));
+            Debug.Assert(room != null);
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Ready), Times.Once);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
+
+            await hub.ChangeSettings(testSettings);
+            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Idle), Times.Once);
+            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+        }
+
+        [Fact]
         public async Task UserCantChangeSettingsWhenNotJoinedRoom()
         {
             await Assert.ThrowsAsync<NotJoinedRoomException>(() => hub.ChangeSettings(new MultiplayerRoomSettings()));
