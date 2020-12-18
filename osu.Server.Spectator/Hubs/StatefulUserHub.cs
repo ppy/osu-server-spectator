@@ -90,6 +90,6 @@ namespace osu.Server.Spectator.Hubs
             return state;
         }
 
-        public static string GetStateId(int userId) => $"state-{nameof(TClient)}:{userId}";
+        public static string GetStateId(int userId) => $"state-{typeof(TClient)}:{userId}";
     }
 }

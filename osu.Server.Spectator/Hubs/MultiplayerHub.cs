@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
@@ -170,13 +171,10 @@ namespace osu.Server.Spectator.Hubs
                 // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
                 if (room.Host?.Equals(user) == true)
                 {
-                    var newHost = room.Users.FirstOrDefault();
+                    // there *has* to still be at least one user in the room (see user check above).
+                    var newHost = room.Users.First();
 
-                    if (newHost != null)
-                    {
-                        room.Host = newHost;
-                        await clients.HostChanged(newHost.UserID);
-                    }
+                    await setNewHost(room, newHost);
                 }
 
                 await clients.UserLeft(user);
@@ -196,8 +194,7 @@ namespace osu.Server.Spectator.Hubs
                 if (newHost == null)
                     throw new Exception("Target user is not in the current room");
 
-                room.Host = newHost;
-                await Clients.Group(GetGroupId(room.RoomID)).HostChanged(userId);
+                await setNewHost(room, newHost);
             }
         }
 
@@ -255,6 +252,8 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Host != null && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
+                await ClearDatabaseScores(room);
+
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
                 foreach (var u in readyUsers)
@@ -298,6 +297,22 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
+        protected virtual async Task ClearDatabaseScores(MultiplayerRoom room)
+        {
+            // for now, clear all existing scores out of the playlist item to ensure no duplicates.
+            // eventually we will want to increment to a new playlist item rather than reusing the same one.
+            using (var conn = Database.GetConnection())
+            {
+                long playlistItemId = await conn.QuerySingleAsync<long>("SELECT id FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
+                {
+                    RoomID = room.RoomID,
+                });
+
+                await conn.ExecuteAsync("DELETE FROM multiplayer_scores WHERE playlist_item_id = @PlaylistItemID", new { PlaylistItemID = playlistItemId });
+                await conn.ExecuteAsync("DELETE FROM multiplayer_scores_high WHERE playlist_item_id = @PlaylistItemID", new { PlaylistItemID = playlistItemId });
+            }
+        }
+
         protected virtual async Task UpdateDatabaseSettings(MultiplayerRoom room)
         {
             using (var conn = Database.GetConnection())
@@ -311,6 +326,20 @@ namespace osu.Server.Spectator.Hubs
                 });
 
                 await conn.ExecuteAsync("UPDATE multiplayer_playlist_items SET beatmap_id = @beatmap_id, ruleset_id = @ruleset_id, required_mods = @required_mods, updated_at = NOW() WHERE room_id = @room_id", dbPlaylistItem);
+            }
+        }
+
+        protected virtual async Task UpdateDatabaseHost(MultiplayerRoom room)
+        {
+            Debug.Assert(room.Host != null);
+
+            using (var conn = Database.GetConnection())
+            {
+                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET user_id = @HostUserID WHERE id = @RoomID", new
+                {
+                    HostUserID = room.Host.UserID,
+                    RoomID = room.RoomID
+                });
             }
         }
 
@@ -355,6 +384,15 @@ namespace osu.Server.Spectator.Hubs
                     Count = room.Users.Count
                 });
             }
+        }
+
+        private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
+        {
+            room.Host = newHost;
+
+            await UpdateDatabaseHost(room);
+
+            await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
         }
 
         /// <summary>
