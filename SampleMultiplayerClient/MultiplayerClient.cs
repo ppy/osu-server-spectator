@@ -26,9 +26,9 @@ namespace SampleMultiplayerClient
             connection.On<MultiplayerRoomState>(nameof(IMultiplayerClient.RoomStateChanged), ((IMultiplayerClient)this).RoomStateChanged);
             connection.On<MultiplayerRoomUser>(nameof(IMultiplayerClient.UserJoined), ((IMultiplayerClient)this).UserJoined);
             connection.On<MultiplayerRoomUser>(nameof(IMultiplayerClient.UserLeft), ((IMultiplayerClient)this).UserLeft);
-            connection.On<long>(nameof(IMultiplayerClient.HostChanged), ((IMultiplayerClient)this).HostChanged);
+            connection.On<int>(nameof(IMultiplayerClient.HostChanged), ((IMultiplayerClient)this).HostChanged);
             connection.On<MultiplayerRoomSettings>(nameof(IMultiplayerClient.SettingsChanged), ((IMultiplayerClient)this).SettingsChanged);
-            connection.On<long, MultiplayerUserState>(nameof(IMultiplayerClient.UserStateChanged), ((IMultiplayerClient)this).UserStateChanged);
+            connection.On<int, MultiplayerUserState>(nameof(IMultiplayerClient.UserStateChanged), ((IMultiplayerClient)this).UserStateChanged);
             connection.On(nameof(IMultiplayerClient.LoadRequested), ((IMultiplayerClient)this).LoadRequested);
             connection.On(nameof(IMultiplayerClient.MatchStarted), ((IMultiplayerClient)this).MatchStarted);
             connection.On(nameof(IMultiplayerClient.ResultsReady), ((IMultiplayerClient)this).ResultsReady);
@@ -49,7 +49,7 @@ namespace SampleMultiplayerClient
             Room = null;
         }
 
-        public Task TransferHost(long userId) =>
+        public Task TransferHost(int userId) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.TransferHost), userId);
 
         public Task ChangeSettings(MultiplayerRoomSettings settings) =>
@@ -85,7 +85,7 @@ namespace SampleMultiplayerClient
             return Task.CompletedTask;
         }
 
-        Task IMultiplayerClient.HostChanged(long userId)
+        Task IMultiplayerClient.HostChanged(int userId)
         {
             Debug.Assert(Room != null);
             Room.Host = Room.Users.FirstOrDefault(u => u.UserID == userId);
@@ -101,7 +101,7 @@ namespace SampleMultiplayerClient
             return Task.CompletedTask;
         }
 
-        Task IMultiplayerClient.UserStateChanged(long userId, MultiplayerUserState state)
+        Task IMultiplayerClient.UserStateChanged(int userId, MultiplayerUserState state)
         {
             if (userId == this.UserID)
                 State = state;

@@ -187,7 +187,7 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task TransferHost(long userId)
+        public async Task TransferHost(int userId)
         {
             var room = await getLocalUserRoom();
 
@@ -280,7 +280,14 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureIsHost(room);
 
+                if (room.Settings.Equals(settings))
+                    return;
+
                 room.Settings = settings;
+
+                // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
+                foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
+                    await changeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
 
                 await UpdateDatabaseSettings(room);
 

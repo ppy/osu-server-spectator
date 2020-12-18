@@ -11,6 +11,7 @@ using Moq;
 using Newtonsoft.Json;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
+using osu.Game.Scoring;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -56,7 +57,7 @@ namespace osu.Server.Spectator.Tests
             var cacheState = await cache.GetStringAsync(SpectatorHub.GetStateId(streamer_id));
             Assert.Equal(state, JsonConvert.DeserializeObject<SpectatorState>(cacheState));
 
-            var data = new FrameDataBundle(new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) });
+            var data = new FrameDataBundle(new ScoreInfo(), new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) });
 
             // check streaming data is propagating to watchers
             await hub.SendFrameData(data);
