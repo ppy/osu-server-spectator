@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
@@ -31,6 +32,8 @@ namespace osu.Server.Spectator.Tests
         private readonly Mock<HubCallerContext> mockContextUser1;
         private readonly Mock<HubCallerContext> mockContextUser2;
 
+        private readonly Mock<IGroupManager> mockGroups;
+
         public MultiplayerFlowTests()
         {
             MultiplayerHub.Reset();
@@ -39,13 +42,15 @@ namespace osu.Server.Spectator.Tests
 
             hub = new TestMultiplayerHub(cache);
 
-            Mock<IGroupManager> mockGroups = new Mock<IGroupManager>();
+            mockGroups = new Mock<IGroupManager>();
 
             mockContextUser1 = new Mock<HubCallerContext>();
             mockContextUser1.Setup(context => context.UserIdentifier).Returns(user_id.ToString());
+            mockContextUser1.Setup(context => context.ConnectionId).Returns(user_id.ToString());
 
             mockContextUser2 = new Mock<HubCallerContext>();
             mockContextUser2.Setup(context => context.UserIdentifier).Returns(user_id_2.ToString());
+            mockContextUser2.Setup(context => context.ConnectionId).Returns(user_id_2.ToString());
 
             Mock<IHubCallerClients<IMultiplayerClient>> mockClients = new Mock<IHubCallerClients<IMultiplayerClient>>();
 
@@ -289,10 +294,37 @@ namespace osu.Server.Spectator.Tests
 
             await hub.StartMatch();
             await hub.ChangeState(MultiplayerUserState.Loaded);
+
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            verifyRemovedFromGameplayGroup(mockContextUser1, room_id);
+            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, false);
 
             Assert.Single(room.Users, u => u.State == MultiplayerUserState.Results);
             Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
+        }
+
+        [Fact]
+        public async Task OnlyReadyPlayersAreAddedToAndRemovedFromGameplayGroup()
+        {
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser1);
+
+            await hub.StartMatch();
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+
+            verifyAddedToGameplayGroup(mockContextUser1, room_id);
+            verifyAddedToGameplayGroup(mockContextUser2, room_id, false);
+
+            await hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            verifyRemovedFromGameplayGroup(mockContextUser1, room_id);
+            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, false);
         }
 
         /// <summary>
@@ -500,6 +532,18 @@ namespace osu.Server.Spectator.Tests
         }
 
         #endregion
+
+        private void verifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasAdded = true)
+            => mockGroups.Verify(groups => groups.AddToGroupAsync(
+                context.Object.ConnectionId,
+                MultiplayerHub.GetGroupId(roomId, true),
+                It.IsAny<CancellationToken>()), wasAdded ? Times.Once : Times.Never);
+
+        private void verifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasRemoved = true)
+            => mockGroups.Verify(groups => groups.RemoveFromGroupAsync(
+                context.Object.ConnectionId,
+                MultiplayerHub.GetGroupId(roomId, true),
+                It.IsAny<CancellationToken>()), wasRemoved ? Times.Once : Times.Never);
 
         private void setUserContext(Mock<HubCallerContext> context) => hub.Context = context.Object;
 
