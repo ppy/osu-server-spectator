@@ -111,7 +111,7 @@ namespace osu.Server.Spectator.Hubs
                 if (databaseRoom == null)
                     throw new InvalidStateException("Specified match does not exist.");
 
-                if (databaseRoom.ends_at != null)
+                if (databaseRoom.ends_at != null && databaseRoom.ends_at < DateTimeOffset.Now)
                     throw new InvalidStateException("Match has already ended.");
 
                 if (databaseRoom.user_id != CurrentContextUserId)
