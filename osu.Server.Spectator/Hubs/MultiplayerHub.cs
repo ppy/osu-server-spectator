@@ -300,13 +300,23 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Settings.Equals(settings))
                     return;
 
-                room.Settings = settings;
+                var previousSettings = room.Settings;
+
+                try
+                {
+                    room.Settings = settings;
+                    await UpdateDatabaseSettings(room);
+                }
+                catch
+                {
+                    // rollback settings if an error occurred when updating the database.
+                    room.Settings = previousSettings;
+                    throw;
+                }
 
                 // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
                 foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
-
-                await UpdateDatabaseSettings(room);
 
                 await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(settings);
             }
@@ -348,6 +358,17 @@ namespace osu.Server.Spectator.Hubs
             using (var conn = Database.GetConnection())
             {
                 var dbPlaylistItem = new multiplayer_playlist_item(room);
+
+                var beatmapChecksum = await conn.QuerySingleOrDefaultAsync<string>("SELECT checksum from osu_beatmaps where beatmap_id = @BeatmapID", new
+                {
+                    BeatmapId = dbPlaylistItem.beatmap_id
+                });
+
+                if (beatmapChecksum == null)
+                    throw new InvalidStateException("Attempted to select a beatmap which does not exist online.");
+
+                if (room.Settings.BeatmapChecksum != beatmapChecksum)
+                    throw new InvalidStateException("Attempted to select a beatmap which has been modified.");
 
                 await conn.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new
                 {
