@@ -135,7 +135,7 @@ namespace osu.Server.Spectator.Hubs
                         BeatmapID = playlistItem.beatmap_id,
                         RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
-                        Mods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>()
+                        Mods = playlistItem.required_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods) : Array.Empty<APIMod>()
                     }
                 };
             }
