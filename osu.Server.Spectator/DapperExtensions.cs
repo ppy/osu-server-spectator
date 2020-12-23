@@ -10,6 +10,7 @@ namespace osu.Server.Spectator
 {
     public static class DapperExtensions
     {
+        // see https://stackoverflow.com/questions/12510299/get-datetime-as-utc-with-dapper
         public class DateTimeOffsetTypeHandler : SqlMapper.TypeHandler<DateTimeOffset>
         {
             public override void SetValue(IDbDataParameter parameter, DateTimeOffset value)
