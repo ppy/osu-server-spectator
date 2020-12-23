@@ -288,8 +288,8 @@ namespace osu.Server.Spectator.Hubs
 
                 try
                 {
-                    await UpdateDatabaseSettings(room);
                     room.Settings = settings;
+                    await UpdateDatabaseSettings(room);
                 }
                 catch
                 {
