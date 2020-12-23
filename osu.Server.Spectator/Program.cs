@@ -25,7 +25,7 @@ namespace osu.Server.Spectator
                            webBuilder.UseStartup<Startup>();
 #endif
 
-                           webBuilder.UseUrls(urls: new[] { "http://*:80", "https://*:443" });
+                           webBuilder.UseUrls(urls: new[] { "http://*:80" });
                        });
         }
     }

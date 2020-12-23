@@ -88,6 +88,8 @@ namespace osu.Server.Spectator.Hubs
 
             await UpdateLocalUserState(new MultiplayerClientState(roomId));
 
+            await MarkRoomActive(room);
+
             return room;
         }
 
@@ -109,7 +111,7 @@ namespace osu.Server.Spectator.Hubs
                 if (databaseRoom == null)
                     throw new InvalidStateException("Specified match does not exist.");
 
-                if (databaseRoom.ends_at != null)
+                if (databaseRoom.ends_at != null && databaseRoom.ends_at < DateTimeOffset.Now)
                     throw new InvalidStateException("Match has already ended.");
 
                 if (databaseRoom.user_id != CurrentContextUserId)
@@ -136,6 +138,20 @@ namespace osu.Server.Spectator.Hubs
                         Mods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>()
                     }
                 };
+            }
+        }
+
+        /// <summary>
+        /// Marks a room active at the database, implying the host has joined and this server is now in control of the room's lifetime.
+        /// </summary>
+        protected virtual async Task MarkRoomActive(MultiplayerRoom room)
+        {
+            using (var conn = Database.GetConnection())
+            {
+                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = null WHERE id = @RoomID", new
+                {
+                    RoomID = room.RoomID
+                });
             }
         }
 
