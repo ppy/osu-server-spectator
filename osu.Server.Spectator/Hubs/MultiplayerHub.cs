@@ -240,6 +240,7 @@ namespace osu.Server.Spectator.Hubs
                 // handle whether this user should be receiving gameplay messages or not.
                 switch (newState)
                 {
+                    case MultiplayerUserState.BeatmapNotDownloaded:
                     case MultiplayerUserState.FinishedPlay:
                     case MultiplayerUserState.Idle:
                         await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
