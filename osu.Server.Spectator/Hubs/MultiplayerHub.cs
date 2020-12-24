@@ -515,6 +515,16 @@ namespace osu.Server.Spectator.Hubs
         {
             switch (newState)
             {
+                case MultiplayerUserState.BeatmapNotDownloaded:
+                    // any state can switch to this.
+                    break;
+
+                case MultiplayerUserState.DownloadingBeatmap:
+                    if (oldState != MultiplayerUserState.BeatmapNotDownloaded)
+                        throw new InvalidStateChangeException(oldState, newState);
+
+                    break;
+
                 case MultiplayerUserState.Idle:
                     // any state can return to idle.
                     break;
