@@ -52,6 +52,13 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
         {
+            bool isRestricted = await CheckUserRestrictions();
+
+            if (isRestricted)
+            {
+                throw new InvalidStateException("Can't join a room when restricted.");
+            }
+
             var state = await GetLocalUserState();
 
             if (state != null)
@@ -402,6 +409,17 @@ namespace osu.Server.Spectator.Hubs
                 {
                     RoomID = room.RoomID
                 });
+            }
+        }
+
+        protected virtual async Task<bool> CheckUserRestrictions()
+        {
+            using (var conn = Database.GetConnection())
+            {
+                return await conn.QueryFirstOrDefaultAsync<byte>("SELECT user_warnings FROM phpbb_users WHERE user_id = @UserID", new
+                {
+                    UserID = CurrentContextUserId
+                }) != 0;
             }
         }
 
