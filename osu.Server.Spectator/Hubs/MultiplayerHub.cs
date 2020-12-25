@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
         {
-            bool isRestricted = await CheckUserRestrictions();
+            bool isRestricted = await CheckIsUserRestricted();
 
             if (isRestricted)
             {
@@ -412,7 +412,7 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        protected virtual async Task<bool> CheckUserRestrictions()
+        protected virtual async Task<bool> CheckIsUserRestricted()
         {
             using (var conn = Database.GetConnection())
             {
