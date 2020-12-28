@@ -284,10 +284,10 @@ namespace osu.Server.Spectator.Hubs
 
                 await ClearDatabaseScores(room);
 
-                await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
-
                 foreach (var u in readyUsers)
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
+
+                await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
             }
