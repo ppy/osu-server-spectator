@@ -22,18 +22,20 @@ namespace osu.Server.Spectator.Hubs
     {
         protected static readonly EntityStore<MultiplayerRoom> ACTIVE_ROOMS = new EntityStore<MultiplayerRoom>();
 
-        /// <summary>
-        /// Temporary method to reset in-memory storage (used only for tests).
-        /// </summary>
-        public static void Reset()
-        {
-            Console.WriteLine("Resetting ALL tracked rooms.");
-            ACTIVE_ROOMS.Clear();
-        }
-
         public MultiplayerHub(IDistributedCache cache)
             : base(cache)
         {
+        }
+
+        /// <summary>
+        /// Temporary method to reset in-memory storage (used only for tests).
+        /// </summary>
+        public new static void Reset()
+        {
+            StatefulUserHub<IMultiplayerClient, MultiplayerClientState>.Reset();
+
+            Console.WriteLine("Resetting ALL tracked rooms.");
+            ACTIVE_ROOMS.Clear();
         }
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
