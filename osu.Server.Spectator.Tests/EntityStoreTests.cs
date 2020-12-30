@@ -174,9 +174,11 @@ namespace osu.Server.Spectator.Tests
                 // we'll be testing that this isn't returned later.
             }
 
-            KeyValuePair<long, TestItem?>[]? items = null;
+            KeyValuePair<long, TestItem>[] items = new KeyValuePair<long, TestItem>[0];
+
             ManualResetEventSlim backgroundRetrievalStarted = new ManualResetEventSlim();
             ManualResetEventSlim backgroundRetrievalDone = new ManualResetEventSlim();
+
             Thread backgroundRetrievalThread = new Thread(() =>
             {
                 backgroundRetrievalStarted.Set();
@@ -193,6 +195,7 @@ namespace osu.Server.Spectator.Tests
             }
 
             Assert.True(backgroundRetrievalDone.Wait(1000));
+
             Assert.NotNull(items);
             Assert.Equal(3, items?.Length);
             Assert.DoesNotContain(3, items?.Select(item => item.Key));

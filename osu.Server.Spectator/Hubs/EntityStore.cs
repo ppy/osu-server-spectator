@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using osu.Framework.Extensions.ObjectExtensions;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -60,13 +61,13 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Get all tracked entities in an unsafe manner. Only read operations should be performed on retrieved entities.
         /// </summary>
-        public KeyValuePair<long, T?>[] GetAllEntities()
+        public KeyValuePair<long, T>[] GetAllEntities()
         {
             lock (entityMapping)
             {
                 return entityMapping
                        .Where(kvp => kvp.Value.GetItemUnsafe() != null)
-                       .Select(entity => new KeyValuePair<long, T?>(entity.Key, entity.Value.GetItemUnsafe()))
+                       .Select(entity => new KeyValuePair<long, T>(entity.Key, entity.Value.GetItemUnsafe().AsNonNull()))
                        .ToArray();
             }
         }
