@@ -60,13 +60,13 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Get all tracked entities in an unsafe manner. Only read operations should be performed on retrieved entities.
         /// </summary>
-        public KeyValuePair<long, T?>[] GetAllStates()
+        public KeyValuePair<long, T?>[] GetAllEntities()
         {
             lock (entityMapping)
             {
                 return entityMapping
                        .Where(kvp => kvp.Value.Item != null)
-                       .Select(state => new KeyValuePair<long, T?>(state.Key, state.Value.Item))
+                       .Select(entity => new KeyValuePair<long, T?>(entity.Key, entity.Value.Item))
                        .ToArray();
             }
         }
