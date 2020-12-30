@@ -13,8 +13,8 @@ namespace osu.Server.Spectator.Hubs
         public SpectatorState? State;
 
         [JsonConstructor]
-        public SpectatorClientState(in string connectionId)
-            : base(connectionId)
+        public SpectatorClientState(in string connectionId, in int userId)
+            : base(connectionId, userId)
         {
         }
     }

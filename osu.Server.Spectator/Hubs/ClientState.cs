@@ -9,12 +9,18 @@ namespace osu.Server.Spectator.Hubs
     public class ClientState
     {
         /// <summary>
-        /// The owner of this state.
+        /// The connection ID of the owner of this state.
         /// </summary>
         public string ConnectionId { get; set; }
 
-        public ClientState(in string connectionId)
+        /// <summary>
+        /// The user ID of the owner of this state.
+        /// </summary>
+        public int UserId { get; set; }
+
+        public ClientState(in string connectionId, in int userId)
         {
+            UserId = userId;
             ConnectionId = connectionId;
         }
     }

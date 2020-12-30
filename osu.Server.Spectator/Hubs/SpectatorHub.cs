@@ -19,7 +19,11 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task BeginPlaySession(SpectatorState state)
         {
-            await UpdateLocalUserState(state);
+            using (var usage = await GetOrCreateLocalUserState())
+            {
+                usage.Item ??= new SpectatorClientState(Context.ConnectionId, CurrentContextUserId);
+                usage.Item.State = state;
+            }
 
             Console.WriteLine($"User {CurrentContextUserId} beginning play session ({state})");
 
@@ -34,10 +38,10 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task EndPlaySession(SpectatorState state)
         {
-            Console.WriteLine($"User {CurrentContextUserId} ending play session ({state})");
+            using (var usage = await GetOrCreateLocalUserState())
+                usage.Destroy();
 
-            await RemoveLocalUserState();
-            await Clients.All.UserFinishedPlaying(CurrentContextUserId, state);
+            await endPlaySession(CurrentContextUserId, state);
         }
 
         public async Task StartWatchingUser(int userId)
@@ -81,14 +85,20 @@ namespace osu.Server.Spectator.Hubs
             await base.OnConnectedAsync();
         }
 
-        protected override Task OnDisconnectedAsync(Exception exception, SpectatorState? state)
+        protected override async Task CleanUpState(SpectatorClientState state)
         {
-            if (state != null)
-                return EndPlaySession(state);
+            if (state.State != null)
+                await endPlaySession(state.UserId, state.State);
 
-            return base.OnDisconnectedAsync(exception, state);
+            await base.CleanUpState(state);
         }
 
         public static string GetGroupId(int userId) => $"watch:{userId}";
+
+        private async Task endPlaySession(int userId, SpectatorState state)
+        {
+            Console.WriteLine($"User {userId} ending play session ({state})");
+            await Clients.All.UserFinishedPlaying(userId, state);
+        }
     }
 }

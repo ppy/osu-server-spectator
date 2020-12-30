@@ -14,8 +14,8 @@ namespace osu.Server.Spectator.Hubs
         public readonly long CurrentRoomID;
 
         [JsonConstructor]
-        public MultiplayerClientState(in string connectionId, in long currentRoomID)
-            : base(connectionId)
+        public MultiplayerClientState(in string connectionId, in int userId, in long currentRoomID)
+            : base(connectionId, userId)
         {
             CurrentRoomID = currentRoomID;
         }

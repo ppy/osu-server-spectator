@@ -8,13 +8,14 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
+using osu.Game.Online.RealtimeMultiplayer;
 
 namespace osu.Server.Spectator.Hubs
 {
     [UsedImplicitly]
     [Authorize]
     public abstract class StatefulUserHub<TClient, TUserState> : Hub<TClient>
-        where TUserState : class
+        where TUserState : ClientState
         where TClient : class
     {
         protected static readonly EntityStore<TUserState> ACTIVE_STATES = new EntityStore<TUserState>();
@@ -23,7 +24,7 @@ namespace osu.Server.Spectator.Hubs
         {
         }
 
-        protected static KeyValuePair<long, TUserState?>[] GetAllStates() => ACTIVE_STATES.GetAllStates();
+        protected static KeyValuePair<long, TUserState?>[] GetAllStates() => ACTIVE_STATES.GetAllEntities();
 
         /// <summary>
         /// The osu! user id for the currently processing context.
@@ -37,29 +38,44 @@ namespace osu.Server.Spectator.Hubs
             return base.OnConnectedAsync();
         }
 
-        /// <summary>
-        /// Called when a user disconnected, providing their last state.
-        /// </summary>
-        /// <param name="exception">A potential error which caused the disconnection.</param>
-        /// <param name="state">The last user state. May be null. This is automatically cleared on disconnection.</param>
-        protected virtual Task OnDisconnectedAsync(Exception exception, TUserState? state) => Task.CompletedTask;
-
         public sealed override async Task OnDisconnectedAsync(Exception exception)
         {
             Console.WriteLine($"User {CurrentContextUserId} disconnected!");
 
-            var state = await GetLocalUserState();
+            ItemUsage<TUserState>? usage;
 
-            await OnDisconnectedAsync(exception, state);
+            try
+            {
+                usage = await GetOrCreateLocalUserState();
+            }
+            catch (ArgumentException)
+            {
+                // no state to clean up.
+                return;
+            }
 
-            // clean up user on disconnection
-            if (state != null) await RemoveLocalUserState();
-
-            await base.OnDisconnectedAsync(exception);
+            using (usage)
+            {
+                if (usage.Item != null)
+                    await CleanUpState(usage.Item);
+                usage.Destroy();
+            }
         }
 
-        protected Task<ItemUsage<TUserState>> GetLocalUserState() =>
-            GetStateFromUser(CurrentContextUserId);
+        /// <summary>
+        /// Perform any cleanup required on the provided state.
+        /// </summary>
+        protected virtual Task CleanUpState(TUserState state) => Task.CompletedTask;
+
+        protected async Task<ItemUsage<TUserState>> GetOrCreateLocalUserState()
+        {
+            var usage = await ACTIVE_STATES.GetForUse(CurrentContextUserId, true);
+
+            if (usage.Item != null && usage.Item.ConnectionId != Context.ConnectionId)
+                throw new InvalidStateException("State is not valid for this connection");
+
+            return usage;
+        }
 
         protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) =>
             ACTIVE_STATES.GetForUse(userId);
