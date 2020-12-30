@@ -30,8 +30,7 @@ namespace osu.Server.Spectator.Hubs
                     entityMapping[id] = item = new TrackedEntity(id, this);
             }
 
-            if (!await item.Semaphore.WaitAsync(lock_timeout))
-                throw new TimeoutException($"Lock for {nameof(T)} id {id} could not be obtained within timeout period");
+            await item.ObtainLockAsync();
 
             return new ItemUsage<T>(item);
         }
@@ -47,7 +46,7 @@ namespace osu.Server.Spectator.Hubs
                     return;
             }
 
-            await item.Semaphore.WaitAsync(lock_timeout);
+            await item.ObtainLockAsync();
 
             // handles removal and disposal of the semaphore.
             item.Destroy();
@@ -85,12 +84,16 @@ namespace osu.Server.Spectator.Hubs
 
         public class TrackedEntity
         {
-            public readonly SemaphoreSlim Semaphore = new SemaphoreSlim(1);
+            private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1);
 
-            public T? Item;
+            private T? item;
 
             private readonly long id;
             private readonly EntityStore<T> store;
+
+            private bool isDestroyed;
+
+            private bool isLocked => semaphore.CurrentCount == 0;
 
             public TrackedEntity(long id, EntityStore<T> store)
             {
@@ -98,16 +101,51 @@ namespace osu.Server.Spectator.Hubs
                 this.store = store;
             }
 
+            public T? Item
+            {
+                get
+                {
+                    checkValidForUse();
+                    return item;
+                }
+                set
+                {
+                    checkValidForUse();
+                    item = value;
+                }
+            }
+
             /// <summary>
             /// Mark this item as no longer used. Will remove any tracking overhead.
             /// </summary>
             public void Destroy()
             {
-                if (Semaphore.CurrentCount > 0)
-                    throw new InvalidOperationException("Attempted to destroy a tracked entity without holding a lock");
+                // we should already have a lock when calling destroy.
+                checkValidForUse();
 
                 store.remove(id);
-                Semaphore.Dispose();
+                semaphore.Dispose();
+                isDestroyed = true;
+            }
+
+            public async Task ObtainLockAsync()
+            {
+                checkValidForUse(false);
+
+                if (!await semaphore.WaitAsync(lock_timeout))
+                    throw new TimeoutException($"Lock for {nameof(T)} id {id} could not be obtained within timeout period");
+            }
+
+            public void ReleaseLock()
+            {
+                if (!isDestroyed)
+                    semaphore.Release();
+            }
+
+            private void checkValidForUse(bool shouldBeLocked = true)
+            {
+                if (isDestroyed) throw new InvalidOperationException("Attempted to use an item which has already been destroyed");
+                if (shouldBeLocked && !isLocked) throw new InvalidOperationException("Attempted to destroy a tracked entity without holding a lock");
             }
         }
     }

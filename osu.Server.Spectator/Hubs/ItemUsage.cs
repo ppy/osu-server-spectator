@@ -35,9 +35,6 @@ namespace osu.Server.Spectator.Hubs
             entity.Destroy();
         }
 
-        private static void returnLock(EntityStore<T>.TrackedEntity entity)
-        {
-            entity.Semaphore.Release();
-        }
+        private static void returnLock(EntityStore<T>.TrackedEntity entity) => entity.ReleaseLock();
     }
 }

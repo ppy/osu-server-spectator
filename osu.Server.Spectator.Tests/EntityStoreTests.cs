@@ -34,6 +34,29 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async void TestGetWithoutLockFails()
+        {
+            ItemUsage<TestItem>? retrieval;
+
+            using (retrieval = await store.GetForUse(1))
+                retrieval.Item = new TestItem("test data");
+
+            Assert.Throws<InvalidOperationException>(() => retrieval.Item);
+        }
+
+        [Fact]
+        public async void TestSetWithoutLockFails()
+        {
+            ItemUsage<TestItem>? retrieval;
+
+            using (retrieval = await store.GetForUse(1))
+            {
+            }
+
+            Assert.Throws<InvalidOperationException>(() => retrieval.Item = new TestItem("test data"));
+        }
+
+        [Fact]
         public async void TestDestroyingTrackedEntity()
         {
             using (var firstGet = await store.GetForUse(1))
@@ -48,6 +71,39 @@ namespace osu.Server.Spectator.Tests
 
             using (var thirdGet = await store.GetForUse(1))
                 Assert.Null(thirdGet.Item);
+        }
+
+        [Fact]
+        public async void TestDestroyingFromInsideUsage()
+        {
+            using (var firstGet = await store.GetForUse(1))
+            {
+                firstGet.Item = new TestItem("test data");
+            }
+
+            using (var secondGet = await store.GetForUse(1))
+            {
+                Assert.NotNull(secondGet.Item);
+                secondGet.Destroy();
+                Assert.Throws<InvalidOperationException>(() => secondGet.Item);
+            }
+
+            using (var thirdGet = await store.GetForUse(1))
+                Assert.Null(thirdGet.Item);
+        }
+
+        [Fact]
+        public async void TestDestroyingWithoutLockFails()
+        {
+            using (var firstGet = await store.GetForUse(1))
+                firstGet.Item = new TestItem("test data");
+
+            ItemUsage<TestItem>? secondGet;
+
+            using (secondGet = await store.GetForUse(1))
+                Assert.NotNull(secondGet.Item);
+
+            Assert.Throws<InvalidOperationException>(() => secondGet.Destroy());
         }
 
         [Fact]
