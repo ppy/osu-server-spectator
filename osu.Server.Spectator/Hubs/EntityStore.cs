@@ -8,25 +8,31 @@ using System.Threading.Tasks;
 
 namespace osu.Server.Spectator.Hubs
 {
+    public interface IEntityStore
+    {
+    }
+
     /// <summary>
     /// Tracks and ensures consistency of a collection of entities that have a related permanent ID.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class EntityStore<T>
+    /// <typeparam name="T">The type of the entity being tracked.</typeparam>
+    /// <typeparam name="TKey">The numeric type of the key (generally int or long).</typeparam>
+    public class EntityStore<T, TKey>
         where T : class
+        where TKey : struct
     {
-        private readonly Dictionary<int, Entity<T>> entityMapping = new Dictionary<int, Entity<T>>();
+        private readonly Dictionary<TKey, TrackedEntity<T>> entityMapping = new Dictionary<TKey, TrackedEntity<T>>();
 
         private const int lock_timeout = 5000;
 
-        public async Task<ItemUsage<T>> GetForUse(int id)
+        public async Task<ItemUsage<T>> GetForUse(TKey id)
         {
-            Entity<T>? item;
+            TrackedEntity<T>? item;
 
             lock (entityMapping)
             {
                 if (!entityMapping.TryGetValue(id, out item))
-                    entityMapping[id] = item = new Entity<T>();
+                    entityMapping[id] = item = new TrackedEntity<T>();
             }
 
             if (!await item.Semaphore.WaitAsync(lock_timeout))
@@ -35,9 +41,9 @@ namespace osu.Server.Spectator.Hubs
             return new ItemUsage<T>(item);
         }
 
-        public async Task Destroy(int id)
+        public async Task Destroy(TKey id)
         {
-            Entity<T>? item;
+            TrackedEntity<T>? item;
 
             lock (entityMapping)
             {
@@ -57,13 +63,24 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Get all tracked entities in an unsafe manner. Only read operations should be performed on retrieved entities.
         /// </summary>
-        protected KeyValuePair<int, T?>[] GetAllStates()
+        protected KeyValuePair<TKey, T?>[] GetAllStates()
         {
             lock (entityMapping)
             {
                 return entityMapping
-                       .Select(state => new KeyValuePair<int, T?>(state.Key, state.Value.Item))
+                       .Select(state => new KeyValuePair<TKey, T?>(state.Key, state.Value.Item))
                        .ToArray();
+            }
+        }
+
+        /// <summary>
+        /// Clear all tracked entities.
+        /// </summary>
+        public void Clear()
+        {
+            lock (entityMapping)
+            {
+                entityMapping.Clear();
             }
         }
     }

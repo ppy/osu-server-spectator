@@ -5,16 +5,21 @@ using System.Threading;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class Entity<T>
+    public class TrackedEntity<T>
         where T : class
     {
         public readonly SemaphoreSlim Semaphore = new SemaphoreSlim(1);
 
         public T? Item;
 
-        public Entity(T? item = null)
+        public bool IsDestroyed { get; private set; }
+
+        /// <summary>
+        /// Mark this item as no longer used. Will remove any tracking overhead.
+        /// </summary>
+        public void Destroy()
         {
-            Item = item;
+            IsDestroyed = true;
         }
     }
 }

@@ -1,15 +1,18 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System.Threading;
 using osu.Framework.Allocation;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class ItemUsage<T> : InvokeOnDisposal<SemaphoreSlim>
+    /// <summary>
+    /// A usage of an item, returned after ensuring locked control.
+    /// Should be disposed after usage.
+    /// </summary>
+    public class ItemUsage<T> : InvokeOnDisposal<TrackedEntity<T>>
         where T : class
     {
-        private readonly Entity<T> entity;
+        private readonly TrackedEntity<T> entity;
 
         public T? Item
         {
@@ -17,12 +20,24 @@ namespace osu.Server.Spectator.Hubs
             set => entity.Item = value;
         }
 
-        public ItemUsage(in Entity<T> entity)
-            : base(entity.Semaphore, returnLock)
+        public ItemUsage(in TrackedEntity<T> entity)
+            : base(entity, returnLock)
         {
             this.entity = entity;
         }
 
-        private static void returnLock(SemaphoreSlim semaphore) => semaphore.Release();
+        /// <summary>
+        /// Mark this item as no longer used. Will remove any tracking overhead.
+        /// </summary>
+        public void Destroy()
+        {
+            Item = null;
+            entity.Destroy();
+        }
+
+        private static void returnLock(TrackedEntity<T> entity)
+        {
+            entity.Semaphore.Release();
+        }
     }
 }
