@@ -199,6 +199,36 @@ namespace osu.Server.Spectator.Tests
             Assert.All(items, item => Assert.NotNull(item.Value));
         }
 
+        [Fact]
+        public async Task TestClearOperationIsSerialised()
+        {
+            using (var firstGet = await store.GetForUse(1, true))
+                firstGet.Item = new TestItem("hello");
+
+            using (var secondGet = await store.GetForUse(2, true))
+                secondGet.Item = new TestItem("there");
+
+            ManualResetEventSlim clearOperationStarted = new ManualResetEventSlim();
+            ManualResetEventSlim clearOperationDone = new ManualResetEventSlim();
+            Thread backgroundClearThread = new Thread(() =>
+            {
+                clearOperationStarted.Set();
+                store.Clear();
+                clearOperationDone.Set();
+            });
+
+            using (var thirdGet = await store.GetForUse(3, true))
+            {
+                // start background clear while this get is holding the lock.
+                backgroundClearThread.Start();
+                clearOperationStarted.Wait(1000);
+                thirdGet.Item = new TestItem("another");
+            }
+
+            Assert.True(clearOperationDone.Wait(1000));
+            Assert.Empty(store.GetAllEntities());
+        }
+
         public class TestItem
         {
             public readonly string TestData;
