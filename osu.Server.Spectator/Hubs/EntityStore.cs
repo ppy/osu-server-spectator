@@ -65,7 +65,7 @@ namespace osu.Server.Spectator.Hubs
             lock (entityMapping)
             {
                 return entityMapping
-                       .Where(kvp => kvp.Value.Item != null)
+                       .Where(kvp => kvp.Value.GetItemUnsafe() != null)
                        .Select(entity => new KeyValuePair<long, T?>(entity.Key, entity.Value.GetItemUnsafe()))
                        .ToArray();
             }
