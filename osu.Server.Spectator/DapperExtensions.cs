@@ -48,7 +48,7 @@ namespace osu.Server.Spectator
             }
         }
 
-        private static int dateTimeOffsetMapperInstalled = 0;
+        private static int dateTimeOffsetMapperInstalled;
 
         public static void InstallDateTimeOffsetMapper()
         {
