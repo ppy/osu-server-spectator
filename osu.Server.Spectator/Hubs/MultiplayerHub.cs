@@ -153,8 +153,10 @@ namespace osu.Server.Spectator.Hubs
         {
             using (var userUsage = await GetOrCreateLocalUserState())
             {
-                if (userUsage.Item != null)
-                    await LeaveRoom(userUsage.Item);
+                if (userUsage.Item == null)
+                    throw new NotJoinedRoomException();
+
+                await LeaveRoom(userUsage.Item);
 
                 userUsage.Destroy();
             }
