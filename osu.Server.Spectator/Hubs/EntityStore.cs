@@ -66,7 +66,7 @@ namespace osu.Server.Spectator.Hubs
             {
                 return entityMapping
                        .Where(kvp => kvp.Value.Item != null)
-                       .Select(entity => new KeyValuePair<long, T?>(entity.Key, entity.Value.Item))
+                       .Select(entity => new KeyValuePair<long, T?>(entity.Key, entity.Value.GetItemUnsafe()))
                        .ToArray();
             }
         }
@@ -106,6 +106,8 @@ namespace osu.Server.Spectator.Hubs
                 this.id = id;
                 this.store = store;
             }
+
+            public T? GetItemUnsafe() => item;
 
             public T? Item
             {
