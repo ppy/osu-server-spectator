@@ -21,6 +21,28 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task TestDestroyingInConcurrentUsages()
+        {
+            ManualResetEventSlim secondGetStarted = new ManualResetEventSlim();
+
+            var firstGet = await store.GetForUse(1, true);
+            var secondGet = Task.Run(async () =>
+            {
+                secondGetStarted.Set();
+
+                using (await store.GetForUse(1))
+                {
+                }
+            });
+
+            secondGetStarted.Wait(1000);
+            using (firstGet)
+                firstGet.Destroy();
+
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await secondGet);
+        }
+
+        [Fact]
         public async void TestGetTwiceRetainsItem()
         {
             using (var firstGet = await store.GetForUse(1, true))

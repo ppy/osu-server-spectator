@@ -135,6 +135,7 @@ namespace osu.Server.Spectator.Hubs
                 isDestroyed = true;
 
                 store.remove(id);
+                semaphore.Release();
                 semaphore.Dispose();
             }
 
