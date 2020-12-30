@@ -2,6 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Server.Spectator.Hubs;
@@ -155,6 +157,46 @@ namespace osu.Server.Spectator.Tests
 
                 await Assert.ThrowsAsync<TimeoutException>(() => store.GetForUse(1));
             }
+        }
+
+        [Fact]
+        public async Task TestGetAllEntitiesReadsConsistentState()
+        {
+            using (var firstGet = await store.GetForUse(1, true))
+                firstGet.Item = new TestItem("a");
+
+            using (var secondGet = await store.GetForUse(2, true))
+                secondGet.Item = new TestItem("b");
+
+            using (await store.GetForUse(3, true))
+            {
+                // keep this item null.
+                // we'll be testing that this isn't returned later.
+            }
+
+            KeyValuePair<long, TestItem?>[]? items = null;
+            ManualResetEventSlim backgroundRetrievalStarted = new ManualResetEventSlim();
+            ManualResetEventSlim backgroundRetrievalDone = new ManualResetEventSlim();
+            Thread backgroundRetrievalThread = new Thread(() =>
+            {
+                backgroundRetrievalStarted.Set();
+                items = store.GetAllEntities();
+                backgroundRetrievalDone.Set();
+            });
+
+            using (var fourthGet = await store.GetForUse(4, true))
+            {
+                // start background retrieval while this get is holding the lock.
+                backgroundRetrievalThread.Start();
+                backgroundRetrievalStarted.Wait(1000);
+                fourthGet.Item = new TestItem("c");
+            }
+
+            Assert.True(backgroundRetrievalDone.Wait(1000));
+            Assert.NotNull(items);
+            Assert.Equal(3, items?.Length);
+            Assert.DoesNotContain(3, items?.Select(item => item.Key));
+            Assert.All(items, item => Assert.NotNull(item.Value));
         }
 
         public class TestItem
