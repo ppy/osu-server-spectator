@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -143,13 +142,13 @@ namespace osu.Server.Spectator.Tests
             await hub.LeaveRoom();
 
             // room still exists even though the original host left
-            Assert.True(hub.TryGetRoom(room_id, out var _));
+            Assert.True(hub.CheckRoomExists(room_id));
 
             setUserContext(mockContextUser2);
             await hub.LeaveRoom();
 
             // room is gone.
-            Assert.False(hub.TryGetRoom(room_id, out var _));
+            Assert.False(hub.CheckRoomExists(room_id));
         }
 
         [Fact]
@@ -491,10 +490,13 @@ namespace osu.Server.Spectator.Tests
             await hub.JoinRoom(room_id);
             await hub.ChangeSettings(testSettings);
 
-            Assert.True(hub.TryGetRoom(room_id, out var room));
+            using (var usage = hub.GetRoom(room_id))
+            {
+                var room = usage.Item;
 
-            Debug.Assert(room != null);
-            Assert.Equal(testSettings.Name, room.Settings.Name);
+                Debug.Assert(room != null);
+                Assert.Equal(testSettings.Name, room.Settings.Name);
+            }
         }
 
         [Fact]
@@ -507,8 +509,14 @@ namespace osu.Server.Spectator.Tests
 
             await hub.JoinRoom(room_id);
 
-            Assert.True(hub.TryGetRoom(room_id, out var room));
-            Debug.Assert(room != null);
+            MultiplayerRoom? room;
+
+            using (var usage = hub.GetRoom(room_id))
+            {
+                // unsafe, but just for tests.
+                room = usage.Item;
+                Debug.Assert(room != null);
+            }
 
             await hub.ChangeState(MultiplayerUserState.Ready);
             mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Ready), Times.Once);
@@ -529,12 +537,9 @@ namespace osu.Server.Spectator.Tests
         public async Task UserCantChangeSettingsWhenGameIsActive()
         {
             var room = await hub.JoinRoom(room_id);
-
             await hub.ChangeState(MultiplayerUserState.Ready);
             await hub.StartMatch();
-
             Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
-
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(new MultiplayerRoomSettings()));
         }
 
@@ -549,7 +554,6 @@ namespace osu.Server.Spectator.Tests
 
             await hub.JoinRoom(room_id);
             await hub.ChangeSettings(testSettings);
-
             mockReceiver.Verify(r => r.SettingsChanged(testSettings), Times.Once);
         }
 
@@ -593,8 +597,21 @@ namespace osu.Server.Spectator.Tests
                 });
             }
 
-            public new bool TryGetRoom(long roomId, [MaybeNullWhen(false)] out MultiplayerRoom room)
-                => base.TryGetRoom(roomId, out room);
+            public ItemUsage<MultiplayerRoom> GetRoom(long roomId) => ACTIVE_ROOMS.GetForUse(roomId).Result;
+
+            public bool CheckRoomExists(long roomId)
+            {
+                try
+                {
+                    using (var usage = ACTIVE_ROOMS.GetForUse(roomId).Result)
+                        return usage.Item != null;
+                }
+                catch
+                {
+                    // probably not tracked.
+                    return false;
+                }
+            }
         }
     }
 }
