@@ -151,7 +151,7 @@ namespace osu.Server.Spectator.Hubs
             private void checkValidForUse(bool shouldBeLocked = true)
             {
                 if (isDestroyed) throw new InvalidOperationException("Attempted to use an item which has already been destroyed");
-                if (shouldBeLocked && !isLocked) throw new InvalidOperationException("Attempted to destroy a tracked entity without holding a lock");
+                if (shouldBeLocked && !isLocked) throw new InvalidOperationException("Attempted to access a tracked entity without holding a lock");
             }
         }
     }
