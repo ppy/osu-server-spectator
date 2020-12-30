@@ -31,22 +31,30 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         protected int CurrentContextUserId => int.Parse(Context.UserIdentifier);
 
-        public override Task OnConnectedAsync()
+        public override async Task OnConnectedAsync()
         {
             Console.WriteLine($"User {CurrentContextUserId} connected!");
 
-            return base.OnConnectedAsync();
+            // if a previous connection is still present for the current user, we need to clean it up.
+            await cleanUpState(false);
+
+            await base.OnConnectedAsync();
         }
 
         public sealed override async Task OnDisconnectedAsync(Exception exception)
         {
             Console.WriteLine($"User {CurrentContextUserId} disconnected!");
 
+            await cleanUpState(true);
+        }
+
+        private async Task cleanUpState(bool isDisconnect)
+        {
             ItemUsage<TUserState>? usage;
 
             try
             {
-                usage = await GetOrCreateLocalUserState();
+                usage = await ACTIVE_STATES.GetForUse(CurrentContextUserId);
             }
             catch (ArgumentException)
             {
@@ -57,7 +65,17 @@ namespace osu.Server.Spectator.Hubs
             using (usage)
             {
                 if (usage.Item != null)
+                {
+                    bool isOurState = usage.Item.ConnectionId != Context.ConnectionId;
+
+                    if (isDisconnect && !isOurState)
+                        // not our state, owned by a different connection.
+                        return;
+                }
+
+                if (usage.Item != null)
                     await CleanUpState(usage.Item);
+
                 usage.Destroy();
             }
         }
