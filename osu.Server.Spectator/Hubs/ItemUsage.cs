@@ -9,10 +9,10 @@ namespace osu.Server.Spectator.Hubs
     /// A usage of an item, returned after ensuring locked control.
     /// Should be disposed after usage.
     /// </summary>
-    public class ItemUsage<T> : InvokeOnDisposal<TrackedEntity<T>>
+    public class ItemUsage<T> : InvokeOnDisposal<EntityStore<T>.TrackedEntity>
         where T : class
     {
-        private readonly TrackedEntity<T> entity;
+        private readonly EntityStore<T>.TrackedEntity entity;
 
         public T? Item
         {
@@ -20,7 +20,7 @@ namespace osu.Server.Spectator.Hubs
             set => entity.Item = value;
         }
 
-        public ItemUsage(in TrackedEntity<T> entity)
+        public ItemUsage(in EntityStore<T>.TrackedEntity entity)
             : base(entity, returnLock)
         {
             this.entity = entity;
@@ -35,7 +35,7 @@ namespace osu.Server.Spectator.Hubs
             entity.Destroy();
         }
 
-        private static void returnLock(TrackedEntity<T> entity)
+        private static void returnLock(EntityStore<T>.TrackedEntity entity)
         {
             entity.Semaphore.Release();
         }

@@ -11,11 +11,11 @@ namespace osu.Server.Spectator.Tests
 {
     public class EntityStoreTests
     {
-        private readonly EntityStore<TestItem, int> store;
+        private readonly EntityStore<TestItem> store;
 
         public EntityStoreTests()
         {
-            store = new EntityStore<TestItem, int>();
+            store = new EntityStore<TestItem>();
         }
 
         [Fact]

@@ -4,35 +4,30 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public interface IEntityStore
-    {
-    }
-
     /// <summary>
     /// Tracks and ensures consistency of a collection of entities that have a related permanent ID.
     /// </summary>
     /// <typeparam name="T">The type of the entity being tracked.</typeparam>
-    /// <typeparam name="TKey">The numeric type of the key (generally int or long).</typeparam>
-    public class EntityStore<T, TKey>
+    public class EntityStore<T>
         where T : class
-        where TKey : struct
     {
-        private readonly Dictionary<TKey, TrackedEntity<T>> entityMapping = new Dictionary<TKey, TrackedEntity<T>>();
+        private readonly Dictionary<long, TrackedEntity> entityMapping = new Dictionary<long, TrackedEntity>();
 
         private const int lock_timeout = 5000;
 
-        public async Task<ItemUsage<T>> GetForUse(TKey id)
+        public async Task<ItemUsage<T>> GetForUse(long id)
         {
-            TrackedEntity<T>? item;
+            TrackedEntity? item;
 
             lock (entityMapping)
             {
                 if (!entityMapping.TryGetValue(id, out item))
-                    entityMapping[id] = item = new TrackedEntity<T>();
+                    entityMapping[id] = item = new TrackedEntity(id, this);
             }
 
             if (!await item.Semaphore.WaitAsync(lock_timeout))
@@ -41,9 +36,9 @@ namespace osu.Server.Spectator.Hubs
             return new ItemUsage<T>(item);
         }
 
-        public async Task Destroy(TKey id)
+        public async Task Destroy(long id)
         {
-            TrackedEntity<T>? item;
+            TrackedEntity? item;
 
             lock (entityMapping)
             {
@@ -54,21 +49,25 @@ namespace osu.Server.Spectator.Hubs
 
             await item.Semaphore.WaitAsync(lock_timeout);
 
+            // handles removal and disposal of the semaphore.
+            item.Destroy();
+        }
+
+        private void remove(long id)
+        {
             lock (entityMapping)
                 entityMapping.Remove(id);
-
-            item.Semaphore.Dispose();
         }
 
         /// <summary>
         /// Get all tracked entities in an unsafe manner. Only read operations should be performed on retrieved entities.
         /// </summary>
-        protected KeyValuePair<TKey, T?>[] GetAllStates()
+        protected KeyValuePair<long, T?>[] GetAllStates()
         {
             lock (entityMapping)
             {
                 return entityMapping
-                       .Select(state => new KeyValuePair<TKey, T?>(state.Key, state.Value.Item))
+                       .Select(state => new KeyValuePair<long, T?>(state.Key, state.Value.Item))
                        .ToArray();
             }
         }
@@ -81,6 +80,34 @@ namespace osu.Server.Spectator.Hubs
             lock (entityMapping)
             {
                 entityMapping.Clear();
+            }
+        }
+
+        public class TrackedEntity
+        {
+            public readonly SemaphoreSlim Semaphore = new SemaphoreSlim(1);
+
+            public T? Item;
+
+            private readonly long id;
+            private readonly EntityStore<T> store;
+
+            public TrackedEntity(long id, EntityStore<T> store)
+            {
+                this.id = id;
+                this.store = store;
+            }
+
+            /// <summary>
+            /// Mark this item as no longer used. Will remove any tracking overhead.
+            /// </summary>
+            public void Destroy()
+            {
+                if (Semaphore.CurrentCount > 0)
+                    throw new InvalidOperationException("Attempted to destroy a tracked entity without holding a lock");
+
+                store.remove(id);
+                Semaphore.Dispose();
             }
         }
     }
