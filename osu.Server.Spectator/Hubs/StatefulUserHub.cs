@@ -90,7 +90,10 @@ namespace osu.Server.Spectator.Hubs
             var usage = await ACTIVE_STATES.GetForUse(CurrentContextUserId, true);
 
             if (usage.Item != null && usage.Item.ConnectionId != Context.ConnectionId)
+            {
+                usage.Dispose();
                 throw new InvalidStateException("State is not valid for this connection");
+            }
 
             return usage;
         }
