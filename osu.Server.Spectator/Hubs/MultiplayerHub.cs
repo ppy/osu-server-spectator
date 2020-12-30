@@ -150,9 +150,10 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task LeaveRoom()
         {
-            using (var usage = await getLocalUserRoom())
+            using (var userUsage = await GetLocalUserState())
+            using (var roomUsage = await getLocalUserRoom())
             {
-                var room = usage.Item;
+                var room = roomUsage.Item;
 
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
@@ -174,7 +175,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Users.Count == 0)
                 {
                     Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
-                    usage.Destroy();
+                    roomUsage.Destroy();
 
                     await EndDatabaseMatch(room);
 

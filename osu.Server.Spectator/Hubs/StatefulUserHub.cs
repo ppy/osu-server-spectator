@@ -58,30 +58,11 @@ namespace osu.Server.Spectator.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        protected Task UpdateLocalUserState(TUserState state)
-        {
-            // active_states[CurrentContextUserId] = state;
+        protected Task<ItemUsage<TUserState>> GetLocalUserState() =>
+            GetStateFromUser(CurrentContextUserId);
 
-            return Task.CompletedTask;
-        }
-
-        protected Task<TUserState?> GetLocalUserState() => GetStateFromUser(CurrentContextUserId);
-
-        protected Task RemoveLocalUserState()
-        {
-            // active_states.Remove(CurrentContextUserId);
-
-            return Task.CompletedTask;
-        }
-
-        protected Task<TUserState?> GetStateFromUser(int userId)
-        {
-            TUserState? state;
-
-            // active_states.TryGetValue(userId, out state);
-
-            return Task.FromResult(state);
-        }
+        protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) =>
+            ACTIVE_STATES.GetForUse(userId);
 
         public static string GetStateId(int userId) => $"state-{typeof(TClient)}:{userId}";
 

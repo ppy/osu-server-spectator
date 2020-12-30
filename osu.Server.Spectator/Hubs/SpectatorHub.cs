@@ -43,12 +43,15 @@ namespace osu.Server.Spectator.Hubs
         {
             Console.WriteLine($"User {CurrentContextUserId} watching {userId}");
 
-            // send the user's state if exists
-            var state = await GetStateFromUser(userId);
-
-            if (state != null)
+            try
             {
+                // send the user's state if exists
+                var state = await GetStateFromUser(userId);
                 await Clients.Caller.UserBeganPlaying(userId, state);
+            }
+            catch (ArgumentException)
+            {
+                // user isn't tracked.
             }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(userId));
