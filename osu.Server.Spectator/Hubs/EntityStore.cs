@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using osu.Framework.Extensions.ObjectExtensions;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -60,13 +61,13 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Get all tracked entities in an unsafe manner. Only read operations should be performed on retrieved entities.
         /// </summary>
-        public KeyValuePair<long, T?>[] GetAllEntities()
+        public KeyValuePair<long, T>[] GetAllEntities()
         {
             lock (entityMapping)
             {
                 return entityMapping
                        .Where(kvp => kvp.Value.GetItemUnsafe() != null)
-                       .Select(entity => new KeyValuePair<long, T?>(entity.Key, entity.Value.GetItemUnsafe()))
+                       .Select(entity => new KeyValuePair<long, T>(entity.Key, entity.Value.GetItemUnsafe().AsNonNull()))
                        .ToArray();
             }
         }
@@ -131,9 +132,11 @@ namespace osu.Server.Spectator.Hubs
                 // we should already have a lock when calling destroy.
                 checkValidForUse();
 
-                store.remove(id);
-                semaphore.Dispose();
                 isDestroyed = true;
+
+                store.remove(id);
+                semaphore.Release();
+                semaphore.Dispose();
             }
 
             public async Task ObtainLockAsync()
@@ -142,6 +145,9 @@ namespace osu.Server.Spectator.Hubs
 
                 if (!await semaphore.WaitAsync(lock_timeout))
                     throw new TimeoutException($"Lock for {typeof(T)} id {id} could not be obtained within timeout period");
+
+                // destroyed state may have changed while waiting for the lock.
+                checkValidForUse();
             }
 
             public void ReleaseLock()
