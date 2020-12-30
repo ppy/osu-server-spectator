@@ -156,55 +156,9 @@ namespace osu.Server.Spectator.Hubs
                 if (userUsage.Item == null)
                     throw new NotJoinedRoomException();
 
-                await LeaveRoom(userUsage.Item);
+                await leaveRoom(userUsage.Item);
 
                 userUsage.Destroy();
-            }
-        }
-
-        public async Task LeaveRoom(MultiplayerClientState state)
-        {
-            using (var roomUsage = await getLocalUserRoom(state))
-            {
-                var room = roomUsage.Item;
-
-                if (room == null)
-                    throw new InvalidOperationException("Attempted to operate on a null room");
-
-                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
-                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
-
-                var user = room.Users.Find(u => u.UserID == state.UserId);
-
-                if (user == null)
-                    failWithInvalidState("User was not in the expected room.");
-
-                room.Users.Remove(user);
-
-                await UpdateDatabaseParticipants(room);
-
-                if (room.Users.Count == 0)
-                {
-                    Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
-                    roomUsage.Destroy();
-
-                    await EndDatabaseMatch(room);
-
-                    return;
-                }
-
-                var clients = Clients.Group(GetGroupId(room.RoomID));
-
-                // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
-                if (room.Host?.Equals(user) == true)
-                {
-                    // there *has* to still be at least one user in the room (see user check above).
-                    var newHost = room.Users.First();
-
-                    await setNewHost(room, newHost);
-                }
-
-                await clients.UserLeft(user);
             }
         }
 
@@ -463,7 +417,7 @@ namespace osu.Server.Spectator.Hubs
 
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
-            await LeaveRoom(state);
+            await leaveRoom(state);
             await base.CleanUpState(state);
         }
 
@@ -604,6 +558,52 @@ namespace osu.Server.Spectator.Hubs
             long roomId = state.CurrentRoomID;
 
             return await ACTIVE_ROOMS.GetForUse(roomId);
+        }
+
+        private async Task leaveRoom(MultiplayerClientState state)
+        {
+            using (var roomUsage = await getLocalUserRoom(state))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
+                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
+
+                var user = room.Users.Find(u => u.UserID == state.UserId);
+
+                if (user == null)
+                    failWithInvalidState("User was not in the expected room.");
+
+                room.Users.Remove(user);
+
+                await UpdateDatabaseParticipants(room);
+
+                if (room.Users.Count == 0)
+                {
+                    Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
+                    roomUsage.Destroy();
+
+                    await EndDatabaseMatch(room);
+
+                    return;
+                }
+
+                var clients = Clients.Group(GetGroupId(room.RoomID));
+
+                // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
+                if (room.Host?.Equals(user) == true)
+                {
+                    // there *has* to still be at least one user in the room (see user check above).
+                    var newHost = room.Users.First();
+
+                    await setNewHost(room, newHost);
+                }
+
+                await clients.UserLeft(user);
+            }
         }
 
         [ExcludeFromCodeCoverage]
