@@ -20,14 +20,19 @@ namespace osu.Server.Spectator.Hubs
 
         private const int lock_timeout = 5000;
 
-        public async Task<ItemUsage<T>> GetForUse(long id)
+        public async Task<ItemUsage<T>> GetForUse(long id, bool createOnMissing = false)
         {
             TrackedEntity? item;
 
             lock (entityMapping)
             {
                 if (!entityMapping.TryGetValue(id, out item))
+                {
+                    if (!createOnMissing)
+                        throw new ArgumentException($"Attempted to get untracked entity {nameof(T)} id {id}", nameof(id));
+
                     entityMapping[id] = item = new TrackedEntity(id, this);
+                }
             }
 
             await item.ObtainLockAsync();
