@@ -29,7 +29,7 @@ namespace osu.Server.Spectator.Hubs
                 if (!entityMapping.TryGetValue(id, out item))
                 {
                     if (!createOnMissing)
-                        throw new ArgumentException($"Attempted to get untracked entity {nameof(T)} id {id}", nameof(id));
+                        throw new ArgumentException($"Attempted to get untracked entity {typeof(T)} id {id}", nameof(id));
 
                     entityMapping[id] = item = new TrackedEntity(id, this);
                 }
@@ -138,7 +138,7 @@ namespace osu.Server.Spectator.Hubs
                 checkValidForUse(false);
 
                 if (!await semaphore.WaitAsync(lock_timeout))
-                    throw new TimeoutException($"Lock for {nameof(T)} id {id} could not be obtained within timeout period");
+                    throw new TimeoutException($"Lock for {typeof(T)} id {id} could not be obtained within timeout period");
             }
 
             public void ReleaseLock()
