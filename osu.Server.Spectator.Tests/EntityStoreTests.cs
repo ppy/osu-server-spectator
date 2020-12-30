@@ -34,6 +34,23 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async void TestDestroyingTrackedEntity()
+        {
+            using (var firstGet = await store.GetForUse(1))
+            {
+                firstGet.Item = new TestItem("test data");
+            }
+
+            using (var secondGet = await store.GetForUse(1))
+                Assert.NotNull(secondGet.Item);
+
+            await store.Destroy(1);
+
+            using (var thirdGet = await store.GetForUse(1))
+                Assert.Null(thirdGet.Item);
+        }
+
+        [Fact]
         public async void TestGetTwiceWithDelayedReturn()
         {
             var firstLockAchieved = new ManualResetEventSlim();

@@ -17,6 +17,8 @@ namespace osu.Server.Spectator.Hubs
     {
         private readonly Dictionary<int, Entity<T>> entityMapping = new Dictionary<int, Entity<T>>();
 
+        private const int lock_timeout = 5000;
+
         public async Task<ItemUsage<T>> GetForUse(int id)
         {
             Entity<T>? item;
@@ -27,10 +29,29 @@ namespace osu.Server.Spectator.Hubs
                     entityMapping[id] = item = new Entity<T>();
             }
 
-            if (!await item.Semaphore.WaitAsync(5000))
+            if (!await item.Semaphore.WaitAsync(lock_timeout))
                 throw new TimeoutException($"Lock for {nameof(T)} id {id} could not be obtained within timeout period");
 
             return new ItemUsage<T>(item);
+        }
+
+        public async Task Destroy(int id)
+        {
+            Entity<T>? item;
+
+            lock (entityMapping)
+            {
+                if (!entityMapping.TryGetValue(id, out item))
+                    // was not tracking.
+                    return;
+            }
+
+            await item.Semaphore.WaitAsync(lock_timeout);
+
+            lock (entityMapping)
+                entityMapping.Remove(id);
+
+            item.Semaphore.Dispose();
         }
 
         /// <summary>
