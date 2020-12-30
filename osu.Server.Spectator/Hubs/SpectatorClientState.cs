@@ -3,21 +3,19 @@
 
 using System;
 using Newtonsoft.Json;
-
-#nullable enable
+using osu.Game.Online.Spectator;
 
 namespace osu.Server.Spectator.Hubs
 {
     [Serializable]
-    public class MultiplayerClientState : ClientState
+    public class SpectatorClientState : ClientState
     {
-        public readonly long CurrentRoomID;
+        public SpectatorState? State;
 
         [JsonConstructor]
-        public MultiplayerClientState(in string connectionId, in long currentRoomID)
+        public SpectatorClientState(in string connectionId)
             : base(connectionId)
         {
-            CurrentRoomID = currentRoomID;
         }
     }
 }

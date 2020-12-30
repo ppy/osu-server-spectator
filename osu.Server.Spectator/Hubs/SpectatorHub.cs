@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Caching.Distributed;
@@ -9,7 +10,7 @@ using osu.Game.Online.Spectator;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorState>, ISpectatorServer
+    public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {
         public SpectatorHub([NotNull] IDistributedCache cache)
             : base(cache)
@@ -45,9 +46,14 @@ namespace osu.Server.Spectator.Hubs
 
             try
             {
+                SpectatorState? spectatorState;
+
                 // send the user's state if exists
-                var state = await GetStateFromUser(userId);
-                await Clients.Caller.UserBeganPlaying(userId, state);
+                using (var usage = await GetStateFromUser(userId))
+                    spectatorState = usage.Item?.State;
+
+                if (spectatorState != null)
+                    await Clients.Caller.UserBeganPlaying(userId, spectatorState);
             }
             catch (ArgumentException)
             {
@@ -67,7 +73,10 @@ namespace osu.Server.Spectator.Hubs
             // for now, send *all* player states to users on connect.
             // we don't want this for long, but while the lazer user base is small it should be okay.
             foreach (var kvp in GetAllStates())
-                await Clients.Caller.UserBeganPlaying((int)kvp.Key, kvp.Value);
+            {
+                Debug.Assert(kvp.Value != null);
+                await Clients.Caller.UserBeganPlaying((int)kvp.Key, kvp.Value.State);
+            }
 
             await base.OnConnectedAsync();
         }
