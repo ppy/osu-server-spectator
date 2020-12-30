@@ -57,16 +57,10 @@ namespace osu.Server.Spectator.Hubs
             item.Destroy();
         }
 
-        private void remove(long id)
-        {
-            lock (entityMapping)
-                entityMapping.Remove(id);
-        }
-
         /// <summary>
         /// Get all tracked entities in an unsafe manner. Only read operations should be performed on retrieved entities.
         /// </summary>
-        protected KeyValuePair<long, T?>[] GetAllStates()
+        public KeyValuePair<long, T?>[] GetAllStates()
         {
             lock (entityMapping)
             {
@@ -85,6 +79,12 @@ namespace osu.Server.Spectator.Hubs
             {
                 entityMapping.Clear();
             }
+        }
+
+        private void remove(long id)
+        {
+            lock (entityMapping)
+                entityMapping.Remove(id);
         }
 
         public class TrackedEntity
