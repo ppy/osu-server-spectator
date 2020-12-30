@@ -131,9 +131,10 @@ namespace osu.Server.Spectator.Hubs
                 // we should already have a lock when calling destroy.
                 checkValidForUse();
 
+                isDestroyed = true;
+
                 store.remove(id);
                 semaphore.Dispose();
-                isDestroyed = true;
             }
 
             public async Task ObtainLockAsync()
@@ -142,6 +143,9 @@ namespace osu.Server.Spectator.Hubs
 
                 if (!await semaphore.WaitAsync(lock_timeout))
                     throw new TimeoutException($"Lock for {typeof(T)} id {id} could not be obtained within timeout period");
+
+                // destroyed state may have changed while waiting for the lock.
+                checkValidForUse();
             }
 
             public void ReleaseLock()
