@@ -197,7 +197,7 @@ namespace osu.Server.Spectator.Tests
             Assert.True(backgroundRetrievalDone.Wait(1000));
 
             Assert.NotNull(items);
-            Assert.Equal(3, items?.Length);
+            Assert.Equal(3, items.Length);
             Assert.DoesNotContain(3, items?.Select(item => item.Key));
             Assert.All(items, item => Assert.NotNull(item.Value));
         }
