@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async void TestGetTwiceRetainsItem()
         {
-            using (var firstGet = await store.GetForUse(1))
+            using (var firstGet = await store.GetForUse(1, true))
             {
                 firstGet.Item = new TestItem("test data");
             }
@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Tests
         {
             ItemUsage<TestItem>? retrieval;
 
-            using (retrieval = await store.GetForUse(1))
+            using (retrieval = await store.GetForUse(1, true))
                 retrieval.Item = new TestItem("test data");
 
             Assert.Throws<InvalidOperationException>(() => retrieval.Item);
@@ -49,7 +49,7 @@ namespace osu.Server.Spectator.Tests
         {
             ItemUsage<TestItem>? retrieval;
 
-            using (retrieval = await store.GetForUse(1))
+            using (retrieval = await store.GetForUse(1, true))
             {
             }
 
@@ -59,7 +59,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async void TestDestroyingTrackedEntity()
         {
-            using (var firstGet = await store.GetForUse(1))
+            using (var firstGet = await store.GetForUse(1, true))
             {
                 firstGet.Item = new TestItem("test data");
             }
@@ -69,14 +69,16 @@ namespace osu.Server.Spectator.Tests
 
             await store.Destroy(1);
 
-            using (var thirdGet = await store.GetForUse(1))
+            await Assert.ThrowsAsync<ArgumentException>(() => store.GetForUse(1));
+
+            using (var thirdGet = await store.GetForUse(1, true))
                 Assert.Null(thirdGet.Item);
         }
 
         [Fact]
         public async void TestDestroyingFromInsideUsage()
         {
-            using (var firstGet = await store.GetForUse(1))
+            using (var firstGet = await store.GetForUse(1, true))
             {
                 firstGet.Item = new TestItem("test data");
             }
@@ -88,14 +90,16 @@ namespace osu.Server.Spectator.Tests
                 Assert.Throws<InvalidOperationException>(() => secondGet.Item);
             }
 
-            using (var thirdGet = await store.GetForUse(1))
+            await Assert.ThrowsAsync<ArgumentException>(() => store.GetForUse(1));
+
+            using (var thirdGet = await store.GetForUse(1, true))
                 Assert.Null(thirdGet.Item);
         }
 
         [Fact]
         public async void TestDestroyingWithoutLockFails()
         {
-            using (var firstGet = await store.GetForUse(1))
+            using (var firstGet = await store.GetForUse(1, true))
                 firstGet.Item = new TestItem("test data");
 
             ItemUsage<TestItem>? secondGet;
@@ -114,7 +118,7 @@ namespace osu.Server.Spectator.Tests
 
             new Thread(async () =>
             {
-                using (var firstGet = await store.GetForUse(1))
+                using (var firstGet = await store.GetForUse(1, true))
                 {
                     // signal the second fetch to start once the first lock has been achieved.
                     firstLockAchieved.Set();
@@ -145,7 +149,7 @@ namespace osu.Server.Spectator.Tests
         public async void TestNestedGetForUseFailsWithTimeout()
         {
             // pretty sure this will fail and be pretty tough to work around.
-            using (var firstGet = await store.GetForUse(1))
+            using (var firstGet = await store.GetForUse(1, true))
             {
                 firstGet.Item = new TestItem("test data");
 
