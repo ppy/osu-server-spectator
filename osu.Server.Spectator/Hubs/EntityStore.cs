@@ -24,37 +24,48 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Retrieve an entity with a lock for use.
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="createOnMissing"></param>
-        /// <returns>An <see cref="ItemUsage{T}"/> which allows reading or writing the item. This should be disposed </returns>
+        /// <param name="id">The ID of the requested entity.</param>
+        /// <param name="createOnMissing">Whether to create a new tracking instance if the entity is not already tracked.</param>
+        /// <returns>An <see cref="ItemUsage{T}"/> which allows reading or writing the item. This should be disposed after usage.</returns>
         /// <exception cref="KeyNotFoundException">Thrown if <see cref="createOnMissing"/> was false and the item is not in a tracked state.</exception>
         public async Task<ItemUsage<T>> GetForUse(long id, bool createOnMissing = false)
         {
-            TrackedEntity? item;
+            int retryCount = 10;
 
-            lock (entityMapping)
+            while (retryCount-- > 0)
             {
-                if (!entityMapping.TryGetValue(id, out item))
+                TrackedEntity? item;
+
+                lock (entityMapping)
                 {
-                    if (!createOnMissing)
-                        throw new KeyNotFoundException($"Attempted to get untracked entity {typeof(T)} id {id}");
+                    if (!entityMapping.TryGetValue(id, out item))
+                    {
+                        if (!createOnMissing)
+                            throw new KeyNotFoundException($"Attempted to get untracked entity {typeof(T)} id {id}");
 
-                    entityMapping[id] = item = new TrackedEntity(id, this);
+                        entityMapping[id] = item = new TrackedEntity(id, this);
+                    }
                 }
-            }
 
-            try
-            {
-                await item.ObtainLockAsync();
-            }
-            catch (InvalidOperationException)
-            {
+                try
+                {
+                    await item.ObtainLockAsync();
+                }
                 // this may be thrown if the item was destroyed between when we retrieved the item usage and took the lock.
-                // to an external consumer, this should just be handled as the item not being tracked.
-                throw new KeyNotFoundException($"Attempted to get untracked entity {typeof(T)} id {id}");
+                catch (InvalidOperationException)
+                {
+                    // if we're looking to create on missing, we should retry the whole process now that we are aware a previous tracked instance was destroyed.
+                    if (createOnMissing)
+                        continue;
+
+                    // if we're just looking to retrieve and instance, to an external consumer, this should just be handled as the item not being tracked.
+                    throw new KeyNotFoundException($"Attempted to get untracked entity {typeof(T)} id {id}");
+                }
+
+                return new ItemUsage<T>(item);
             }
 
-            return new ItemUsage<T>(item);
+            throw new TimeoutException("Could not allocate new entity after multiple retries. Something very bad has happened");
         }
 
         public async Task Destroy(long id)
