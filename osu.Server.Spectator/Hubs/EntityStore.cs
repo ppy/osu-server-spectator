@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework.Extensions.ObjectExtensions;
+using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -14,12 +15,14 @@ namespace osu.Server.Spectator.Hubs
     /// Tracks and ensures consistency of a collection of entities that have a related permanent ID.
     /// </summary>
     /// <typeparam name="T">The type of the entity being tracked.</typeparam>
-    public class EntityStore<T>
+    public sealed class EntityStore<T>
         where T : class
     {
         private readonly Dictionary<long, TrackedEntity> entityMapping = new Dictionary<long, TrackedEntity>();
 
         private const int lock_timeout = 5000;
+
+        private string statsDPrefix => $"entities.{typeof(T).Name}";
 
         /// <summary>
         /// Retrieve an entity with a lock for use.
@@ -44,6 +47,7 @@ namespace osu.Server.Spectator.Hubs
                             throw new KeyNotFoundException($"Attempted to get untracked entity {typeof(T)} id {id}");
 
                         entityMapping[id] = item = new TrackedEntity(id, this);
+                        DogStatsd.Increment($"{statsDPrefix}.total");
                     }
                 }
 
@@ -120,7 +124,10 @@ namespace osu.Server.Spectator.Hubs
         private void remove(long id)
         {
             lock (entityMapping)
+            {
                 entityMapping.Remove(id);
+                DogStatsd.Decrement($"{statsDPrefix}.total");
+            }
         }
 
         public class TrackedEntity
