@@ -155,9 +155,14 @@ namespace osu.Server.Spectator.Hubs
                 if (userUsage.Item == null)
                     throw new NotJoinedRoomException();
 
-                await leaveRoom(userUsage.Item);
-
-                userUsage.Destroy();
+                try
+                {
+                    await leaveRoom(userUsage.Item);
+                }
+                finally
+                {
+                    userUsage.Destroy();
+                }
             }
         }
 
