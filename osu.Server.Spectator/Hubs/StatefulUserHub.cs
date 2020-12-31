@@ -71,10 +71,9 @@ namespace osu.Server.Spectator.Hubs
                     if (isDisconnect && !isOurState)
                         // not our state, owned by a different connection.
                         return;
-                }
 
-                if (usage.Item != null)
                     await CleanUpState(usage.Item);
+                }
 
                 usage.Destroy();
             }
