@@ -44,10 +44,13 @@ namespace osu.Server.Spectator.Hubs
                     if (!entityMapping.TryGetValue(id, out item))
                     {
                         if (!createOnMissing)
+                        {
+                            DogStatsd.Increment($"{statsDPrefix}.get-notfound");
                             throw new KeyNotFoundException($"Attempted to get untracked entity {typeof(T)} id {id}");
+                        }
 
                         entityMapping[id] = item = new TrackedEntity(id, this);
-                        DogStatsd.Increment($"{statsDPrefix}.total");
+                        DogStatsd.Increment($"{statsDPrefix}.create");
                     }
                 }
 
@@ -66,6 +69,7 @@ namespace osu.Server.Spectator.Hubs
                     throw new KeyNotFoundException($"Attempted to get untracked entity {typeof(T)} id {id}");
                 }
 
+                DogStatsd.Increment($"{statsDPrefix}.get");
                 return new ItemUsage<T>(item);
             }
 
@@ -89,6 +93,7 @@ namespace osu.Server.Spectator.Hubs
 
                 // handles removal and disposal of the semaphore.
                 item.Destroy();
+                DogStatsd.Increment($"{statsDPrefix}.destroy");
             }
             catch (InvalidOperationException)
             {
