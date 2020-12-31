@@ -56,7 +56,7 @@ namespace osu.Server.Spectator.Hubs
             {
                 usage = await ACTIVE_STATES.GetForUse(CurrentContextUserId);
             }
-            catch (ArgumentException)
+            catch (KeyNotFoundException)
             {
                 // no state to clean up.
                 return;
