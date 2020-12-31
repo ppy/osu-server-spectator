@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Tests
             using (firstGet)
                 firstGet.Destroy();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await secondGet);
+            await Assert.ThrowsAnyAsync<Exception>(async () => await secondGet);
         }
 
         [Fact]
@@ -93,7 +93,7 @@ namespace osu.Server.Spectator.Tests
 
             await store.Destroy(1);
 
-            await Assert.ThrowsAsync<ArgumentException>(() => store.GetForUse(1));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => store.GetForUse(1));
 
             using (var thirdGet = await store.GetForUse(1, true))
                 Assert.Null(thirdGet.Item);
@@ -114,7 +114,7 @@ namespace osu.Server.Spectator.Tests
                 Assert.Throws<InvalidOperationException>(() => secondGet.Item);
             }
 
-            await Assert.ThrowsAsync<ArgumentException>(() => store.GetForUse(1));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => store.GetForUse(1));
 
             using (var thirdGet = await store.GetForUse(1, true))
                 Assert.Null(thirdGet.Item);
