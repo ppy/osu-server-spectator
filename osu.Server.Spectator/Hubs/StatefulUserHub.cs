@@ -24,7 +24,7 @@ namespace osu.Server.Spectator.Hubs
         {
         }
 
-        protected static KeyValuePair<long, TUserState?>[] GetAllStates() => ACTIVE_STATES.GetAllEntities();
+        protected static KeyValuePair<long, TUserState>[] GetAllStates() => ACTIVE_STATES.GetAllEntities();
 
         /// <summary>
         /// The osu! user id for the currently processing context.
