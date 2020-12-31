@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -59,7 +60,7 @@ namespace osu.Server.Spectator.Hubs
                 if (spectatorState != null)
                     await Clients.Caller.UserBeganPlaying(userId, spectatorState);
             }
-            catch (ArgumentException)
+            catch (KeyNotFoundException)
             {
                 // user isn't tracked.
             }
