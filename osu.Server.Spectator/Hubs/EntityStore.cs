@@ -50,6 +50,7 @@ namespace osu.Server.Spectator.Hubs
                         }
 
                         entityMapping[id] = item = new TrackedEntity(id, this);
+                        DogStatsd.Gauge($"{statsDPrefix}.total-tracked", entityMapping.Count);
                         DogStatsd.Increment($"{statsDPrefix}.create");
                     }
                 }
@@ -132,8 +133,8 @@ namespace osu.Server.Spectator.Hubs
             {
                 entityMapping.Remove(id);
 
-                DogStatsd.Decrement($"{statsDPrefix}.change");
-                DogStatsd.Gauge($"{statsDPrefix}.total", entityMapping.Count);
+                DogStatsd.Increment($"{statsDPrefix}.removed");
+                DogStatsd.Gauge($"{statsDPrefix}.total-tracked", entityMapping.Count);
             }
         }
 
