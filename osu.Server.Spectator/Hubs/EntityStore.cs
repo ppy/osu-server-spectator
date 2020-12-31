@@ -79,10 +79,17 @@ namespace osu.Server.Spectator.Hubs
                     return;
             }
 
-            await item.ObtainLockAsync();
+            try
+            {
+                await item.ObtainLockAsync();
 
-            // handles removal and disposal of the semaphore.
-            item.Destroy();
+                // handles removal and disposal of the semaphore.
+                item.Destroy();
+            }
+            catch (InvalidOperationException)
+            {
+                // the item has most likely already been cleaned up if we get here.
+            }
         }
 
         /// <summary>
