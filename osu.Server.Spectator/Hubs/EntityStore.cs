@@ -126,7 +126,9 @@ namespace osu.Server.Spectator.Hubs
             lock (entityMapping)
             {
                 entityMapping.Remove(id);
-                DogStatsd.Decrement($"{statsDPrefix}.total");
+
+                DogStatsd.Decrement($"{statsDPrefix}.change");
+                DogStatsd.Gauge($"{statsDPrefix}.total", entityMapping.Count);
             }
         }
 
