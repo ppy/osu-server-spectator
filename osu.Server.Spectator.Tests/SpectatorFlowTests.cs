@@ -55,10 +55,6 @@ namespace osu.Server.Spectator.Tests
             mockClients.Verify(clients => clients.All, Times.Once);
             mockReceiver.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state))), Times.Once());
 
-            // check state data was added
-            // var cacheState = await cache.GetStringAsync(SpectatorHub.GetStateId(streamer_id));
-            // Assert.Equal(state, JsonConvert.DeserializeObject<SpectatorState>(cacheState));
-
             var data = new FrameDataBundle(new ScoreInfo(), new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) });
 
             // check streaming data is propagating to watchers
