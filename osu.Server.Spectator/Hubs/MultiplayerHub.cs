@@ -72,16 +72,15 @@ namespace osu.Server.Spectator.Hubs
                     room = roomUsage.Item;
 
                     room.Users.Add(roomUser);
+
+                    await UpdateDatabaseParticipants(room);
+                    await MarkRoomActive(room);
                 }
 
                 await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                 await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
                 userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
-
-                // read only database operations are allowed to be done outside of the lock for performance reasons.
-                await UpdateDatabaseParticipants(room);
-                await MarkRoomActive(room);
 
                 return room;
             }
