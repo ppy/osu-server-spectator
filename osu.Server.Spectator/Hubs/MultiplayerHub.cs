@@ -20,18 +20,7 @@ namespace osu.Server.Spectator.Hubs
 {
     public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
-        // for the time being rooms will be maintained in memory and not distributed.
-        private static readonly Dictionary<long, MultiplayerRoom> active_rooms = new Dictionary<long, MultiplayerRoom>();
-
-        /// <summary>
-        /// Temporary method to reset in-memory storage (used only for tests).
-        /// </summary>
-        public static void Reset()
-        {
-            Console.WriteLine("Resetting ALL tracked rooms.");
-            lock (active_rooms)
-                active_rooms.Clear();
-        }
+        protected static readonly EntityStore<MultiplayerRoom> ACTIVE_ROOMS = new EntityStore<MultiplayerRoom>();
 
         public MultiplayerHub(IDistributedCache cache)
             : base(cache)
@@ -39,15 +28,14 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Retrieve a room instance from a provided room ID, if tracked by this hub.
+        /// Temporary method to reset in-memory storage (used only for tests).
         /// </summary>
-        /// <param name="roomId">The lookup ID.</param>
-        /// <param name="room">The room instance, or null if not tracked.</param>
-        /// <returns>Whether the room could be found.</returns>
-        protected bool TryGetRoom(long roomId, [MaybeNullWhen(false)] out MultiplayerRoom room)
+        public new static void Reset()
         {
-            lock (active_rooms)
-                return active_rooms.TryGetValue(roomId, out room);
+            StatefulUserHub<IMultiplayerClient, MultiplayerClientState>.Reset();
+
+            Console.WriteLine("Resetting ALL tracked rooms.");
+            ACTIVE_ROOMS.Clear();
         }
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
@@ -59,45 +47,43 @@ namespace osu.Server.Spectator.Hubs
                 throw new InvalidStateException("Can't join a room when restricted.");
             }
 
-            var state = await GetLocalUserState();
-
-            if (state != null)
+            using (var userUsage = await GetOrCreateLocalUserState())
             {
-                // if the user already has a state, it means they are already in a room and can't join another without first leaving.
-                throw new InvalidStateException("Can't join a room when already in another room.");
-            }
-
-            // add the user to the room.
-            var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
-
-            // check whether we are already aware of this match.
-            if (!TryGetRoom(roomId, out var room))
-            {
-                room = await RetrieveRoom(roomId);
-
-                room.Host = roomUser;
-
-                lock (active_rooms)
+                if (userUsage.Item != null)
                 {
-                    Console.WriteLine($"Tracking new room {roomId}.");
-                    active_rooms.Add(roomId, room);
+                    // if the user already has a state, it means they are already in a room and can't join another without first leaving.
+                    throw new InvalidStateException("Can't join a room when already in another room.");
                 }
-            }
 
-            using (room.LockForUpdate())
-            {
-                room.Users.Add(roomUser);
+                // add the user to the room.
+                var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
+
+                MultiplayerRoom room;
+
+                using (var roomUsage = await ACTIVE_ROOMS.GetForUse(roomId, true))
+                {
+                    if (roomUsage.Item == null)
+                    {
+                        var retrievedRoom = await RetrieveRoom(roomId);
+                        retrievedRoom.Host = roomUser;
+                        roomUsage.Item = retrievedRoom;
+                    }
+
+                    room = roomUsage.Item;
+
+                    room.Users.Add(roomUser);
+
+                    await UpdateDatabaseParticipants(room);
+                    await MarkRoomActive(room);
+                }
+
                 await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                 await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
-                await UpdateDatabaseParticipants(room);
+                userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
+
+                return room;
             }
-
-            await UpdateLocalUserState(new MultiplayerClientState(roomId));
-
-            await MarkRoomActive(room);
-
-            return room;
         }
 
         /// <summary>
@@ -164,58 +150,32 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task LeaveRoom()
         {
-            var room = await getLocalUserRoom();
-
-            await RemoveLocalUserState();
-
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID));
-
-            using (room.LockForUpdate())
+            using (var userUsage = await GetOrCreateLocalUserState())
             {
-                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+                if (userUsage.Item == null)
+                    throw new NotJoinedRoomException();
 
-                if (user == null)
-                    failWithInvalidState("User was not in the expected room.");
-
-                room.Users.Remove(user);
-
-                await UpdateDatabaseParticipants(room);
-
-                if (room.Users.Count == 0)
+                try
                 {
-                    lock (active_rooms)
-                    {
-                        Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
-                        active_rooms.Remove(room.RoomID);
-                    }
-
-                    await EndDatabaseMatch(room);
-
-                    return;
+                    await leaveRoom(userUsage.Item);
                 }
-
-                var clients = Clients.Group(GetGroupId(room.RoomID));
-
-                // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
-                if (room.Host?.Equals(user) == true)
+                finally
                 {
-                    // there *has* to still be at least one user in the room (see user check above).
-                    var newHost = room.Users.First();
-
-                    await setNewHost(room, newHost);
+                    userUsage.Destroy();
                 }
-
-                await clients.UserLeft(user);
             }
         }
 
         public async Task TransferHost(int userId)
         {
-            var room = await getLocalUserRoom();
-
-            using (room.LockForUpdate())
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
                 ensureIsHost(room);
 
                 var newHost = room.Users.Find(u => u.UserID == userId);
@@ -229,10 +189,14 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task ChangeState(MultiplayerUserState newState)
         {
-            var room = await getLocalUserRoom();
-
-            using (room.LockForUpdate())
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
                 var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
@@ -265,12 +229,16 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task StartMatch()
         {
-            var room = await getLocalUserRoom();
-
-            ensureIsHost(room);
-
-            using (room.LockForUpdate())
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                ensureIsHost(room);
+
                 if (room.State != MultiplayerRoomState.Open)
                     throw new InvalidStateException("Can't start match when already in a running state.");
 
@@ -295,10 +263,14 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task ChangeSettings(MultiplayerRoomSettings settings)
         {
-            var room = await getLocalUserRoom();
-
-            using (room.LockForUpdate())
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
                 if (room.State != MultiplayerRoomState.Open)
                     throw new InvalidStateException("Attempted to change settings while game is active");
 
@@ -327,14 +299,6 @@ namespace osu.Server.Spectator.Hubs
 
                 await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(settings);
             }
-        }
-
-        protected override Task OnDisconnectedAsync(Exception exception, MultiplayerClientState? state)
-        {
-            if (state != null)
-                return LeaveRoom();
-
-            return base.OnDisconnectedAsync(exception, state);
         }
 
         /// <summary>
@@ -453,6 +417,12 @@ namespace osu.Server.Spectator.Hubs
                     Count = room.Users.Count
                 });
             }
+        }
+
+        protected override async Task CleanUpState(MultiplayerClientState state)
+        {
+            await leaveRoom(state);
+            await base.CleanUpState(state);
         }
 
         private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
@@ -584,24 +554,60 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Retrieve the <see cref="MultiplayerRoom"/> for the local context user.
         /// </summary>
-        private async Task<MultiplayerRoom> getLocalUserRoom()
+        private async Task<ItemUsage<MultiplayerRoom>> getLocalUserRoom(MultiplayerClientState? state)
         {
-            var state = await GetLocalUserState();
-
             if (state == null)
                 throw new NotJoinedRoomException();
 
             long roomId = state.CurrentRoomID;
 
-            MultiplayerRoom? room;
+            return await ACTIVE_ROOMS.GetForUse(roomId);
+        }
 
-            lock (active_rooms)
+        private async Task leaveRoom(MultiplayerClientState state)
+        {
+            using (var roomUsage = await getLocalUserRoom(state))
             {
-                if (!active_rooms.TryGetValue(roomId, out room))
-                    failWithInvalidState($"User ({CurrentContextUserId}) is in a room ({roomId}) this hub is not aware of.");
-            }
+                var room = roomUsage.Item;
 
-            return room;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
+                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
+
+                var user = room.Users.Find(u => u.UserID == state.UserId);
+
+                if (user == null)
+                    failWithInvalidState("User was not in the expected room.");
+
+                room.Users.Remove(user);
+
+                await UpdateDatabaseParticipants(room);
+
+                if (room.Users.Count == 0)
+                {
+                    Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
+                    roomUsage.Destroy();
+
+                    await EndDatabaseMatch(room);
+
+                    return;
+                }
+
+                var clients = Clients.Group(GetGroupId(room.RoomID));
+
+                // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
+                if (room.Host?.Equals(user) == true)
+                {
+                    // there *has* to still be at least one user in the room (see user check above).
+                    var newHost = room.Users.First();
+
+                    await setNewHost(room, newHost);
+                }
+
+                await clients.UserLeft(user);
+            }
         }
 
         [ExcludeFromCodeCoverage]

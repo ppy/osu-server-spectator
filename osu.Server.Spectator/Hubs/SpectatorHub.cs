@@ -2,6 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Caching.Distributed;
@@ -9,7 +11,7 @@ using osu.Game.Online.Spectator;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorState>, ISpectatorServer
+    public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {
         public SpectatorHub([NotNull] IDistributedCache cache)
             : base(cache)
@@ -18,7 +20,11 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task BeginPlaySession(SpectatorState state)
         {
-            await UpdateLocalUserState(state);
+            using (var usage = await GetOrCreateLocalUserState())
+            {
+                usage.Item ??= new SpectatorClientState(Context.ConnectionId, CurrentContextUserId);
+                usage.Item.State = state;
+            }
 
             Console.WriteLine($"User {CurrentContextUserId} beginning play session ({state})");
 
@@ -33,22 +39,30 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task EndPlaySession(SpectatorState state)
         {
-            Console.WriteLine($"User {CurrentContextUserId} ending play session ({state})");
+            using (var usage = await GetOrCreateLocalUserState())
+                usage.Destroy();
 
-            await RemoveLocalUserState();
-            await Clients.All.UserFinishedPlaying(CurrentContextUserId, state);
+            await endPlaySession(CurrentContextUserId, state);
         }
 
         public async Task StartWatchingUser(int userId)
         {
             Console.WriteLine($"User {CurrentContextUserId} watching {userId}");
 
-            // send the user's state if exists
-            var state = await GetStateFromUser(userId);
-
-            if (state != null)
+            try
             {
-                await Clients.Caller.UserBeganPlaying(userId, state);
+                SpectatorState? spectatorState;
+
+                // send the user's state if exists
+                using (var usage = await GetStateFromUser(userId))
+                    spectatorState = usage.Item?.State;
+
+                if (spectatorState != null)
+                    await Clients.Caller.UserBeganPlaying(userId, spectatorState);
+            }
+            catch (KeyNotFoundException)
+            {
+                // user isn't tracked.
             }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(userId));
@@ -63,20 +77,29 @@ namespace osu.Server.Spectator.Hubs
         {
             // for now, send *all* player states to users on connect.
             // we don't want this for long, but while the lazer user base is small it should be okay.
-            foreach (var kvp in ACTIVE_STATES)
-                await Clients.Caller.UserBeganPlaying(kvp.Key, kvp.Value);
+            foreach (var kvp in GetAllStates())
+            {
+                Debug.Assert(kvp.Value != null);
+                await Clients.Caller.UserBeganPlaying((int)kvp.Key, kvp.Value.State);
+            }
 
             await base.OnConnectedAsync();
         }
 
-        protected override Task OnDisconnectedAsync(Exception exception, SpectatorState? state)
+        protected override async Task CleanUpState(SpectatorClientState state)
         {
-            if (state != null)
-                return EndPlaySession(state);
+            if (state.State != null)
+                await endPlaySession(state.UserId, state.State);
 
-            return base.OnDisconnectedAsync(exception, state);
+            await base.CleanUpState(state);
         }
 
         public static string GetGroupId(int userId) => $"watch:{userId}";
+
+        private async Task endPlaySession(int userId, SpectatorState state)
+        {
+            Console.WriteLine($"User {userId} ending play session ({state})");
+            await Clients.All.UserFinishedPlaying(userId, state);
+        }
     }
 }
