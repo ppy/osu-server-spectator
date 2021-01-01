@@ -62,7 +62,7 @@ namespace osu.Server.Spectator.Hubs
                 return;
             }
 
-            using (usage)
+            try
             {
                 if (usage.Item != null)
                 {
@@ -74,8 +74,11 @@ namespace osu.Server.Spectator.Hubs
 
                     await CleanUpState(usage.Item);
                 }
-
+            }
+            finally
+            {
                 usage.Destroy();
+                usage.Dispose();
             }
         }
 
