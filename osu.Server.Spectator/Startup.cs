@@ -87,11 +87,6 @@ namespace osu.Server.Spectator
                             }
                         }
                     },
-                    OnAuthenticationFailed = context =>
-                    {
-                        Console.WriteLine("Token authentication failed");
-                        return Task.CompletedTask;
-                    },
                 };
             });
         }

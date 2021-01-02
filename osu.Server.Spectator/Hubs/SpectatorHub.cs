@@ -26,8 +26,6 @@ namespace osu.Server.Spectator.Hubs
                 usage.Item.State = state;
             }
 
-            Console.WriteLine($"User {CurrentContextUserId} beginning play session ({state})");
-
             // let's broadcast to every player temporarily. probably won't stay this way.
             await Clients.All.UserBeganPlaying(CurrentContextUserId, state);
         }
@@ -98,7 +96,6 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task endPlaySession(int userId, SpectatorState state)
         {
-            Console.WriteLine($"User {userId} ending play session ({state})");
             await Clients.All.UserFinishedPlaying(userId, state);
         }
     }
