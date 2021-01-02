@@ -67,6 +67,7 @@ namespace osu.Server.Spectator.Hubs
                         continue;
 
                     // if we're just looking to retrieve and instance, to an external consumer, this should just be handled as the item not being tracked.
+                    DogStatsd.Increment($"{statsDPrefix}.get-notfound");
                     throw new KeyNotFoundException($"Attempted to get untracked entity {typeof(T)} id {id}");
                 }
 
