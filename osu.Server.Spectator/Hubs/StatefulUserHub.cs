@@ -66,7 +66,7 @@ namespace osu.Server.Spectator.Hubs
             {
                 if (usage.Item != null)
                 {
-                    bool isOurState = usage.Item.ConnectionId != Context.ConnectionId;
+                    bool isOurState = usage.Item.ConnectionId == Context.ConnectionId;
 
                     if (isDisconnect && !isOurState)
                         // not our state, owned by a different connection.
