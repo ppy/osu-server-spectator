@@ -12,8 +12,10 @@ using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
+using osu.Game.Online;
 using osu.Game.Online.API;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.DatabaseModels;
 
 namespace osu.Server.Spectator.Hubs
@@ -224,6 +226,40 @@ namespace osu.Server.Spectator.Hubs
                 await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(CurrentContextUserId, newState);
 
                 await updateRoomStateIfRequired(room);
+            }
+        }
+
+        public async Task ChangeBeatmapAvailability(BeatmapAvailability newBeatmapAvailability)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidStateException("Attempted to operate on a null room");
+
+                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+
+                if (user == null)
+                    throw new InvalidStateException("Local user was not found in the expected room");
+
+                if (user.State > MultiplayerUserState.Ready && user.State < MultiplayerUserState.Results)
+                    throw new InvalidStateException($"Attempted to change beatmap availability to {newBeatmapAvailability} while in {user.State} state");
+
+                if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
+                    return;
+
+                user.BeatmapAvailability = newBeatmapAvailability;
+
+                // force state to idle when beatmap availability changes.
+                if (user.State != MultiplayerUserState.Idle)
+                {
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
+                    await changeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+                }
+
+                await Clients.Group(GetGroupId(room.RoomID)).UserBeatmapAvailabilityChanged(user.UserID, newBeatmapAvailability);
             }
         }
 
