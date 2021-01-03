@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
@@ -44,9 +43,7 @@ namespace osu.Server.Spectator.Hubs
             bool isRestricted = await CheckIsUserRestricted();
 
             if (isRestricted)
-            {
                 throw new InvalidStateException("Can't join a room when restricted.");
-            }
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -71,6 +68,11 @@ namespace osu.Server.Spectator.Hubs
                     }
 
                     room = roomUsage.Item;
+
+                    // this is a sanity check to keep *rooms* in a good state.
+                    // in theory the connection clean-up code should handle this correctly.
+                    if (room.Users.Any(u => u.UserID == roomUser.UserID))
+                        throw new InvalidOperationException($"User {roomUser.UserID} attempted to join a room they are already present in.");
 
                     // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
                     await MarkRoomActive(room);
@@ -203,7 +205,7 @@ namespace osu.Server.Spectator.Hubs
                 var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
-                    failWithInvalidState("Local user was not found in the expected room");
+                    throw new InvalidStateException("Local user was not found in the expected room");
 
                 if (user.State == newState)
                     return;
@@ -589,7 +591,7 @@ namespace osu.Server.Spectator.Hubs
                 var user = room.Users.Find(u => u.UserID == state.UserId);
 
                 if (user == null)
-                    failWithInvalidState("User was not in the expected room.");
+                    throw new InvalidStateException("User was not in the expected room.");
 
                 // handle closing the room if the only participant is the user which is leaving.
                 if (room.Users.Count == 1)
@@ -619,9 +621,5 @@ namespace osu.Server.Spectator.Hubs
                 await clients.UserLeft(user);
             }
         }
-
-        [ExcludeFromCodeCoverage]
-        [DoesNotReturn]
-        private void failWithInvalidState(string message) => throw new InvalidStateException(message);
     }
 }
