@@ -591,19 +591,19 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     failWithInvalidState("User was not in the expected room.");
 
-                room.Users.Remove(user);
-
-                await UpdateDatabaseParticipants(room);
-
-                if (room.Users.Count == 0)
+                // handle closing the room if the only participant is the user which is leaving.
+                if (room.Users.Count == 1)
                 {
-                    Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
-                    roomUsage.Destroy();
-
                     await EndDatabaseMatch(room);
 
+                    // only destroy the usage after the database operation succeeds.
+                    Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
+                    roomUsage.Destroy();
                     return;
                 }
+
+                room.Users.Remove(user);
+                await UpdateDatabaseParticipants(room);
 
                 var clients = Clients.Group(GetGroupId(room.RoomID));
 
