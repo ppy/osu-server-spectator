@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Extensions.Caching.Distributed;
+using MySqlConnector;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.RealtimeMultiplayer;
@@ -389,33 +390,40 @@ namespace osu.Server.Spectator.Hubs
 
         protected virtual async Task UpdateDatabaseParticipants(MultiplayerRoom room)
         {
-            using (var conn = Database.GetConnection())
+            try
             {
-                using (var transaction = await conn.BeginTransactionAsync())
+                using (var conn = Database.GetConnection())
                 {
-                    // This should be considered *very* temporary, and for display purposes only!
-                    await conn.ExecuteAsync("DELETE FROM multiplayer_rooms_high WHERE room_id = @RoomID", new
+                    using (var transaction = await conn.BeginTransactionAsync())
                     {
-                        RoomID = room.RoomID
-                    }, transaction);
-
-                    foreach (var u in room.Users)
-                    {
-                        await conn.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id) VALUES (@RoomID, @UserID)", new
+                        // This should be considered *very* temporary, and for display purposes only!
+                        await conn.ExecuteAsync("DELETE FROM multiplayer_rooms_high WHERE room_id = @RoomID", new
                         {
-                            RoomID = room.RoomID,
-                            UserID = u.UserID
+                            RoomID = room.RoomID
                         }, transaction);
+
+                        foreach (var u in room.Users)
+                        {
+                            await conn.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id) VALUES (@RoomID, @UserID)", new
+                            {
+                                RoomID = room.RoomID,
+                                UserID = u.UserID
+                            }, transaction);
+                        }
+
+                        await transaction.CommitAsync();
                     }
 
-                    await transaction.CommitAsync();
+                    await conn.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
+                    {
+                        RoomID = room.RoomID,
+                        Count = room.Users.Count
+                    });
                 }
-
-                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
-                {
-                    RoomID = room.RoomID,
-                    Count = room.Users.Count
-                });
+            }
+            catch (MySqlException)
+            {
+                // for now we really don't care about failures in this. it's updating display information each time a user joins/quits and doesn't need to be perfect.
             }
         }
 
