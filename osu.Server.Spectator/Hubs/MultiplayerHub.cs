@@ -204,8 +204,8 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     failWithInvalidState("Local user was not found in the expected room");
 
-                if (user.BeatmapAvailability.State != DownloadState.LocallyAvailable)
-                    throw new InvalidStateException("Attempted to change user state while they don't have the room's beatmap.");
+                if (user.BeatmapAvailability.State != DownloadState.LocallyAvailable && newState != MultiplayerUserState.Idle)
+                    throw new InvalidStateException($"Attempted to change user state to {newState} while they don't have the room's beatmap.");
 
                 if (user.State == newState)
                     return;
