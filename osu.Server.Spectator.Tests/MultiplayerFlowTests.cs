@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -298,8 +299,8 @@ namespace osu.Server.Spectator.Tests
 
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-            verifyRemovedFromGameplayGroup(mockContextUser1, room_id);
-            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, false);
+            verifyRemovedFromGameplayGroup(mockContextUser1, room_id, Times.Once);
+            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, Times.Never);
 
             Assert.Single(room.Users, u => u.State == MultiplayerUserState.Results);
             Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
@@ -319,13 +320,13 @@ namespace osu.Server.Spectator.Tests
             await hub.StartMatch();
             await hub.ChangeState(MultiplayerUserState.Loaded);
 
-            verifyAddedToGameplayGroup(mockContextUser1, room_id);
-            verifyAddedToGameplayGroup(mockContextUser2, room_id, false);
+            verifyAddedToGameplayGroup(mockContextUser1, room_id, Times.Once);
+            verifyAddedToGameplayGroup(mockContextUser2, room_id, Times.Never);
 
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-            verifyRemovedFromGameplayGroup(mockContextUser1, room_id);
-            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, false);
+            verifyRemovedFromGameplayGroup(mockContextUser1, room_id, Times.Once);
+            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, Times.Never);
         }
 
         /// <summary>
@@ -526,15 +527,15 @@ namespace osu.Server.Spectator.Tests
             await hub.JoinRoom(room_id);
 
             await hub.ChangeState(MultiplayerUserState.Ready);
-            verifyAddedToGameplayGroup(mockContextUser1, room_id);
+            verifyAddedToGameplayGroup(mockContextUser1, room_id, Times.Once);
 
             await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded));
-            verifyRemovedFromGameplayGroup(mockContextUser1, room_id);
+            verifyRemovedFromGameplayGroup(mockContextUser1, room_id, Times.Once);
 
             // ensure adds to gameplay group back when "restoring" beatmap and changing state to ready.
             await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.LocallyAvailable));
             await hub.ChangeState(MultiplayerUserState.Ready);
-            verifyAddedToGameplayGroup(mockContextUser1, room_id);
+            verifyAddedToGameplayGroup(mockContextUser1, room_id, () => Times.Exactly(2));
         }
 
         #endregion
@@ -621,17 +622,17 @@ namespace osu.Server.Spectator.Tests
 
         #endregion
 
-        private void verifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasAdded = true)
+        private void verifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, Func<Times> times)
             => mockGroups.Verify(groups => groups.AddToGroupAsync(
                 context.Object.ConnectionId,
                 MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasAdded ? Times.AtLeastOnce : Times.Never);
+                It.IsAny<CancellationToken>()), times);
 
-        private void verifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasRemoved = true)
+        private void verifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, Func<Times> times)
             => mockGroups.Verify(groups => groups.RemoveFromGroupAsync(
                 context.Object.ConnectionId,
                 MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasRemoved ? Times.AtLeastOnce : Times.Never);
+                It.IsAny<CancellationToken>()), times);
 
         private void setUserContext(Mock<HubCallerContext> context) => hub.Context = context.Object;
 
