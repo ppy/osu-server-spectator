@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
@@ -200,7 +199,7 @@ namespace osu.Server.Spectator.Hubs
                 var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
-                    failWithInvalidState("Local user was not found in the expected room");
+                    throw new InvalidStateException("Local user was not found in the expected room");
 
                 if (user.State == newState)
                     return;
@@ -579,7 +578,7 @@ namespace osu.Server.Spectator.Hubs
                 var user = room.Users.Find(u => u.UserID == state.UserId);
 
                 if (user == null)
-                    failWithInvalidState("User was not in the expected room.");
+                    throw new InvalidStateException("User was not in the expected room.");
 
                 room.Users.Remove(user);
 
@@ -609,9 +608,5 @@ namespace osu.Server.Spectator.Hubs
                 await clients.UserLeft(user);
             }
         }
-
-        [ExcludeFromCodeCoverage]
-        [DoesNotReturn]
-        private void failWithInvalidState(string message) => throw new InvalidStateException(message);
     }
 }
