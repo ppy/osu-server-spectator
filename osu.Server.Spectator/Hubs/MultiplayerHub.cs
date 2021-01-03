@@ -440,10 +440,11 @@ namespace osu.Server.Spectator.Hubs
         private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
         {
             room.Host = newHost;
-
-            await UpdateDatabaseHost(room);
-
             await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
+
+
+            // don't care too much about failures here (is only for display), so run after local state is updated.
+            await UpdateDatabaseHost(room);
         }
 
         /// <summary>
