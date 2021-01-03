@@ -35,8 +35,18 @@ namespace osu.Server.Spectator.Hubs
         {
             Console.WriteLine($"User {CurrentContextUserId} connected!");
 
-            // if a previous connection is still present for the current user, we need to clean it up.
-            await cleanUpState(false);
+            try
+            {
+                // if a previous connection is still present for the current user, we need to clean it up.
+                await cleanUpState(false);
+            }
+            catch
+            {
+                // if any exception happened during clean-up, don't allow the user to reconnect.
+                // this limits damage to the user in a bad state if their clean-up cannot occur (they will not be able to reconnect until the issue is resolved).
+                Context.Abort();
+                throw;
+            }
 
             await base.OnConnectedAsync();
         }
