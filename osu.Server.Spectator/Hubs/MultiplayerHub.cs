@@ -72,10 +72,12 @@ namespace osu.Server.Spectator.Hubs
 
                     room = roomUsage.Item;
 
+                    // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
+                    await MarkRoomActive(room);
+
                     room.Users.Add(roomUser);
 
                     await UpdateDatabaseParticipants(room);
-                    await MarkRoomActive(room);
                 }
 
                 await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
