@@ -505,8 +505,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async void NoBeatmapUserCantChangeState()
         {
-            var room = await hub.JoinRoom(room_id);
-            var user = room.Users.Single();
+            await hub.JoinRoom(room_id);
 
             await hub.ChangeState(MultiplayerUserState.Ready);
 
@@ -514,7 +513,11 @@ namespace osu.Server.Spectator.Tests
             mockReceiver.Verify(c => c.UserBeatmapAvailabilityChanged(user_id, new BeatmapAvailability(DownloadState.NotDownloaded)), Times.Once);
             mockReceiver.Verify(c => c.UserStateChanged(user_id, MultiplayerUserState.Idle), Times.Once);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeState(MultiplayerUserState.Idle));
+            // changing user state to idle again is fine, but shouldn't trigger "state change" again.
+            await hub.ChangeState(MultiplayerUserState.Idle);
+            mockReceiver.Verify(c => c.UserStateChanged(user_id, MultiplayerUserState.Idle), Times.Once);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeState(MultiplayerUserState.Ready));
         }
 
         [Fact]
