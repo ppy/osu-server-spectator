@@ -10,7 +10,9 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -475,6 +477,63 @@ namespace osu.Server.Spectator.Tests
             Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.Idle));
         }
 
+        [Fact]
+        public async void UserCantChangeBeatmapAvailabilityWhilePlaying()
+        {
+            var room = await hub.JoinRoom(room_id);
+            var user = room.Users.Single();
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            await hub.StartMatch();
+
+            // ensure throws when changing beatmap availability while loading.
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded)));
+
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+
+            // ensure throws when changing beatmap availability while playing.
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded)));
+
+            await hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            // ensure can change beatmap availability while in results, but state should be forced back to idle.
+            await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded));
+            mockReceiver.Verify(c => c.UserBeatmapAvailabilityChanged(user_id, new BeatmapAvailability(DownloadState.NotDownloaded)), Times.Once);
+            mockReceiver.Verify(c => c.UserStateChanged(user_id, MultiplayerUserState.Idle), Times.Once);
+        }
+
+        [Fact]
+        public async void NoBeatmapUserCantChangeState()
+        {
+            var room = await hub.JoinRoom(room_id);
+            var user = room.Users.Single();
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded));
+            mockReceiver.Verify(c => c.UserBeatmapAvailabilityChanged(user_id, new BeatmapAvailability(DownloadState.NotDownloaded)), Times.Once);
+            mockReceiver.Verify(c => c.UserStateChanged(user_id, MultiplayerUserState.Idle), Times.Once);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeState(MultiplayerUserState.Idle));
+        }
+
+        [Fact]
+        public async void DeletingBeatmapRemovesFromGameplayGroup()
+        {
+            await hub.JoinRoom(room_id);
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            verifyAddedToGameplayGroup(mockContextUser1, room_id);
+
+            await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded));
+            verifyRemovedFromGameplayGroup(mockContextUser1, room_id);
+
+            // ensure adds to gameplay group back when "restoring" beatmap and changing state to ready.
+            await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.LocallyAvailable));
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            verifyAddedToGameplayGroup(mockContextUser1, room_id);
+        }
+
         #endregion
 
         #region Room Settings
@@ -563,13 +622,13 @@ namespace osu.Server.Spectator.Tests
             => mockGroups.Verify(groups => groups.AddToGroupAsync(
                 context.Object.ConnectionId,
                 MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasAdded ? Times.Once : Times.Never);
+                It.IsAny<CancellationToken>()), wasAdded ? Times.AtLeastOnce : Times.Never);
 
         private void verifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasRemoved = true)
             => mockGroups.Verify(groups => groups.RemoveFromGroupAsync(
                 context.Object.ConnectionId,
                 MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasRemoved ? Times.Once : Times.Never);
+                It.IsAny<CancellationToken>()), wasRemoved ? Times.AtLeastOnce : Times.Never);
 
         private void setUserContext(Mock<HubCallerContext> context) => hub.Context = context.Object;
 
