@@ -360,13 +360,20 @@ namespace osu.Server.Spectator.Hubs
         {
             Debug.Assert(room.Host != null);
 
-            using (var conn = Database.GetConnection())
+            try
             {
-                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET user_id = @HostUserID WHERE id = @RoomID", new
+                using (var conn = Database.GetConnection())
                 {
-                    HostUserID = room.Host.UserID,
-                    RoomID = room.RoomID
-                });
+                    await conn.ExecuteAsync("UPDATE multiplayer_rooms SET user_id = @HostUserID WHERE id = @RoomID", new
+                    {
+                        HostUserID = room.Host.UserID,
+                        RoomID = room.RoomID
+                    });
+                }
+            }
+            catch (MySqlException)
+            {
+                // for now we really don't care about failures in this. it's updating display information each time a user joins/quits and doesn't need to be perfect.
             }
         }
 
@@ -443,7 +450,6 @@ namespace osu.Server.Spectator.Hubs
             await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
 
 
-            // don't care too much about failures here (is only for display), so run after local state is updated.
             await UpdateDatabaseHost(room);
         }
 
