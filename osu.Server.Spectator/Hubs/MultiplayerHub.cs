@@ -145,6 +145,8 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         protected virtual async Task MarkRoomActive(MultiplayerRoom room)
         {
+            Log($"Host marking room active {room.RoomID}");
+
             using (var conn = Database.GetConnection())
             {
                 await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = null WHERE id = @RoomID", new
