@@ -11,12 +11,12 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// The connection ID of the owner of this state.
         /// </summary>
-        public string ConnectionId { get; set; }
+        public readonly string ConnectionId;
 
         /// <summary>
         /// The user ID of the owner of this state.
         /// </summary>
-        public int UserId { get; set; }
+        public readonly int UserId;
 
         public ClientState(in string connectionId, in int userId)
         {
