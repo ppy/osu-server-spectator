@@ -41,8 +41,10 @@ namespace osu.Server.Spectator.Hubs
                 // if a previous connection is still present for the current user, we need to clean it up.
                 await cleanUpState(false);
             }
-            catch
+            catch (Exception e)
             {
+                Log("State cleanup failed");
+
                 // if any exception happened during clean-up, don't allow the user to reconnect.
                 // this limits damage to the user in a bad state if their clean-up cannot occur (they will not be able to reconnect until the issue is resolved).
                 Context.Abort();
@@ -75,13 +77,18 @@ namespace osu.Server.Spectator.Hubs
 
             try
             {
+                Log($"Cleaning up state on {(isDisconnect ? "disconnect" : "connect")}");
+
                 if (usage.Item != null)
                 {
                     bool isOurState = usage.Item.ConnectionId == Context.ConnectionId;
 
                     if (isDisconnect && !isOurState)
+                    {
                         // not our state, owned by a different connection.
+                        Log("Disconnect state cleanup aborted due to newer connection owning state");
                         return;
+                    }
 
                     await CleanUpState(usage.Item);
                 }
@@ -90,6 +97,8 @@ namespace osu.Server.Spectator.Hubs
             {
                 usage.Destroy();
                 usage.Dispose();
+
+                Log("State cleanup completed");
             }
         }
 

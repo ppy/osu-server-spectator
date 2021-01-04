@@ -85,6 +85,7 @@ namespace osu.Server.Spectator.Hubs
                     await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
                     userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
+                    Log($"Joining room {room.RoomID}");
                 }
 
                 return room;
@@ -449,7 +450,6 @@ namespace osu.Server.Spectator.Hubs
             room.Host = newHost;
             await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
 
-
             await UpdateDatabaseHost(room);
         }
 
@@ -591,6 +591,8 @@ namespace osu.Server.Spectator.Hubs
 
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
+
+                Log($"Leaving room {room.RoomID}");
 
                 await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
                 await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
