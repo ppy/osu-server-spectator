@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Hubs
                 if (userUsage.Item != null)
                 {
                     // if the user already has a state, it means they are already in a room and can't join another without first leaving.
-                    throw new InvalidStateException("Can't join a room when already in another room.");
+                    throw new InvalidStateException($"Can't join room {roomId} when already in room {userUsage.Item.CurrentRoomID}.");
                 }
 
                 // add the user to the room.
@@ -72,7 +72,7 @@ namespace osu.Server.Spectator.Hubs
                     // this is a sanity check to keep *rooms* in a good state.
                     // in theory the connection clean-up code should handle this correctly.
                     if (room.Users.Any(u => u.UserID == roomUser.UserID))
-                        throw new InvalidOperationException($"User {roomUser.UserID} attempted to join a room they are already present in.");
+                        throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
 
                     // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
                     await MarkRoomActive(room);
