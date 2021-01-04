@@ -449,7 +449,6 @@ namespace osu.Server.Spectator.Hubs
             room.Host = newHost;
             await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
 
-
             await UpdateDatabaseHost(room);
         }
 
