@@ -80,12 +80,12 @@ namespace osu.Server.Spectator.Hubs
                     room.Users.Add(roomUser);
 
                     await UpdateDatabaseParticipants(room);
+
+                    await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
+                    await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
+
+                    userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
                 }
-
-                await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
-                await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
-
-                userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
 
                 return room;
             }
