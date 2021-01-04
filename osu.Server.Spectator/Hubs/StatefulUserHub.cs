@@ -113,8 +113,6 @@ namespace osu.Server.Spectator.Hubs
         protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) =>
             ACTIVE_STATES.GetForUse(userId);
 
-        public static string GetStateId(int userId) => $"state-{typeof(TClient)}:{userId}";
-
         public static void Reset() => ACTIVE_STATES.Clear();
     }
 }
