@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
@@ -33,7 +34,7 @@ namespace osu.Server.Spectator.Hubs
 
         public override async Task OnConnectedAsync()
         {
-            Console.WriteLine($"User {CurrentContextUserId} connected!");
+            Log("Connected");
 
             try
             {
@@ -53,7 +54,7 @@ namespace osu.Server.Spectator.Hubs
 
         public sealed override async Task OnDisconnectedAsync(Exception exception)
         {
-            Console.WriteLine($"User {CurrentContextUserId} disconnected!");
+            Log("Disconnected");
 
             await cleanUpState(true);
         }
@@ -116,5 +117,7 @@ namespace osu.Server.Spectator.Hubs
         public static string GetStateId(int userId) => $"state-{typeof(TClient)}:{userId}";
 
         public static void Reset() => ACTIVE_STATES.Clear();
+
+        protected void Log(string message) => Console.WriteLine($@"{DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)} [{CurrentContextUserId}]: {message.Trim()}");
     }
 }

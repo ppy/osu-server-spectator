@@ -45,7 +45,7 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task StartWatchingUser(int userId)
         {
-            Console.WriteLine($"User {CurrentContextUserId} watching {userId}");
+            Log($"Watching {userId}");
 
             try
             {

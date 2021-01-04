@@ -606,7 +606,7 @@ namespace osu.Server.Spectator.Hubs
                     await EndDatabaseMatch(room);
 
                     // only destroy the usage after the database operation succeeds.
-                    Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
+                    Log($"Stopping tracking of room {room.RoomID} (all users left).");
                     roomUsage.Destroy();
                     return;
                 }
