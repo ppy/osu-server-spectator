@@ -43,6 +43,8 @@ namespace osu.Server.Spectator.Tests
 
             hub = new TestMultiplayerHub(cache);
 
+            hub.RoomHostId = user_id;
+
             mockGroups = new Mock<IGroupManager>();
 
             mockContextUser1 = new Mock<HubCallerContext>();
@@ -178,6 +180,16 @@ namespace osu.Server.Spectator.Tests
 
             await hub.LeaveRoom();
             mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id_2)), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task UserJoinPreRetrievalFailureCleansUpRoom()
+        {
+            setUserContext(mockContextUser2); // not the correct user to join the game first; triggers host mismatch failure.
+            await Assert.ThrowsAnyAsync<Exception>(() => hub.JoinRoom(room_id));
+
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.RoomStore.GetForUse(room_id));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStore.GetForUse(user_id));
         }
 
         [Fact]
@@ -626,12 +638,17 @@ namespace osu.Server.Spectator.Tests
             public bool CheckIsUserRestrictedShouldThrow;
             protected override Task<bool> CheckIsUserRestricted() => CheckIsUserRestrictedShouldThrow ? throw new InvalidOperationException() : Task.FromResult(false);
 
+            public int RoomHostId;
+
             protected override Task<MultiplayerRoom> RetrieveRoom(long roomId)
             {
+                if (RoomHostId != CurrentContextUserId)
+                    throw new InvalidStateException("Non-host is attempting to join match before host");
+
                 // bypass database for testing.
                 return Task.FromResult(new MultiplayerRoom(roomId)
                 {
-                    Host = new MultiplayerRoomUser(CurrentContextUserId)
+                    Host = new MultiplayerRoomUser(RoomHostId)
                 });
             }
 

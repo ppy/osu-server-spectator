@@ -96,31 +96,31 @@ namespace osu.Server.Spectator.Hubs
                     catch
                     {
                         // if room join failed, we may need to clean up the room usage.
-                        if (room != null)
+                        try
                         {
-                            try
+                            if (userUsage.Item != null)
                             {
-                                if (userUsage.Item != null)
-                                {
-                                    // the user was joined to the room, so we can tun the standard leaveRoom method.
-                                    // this will handle closing the room if this was the only user.
-                                    await leaveRoom(userUsage.Item, roomUsage);
-                                }
-                                else
-                                {
-                                    // the room may have been retrieved but failed before the user could join.
-                                    // check whether the room should be closed (may happen if this was the first and only user joining the room)
-                                    if (room.Users.Count == 0)
-                                    {
-                                        await EndDatabaseMatch(room);
-                                        roomUsage.Destroy();
-                                    }
-                                }
+                                // the user was joined to the room, so we can tun the standard leaveRoom method.
+                                // this will handle closing the room if this was the only user.
+                                await leaveRoom(userUsage.Item, roomUsage);
                             }
-                            finally
+                            else if (room == null)
                             {
-                                userUsage.Destroy();
+                                // the room usage was created but no match was retrieved
+                                // clean up the usage.
+                                roomUsage.Destroy();
                             }
+                            else if (room.Users.Count == 0)
+                            {
+                                // the room may have been retrieved but failed before the user could join.
+                                // check whether the room should be closed (may happen if this was the first and only user joining the room)
+                                await EndDatabaseMatch(room);
+                                roomUsage.Destroy();
+                            }
+                        }
+                        finally
+                        {
+                            userUsage.Destroy();
                         }
 
                         throw;
