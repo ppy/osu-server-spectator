@@ -181,11 +181,23 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async Task UserJoinFailureCleansUpRoom()
+        public async Task UserJoinPreJoinFailureCleansUpRoom()
         {
             hub.MarkRoomActiveShouldThrow = true;
             await Assert.ThrowsAnyAsync<Exception>(() => hub.JoinRoom(room_id));
+
             await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.RoomStore.GetForUse(room_id));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStore.GetForUse(user_id));
+        }
+
+        [Fact]
+        public async Task UserJoinPostJoinFailureCleansUpRoomAndUser()
+        {
+            hub.UpdateDatabaseParticipantsShouldThrow = true;
+            await Assert.ThrowsAnyAsync<Exception>(() => hub.JoinRoom(room_id));
+
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.RoomStore.GetForUse(room_id));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStore.GetForUse(user_id));
         }
 
         #endregion
@@ -586,6 +598,7 @@ namespace osu.Server.Spectator.Tests
         public class TestMultiplayerHub : MultiplayerHub
         {
             public EntityStore<MultiplayerRoom> RoomStore => MultiplayerHub.ACTIVE_ROOMS;
+            public EntityStore<MultiplayerClientState> UserStore => MultiplayerHub.ACTIVE_STATES;
 
             public TestMultiplayerHub(MemoryDistributedCache cache)
                 : base(cache)
