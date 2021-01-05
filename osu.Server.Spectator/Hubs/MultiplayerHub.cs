@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Hubs
                 if (userUsage.Item != null)
                 {
                     // if the user already has a state, it means they are already in a room and can't join another without first leaving.
-                    throw new InvalidStateException($"Can't join room {roomId} when already in room {userUsage.Item.CurrentRoomID}.");
+                    throw new InvalidStateException("Can't join a room when already in another room.");
                 }
 
                 // add the user to the room.
