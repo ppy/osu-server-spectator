@@ -98,22 +98,28 @@ namespace osu.Server.Spectator.Hubs
                         // if room join failed, we may need to clean up the room usage.
                         if (room != null)
                         {
-                            if (userUsage.Item != null)
+                            try
                             {
-                                // the user was joined to the room, so we can tun the standard leaveRoom method.
-                                // this will handle closing the room if this was the only user.
-                                await leaveRoom(userUsage.Item, roomUsage);
-                                userUsage.Item = null;
-                            }
-                            else
-                            {
-                                // the room may have been retrieved but failed before the user could join.
-                                // check whether the room should be closed (may happen if this was the first and only user joining the room)
-                                if (room.Users.Count == 0)
+                                if (userUsage.Item != null)
                                 {
-                                    await EndDatabaseMatch(room);
-                                    roomUsage.Destroy();
+                                    // the user was joined to the room, so we can tun the standard leaveRoom method.
+                                    // this will handle closing the room if this was the only user.
+                                    await leaveRoom(userUsage.Item, roomUsage);
                                 }
+                                else
+                                {
+                                    // the room may have been retrieved but failed before the user could join.
+                                    // check whether the room should be closed (may happen if this was the first and only user joining the room)
+                                    if (room.Users.Count == 0)
+                                    {
+                                        await EndDatabaseMatch(room);
+                                        roomUsage.Destroy();
+                                    }
+                                }
+                            }
+                            finally
+                            {
+                                userUsage.Destroy();
                             }
                         }
 
@@ -415,6 +421,7 @@ namespace osu.Server.Spectator.Hubs
 
         protected virtual async Task EndDatabaseMatch(MultiplayerRoom room)
         {
+            // todo: this shouldn't be allowed to fail
             using (var conn = Database.GetConnection())
             {
                 await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
