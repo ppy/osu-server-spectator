@@ -40,6 +40,8 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
         {
+            Log($"Joining room {roomId}");
+
             bool isRestricted = await CheckIsUserRestricted();
 
             if (isRestricted)
@@ -85,7 +87,6 @@ namespace osu.Server.Spectator.Hubs
                     await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
                     userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
-                    Log($"Joining room {room.RoomID}");
                 }
 
                 return room;
@@ -158,6 +159,8 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task LeaveRoom()
         {
+            Log("Requesting to leave room");
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 if (userUsage.Item == null)
