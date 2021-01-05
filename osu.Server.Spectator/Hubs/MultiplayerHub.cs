@@ -40,6 +40,8 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
         {
+            Log($"Joining room {roomId}");
+
             bool isRestricted = await CheckIsUserRestricted();
 
             if (isRestricted)
@@ -72,7 +74,7 @@ namespace osu.Server.Spectator.Hubs
                     // this is a sanity check to keep *rooms* in a good state.
                     // in theory the connection clean-up code should handle this correctly.
                     if (room.Users.Any(u => u.UserID == roomUser.UserID))
-                        throw new InvalidOperationException($"User {roomUser.UserID} attempted to join a room they are already present in.");
+                        throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
 
                     // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
                     await MarkRoomActive(room);
@@ -144,6 +146,8 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         protected virtual async Task MarkRoomActive(MultiplayerRoom room)
         {
+            Log($"Host marking room active {room.RoomID}");
+
             using (var conn = Database.GetConnection())
             {
                 await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = null WHERE id = @RoomID", new
@@ -155,6 +159,8 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task LeaveRoom()
         {
+            Log("Requesting to leave room");
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 if (userUsage.Item == null)
@@ -591,6 +597,8 @@ namespace osu.Server.Spectator.Hubs
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
+                Log($"Leaving room {room.RoomID}");
+
                 await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
                 await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
 
@@ -605,7 +613,7 @@ namespace osu.Server.Spectator.Hubs
                     await EndDatabaseMatch(room);
 
                     // only destroy the usage after the database operation succeeds.
-                    Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
+                    Log($"Stopping tracking of room {room.RoomID} (all users left).");
                     roomUsage.Destroy();
                     return;
                 }
