@@ -58,8 +58,8 @@ namespace osu.Server.Spectator.Hubs
                 // add the user to the room.
                 var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
-                // track whether a new room was fetched from the database and assigned to a usage.
-                bool newRoomFetched = false;
+                // track whether this join necessitated starting the process of fetching the room and adding it to the ACTIVE_ROOMS store.
+                bool newRoomFetchStarted = false;
 
                 MultiplayerRoom? room = null;
 
@@ -69,7 +69,7 @@ namespace osu.Server.Spectator.Hubs
                     {
                         if (roomUsage.Item == null)
                         {
-                            newRoomFetched = true;
+                            newRoomFetchStarted = true;
 
                             // the requested room is not yet tracked by this server.
                             room = await RetrieveRoom(roomId);
@@ -112,7 +112,7 @@ namespace osu.Server.Spectator.Hubs
                                 // this will handle closing the room if this was the only user.
                                 await leaveRoom(userUsage.Item, roomUsage);
                             }
-                            else if (newRoomFetched)
+                            else if (newRoomFetchStarted)
                             {
                                 if (room != null)
                                 {
