@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -54,7 +56,7 @@ namespace osu.Server.Spectator.Hubs
             await base.OnConnectedAsync();
         }
 
-        public sealed override async Task OnDisconnectedAsync(Exception exception)
+        public sealed override async Task OnDisconnectedAsync(Exception? exception)
         {
             Log("Disconnected");
 
