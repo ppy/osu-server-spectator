@@ -61,7 +61,7 @@ namespace osu.Server.Spectator.Hubs
                 // track whether a new room was fetched from the database and assigned to a usage.
                 bool newRoomFetched = false;
 
-                MultiplayerRoom? room;
+                MultiplayerRoom? room = null;
 
                 using (var roomUsage = await ACTIVE_ROOMS.GetForUse(roomId, true))
                 {
@@ -69,6 +69,8 @@ namespace osu.Server.Spectator.Hubs
                     {
                         if (roomUsage.Item == null)
                         {
+                            newRoomFetched = true;
+
                             // the requested room is not yet tracked by this server.
                             room = await RetrieveRoom(roomId);
 
@@ -79,7 +81,6 @@ namespace osu.Server.Spectator.Hubs
                             await MarkRoomActive(room);
 
                             roomUsage.Item = room;
-                            newRoomFetched = true;
                         }
                         else
                         {
@@ -103,7 +104,6 @@ namespace osu.Server.Spectator.Hubs
                     }
                     catch
                     {
-                        // if room join failed, we may need to clean up the room usage.
                         try
                         {
                             if (userUsage.Item != null)
@@ -112,21 +112,21 @@ namespace osu.Server.Spectator.Hubs
                                 // this will handle closing the room if this was the only user.
                                 await leaveRoom(userUsage.Item, roomUsage);
                             }
-                            else if (roomUsage.Item == null)
-                            {
-                                // the room usage was created but no match was successfully retrieved; clean up the usage.
-                                roomUsage.Destroy();
-                            }
                             else if (newRoomFetched)
                             {
-                                // the room was retrieved but failed before the user (host) could join.
-                                // for now, let's mark the room as ended if this happens.
-                                await EndDatabaseMatch(roomUsage.Item);
+                                if (room != null)
+                                {
+                                    // the room was retrieved and associated to the usage, but something failed before the user (host) could join.
+                                    // for now, let's mark the room as ended if this happens.
+                                    await EndDatabaseMatch(room);
+                                }
+
                                 roomUsage.Destroy();
                             }
                         }
                         finally
                         {
+                            // no matter how we end up cleaning up the room, ensure the user's context is destroyed.
                             userUsage.Destroy();
                         }
 
