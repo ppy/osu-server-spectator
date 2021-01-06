@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -54,7 +56,7 @@ namespace osu.Server.Spectator.Hubs
             await base.OnConnectedAsync();
         }
 
-        public sealed override async Task OnDisconnectedAsync(Exception exception)
+        public sealed override async Task OnDisconnectedAsync(Exception? exception)
         {
             Log("Disconnected");
 
@@ -75,10 +77,10 @@ namespace osu.Server.Spectator.Hubs
                 return;
             }
 
+            Log($"Cleaning up state on {(isDisconnect ? "disconnect" : "connect")}");
+
             try
             {
-                Log($"Cleaning up state on {(isDisconnect ? "disconnect" : "connect")}");
-
                 if (usage.Item != null)
                 {
                     bool isOurState = usage.Item.ConnectionId == Context.ConnectionId;
@@ -90,15 +92,20 @@ namespace osu.Server.Spectator.Hubs
                         return;
                     }
 
-                    await CleanUpState(usage.Item);
+                    try
+                    {
+                        await CleanUpState(usage.Item);
+                    }
+                    finally
+                    {
+                        usage.Destroy();
+                        Log("State cleanup completed");
+                    }
                 }
             }
             finally
             {
-                usage.Destroy();
                 usage.Dispose();
-
-                Log("State cleanup completed");
             }
         }
 
