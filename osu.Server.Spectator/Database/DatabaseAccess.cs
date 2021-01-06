@@ -20,7 +20,19 @@ namespace osu.Server.Spectator.Database
 
         public DatabaseAccess()
         {
-            connection = DB.GetConnection();
+            connection = getConnection();
+        }
+
+        private static MySqlConnection getConnection()
+        {
+            string host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+            string user = Environment.GetEnvironmentVariable("DB_USER") ?? "root";
+
+            DapperExtensions.InstallDateTimeOffsetMapper();
+
+            var connection = new MySqlConnection($"Server={host};Database=osu;User ID={user};ConnectionTimeout=5;ConnectionReset=false;Pooling=true;");
+            connection.Open();
+            return connection;
         }
 
         public Task<int?> GetUserIdFromTokenAsync(JwtSecurityToken jwtToken)

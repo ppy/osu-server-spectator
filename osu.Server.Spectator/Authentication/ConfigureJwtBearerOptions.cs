@@ -5,7 +5,6 @@ using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Security.Cryptography;
-using Dapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -17,6 +16,13 @@ namespace osu.Server.Spectator.Authentication
 {
     public class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearerOptions>
     {
+        private readonly IDatabaseFactory databaseFactory;
+
+        public ConfigureJwtBearerOptions(IDatabaseFactory databaseFactory)
+        {
+            this.databaseFactory = databaseFactory;
+        }
+
         public void Configure(JwtBearerOptions options)
         {
             var rsa = getKeyProvider();
@@ -38,11 +44,10 @@ namespace osu.Server.Spectator.Authentication
                     var jwtToken = (JwtSecurityToken)context.SecurityToken;
                     int tokenUserId = int.Parse(jwtToken.Subject);
 
-                    using (var conn = DB.GetConnection())
+                    using (var database = databaseFactory.GetInstance())
                     {
                         // check expiry/revocation against database
-                        var userId = await conn.QueryFirstOrDefaultAsync<int?>("SELECT user_id FROM oauth_access_tokens WHERE revoked = false AND expires_at > now() AND id = @id",
-                            new { id = jwtToken.Id });
+                        var userId = await database.GetUserIdFromTokenAsync(jwtToken);
 
                         if (userId != tokenUserId)
                         {

@@ -637,7 +637,7 @@ namespace osu.Server.Spectator.Tests
             protected override Task MarkRoomActive(MultiplayerRoom room) => MarkRoomActiveShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
 
             public bool CheckIsUserRestrictedShouldThrow;
-            protected override Task<bool> CheckIsUserRestricted() => CheckIsUserRestrictedShouldThrow ? throw new InvalidOperationException() : Task.FromResult(false);
+            protected virtual Task<bool> CheckIsUserRestricted() => CheckIsUserRestrictedShouldThrow ? throw new InvalidOperationException() : Task.FromResult(false);
 
             public int RoomHostId;
 

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using osu.Server.Spectator.Authentication;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator
@@ -21,6 +22,8 @@ namespace osu.Server.Spectator
         {
             services.AddSignalR()
                     .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; });
+
+            services.AddDatabaseServices();
 
             services.AddDistributedMemoryCache(); // replace with redis
 

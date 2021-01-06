@@ -5,9 +5,6 @@ namespace osu.Server.Spectator.Database
 {
     public class DatabaseFactory : IDatabaseFactory
     {
-        public IDatabaseAccess GetInstance()
-        {
-            throw new System.NotImplementedException();
-        }
+        public IDatabaseAccess GetInstance() => new DatabaseAccess();
     }
 }
