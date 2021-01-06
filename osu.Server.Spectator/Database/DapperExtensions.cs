@@ -6,7 +6,7 @@ using System.Data;
 using System.Threading;
 using Dapper;
 
-namespace osu.Server.Spectator
+namespace osu.Server.Spectator.Database
 {
     public static class DapperExtensions
     {

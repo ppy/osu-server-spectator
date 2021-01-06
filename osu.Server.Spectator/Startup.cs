@@ -16,6 +16,7 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator

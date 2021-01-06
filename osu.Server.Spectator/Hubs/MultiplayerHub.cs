@@ -14,7 +14,8 @@ using MySqlConnector;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.RealtimeMultiplayer;
-using osu.Server.Spectator.DatabaseModels;
+using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs
 {

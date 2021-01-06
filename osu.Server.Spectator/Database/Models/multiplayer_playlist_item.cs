@@ -7,7 +7,7 @@ using osu.Game.Online.RealtimeMultiplayer;
 
 // ReSharper disable InconsistentNaming (matches database table)
 
-namespace osu.Server.Spectator.DatabaseModels
+namespace osu.Server.Spectator.Database.Models
 {
     [Serializable]
     public class multiplayer_playlist_item
