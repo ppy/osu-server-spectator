@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -40,6 +42,8 @@ namespace osu.Server.Spectator.Tests
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
             hub = new TestMultiplayerHub(cache);
+
+            hub.RoomHostId = user_id;
 
             mockGroups = new Mock<IGroupManager>();
 
@@ -176,6 +180,36 @@ namespace osu.Server.Spectator.Tests
 
             await hub.LeaveRoom();
             mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id_2)), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task UserJoinPreRetrievalFailureCleansUpRoom()
+        {
+            setUserContext(mockContextUser2); // not the correct user to join the game first; triggers host mismatch failure.
+            await Assert.ThrowsAnyAsync<Exception>(() => hub.JoinRoom(room_id));
+
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.RoomStore.GetForUse(room_id));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStore.GetForUse(user_id));
+        }
+
+        [Fact]
+        public async Task UserJoinPreJoinFailureCleansUpRoom()
+        {
+            hub.MarkRoomActiveShouldThrow = true;
+            await Assert.ThrowsAnyAsync<Exception>(() => hub.JoinRoom(room_id));
+
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.RoomStore.GetForUse(room_id));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStore.GetForUse(user_id));
+        }
+
+        [Fact]
+        public async Task UserJoinPostJoinFailureCleansUpRoomAndUser()
+        {
+            hub.UpdateDatabaseParticipantsShouldThrow = true;
+            await Assert.ThrowsAnyAsync<Exception>(() => hub.JoinRoom(room_id));
+
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.RoomStore.GetForUse(room_id));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStore.GetForUse(user_id));
         }
 
         #endregion
@@ -575,35 +609,56 @@ namespace osu.Server.Spectator.Tests
 
         public class TestMultiplayerHub : MultiplayerHub
         {
+            public EntityStore<MultiplayerRoom> RoomStore => ACTIVE_ROOMS;
+            public EntityStore<MultiplayerClientState> UserStore => ACTIVE_STATES;
+
             public TestMultiplayerHub(MemoryDistributedCache cache)
                 : base(cache)
             {
             }
 
-            protected override Task ClearDatabaseScores(MultiplayerRoom room) => Task.CompletedTask;
-            protected override Task UpdateDatabaseParticipants(MultiplayerRoom room) => Task.CompletedTask;
-            protected override Task UpdateDatabaseSettings(MultiplayerRoom room) => Task.CompletedTask;
-            protected override Task UpdateDatabaseHost(MultiplayerRoom room) => Task.CompletedTask;
-            protected override Task EndDatabaseMatch(MultiplayerRoom room) => Task.CompletedTask;
-            protected override Task MarkRoomActive(MultiplayerRoom room) => Task.CompletedTask;
-            protected override Task<bool> CheckIsUserRestricted() => Task.FromResult(false);
+            public bool ClearDatabaseScoresShouldThrow;
+            protected override Task ClearDatabaseScores(MultiplayerRoom room) => ClearDatabaseScoresShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
+
+            public bool UpdateDatabaseParticipantsShouldThrow;
+            protected override Task UpdateDatabaseParticipants(MultiplayerRoom room) => UpdateDatabaseParticipantsShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
+
+            public bool UpdateDatabaseSettingsShouldThrow;
+            protected override Task UpdateDatabaseSettings(MultiplayerRoom room) => UpdateDatabaseSettingsShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
+
+            public bool UpdateDatabaseHostShouldThrow;
+            protected override Task UpdateDatabaseHost(MultiplayerRoom room) => UpdateDatabaseHostShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
+
+            public bool EndDatabaseMatchShouldThrow;
+            protected override Task EndDatabaseMatch(MultiplayerRoom room) => EndDatabaseMatchShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
+
+            public bool MarkRoomActiveShouldThrow;
+            protected override Task MarkRoomActive(MultiplayerRoom room) => MarkRoomActiveShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
+
+            public bool CheckIsUserRestrictedShouldThrow;
+            protected override Task<bool> CheckIsUserRestricted() => CheckIsUserRestrictedShouldThrow ? throw new InvalidOperationException() : Task.FromResult(false);
+
+            public int RoomHostId;
 
             protected override Task<MultiplayerRoom> RetrieveRoom(long roomId)
             {
+                if (RoomHostId != CurrentContextUserId)
+                    throw new InvalidStateException("Non-host is attempting to join match before host");
+
                 // bypass database for testing.
                 return Task.FromResult(new MultiplayerRoom(roomId)
                 {
-                    Host = new MultiplayerRoomUser(CurrentContextUserId)
+                    Host = new MultiplayerRoomUser(RoomHostId)
                 });
             }
 
-            public ItemUsage<MultiplayerRoom> GetRoom(long roomId) => ACTIVE_ROOMS.GetForUse(roomId).Result;
+            public ItemUsage<MultiplayerRoom> GetRoom(long roomId) => RoomStore.GetForUse(roomId).Result;
 
             public bool CheckRoomExists(long roomId)
             {
                 try
                 {
-                    using (var usage = ACTIVE_ROOMS.GetForUse(roomId).Result)
+                    using (var usage = RoomStore.GetForUse(roomId).Result)
                         return usage.Item != null;
                 }
                 catch

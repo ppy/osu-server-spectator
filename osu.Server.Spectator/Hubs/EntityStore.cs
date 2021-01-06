@@ -179,6 +179,9 @@ namespace osu.Server.Spectator.Hubs
             /// </summary>
             public void Destroy()
             {
+                if (isDestroyed)
+                    return;
+
                 // we should already have a lock when calling destroy.
                 checkValidForUse();
 

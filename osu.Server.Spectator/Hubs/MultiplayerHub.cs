@@ -40,6 +40,8 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
         {
+            Log($"Joining room {roomId}");
+
             bool isRestricted = await CheckIsUserRestricted();
 
             if (isRestricted)
@@ -56,49 +58,97 @@ namespace osu.Server.Spectator.Hubs
                 // add the user to the room.
                 var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
-                MultiplayerRoom room;
+                // track whether this join necessitated starting the process of fetching the room and adding it to the ACTIVE_ROOMS store.
+                bool newRoomFetchStarted = false;
+
+                MultiplayerRoom? room = null;
 
                 using (var roomUsage = await ACTIVE_ROOMS.GetForUse(roomId, true))
                 {
-                    if (roomUsage.Item == null)
+                    try
                     {
-                        var retrievedRoom = await RetrieveRoom(roomId);
-                        retrievedRoom.Host = roomUser;
-                        roomUsage.Item = retrievedRoom;
+                        if (roomUsage.Item == null)
+                        {
+                            newRoomFetchStarted = true;
+
+                            // the requested room is not yet tracked by this server.
+                            room = await RetrieveRoom(roomId);
+
+                            // the above call will only succeed if this user is the host.
+                            room.Host = roomUser;
+
+                            // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
+                            await MarkRoomActive(room);
+
+                            roomUsage.Item = room;
+                        }
+                        else
+                        {
+                            room = roomUsage.Item;
+
+                            // this is a sanity check to keep *rooms* in a good state.
+                            // in theory the connection clean-up code should handle this correctly.
+                            if (room.Users.Any(u => u.UserID == roomUser.UserID))
+                                throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
+                        }
+
+                        userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
+                        room.Users.Add(roomUser);
+
+                        await UpdateDatabaseParticipants(room);
+
+                        await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
+                        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
+
+                        Log($"Joining room {room.RoomID}");
                     }
+                    catch
+                    {
+                        try
+                        {
+                            if (userUsage.Item != null)
+                            {
+                                // the user was joined to the room, so we can run the standard leaveRoom method.
+                                // this will handle closing the room if this was the only user.
+                                await leaveRoom(userUsage.Item, roomUsage);
+                            }
+                            else if (newRoomFetchStarted)
+                            {
+                                if (room != null)
+                                {
+                                    // the room was retrieved and associated to the usage, but something failed before the user (host) could join.
+                                    // for now, let's mark the room as ended if this happens.
+                                    await EndDatabaseMatch(room);
+                                }
 
-                    room = roomUsage.Item;
+                                roomUsage.Destroy();
+                            }
+                        }
+                        finally
+                        {
+                            // no matter how we end up cleaning up the room, ensure the user's context is destroyed.
+                            userUsage.Destroy();
+                        }
 
-                    // this is a sanity check to keep *rooms* in a good state.
-                    // in theory the connection clean-up code should handle this correctly.
-                    if (room.Users.Any(u => u.UserID == roomUser.UserID))
-                        throw new InvalidOperationException($"User {roomUser.UserID} attempted to join a room they are already present in.");
-
-                    // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
-                    await MarkRoomActive(room);
-
-                    room.Users.Add(roomUser);
-
-                    await UpdateDatabaseParticipants(room);
+                        throw;
+                    }
                 }
-
-                await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
-                await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
-
-                userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
 
                 return room;
             }
         }
 
         /// <summary>
-        /// Attempt to construct and a room based on a room ID specification.
+        /// Attempt to retrieve and construct a room from the database backend, based on a room ID specification.
         /// This will check the database backing to ensure things are in a consistent state.
+        /// It should only be called by the room's host, before any other user has joined (and will throw if not).
         /// </summary>
         /// <param name="roomId">The proposed room ID.</param>
         /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
         protected virtual async Task<MultiplayerRoom> RetrieveRoom(long roomId)
         {
+            Log($"Retrieving room {roomId} from database");
+
             using (var conn = Database.GetConnection())
             {
                 var databaseRoom = await conn.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @RoomID", new
@@ -144,6 +194,8 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         protected virtual async Task MarkRoomActive(MultiplayerRoom room)
         {
+            Log($"Host marking room active {room.RoomID}");
+
             using (var conn = Database.GetConnection())
             {
                 await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = null WHERE id = @RoomID", new
@@ -155,6 +207,8 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task LeaveRoom()
         {
+            Log("Requesting to leave room");
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 if (userUsage.Item == null)
@@ -379,6 +433,7 @@ namespace osu.Server.Spectator.Hubs
 
         protected virtual async Task EndDatabaseMatch(MultiplayerRoom room)
         {
+            // todo: this shouldn't be allowed to fail
             using (var conn = Database.GetConnection())
             {
                 await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
@@ -448,7 +503,6 @@ namespace osu.Server.Spectator.Hubs
         {
             room.Host = newHost;
             await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
-
 
             await UpdateDatabaseHost(room);
         }
@@ -586,47 +640,52 @@ namespace osu.Server.Spectator.Hubs
         private async Task leaveRoom(MultiplayerClientState state)
         {
             using (var roomUsage = await getLocalUserRoom(state))
+                await leaveRoom(state, roomUsage);
+        }
+
+        private async Task leaveRoom(MultiplayerClientState state, ItemUsage<MultiplayerRoom> roomUsage)
+        {
+            var room = roomUsage.Item;
+
+            if (room == null)
+                throw new InvalidOperationException("Attempted to operate on a null room");
+
+            Log($"Leaving room {room.RoomID}");
+
+            await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
+            await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
+
+            var user = room.Users.Find(u => u.UserID == state.UserId);
+
+            if (user == null)
+                throw new InvalidStateException("User was not in the expected room.");
+
+            // handle closing the room if the only participant is the user which is leaving.
+            if (room.Users.Count == 1)
             {
-                var room = roomUsage.Item;
+                await EndDatabaseMatch(room);
 
-                if (room == null)
-                    throw new InvalidOperationException("Attempted to operate on a null room");
-
-                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
-                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
-
-                var user = room.Users.Find(u => u.UserID == state.UserId);
-
-                if (user == null)
-                    throw new InvalidStateException("User was not in the expected room.");
-
-                // handle closing the room if the only participant is the user which is leaving.
-                if (room.Users.Count == 1)
-                {
-                    await EndDatabaseMatch(room);
-
-                    // only destroy the usage after the database operation succeeds.
-                    Console.WriteLine($"Stopping tracking of room {room.RoomID} (all users left).");
-                    roomUsage.Destroy();
-                    return;
-                }
-
-                room.Users.Remove(user);
-                await UpdateDatabaseParticipants(room);
-
-                var clients = Clients.Group(GetGroupId(room.RoomID));
-
-                // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
-                if (room.Host?.Equals(user) == true)
-                {
-                    // there *has* to still be at least one user in the room (see user check above).
-                    var newHost = room.Users.First();
-
-                    await setNewHost(room, newHost);
-                }
-
-                await clients.UserLeft(user);
+                // only destroy the usage after the database operation succeeds.
+                Log($"Stopping tracking of room {room.RoomID} (all users left).");
+                roomUsage.Destroy();
+                return;
             }
+
+            room.Users.Remove(user);
+            await UpdateDatabaseParticipants(room);
+
+            var clients = Clients.Group(GetGroupId(room.RoomID));
+
+            // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
+            if (room.Host?.Equals(user) == true)
+            {
+                // there *has* to still be at least one user in the room (see user check above).
+                var newHost = room.Users.First();
+
+                await setNewHost(room, newHost);
+            }
+
+            await clients.UserLeft(user);
         }
     }
 }
