@@ -609,8 +609,8 @@ namespace osu.Server.Spectator.Tests
 
         public class TestMultiplayerHub : MultiplayerHub
         {
-            public EntityStore<MultiplayerRoom> RoomStore => MultiplayerHub.ACTIVE_ROOMS;
-            public EntityStore<MultiplayerClientState> UserStore => MultiplayerHub.ACTIVE_STATES;
+            public EntityStore<MultiplayerRoom> RoomStore => ACTIVE_ROOMS;
+            public EntityStore<MultiplayerClientState> UserStore => ACTIVE_STATES;
 
             public TestMultiplayerHub(MemoryDistributedCache cache)
                 : base(cache)
