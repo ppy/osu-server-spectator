@@ -73,7 +73,7 @@ namespace osu.Server.Spectator
                         var jwtToken = (JwtSecurityToken)context.SecurityToken;
                         int tokenUserId = int.Parse(jwtToken.Subject);
 
-                        using (var conn = Database.GetConnection())
+                        using (var conn = OsuDatabase.GetConnection())
                         {
                             // check expiry/revocation against database
                             var userId = await conn.QueryFirstOrDefaultAsync<int?>("SELECT user_id FROM oauth_access_tokens WHERE revoked = false AND expires_at > now() AND id = @id",
