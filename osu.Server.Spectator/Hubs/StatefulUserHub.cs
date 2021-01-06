@@ -75,30 +75,30 @@ namespace osu.Server.Spectator.Hubs
                 return;
             }
 
-            try
+            Log($"Cleaning up state on {(isDisconnect ? "disconnect" : "connect")}");
+
+            if (usage.Item != null)
             {
-                Log($"Cleaning up state on {(isDisconnect ? "disconnect" : "connect")}");
+                bool isOurState = usage.Item.ConnectionId == Context.ConnectionId;
 
-                if (usage.Item != null)
+                if (isDisconnect && !isOurState)
                 {
-                    bool isOurState = usage.Item.ConnectionId == Context.ConnectionId;
+                    // not our state, owned by a different connection.
+                    Log("Disconnect state cleanup aborted due to newer connection owning state");
+                    return;
+                }
 
-                    if (isDisconnect && !isOurState)
-                    {
-                        // not our state, owned by a different connection.
-                        Log("Disconnect state cleanup aborted due to newer connection owning state");
-                        return;
-                    }
-
+                try
+                {
                     await CleanUpState(usage.Item);
                 }
-            }
-            finally
-            {
-                usage.Destroy();
-                usage.Dispose();
+                finally
+                {
+                    usage.Destroy();
+                    usage.Dispose();
 
-                Log("State cleanup completed");
+                    Log("State cleanup completed");
+                }
             }
         }
 
