@@ -58,7 +58,7 @@ namespace osu.Server.Spectator.Hubs
                 // add the user to the room.
                 var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
-                MultiplayerRoom? room = null;
+                MultiplayerRoom? room;
 
                 using (var roomUsage = await ACTIVE_ROOMS.GetForUse(roomId, true))
                 {
@@ -69,6 +69,9 @@ namespace osu.Server.Spectator.Hubs
                             // the requested room is not yet tracked by this server.
                             room = await RetrieveRoom(roomId);
                             room.Host = roomUser;
+
+                            // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
+                            await MarkRoomActive(room);
 
                             roomUsage.Item = room;
                         }
@@ -81,9 +84,6 @@ namespace osu.Server.Spectator.Hubs
                             if (room.Users.Any(u => u.UserID == roomUser.UserID))
                                 throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
                         }
-
-                        // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
-                        await MarkRoomActive(room);
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
                         room.Users.Add(roomUser);
@@ -106,17 +106,17 @@ namespace osu.Server.Spectator.Hubs
                                 // this will handle closing the room if this was the only user.
                                 await leaveRoom(userUsage.Item, roomUsage);
                             }
-                            else if (room == null)
+                            else if (roomUsage.Item == null)
                             {
                                 // the room usage was created but no match was retrieved
                                 // clean up the usage.
                                 roomUsage.Destroy();
                             }
-                            else if (room.Users.Count == 0)
+                            else if (roomUsage.Item.Users.Count == 0)
                             {
                                 // the room may have been retrieved but failed before the user could join.
                                 // check whether the room should be closed (may happen if this was the first and only user joining the room)
-                                await EndDatabaseMatch(room);
+                                await EndDatabaseMatch(roomUsage.Item);
                                 roomUsage.Destroy();
                             }
                         }
@@ -141,6 +141,8 @@ namespace osu.Server.Spectator.Hubs
         /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
         protected virtual async Task<MultiplayerRoom> RetrieveRoom(long roomId)
         {
+            Log($"Retrieving room {roomId} from database");
+
             using (var conn = Database.GetConnection())
             {
                 var databaseRoom = await conn.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @RoomID", new
