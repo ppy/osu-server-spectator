@@ -16,6 +16,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.RealtimeMultiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
 {

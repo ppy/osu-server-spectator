@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Entities;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests
