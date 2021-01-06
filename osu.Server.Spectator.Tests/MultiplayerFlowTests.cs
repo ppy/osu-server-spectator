@@ -13,6 +13,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Online.RealtimeMultiplayer;
+using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 using Xunit;
@@ -28,6 +30,9 @@ namespace osu.Server.Spectator.Tests
 
         private const long room_id = 8888;
 
+        private readonly Mock<IDatabaseFactory> mockDatabaseFactory;
+        private readonly Mock<IDatabaseAccess> mockDatabase;
+
         private readonly Mock<IMultiplayerClient> mockReceiver;
         private readonly Mock<IMultiplayerClient> mockGameplayReceiver;
 
@@ -40,11 +45,13 @@ namespace osu.Server.Spectator.Tests
         {
             MultiplayerHub.Reset();
 
+            mockDatabaseFactory = new Mock<IDatabaseFactory>();
+            mockDatabase = new Mock<IDatabaseAccess>();
+            setUpMockDatabase();
+
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
-            hub = new TestMultiplayerHub(cache);
-
-            hub.RoomHostId = user_id;
+            hub = new TestMultiplayerHub(cache, mockDatabaseFactory.Object);
 
             mockGroups = new Mock<IGroupManager>();
 
@@ -68,6 +75,24 @@ namespace osu.Server.Spectator.Tests
             hub.Clients = mockClients.Object;
 
             setUserContext(mockContextUser1);
+        }
+
+        private void setUpMockDatabase()
+        {
+            mockDatabaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
+            mockDatabase.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+                        .ReturnsAsync(new multiplayer_room
+                        {
+                            ends_at = DateTimeOffset.Now.AddMinutes(5),
+                            user_id = user_id
+                        });
+            mockDatabase.Setup(db => db.GetCurrentPlaylistItemAsync(It.IsAny<long>()))
+                        .ReturnsAsync(new multiplayer_playlist_item
+                        {
+                            beatmap_id = 1234
+                        });
+            mockDatabase.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
+                        .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
         }
 
         #region Host assignment and transfer
@@ -196,7 +221,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task UserJoinPreJoinFailureCleansUpRoom()
         {
-            hub.MarkRoomActiveShouldThrow = true;
+            mockDatabase.Setup(db => db.MarkRoomActiveAsync(It.IsAny<MultiplayerRoom>()))
+                        .ThrowsAsync(new Exception("error"));
             await Assert.ThrowsAnyAsync<Exception>(() => hub.JoinRoom(room_id));
 
             await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.RoomStore.GetForUse(room_id));
@@ -206,7 +232,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task UserJoinPostJoinFailureCleansUpRoomAndUser()
         {
-            hub.UpdateDatabaseParticipantsShouldThrow = true;
+            mockDatabase.Setup(db => db.UpdateRoomParticipantsAsync(It.IsAny<MultiplayerRoom>()))
+                        .ThrowsAsync(new Exception("error"));
             await Assert.ThrowsAnyAsync<Exception>(() => hub.JoinRoom(room_id));
 
             await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.RoomStore.GetForUse(room_id));
@@ -520,6 +547,7 @@ namespace osu.Server.Spectator.Tests
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 Name = "bestest room ever",
+                BeatmapChecksum = "checksum"
             };
 
             await hub.JoinRoom(room_id);
@@ -540,6 +568,7 @@ namespace osu.Server.Spectator.Tests
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 Name = "bestest room ever",
+                BeatmapChecksum = "checksum"
             };
 
             await hub.JoinRoom(room_id);
@@ -584,6 +613,7 @@ namespace osu.Server.Spectator.Tests
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 BeatmapID = 1234567,
+                BeatmapChecksum = "checksum",
                 RulesetID = 2
             };
 
@@ -613,44 +643,9 @@ namespace osu.Server.Spectator.Tests
             public EntityStore<MultiplayerRoom> RoomStore => ACTIVE_ROOMS;
             public EntityStore<MultiplayerClientState> UserStore => ACTIVE_STATES;
 
-            public TestMultiplayerHub(MemoryDistributedCache cache)
-                : base(cache)
+            public TestMultiplayerHub(MemoryDistributedCache cache, IDatabaseFactory databaseFactory)
+                : base(cache, databaseFactory)
             {
-            }
-
-            public bool ClearDatabaseScoresShouldThrow;
-            protected override Task ClearDatabaseScores(MultiplayerRoom room) => ClearDatabaseScoresShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
-
-            public bool UpdateDatabaseParticipantsShouldThrow;
-            protected override Task UpdateDatabaseParticipants(MultiplayerRoom room) => UpdateDatabaseParticipantsShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
-
-            public bool UpdateDatabaseSettingsShouldThrow;
-            protected override Task UpdateDatabaseSettings(MultiplayerRoom room) => UpdateDatabaseSettingsShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
-
-            public bool UpdateDatabaseHostShouldThrow;
-            protected override Task UpdateDatabaseHost(MultiplayerRoom room) => UpdateDatabaseHostShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
-
-            public bool EndDatabaseMatchShouldThrow;
-            protected override Task EndDatabaseMatch(MultiplayerRoom room) => EndDatabaseMatchShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
-
-            public bool MarkRoomActiveShouldThrow;
-            protected override Task MarkRoomActive(MultiplayerRoom room) => MarkRoomActiveShouldThrow ? throw new InvalidOperationException() : Task.CompletedTask;
-
-            public bool CheckIsUserRestrictedShouldThrow;
-            protected virtual Task<bool> CheckIsUserRestricted() => CheckIsUserRestrictedShouldThrow ? throw new InvalidOperationException() : Task.FromResult(false);
-
-            public int RoomHostId;
-
-            protected override Task<MultiplayerRoom> RetrieveRoom(long roomId)
-            {
-                if (RoomHostId != CurrentContextUserId)
-                    throw new InvalidStateException("Non-host is attempting to join match before host");
-
-                // bypass database for testing.
-                return Task.FromResult(new MultiplayerRoom(roomId)
-                {
-                    Host = new MultiplayerRoomUser(RoomHostId)
-                });
             }
 
             public ItemUsage<MultiplayerRoom> GetRoom(long roomId) => RoomStore.GetForUse(roomId).Result;
