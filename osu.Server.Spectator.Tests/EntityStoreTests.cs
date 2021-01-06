@@ -93,6 +93,9 @@ namespace osu.Server.Spectator.Tests
 
             await store.Destroy(1);
 
+            // second call should be allowed (and run as a noop).
+            await store.Destroy(1);
+
             await Assert.ThrowsAsync<KeyNotFoundException>(() => store.GetForUse(1));
 
             using (var thirdGet = await store.GetForUse(1, true))
