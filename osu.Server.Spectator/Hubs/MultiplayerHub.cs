@@ -102,7 +102,7 @@ namespace osu.Server.Spectator.Hubs
                         {
                             if (userUsage.Item != null)
                             {
-                                // the user was joined to the room, so we can tun the standard leaveRoom method.
+                                // the user was joined to the room, so we can run the standard leaveRoom method.
                                 // this will handle closing the room if this was the only user.
                                 await leaveRoom(userUsage.Item, roomUsage);
                             }
