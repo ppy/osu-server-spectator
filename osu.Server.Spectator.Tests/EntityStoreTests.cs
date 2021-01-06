@@ -210,10 +210,12 @@ namespace osu.Server.Spectator.Tests
 
             using (var fourthGet = await store.GetForUse(4, true))
             {
+                // ensure the item is set to non-null before allowing retrieval to happen.
+                fourthGet.Item = new TestItem("c");
+
                 // start background retrieval while this get is holding the lock.
                 backgroundRetrievalThread.Start();
                 backgroundRetrievalStarted.Wait(1000);
-                fourthGet.Item = new TestItem("c");
             }
 
             Assert.True(backgroundRetrievalDone.Wait(1000));
@@ -244,10 +246,13 @@ namespace osu.Server.Spectator.Tests
 
             using (var thirdGet = await store.GetForUse(3, true))
             {
+                // set item before allowing clear to proceed.
+                // done to avoid potential false-positives when using GetAllEntities(), which strips null items.
+                thirdGet.Item = new TestItem("another");
+
                 // start background clear while this get is holding the lock.
                 backgroundClearThread.Start();
                 clearOperationStarted.Wait(1000);
-                thirdGet.Item = new TestItem("another");
             }
 
             Assert.True(clearOperationDone.Wait(1000));
