@@ -58,6 +58,9 @@ namespace osu.Server.Spectator.Hubs
                 // add the user to the room.
                 var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
+                // track whether a new room was fetched from the database and assigned to a usage.
+                bool newRoomFetched = false;
+
                 MultiplayerRoom? room;
 
                 using (var roomUsage = await ACTIVE_ROOMS.GetForUse(roomId, true))
@@ -68,12 +71,15 @@ namespace osu.Server.Spectator.Hubs
                         {
                             // the requested room is not yet tracked by this server.
                             room = await RetrieveRoom(roomId);
+
+                            // the above call will only succeed if this user is the host.
                             room.Host = roomUser;
 
                             // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
                             await MarkRoomActive(room);
 
                             roomUsage.Item = room;
+                            newRoomFetched = true;
                         }
                         else
                         {
@@ -108,14 +114,13 @@ namespace osu.Server.Spectator.Hubs
                             }
                             else if (roomUsage.Item == null)
                             {
-                                // the room usage was created but no match was retrieved
-                                // clean up the usage.
+                                // the room usage was created but no match was successfully retrieved; clean up the usage.
                                 roomUsage.Destroy();
                             }
-                            else if (roomUsage.Item.Users.Count == 0)
+                            else if (newRoomFetched)
                             {
-                                // the room may have been retrieved but failed before the user could join.
-                                // check whether the room should be closed (may happen if this was the first and only user joining the room)
+                                // the room was retrieved but failed before the user (host) could join.
+                                // for now, let's mark the room as ended if this happens.
                                 await EndDatabaseMatch(roomUsage.Item);
                                 roomUsage.Destroy();
                             }
@@ -134,8 +139,9 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Attempt to construct and a room based on a room ID specification.
+        /// Attempt to retrieve and construct a room from the database backend, based on a room ID specification.
         /// This will check the database backing to ensure things are in a consistent state.
+        /// It should only be called by the room's host, before any other user has joined (and will throw if not).
         /// </summary>
         /// <param name="roomId">The proposed room ID.</param>
         /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
