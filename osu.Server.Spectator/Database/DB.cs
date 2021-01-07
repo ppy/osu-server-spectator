@@ -6,7 +6,7 @@ using MySqlConnector;
 
 namespace osu.Server.Spectator.Database
 {
-    public class OsuDatabase
+    public static class DB
     {
         public static MySqlConnection GetConnection()
         {
