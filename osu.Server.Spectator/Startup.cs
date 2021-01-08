@@ -16,6 +16,7 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator
@@ -73,7 +74,7 @@ namespace osu.Server.Spectator
                         var jwtToken = (JwtSecurityToken)context.SecurityToken;
                         int tokenUserId = int.Parse(jwtToken.Subject);
 
-                        using (var conn = Database.GetConnection())
+                        using (var conn = DB.GetConnection())
                         {
                             // check expiry/revocation against database
                             var userId = await conn.QueryFirstOrDefaultAsync<int?>("SELECT user_id FROM oauth_access_tokens WHERE revoked = false AND expires_at > now() AND id = @id",

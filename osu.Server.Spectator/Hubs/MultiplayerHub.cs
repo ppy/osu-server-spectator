@@ -14,7 +14,9 @@ using MySqlConnector;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.RealtimeMultiplayer;
-using osu.Server.Spectator.DatabaseModels;
+using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -149,7 +151,7 @@ namespace osu.Server.Spectator.Hubs
         {
             Log($"Retrieving room {roomId} from database");
 
-            using (var conn = Database.GetConnection())
+            using (var conn = DB.GetConnection())
             {
                 var databaseRoom = await conn.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @RoomID", new
                 {
@@ -196,7 +198,7 @@ namespace osu.Server.Spectator.Hubs
         {
             Log($"Host marking room active {room.RoomID}");
 
-            using (var conn = Database.GetConnection())
+            using (var conn = DB.GetConnection())
             {
                 await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = null WHERE id = @RoomID", new
                 {
@@ -371,7 +373,7 @@ namespace osu.Server.Spectator.Hubs
         {
             // for now, clear all existing scores out of the playlist item to ensure no duplicates.
             // eventually we will want to increment to a new playlist item rather than reusing the same one.
-            using (var conn = Database.GetConnection())
+            using (var conn = DB.GetConnection())
             {
                 long playlistItemId = await conn.QuerySingleAsync<long>("SELECT id FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
                 {
@@ -385,7 +387,7 @@ namespace osu.Server.Spectator.Hubs
 
         protected virtual async Task UpdateDatabaseSettings(MultiplayerRoom room)
         {
-            using (var conn = Database.GetConnection())
+            using (var conn = DB.GetConnection())
             {
                 var dbPlaylistItem = new multiplayer_playlist_item(room);
 
@@ -416,7 +418,7 @@ namespace osu.Server.Spectator.Hubs
 
             try
             {
-                using (var conn = Database.GetConnection())
+                using (var conn = DB.GetConnection())
                 {
                     await conn.ExecuteAsync("UPDATE multiplayer_rooms SET user_id = @HostUserID WHERE id = @RoomID", new
                     {
@@ -434,7 +436,7 @@ namespace osu.Server.Spectator.Hubs
         protected virtual async Task EndDatabaseMatch(MultiplayerRoom room)
         {
             // todo: this shouldn't be allowed to fail
-            using (var conn = Database.GetConnection())
+            using (var conn = DB.GetConnection())
             {
                 await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
                 {
@@ -445,7 +447,7 @@ namespace osu.Server.Spectator.Hubs
 
         protected virtual async Task<bool> CheckIsUserRestricted()
         {
-            using (var conn = Database.GetConnection())
+            using (var conn = DB.GetConnection())
             {
                 return await conn.QueryFirstOrDefaultAsync<byte>("SELECT user_warnings FROM phpbb_users WHERE user_id = @UserID", new
                 {
@@ -458,7 +460,7 @@ namespace osu.Server.Spectator.Hubs
         {
             try
             {
-                using (var conn = Database.GetConnection())
+                using (var conn = DB.GetConnection())
                 {
                     using (var transaction = await conn.BeginTransactionAsync())
                     {

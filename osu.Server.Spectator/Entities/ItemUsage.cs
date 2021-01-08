@@ -3,7 +3,7 @@
 
 using osu.Framework.Allocation;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Entities
 {
     /// <summary>
     /// A usage of an item, returned after ensuring locked control.

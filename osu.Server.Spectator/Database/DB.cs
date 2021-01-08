@@ -4,9 +4,9 @@
 using System;
 using MySqlConnector;
 
-namespace osu.Server.Spectator
+namespace osu.Server.Spectator.Database
 {
-    public class Database
+    public static class DB
     {
         public static MySqlConnection GetConnection()
         {

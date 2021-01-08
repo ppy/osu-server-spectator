@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using osu.Framework.Extensions.ObjectExtensions;
 using StatsdClient;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Entities
 {
     /// <summary>
     /// Tracks and ensures consistency of a collection of entities that have a related permanent ID.

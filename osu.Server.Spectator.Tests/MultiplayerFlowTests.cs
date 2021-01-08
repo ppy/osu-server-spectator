@@ -13,6 +13,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Online.RealtimeMultiplayer;
+using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
