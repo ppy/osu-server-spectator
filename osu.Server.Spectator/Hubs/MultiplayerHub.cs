@@ -76,13 +76,13 @@ namespace osu.Server.Spectator.Hubs
                             newRoomFetchStarted = true;
 
                             // the requested room is not yet tracked by this server.
-                            room = await RetrieveRoom(roomId);
+                            room = await retrieveRoom(roomId);
 
                             // the above call will only succeed if this user is the host.
                             room.Host = roomUser;
 
                             // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
-                            await MarkRoomActive(room);
+                            await markRoomActive(room);
 
                             roomUsage.Item = room;
                         }
@@ -99,7 +99,7 @@ namespace osu.Server.Spectator.Hubs
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
                         room.Users.Add(roomUser);
 
-                        await UpdateDatabaseParticipants(room);
+                        await updateDatabaseParticipants(room);
 
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
@@ -122,7 +122,7 @@ namespace osu.Server.Spectator.Hubs
                                 {
                                     // the room was retrieved and associated to the usage, but something failed before the user (host) could join.
                                     // for now, let's mark the room as ended if this happens.
-                                    await EndDatabaseMatch(room);
+                                    await endDatabaseMatch(room);
                                 }
 
                                 roomUsage.Destroy();
@@ -149,7 +149,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="roomId">The proposed room ID.</param>
         /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
-        protected virtual async Task<MultiplayerRoom> RetrieveRoom(long roomId)
+        private async Task<MultiplayerRoom> retrieveRoom(long roomId)
         {
             Log($"Retrieving room {roomId} from database");
 
@@ -186,7 +186,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Marks a room active at the database, implying the host has joined and this server is now in control of the room's lifetime.
         /// </summary>
-        protected virtual async Task MarkRoomActive(MultiplayerRoom room)
+        private async Task markRoomActive(MultiplayerRoom room)
         {
             Log($"Host marking room active {room.RoomID}");
 
@@ -298,7 +298,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Host != null && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
-                await ClearDatabaseScores(room);
+                await clearDatabaseScores(room);
 
                 foreach (var u in readyUsers)
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
@@ -332,7 +332,7 @@ namespace osu.Server.Spectator.Hubs
                 try
                 {
                     room.Settings = settings;
-                    await UpdateDatabaseSettings(room);
+                    await updateDatabaseSettings(room);
                 }
                 catch
                 {
@@ -356,13 +356,13 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
-        protected virtual async Task ClearDatabaseScores(MultiplayerRoom room)
+        private async Task clearDatabaseScores(MultiplayerRoom room)
         {
             using (var database = databaseFactory.GetInstance())
                 await database.ClearRoomScoresAsync(room);
         }
 
-        protected virtual async Task UpdateDatabaseSettings(MultiplayerRoom room)
+        private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
             using (var database = databaseFactory.GetInstance())
             {
@@ -380,19 +380,19 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        protected virtual async Task UpdateDatabaseHost(MultiplayerRoom room)
+        private async Task updateDatabaseHost(MultiplayerRoom room)
         {
             using (var database = databaseFactory.GetInstance())
                 await database.UpdateRoomHostAsync(room);
         }
 
-        protected virtual async Task EndDatabaseMatch(MultiplayerRoom room)
+        private async Task endDatabaseMatch(MultiplayerRoom room)
         {
             using (var database = databaseFactory.GetInstance())
                 await database.EndMatchAsync(room);
         }
 
-        protected virtual async Task UpdateDatabaseParticipants(MultiplayerRoom room)
+        private async Task updateDatabaseParticipants(MultiplayerRoom room)
         {
             using (var database = databaseFactory.GetInstance())
                 await database.UpdateRoomParticipantsAsync(room);
@@ -409,7 +409,7 @@ namespace osu.Server.Spectator.Hubs
             room.Host = newHost;
             await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
 
-            await UpdateDatabaseHost(room);
+            await updateDatabaseHost(room);
         }
 
         /// <summary>
@@ -568,7 +568,7 @@ namespace osu.Server.Spectator.Hubs
             // handle closing the room if the only participant is the user which is leaving.
             if (room.Users.Count == 1)
             {
-                await EndDatabaseMatch(room);
+                await endDatabaseMatch(room);
 
                 // only destroy the usage after the database operation succeeds.
                 Log($"Stopping tracking of room {room.RoomID} (all users left).");
@@ -577,7 +577,7 @@ namespace osu.Server.Spectator.Hubs
             }
 
             room.Users.Remove(user);
-            await UpdateDatabaseParticipants(room);
+            await updateDatabaseParticipants(room);
 
             var clients = Clients.Group(GetGroupId(room.RoomID));
 
