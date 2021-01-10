@@ -45,8 +45,8 @@ namespace osu.Server.Spectator.Hubs
             Log($"Joining room {roomId}");
 
             bool isRestricted;
-            using (var database = databaseFactory.GetInstance())
-                isRestricted = await database.IsUserRestrictedAsync(CurrentContextUserId);
+            using (var db = databaseFactory.GetInstance())
+                isRestricted = await db.IsUserRestrictedAsync(CurrentContextUserId);
 
             if (isRestricted)
                 throw new InvalidStateException("Can't join a room when restricted.");
@@ -153,9 +153,9 @@ namespace osu.Server.Spectator.Hubs
         {
             Log($"Retrieving room {roomId} from database");
 
-            using (var database = databaseFactory.GetInstance())
+            using (var db = databaseFactory.GetInstance())
             {
-                var databaseRoom = await database.GetRoomAsync(roomId);
+                var databaseRoom = await db.GetRoomAsync(roomId);
 
                 if (databaseRoom == null)
                     throw new InvalidStateException("Specified match does not exist.");
@@ -166,8 +166,8 @@ namespace osu.Server.Spectator.Hubs
                 if (databaseRoom.user_id != CurrentContextUserId)
                     throw new InvalidStateException("Non-host is attempting to join match before host");
 
-                var playlistItem = await database.GetCurrentPlaylistItemAsync(roomId);
-                var beatmapChecksum = await database.GetBeatmapChecksumAsync(playlistItem.beatmap_id);
+                var playlistItem = await db.GetCurrentPlaylistItemAsync(roomId);
+                var beatmapChecksum = await db.GetBeatmapChecksumAsync(playlistItem.beatmap_id);
 
                 return new MultiplayerRoom(roomId)
                 {
@@ -190,8 +190,8 @@ namespace osu.Server.Spectator.Hubs
         {
             Log($"Host marking room active {room.RoomID}");
 
-            using (var database = databaseFactory.GetInstance())
-                await database.MarkRoomActiveAsync(room);
+            using (var db = databaseFactory.GetInstance())
+                await db.MarkRoomActiveAsync(room);
         }
 
         public async Task LeaveRoom()
@@ -358,17 +358,17 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task clearDatabaseScores(MultiplayerRoom room)
         {
-            using (var database = databaseFactory.GetInstance())
-                await database.ClearRoomScoresAsync(room);
+            using (var db = databaseFactory.GetInstance())
+                await db.ClearRoomScoresAsync(room);
         }
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
-            using (var database = databaseFactory.GetInstance())
+            using (var db = databaseFactory.GetInstance())
             {
                 var dbPlaylistItem = new multiplayer_playlist_item(room);
 
-                string beatmapChecksum = await database.GetBeatmapChecksumAsync(dbPlaylistItem.beatmap_id);
+                string beatmapChecksum = await db.GetBeatmapChecksumAsync(dbPlaylistItem.beatmap_id);
 
                 if (beatmapChecksum == null)
                     throw new InvalidStateException("Attempted to select a beatmap which does not exist online.");
@@ -376,26 +376,26 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Settings.BeatmapChecksum != beatmapChecksum)
                     throw new InvalidStateException("Attempted to select a beatmap which has been modified.");
 
-                await database.UpdateRoomSettingsAsync(room);
+                await db.UpdateRoomSettingsAsync(room);
             }
         }
 
         private async Task updateDatabaseHost(MultiplayerRoom room)
         {
-            using (var database = databaseFactory.GetInstance())
-                await database.UpdateRoomHostAsync(room);
+            using (var db = databaseFactory.GetInstance())
+                await db.UpdateRoomHostAsync(room);
         }
 
         private async Task endDatabaseMatch(MultiplayerRoom room)
         {
-            using (var database = databaseFactory.GetInstance())
-                await database.EndMatchAsync(room);
+            using (var db = databaseFactory.GetInstance())
+                await db.EndMatchAsync(room);
         }
 
         private async Task updateDatabaseParticipants(MultiplayerRoom room)
         {
-            using (var database = databaseFactory.GetInstance())
-                await database.UpdateRoomParticipantsAsync(room);
+            using (var db = databaseFactory.GetInstance())
+                await db.UpdateRoomParticipantsAsync(room);
         }
 
         protected override async Task CleanUpState(MultiplayerClientState state)

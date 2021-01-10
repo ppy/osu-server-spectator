@@ -44,10 +44,10 @@ namespace osu.Server.Spectator.Authentication
                     var jwtToken = (JwtSecurityToken)context.SecurityToken;
                     int tokenUserId = int.Parse(jwtToken.Subject);
 
-                    using (var database = databaseFactory.GetInstance())
+                    using (var db = databaseFactory.GetInstance())
                     {
                         // check expiry/revocation against database
-                        var userId = await database.GetUserIdFromTokenAsync(jwtToken);
+                        var userId = await db.GetUserIdFromTokenAsync(jwtToken);
 
                         if (userId != tokenUserId)
                         {
