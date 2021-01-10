@@ -5,12 +5,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Dapper;
 using Microsoft.Extensions.Caching.Distributed;
-using MySqlConnector;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.RealtimeMultiplayer;
@@ -24,9 +21,12 @@ namespace osu.Server.Spectator.Hubs
     {
         protected static readonly EntityStore<MultiplayerRoom> ACTIVE_ROOMS = new EntityStore<MultiplayerRoom>();
 
-        public MultiplayerHub(IDistributedCache cache)
+        private readonly IDatabaseFactory databaseFactory;
+
+        public MultiplayerHub(IDistributedCache cache, IDatabaseFactory databaseFactory)
             : base(cache)
         {
+            this.databaseFactory = databaseFactory;
         }
 
         /// <summary>
@@ -44,7 +44,9 @@ namespace osu.Server.Spectator.Hubs
         {
             Log($"Joining room {roomId}");
 
-            bool isRestricted = await CheckIsUserRestricted();
+            bool isRestricted;
+            using (var db = databaseFactory.GetInstance())
+                isRestricted = await db.IsUserRestrictedAsync(CurrentContextUserId);
 
             if (isRestricted)
                 throw new InvalidStateException("Can't join a room when restricted.");
@@ -74,13 +76,13 @@ namespace osu.Server.Spectator.Hubs
                             newRoomFetchStarted = true;
 
                             // the requested room is not yet tracked by this server.
-                            room = await RetrieveRoom(roomId);
+                            room = await retrieveRoom(roomId);
 
                             // the above call will only succeed if this user is the host.
                             room.Host = roomUser;
 
                             // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
-                            await MarkRoomActive(room);
+                            await markRoomActive(room);
 
                             roomUsage.Item = room;
                         }
@@ -97,7 +99,7 @@ namespace osu.Server.Spectator.Hubs
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
                         room.Users.Add(roomUser);
 
-                        await UpdateDatabaseParticipants(room);
+                        await updateDatabaseParticipants(room);
 
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
@@ -120,7 +122,7 @@ namespace osu.Server.Spectator.Hubs
                                 {
                                     // the room was retrieved and associated to the usage, but something failed before the user (host) could join.
                                     // for now, let's mark the room as ended if this happens.
-                                    await EndDatabaseMatch(room);
+                                    await endDatabaseMatch(room);
                                 }
 
                                 roomUsage.Destroy();
@@ -147,16 +149,13 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="roomId">The proposed room ID.</param>
         /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
-        protected virtual async Task<MultiplayerRoom> RetrieveRoom(long roomId)
+        private async Task<MultiplayerRoom> retrieveRoom(long roomId)
         {
             Log($"Retrieving room {roomId} from database");
 
-            using (var conn = DB.GetConnection())
+            using (var db = databaseFactory.GetInstance())
             {
-                var databaseRoom = await conn.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @RoomID", new
-                {
-                    RoomID = roomId
-                });
+                var databaseRoom = await db.GetRoomAsync(roomId);
 
                 if (databaseRoom == null)
                     throw new InvalidStateException("Specified match does not exist.");
@@ -167,15 +166,8 @@ namespace osu.Server.Spectator.Hubs
                 if (databaseRoom.user_id != CurrentContextUserId)
                     throw new InvalidStateException("Non-host is attempting to join match before host");
 
-                var playlistItem = await conn.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
-                {
-                    RoomID = roomId
-                });
-
-                var beatmapChecksum = await conn.QuerySingleAsync<string>("SELECT checksum from osu_beatmaps where beatmap_id = @BeatmapID", new
-                {
-                    BeatmapId = playlistItem.beatmap_id
-                });
+                var playlistItem = await db.GetCurrentPlaylistItemAsync(roomId);
+                var beatmapChecksum = await db.GetBeatmapChecksumAsync(playlistItem.beatmap_id);
 
                 return new MultiplayerRoom(roomId)
                 {
@@ -194,17 +186,12 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Marks a room active at the database, implying the host has joined and this server is now in control of the room's lifetime.
         /// </summary>
-        protected virtual async Task MarkRoomActive(MultiplayerRoom room)
+        private async Task markRoomActive(MultiplayerRoom room)
         {
             Log($"Host marking room active {room.RoomID}");
 
-            using (var conn = DB.GetConnection())
-            {
-                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = null WHERE id = @RoomID", new
-                {
-                    RoomID = room.RoomID
-                });
-            }
+            using (var db = databaseFactory.GetInstance())
+                await db.MarkRoomActiveAsync(room);
         }
 
         public async Task LeaveRoom()
@@ -311,7 +298,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Host != null && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
-                await ClearDatabaseScores(room);
+                await clearDatabaseScores(room);
 
                 foreach (var u in readyUsers)
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
@@ -345,7 +332,7 @@ namespace osu.Server.Spectator.Hubs
                 try
                 {
                     room.Settings = settings;
-                    await UpdateDatabaseSettings(room);
+                    await updateDatabaseSettings(room);
                 }
                 catch
                 {
@@ -369,32 +356,19 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
-        protected virtual async Task ClearDatabaseScores(MultiplayerRoom room)
+        private async Task clearDatabaseScores(MultiplayerRoom room)
         {
-            // for now, clear all existing scores out of the playlist item to ensure no duplicates.
-            // eventually we will want to increment to a new playlist item rather than reusing the same one.
-            using (var conn = DB.GetConnection())
-            {
-                long playlistItemId = await conn.QuerySingleAsync<long>("SELECT id FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
-                {
-                    RoomID = room.RoomID,
-                });
-
-                await conn.ExecuteAsync("DELETE FROM multiplayer_scores WHERE playlist_item_id = @PlaylistItemID", new { PlaylistItemID = playlistItemId });
-                await conn.ExecuteAsync("DELETE FROM multiplayer_scores_high WHERE playlist_item_id = @PlaylistItemID", new { PlaylistItemID = playlistItemId });
-            }
+            using (var db = databaseFactory.GetInstance())
+                await db.ClearRoomScoresAsync(room);
         }
 
-        protected virtual async Task UpdateDatabaseSettings(MultiplayerRoom room)
+        private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
-            using (var conn = DB.GetConnection())
+            using (var db = databaseFactory.GetInstance())
             {
                 var dbPlaylistItem = new multiplayer_playlist_item(room);
 
-                var beatmapChecksum = await conn.QuerySingleOrDefaultAsync<string>("SELECT checksum from osu_beatmaps where beatmap_id = @BeatmapID", new
-                {
-                    BeatmapId = dbPlaylistItem.beatmap_id
-                });
+                string beatmapChecksum = await db.GetBeatmapChecksumAsync(dbPlaylistItem.beatmap_id);
 
                 if (beatmapChecksum == null)
                     throw new InvalidStateException("Attempted to select a beatmap which does not exist online.");
@@ -402,97 +376,26 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Settings.BeatmapChecksum != beatmapChecksum)
                     throw new InvalidStateException("Attempted to select a beatmap which has been modified.");
 
-                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new
-                {
-                    RoomID = room.RoomID,
-                    Name = room.Settings.Name
-                });
-
-                await conn.ExecuteAsync("UPDATE multiplayer_playlist_items SET beatmap_id = @beatmap_id, ruleset_id = @ruleset_id, required_mods = @required_mods, updated_at = NOW() WHERE room_id = @room_id", dbPlaylistItem);
+                await db.UpdateRoomSettingsAsync(room);
             }
         }
 
-        protected virtual async Task UpdateDatabaseHost(MultiplayerRoom room)
+        private async Task updateDatabaseHost(MultiplayerRoom room)
         {
-            Debug.Assert(room.Host != null);
-
-            try
-            {
-                using (var conn = DB.GetConnection())
-                {
-                    await conn.ExecuteAsync("UPDATE multiplayer_rooms SET user_id = @HostUserID WHERE id = @RoomID", new
-                    {
-                        HostUserID = room.Host.UserID,
-                        RoomID = room.RoomID
-                    });
-                }
-            }
-            catch (MySqlException)
-            {
-                // for now we really don't care about failures in this. it's updating display information each time a user joins/quits and doesn't need to be perfect.
-            }
+            using (var db = databaseFactory.GetInstance())
+                await db.UpdateRoomHostAsync(room);
         }
 
-        protected virtual async Task EndDatabaseMatch(MultiplayerRoom room)
+        private async Task endDatabaseMatch(MultiplayerRoom room)
         {
-            // todo: this shouldn't be allowed to fail
-            using (var conn = DB.GetConnection())
-            {
-                await conn.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
-                {
-                    RoomID = room.RoomID
-                });
-            }
+            using (var db = databaseFactory.GetInstance())
+                await db.EndMatchAsync(room);
         }
 
-        protected virtual async Task<bool> CheckIsUserRestricted()
+        private async Task updateDatabaseParticipants(MultiplayerRoom room)
         {
-            using (var conn = DB.GetConnection())
-            {
-                return await conn.QueryFirstOrDefaultAsync<byte>("SELECT user_warnings FROM phpbb_users WHERE user_id = @UserID", new
-                {
-                    UserID = CurrentContextUserId
-                }) != 0;
-            }
-        }
-
-        protected virtual async Task UpdateDatabaseParticipants(MultiplayerRoom room)
-        {
-            try
-            {
-                using (var conn = DB.GetConnection())
-                {
-                    using (var transaction = await conn.BeginTransactionAsync())
-                    {
-                        // This should be considered *very* temporary, and for display purposes only!
-                        await conn.ExecuteAsync("DELETE FROM multiplayer_rooms_high WHERE room_id = @RoomID", new
-                        {
-                            RoomID = room.RoomID
-                        }, transaction);
-
-                        foreach (var u in room.Users)
-                        {
-                            await conn.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id) VALUES (@RoomID, @UserID)", new
-                            {
-                                RoomID = room.RoomID,
-                                UserID = u.UserID
-                            }, transaction);
-                        }
-
-                        await transaction.CommitAsync();
-                    }
-
-                    await conn.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
-                    {
-                        RoomID = room.RoomID,
-                        Count = room.Users.Count
-                    });
-                }
-            }
-            catch (MySqlException)
-            {
-                // for now we really don't care about failures in this. it's updating display information each time a user joins/quits and doesn't need to be perfect.
-            }
+            using (var db = databaseFactory.GetInstance())
+                await db.UpdateRoomParticipantsAsync(room);
         }
 
         protected override async Task CleanUpState(MultiplayerClientState state)
@@ -506,7 +409,7 @@ namespace osu.Server.Spectator.Hubs
             room.Host = newHost;
             await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
 
-            await UpdateDatabaseHost(room);
+            await updateDatabaseHost(room);
         }
 
         /// <summary>
@@ -665,7 +568,7 @@ namespace osu.Server.Spectator.Hubs
             // handle closing the room if the only participant is the user which is leaving.
             if (room.Users.Count == 1)
             {
-                await EndDatabaseMatch(room);
+                await endDatabaseMatch(room);
 
                 // only destroy the usage after the database operation succeeds.
                 Log($"Stopping tracking of room {room.RoomID} (all users left).");
@@ -674,7 +577,7 @@ namespace osu.Server.Spectator.Hubs
             }
 
             room.Users.Remove(user);
-            await UpdateDatabaseParticipants(room);
+            await updateDatabaseParticipants(room);
 
             var clients = Clients.Group(GetGroupId(room.RoomID));
 
