@@ -358,8 +358,8 @@ namespace osu.Server.Spectator.Tests
 
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-            verifyRemovedFromGameplayGroup(mockContextUser1, room_id, Times.Once);
-            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, Times.Never);
+            verifyRemovedFromGameplayGroup(mockContextUser1, room_id);
+            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, false);
 
             Assert.Single(room.Users, u => u.State == MultiplayerUserState.Results);
             Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
@@ -379,13 +379,13 @@ namespace osu.Server.Spectator.Tests
             await hub.StartMatch();
             await hub.ChangeState(MultiplayerUserState.Loaded);
 
-            verifyAddedToGameplayGroup(mockContextUser1, room_id, Times.Once);
-            verifyAddedToGameplayGroup(mockContextUser2, room_id, Times.Never);
+            verifyAddedToGameplayGroup(mockContextUser1, room_id);
+            verifyAddedToGameplayGroup(mockContextUser2, room_id, false);
 
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-            verifyRemovedFromGameplayGroup(mockContextUser1, room_id, Times.Once);
-            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, Times.Never);
+            verifyRemovedFromGameplayGroup(mockContextUser1, room_id);
+            verifyRemovedFromGameplayGroup(mockContextUser2, room_id, false);
         }
 
         /// <summary>
@@ -537,66 +537,6 @@ namespace osu.Server.Spectator.Tests
             Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.Idle));
         }
 
-        [Fact]
-        public async void UserCantChangeBeatmapAvailabilityWhilePlaying()
-        {
-            var room = await hub.JoinRoom(room_id);
-            var user = room.Users.Single();
-
-            await hub.ChangeState(MultiplayerUserState.Ready);
-            await hub.StartMatch();
-
-            // ensure throws when changing beatmap availability while loading.
-            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded)));
-
-            await hub.ChangeState(MultiplayerUserState.Loaded);
-
-            // ensure throws when changing beatmap availability while playing.
-            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded)));
-
-            await hub.ChangeState(MultiplayerUserState.FinishedPlay);
-
-            // ensure can change beatmap availability while in results, but state should be forced back to idle.
-            await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded));
-            mockReceiver.Verify(c => c.UserBeatmapAvailabilityChanged(user_id, new BeatmapAvailability(DownloadState.NotDownloaded)), Times.Once);
-            mockReceiver.Verify(c => c.UserStateChanged(user_id, MultiplayerUserState.Idle), Times.Once);
-        }
-
-        [Fact]
-        public async void NoBeatmapUserCantChangeState()
-        {
-            await hub.JoinRoom(room_id);
-
-            await hub.ChangeState(MultiplayerUserState.Ready);
-
-            await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded));
-            mockReceiver.Verify(c => c.UserBeatmapAvailabilityChanged(user_id, new BeatmapAvailability(DownloadState.NotDownloaded)), Times.Once);
-            mockReceiver.Verify(c => c.UserStateChanged(user_id, MultiplayerUserState.Idle), Times.Once);
-
-            // changing user state to idle again is fine, but shouldn't trigger "state change" again.
-            await hub.ChangeState(MultiplayerUserState.Idle);
-            mockReceiver.Verify(c => c.UserStateChanged(user_id, MultiplayerUserState.Idle), Times.Once);
-
-            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeState(MultiplayerUserState.Ready));
-        }
-
-        [Fact]
-        public async void DeletingBeatmapRemovesFromGameplayGroup()
-        {
-            await hub.JoinRoom(room_id);
-
-            await hub.ChangeState(MultiplayerUserState.Ready);
-            verifyAddedToGameplayGroup(mockContextUser1, room_id, Times.Once);
-
-            await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.NotDownloaded));
-            verifyRemovedFromGameplayGroup(mockContextUser1, room_id, Times.Once);
-
-            // ensure adds to gameplay group back when "restoring" beatmap and changing state to ready.
-            await hub.ChangeBeatmapAvailability(new BeatmapAvailability(DownloadState.LocallyAvailable));
-            await hub.ChangeState(MultiplayerUserState.Ready);
-            verifyAddedToGameplayGroup(mockContextUser1, room_id, () => Times.Exactly(2));
-        }
-
         #endregion
 
         #region Room Settings
@@ -684,17 +624,17 @@ namespace osu.Server.Spectator.Tests
 
         #endregion
 
-        private void verifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, Func<Times> times)
+        private void verifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasAdded = true)
             => mockGroups.Verify(groups => groups.AddToGroupAsync(
                 context.Object.ConnectionId,
                 MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), times);
+                It.IsAny<CancellationToken>()), wasAdded ? Times.AtLeastOnce : Times.Never);
 
-        private void verifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, Func<Times> times)
+        private void verifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasRemoved = true)
             => mockGroups.Verify(groups => groups.RemoveFromGroupAsync(
                 context.Object.ConnectionId,
                 MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), times);
+                It.IsAny<CancellationToken>()), wasRemoved ? Times.AtLeastOnce : Times.Never);
 
         private void setUserContext(Mock<HubCallerContext> context) => hub.Context = context.Object;
 
