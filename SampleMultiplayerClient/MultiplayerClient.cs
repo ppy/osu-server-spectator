@@ -30,12 +30,15 @@ namespace SampleMultiplayerClient
             connection.On<int>(nameof(IMultiplayerClient.HostChanged), ((IMultiplayerClient)this).HostChanged);
             connection.On<MultiplayerRoomSettings>(nameof(IMultiplayerClient.SettingsChanged), ((IMultiplayerClient)this).SettingsChanged);
             connection.On<int, MultiplayerUserState>(nameof(IMultiplayerClient.UserStateChanged), ((IMultiplayerClient)this).UserStateChanged);
+            connection.On<int, BeatmapAvailability>(nameof(IMultiplayerClient.UserBeatmapAvailabilityChanged), ((IMultiplayerClient)this).UserBeatmapAvailabilityChanged);
             connection.On(nameof(IMultiplayerClient.LoadRequested), ((IMultiplayerClient)this).LoadRequested);
             connection.On(nameof(IMultiplayerClient.MatchStarted), ((IMultiplayerClient)this).MatchStarted);
             connection.On(nameof(IMultiplayerClient.ResultsReady), ((IMultiplayerClient)this).ResultsReady);
         }
 
         public MultiplayerUserState State { get; private set; }
+
+        public BeatmapAvailability BeatmapAvailability { get; private set; } = BeatmapAvailability.LocallyAvailable();
 
         public MultiplayerRoom? Room { get; private set; }
 
@@ -58,6 +61,9 @@ namespace SampleMultiplayerClient
 
         public Task ChangeState(MultiplayerUserState newState) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.ChangeState), newState);
+
+        public Task ChangeBeatmapAvailability(BeatmapAvailability newBeatmapAvailability) =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.ChangeBeatmapAvailability), newBeatmapAvailability);
 
         public Task StartMatch() =>
             connection.InvokeAsync(nameof(IMultiplayerServer.StartMatch));
@@ -106,6 +112,14 @@ namespace SampleMultiplayerClient
         {
             if (userId == this.UserID)
                 State = state;
+
+            return Task.CompletedTask;
+        }
+
+        public Task UserBeatmapAvailabilityChanged(int userId, BeatmapAvailability beatmapAvailability)
+        {
+            if (userId == this.UserID)
+                BeatmapAvailability = beatmapAvailability;
 
             return Task.CompletedTask;
         }
