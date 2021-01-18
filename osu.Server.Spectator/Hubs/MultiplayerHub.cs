@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
-using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -252,9 +251,6 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidStateException("Local user was not found in the expected room");
 
-                if (user.BeatmapAvailability.State != DownloadState.LocallyAvailable && newState != MultiplayerUserState.Idle)
-                    throw new InvalidStateException($"Attempted to change user state to {newState} while they don't have the room's beatmap.");
-
                 if (user.State == newState)
                     return;
 
@@ -295,22 +291,12 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidStateException("Local user was not found in the expected room");
 
-                if (user.State > MultiplayerUserState.Ready && user.State < MultiplayerUserState.Results)
-                    throw new InvalidStateException($"Attempted to change beatmap availability to {newBeatmapAvailability} while in {user.State} state");
-
                 if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
                     return;
 
                 user.BeatmapAvailability = newBeatmapAvailability;
 
-                // force state to idle when beatmap availability changes.
-                if (user.State != MultiplayerUserState.Idle)
-                {
-                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
-                    await changeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
-                }
-
-                await Clients.Group(GetGroupId(room.RoomID)).UserBeatmapAvailabilityChanged(user.UserID, newBeatmapAvailability);
+                await Clients.Group(GetGroupId(room.RoomID)).UserBeatmapAvailabilityChanged(CurrentContextUserId, newBeatmapAvailability);
             }
         }
 
