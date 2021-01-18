@@ -1,14 +1,18 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
-using osu.Game.Online.Multiplayer;
+using osu.Game.Online.RealtimeMultiplayer;
+using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -33,17 +37,29 @@ namespace osu.Server.Spectator.Hubs
 
         public override async Task OnConnectedAsync()
         {
-            Console.WriteLine($"User {CurrentContextUserId} connected!");
+            Log("Connected");
 
-            // if a previous connection is still present for the current user, we need to clean it up.
-            await cleanUpState(false);
+            try
+            {
+                // if a previous connection is still present for the current user, we need to clean it up.
+                await cleanUpState(false);
+            }
+            catch
+            {
+                Log("State cleanup failed");
+
+                // if any exception happened during clean-up, don't allow the user to reconnect.
+                // this limits damage to the user in a bad state if their clean-up cannot occur (they will not be able to reconnect until the issue is resolved).
+                Context.Abort();
+                throw;
+            }
 
             await base.OnConnectedAsync();
         }
 
-        public sealed override async Task OnDisconnectedAsync(Exception exception)
+        public sealed override async Task OnDisconnectedAsync(Exception? exception)
         {
-            Console.WriteLine($"User {CurrentContextUserId} disconnected!");
+            Log("Disconnected");
 
             await cleanUpState(true);
         }
@@ -62,6 +78,8 @@ namespace osu.Server.Spectator.Hubs
                 return;
             }
 
+            Log($"Cleaning up state on {(isDisconnect ? "disconnect" : "connect")}");
+
             try
             {
                 if (usage.Item != null)
@@ -69,15 +87,25 @@ namespace osu.Server.Spectator.Hubs
                     bool isOurState = usage.Item.ConnectionId == Context.ConnectionId;
 
                     if (isDisconnect && !isOurState)
+                    {
                         // not our state, owned by a different connection.
+                        Log("Disconnect state cleanup aborted due to newer connection owning state");
                         return;
+                    }
 
-                    await CleanUpState(usage.Item);
+                    try
+                    {
+                        await CleanUpState(usage.Item);
+                    }
+                    finally
+                    {
+                        usage.Destroy();
+                        Log("State cleanup completed");
+                    }
                 }
             }
             finally
             {
-                usage.Destroy();
                 usage.Dispose();
             }
         }
@@ -103,8 +131,8 @@ namespace osu.Server.Spectator.Hubs
         protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) =>
             ACTIVE_STATES.GetForUse(userId);
 
-        public static string GetStateId(int userId) => $"state-{typeof(TClient)}:{userId}";
-
         public static void Reset() => ACTIVE_STATES.Clear();
+
+        protected void Log(string message) => Console.WriteLine($@"{DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)} [{CurrentContextUserId}]: {message.Trim()}");
     }
 }
