@@ -6,7 +6,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 
 namespace SampleMultiplayerClient
 {

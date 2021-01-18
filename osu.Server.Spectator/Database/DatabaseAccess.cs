@@ -9,7 +9,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Database

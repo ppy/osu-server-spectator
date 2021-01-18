@@ -11,7 +11,9 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using osu.Framework.Utils;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 
 namespace SampleMultiplayerClient
 {
