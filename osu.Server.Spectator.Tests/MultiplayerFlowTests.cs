@@ -628,13 +628,13 @@ namespace osu.Server.Spectator.Tests
             => mockGroups.Verify(groups => groups.AddToGroupAsync(
                 context.Object.ConnectionId,
                 MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasAdded ? Times.AtLeastOnce : Times.Never);
+                It.IsAny<CancellationToken>()), wasAdded ? Times.Once : Times.Never);
 
         private void verifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasRemoved = true)
             => mockGroups.Verify(groups => groups.RemoveFromGroupAsync(
                 context.Object.ConnectionId,
                 MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasRemoved ? Times.AtLeastOnce : Times.Never);
+                It.IsAny<CancellationToken>()), wasRemoved ? Times.Once : Times.Never);
 
         private void setUserContext(Mock<HubCallerContext> context) => hub.Context = context.Object;
 
