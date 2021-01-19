@@ -551,6 +551,42 @@ namespace osu.Server.Spectator.Tests
 
         #endregion
 
+        #region Beatmap Availability
+
+        [Fact]
+        public async Task ClientCantChangeAvailabilityWhenNotJoinedRoom()
+        {
+            await Assert.ThrowsAsync<NotJoinedRoomException>(() => hub.ChangeBeatmapAvailability(BeatmapAvailability.Importing()));
+        }
+
+        [Fact]
+        public async Task OnlyClientsInSameRoomReceiveAvailabilityChange()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            var room2 = await hub.JoinRoom(room_id_2);
+
+            var user1Availability = BeatmapAvailability.Importing();
+            var user2Availability = BeatmapAvailability.Downloading(0.5);
+
+            setUserContext(mockContextUser1);
+            await hub.ChangeBeatmapAvailability(user1Availability);
+            Assert.True(room.Users.Single().BeatmapAvailability.Equals(user1Availability));
+
+            setUserContext(mockContextUser2);
+            await hub.ChangeBeatmapAvailability(user2Availability);
+            Assert.True(room2.Users.Single().BeatmapAvailability.Equals(user2Availability));
+
+            mockReceiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.Equals(user1Availability))), Times.Once);
+            mockReceiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(user_id_2, It.Is<BeatmapAvailability>(b => b.Equals(user2Availability))), Times.Never);
+
+            mockReceiver2.Verify(c2 => c2.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.Equals(user1Availability))), Times.Never);
+            mockReceiver2.Verify(c2 => c2.UserBeatmapAvailabilityChanged(user_id_2, It.Is<BeatmapAvailability>(b => b.Equals(user2Availability))), Times.Once);
+        }
+
+        #endregion
+
         #region Room Settings
 
         [Fact]
@@ -654,6 +690,8 @@ namespace osu.Server.Spectator.Tests
         {
             public EntityStore<MultiplayerRoom> RoomStore => ACTIVE_ROOMS;
             public EntityStore<MultiplayerClientState> UserStore => ACTIVE_STATES;
+
+            public new int CurrentContextUserId => base.CurrentContextUserId;
 
             public TestMultiplayerHub(MemoryDistributedCache cache, IDatabaseFactory databaseFactory)
                 : base(cache, databaseFactory)
