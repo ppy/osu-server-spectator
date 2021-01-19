@@ -12,6 +12,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
@@ -35,7 +36,7 @@ namespace osu.Server.Spectator.Tests
         private readonly Mock<IDatabaseFactory> mockDatabaseFactory;
         private readonly Mock<IDatabaseAccess> mockDatabase;
 
-        private readonly Mock<IMultiplayerClient> mockReceiver, mockReceiver2;
+        private readonly Mock<IMultiplayerClient> mockReceiver;
         private readonly Mock<IMultiplayerClient> mockGameplayReceiver;
 
         private readonly Mock<HubCallerContext> mockContextUser1;
@@ -73,7 +74,7 @@ namespace osu.Server.Spectator.Tests
             mockGameplayReceiver = new Mock<IMultiplayerClient>();
             mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id, true))).Returns(mockGameplayReceiver.Object);
 
-            mockReceiver2 = new Mock<IMultiplayerClient>();
+            var mockReceiver2 = new Mock<IMultiplayerClient>();
             mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id_2, false))).Returns(mockReceiver2.Object);
 
             hub.Groups = mockGroups.Object;
@@ -580,9 +581,6 @@ namespace osu.Server.Spectator.Tests
 
             mockReceiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.Equals(user1Availability))), Times.Once);
             mockReceiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(user_id_2, It.Is<BeatmapAvailability>(b => b.Equals(user2Availability))), Times.Never);
-
-            mockReceiver2.Verify(c2 => c2.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.Equals(user1Availability))), Times.Never);
-            mockReceiver2.Verify(c2 => c2.UserBeatmapAvailabilityChanged(user_id_2, It.Is<BeatmapAvailability>(b => b.Equals(user2Availability))), Times.Once);
         }
 
         #endregion
