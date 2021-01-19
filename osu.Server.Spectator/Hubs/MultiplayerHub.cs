@@ -238,15 +238,8 @@ namespace osu.Server.Spectator.Hubs
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
-                var room = roomUsage.Item;
-
-                if (room == null)
-                    throw new InvalidOperationException("Attempted to operate on a null room");
-
-                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
-
-                if (user == null)
-                    throw new InvalidStateException("Local user was not found in the expected room");
+                var room = getRoomOrThrow(roomUsage);
+                var user = getRoomUserOrThrow(room, CurrentContextUserId);
 
                 if (user.State == newState)
                     return;
@@ -549,10 +542,7 @@ namespace osu.Server.Spectator.Hubs
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
 
-            var user = room.Users.Find(u => u.UserID == state.UserId);
-
-            if (user == null)
-                throw new InvalidStateException("User was not in the expected room.");
+            var user = getRoomUserOrThrow(room, state.UserId);
 
             // handle closing the room if the only participant is the user which is leaving.
             if (room.Users.Count == 1)
@@ -589,6 +579,16 @@ namespace osu.Server.Spectator.Hubs
                 throw new InvalidOperationException("Attempted to operate on a null room");
 
             return roomUsage.Item;
+        }
+
+        [ExcludeFromCodeCoverage]
+        private MultiplayerRoomUser getRoomUserOrThrow(MultiplayerRoom room, int userID)
+        {
+            var user = room.Users.Find(u => u.UserID == userID);
+            if (user == null)
+                throw new InvalidOperationException($"User {userID} was not found in the expected room");
+
+            return user;
         }
     }
 }
