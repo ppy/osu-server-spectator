@@ -35,6 +35,12 @@ namespace osu.Server.Spectator.Entities
             entity.Destroy();
         }
 
-        private static void returnLock(EntityStore<T>.TrackedEntity entity) => entity.ReleaseLock();
+        private static void returnLock(EntityStore<T>.TrackedEntity entity)
+        {
+            if (entity.Item == null)
+                entity.Destroy();
+
+            entity.ReleaseLock();
+        }
     }
 }
