@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -219,10 +220,7 @@ namespace osu.Server.Spectator.Hubs
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
-                var room = roomUsage.Item;
-
-                if (room == null)
-                    throw new InvalidOperationException("Attempted to operate on a null room");
+                var room = getRoomOrThrow(roomUsage);
 
                 ensureIsHost(room);
 
@@ -280,10 +278,7 @@ namespace osu.Server.Spectator.Hubs
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
-                var room = roomUsage.Item;
-
-                if (room == null)
-                    throw new InvalidOperationException("Attempted to operate on a null room");
+                var room = getRoomOrThrow(roomUsage);
 
                 ensureIsHost(room);
 
@@ -314,10 +309,7 @@ namespace osu.Server.Spectator.Hubs
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
-                var room = roomUsage.Item;
-
-                if (room == null)
-                    throw new InvalidOperationException("Attempted to operate on a null room");
+                var room = getRoomOrThrow(roomUsage);
 
                 if (room.State != MultiplayerRoomState.Open)
                     throw new InvalidStateException("Attempted to change settings while game is active");
@@ -550,10 +542,7 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task leaveRoom(MultiplayerClientState state, ItemUsage<MultiplayerRoom> roomUsage)
         {
-            var room = roomUsage.Item;
-
-            if (room == null)
-                throw new InvalidOperationException("Attempted to operate on a null room");
+            var room = getRoomOrThrow(roomUsage);
 
             Log($"Leaving room {room.RoomID}");
 
@@ -591,6 +580,15 @@ namespace osu.Server.Spectator.Hubs
             }
 
             await clients.UserLeft(user);
+        }
+
+        [ExcludeFromCodeCoverage]
+        private MultiplayerRoom getRoomOrThrow(ItemUsage<MultiplayerRoom> roomUsage)
+        {
+            if (roomUsage.Item == null)
+                throw new InvalidOperationException("Attempted to operate on a null room");
+
+            return roomUsage.Item;
         }
     }
 }
