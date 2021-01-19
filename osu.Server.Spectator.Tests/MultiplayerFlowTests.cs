@@ -145,6 +145,35 @@ namespace osu.Server.Spectator.Tests
         #region Joining and leaving
 
         [Fact]
+        public async Task UserCantJoinWhenRestricted()
+        {
+            mockDatabase.Setup(db => db.IsUserRestrictedAsync(It.IsAny<int>())).ReturnsAsync(true);
+
+            // ensure the same user can't join a room if already in a room.
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.JoinRoom(room_id));
+
+            // ensure no state was left behind.
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStore.GetForUse(user_id));
+        }
+
+        [Fact]
+        public async Task UserCantJoinAlreadyEnded()
+        {
+            mockDatabase.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+                        .ReturnsAsync(new multiplayer_room
+                        {
+                            ends_at = DateTimeOffset.Now.AddMinutes(-5),
+                            user_id = user_id
+                        });
+
+            // ensure the same user can't join a room if already in a room.
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.JoinRoom(room_id));
+
+            // ensure no state was left behind.
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStore.GetForUse(user_id));
+        }
+
+        [Fact]
         public async Task UserCantJoinWhenAlreadyJoined()
         {
             await hub.JoinRoom(room_id);
