@@ -12,7 +12,9 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -29,6 +31,7 @@ namespace osu.Server.Spectator.Tests
         private const int user_id_2 = 2345;
 
         private const long room_id = 8888;
+        private const long room_id_2 = 9999;
 
         private readonly Mock<IDatabaseFactory> mockDatabaseFactory;
         private readonly Mock<IDatabaseAccess> mockDatabase;
@@ -71,6 +74,9 @@ namespace osu.Server.Spectator.Tests
             mockGameplayReceiver = new Mock<IMultiplayerClient>();
             mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id, true))).Returns(mockGameplayReceiver.Object);
 
+            var mockReceiver2 = new Mock<IMultiplayerClient>();
+            mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id_2, false))).Returns(mockReceiver2.Object);
+
             hub.Groups = mockGroups.Object;
             hub.Clients = mockClients.Object;
 
@@ -80,12 +86,19 @@ namespace osu.Server.Spectator.Tests
         private void setUpMockDatabase()
         {
             mockDatabaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
-            mockDatabase.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+            mockDatabase.Setup(db => db.GetRoomAsync(room_id))
                         .ReturnsAsync(new multiplayer_room
                         {
                             ends_at = DateTimeOffset.Now.AddMinutes(5),
                             user_id = user_id
                         });
+            mockDatabase.Setup(db => db.GetRoomAsync(room_id_2))
+                        .ReturnsAsync(new multiplayer_room
+                        {
+                            ends_at = DateTimeOffset.Now.AddMinutes(5),
+                            user_id = user_id_2
+                        });
+
             mockDatabase.Setup(db => db.GetCurrentPlaylistItemAsync(It.IsAny<long>()))
                         .ReturnsAsync(new multiplayer_playlist_item
                         {
@@ -535,6 +548,52 @@ namespace osu.Server.Spectator.Tests
 
             Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad));
             Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.Idle));
+        }
+
+        #endregion
+
+        #region Beatmap Availability
+
+        [Fact]
+        public async Task ClientCantChangeAvailabilityWhenNotJoinedRoom()
+        {
+            await Assert.ThrowsAsync<NotJoinedRoomException>(() => hub.ChangeBeatmapAvailability(BeatmapAvailability.Importing()));
+        }
+
+        [Fact]
+        public async Task AvailabilityChangeBroadcastedOnlyOnChange()
+        {
+            await hub.JoinRoom(room_id);
+
+            await hub.ChangeBeatmapAvailability(BeatmapAvailability.Importing());
+            mockReceiver.Verify(b => b.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.State == DownloadState.Importing)), Times.Once);
+
+            // should not fire a second time.
+            await hub.ChangeBeatmapAvailability(BeatmapAvailability.Importing());
+            mockReceiver.Verify(b => b.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.State == DownloadState.Importing)), Times.Once);
+        }
+
+        [Fact]
+        public async Task OnlyClientsInSameRoomReceiveAvailabilityChange()
+        {
+            var room = await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser2);
+            var room2 = await hub.JoinRoom(room_id_2);
+
+            var user1Availability = BeatmapAvailability.Importing();
+            var user2Availability = BeatmapAvailability.Downloading(0.5);
+
+            setUserContext(mockContextUser1);
+            await hub.ChangeBeatmapAvailability(user1Availability);
+            Assert.True(room.Users.Single().BeatmapAvailability.Equals(user1Availability));
+
+            setUserContext(mockContextUser2);
+            await hub.ChangeBeatmapAvailability(user2Availability);
+            Assert.True(room2.Users.Single().BeatmapAvailability.Equals(user2Availability));
+
+            mockReceiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.Equals(user1Availability))), Times.Once);
+            mockReceiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(user_id_2, It.Is<BeatmapAvailability>(b => b.Equals(user2Availability))), Times.Never);
         }
 
         #endregion

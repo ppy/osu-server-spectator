@@ -3,7 +3,7 @@
 
 using System;
 using Newtonsoft.Json;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online.Multiplayer;
 
 // ReSharper disable InconsistentNaming (matches database table)
 

@@ -2,7 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 
 // ReSharper disable InconsistentNaming (matches database table)
 

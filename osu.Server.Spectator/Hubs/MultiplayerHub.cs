@@ -10,7 +10,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -272,6 +273,30 @@ namespace osu.Server.Spectator.Hubs
                 await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(CurrentContextUserId, newState);
 
                 await updateRoomStateIfRequired(room);
+            }
+        }
+
+        public async Task ChangeBeatmapAvailability(BeatmapAvailability newBeatmapAvailability)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
+                    return;
+
+                user.BeatmapAvailability = newBeatmapAvailability;
+
+                await Clients.Group(GetGroupId(room.RoomID)).UserBeatmapAvailabilityChanged(CurrentContextUserId, newBeatmapAvailability);
             }
         }
 
