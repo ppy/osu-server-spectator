@@ -691,8 +691,6 @@ namespace osu.Server.Spectator.Tests
             public EntityStore<MultiplayerRoom> RoomStore => ACTIVE_ROOMS;
             public EntityStore<MultiplayerClientState> UserStore => ACTIVE_STATES;
 
-            public new int CurrentContextUserId => base.CurrentContextUserId;
-
             public TestMultiplayerHub(MemoryDistributedCache cache, IDatabaseFactory databaseFactory)
                 : base(cache, databaseFactory)
             {
