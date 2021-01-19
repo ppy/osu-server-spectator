@@ -284,12 +284,12 @@ namespace osu.Server.Spectator.Hubs
                 var room = roomUsage.Item;
 
                 if (room == null)
-                    throw new InvalidStateException("Attempted to operate on a null room");
+                    throw new InvalidOperationException("Attempted to operate on a null room");
 
                 var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
-                    throw new InvalidStateException("Local user was not found in the expected room");
+                    throw new InvalidOperationException("Local user was not found in the expected room");
 
                 if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
                     return;
