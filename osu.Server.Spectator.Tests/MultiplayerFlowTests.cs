@@ -149,7 +149,6 @@ namespace osu.Server.Spectator.Tests
         {
             mockDatabase.Setup(db => db.IsUserRestrictedAsync(It.IsAny<int>())).ReturnsAsync(true);
 
-            // ensure the same user can't join a room if already in a room.
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.JoinRoom(room_id));
 
             // ensure no state was left behind.
@@ -166,7 +165,6 @@ namespace osu.Server.Spectator.Tests
                             user_id = user_id
                         });
 
-            // ensure the same user can't join a room if already in a room.
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.JoinRoom(room_id));
 
             // ensure no state was left behind.
