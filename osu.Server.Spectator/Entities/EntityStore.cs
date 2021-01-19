@@ -148,7 +148,7 @@ namespace osu.Server.Spectator.Entities
             private readonly long id;
             private readonly EntityStore<T> store;
 
-            private bool isDestroyed;
+            internal bool IsDestroyed { get; private set; }
 
             private bool isLocked => semaphore.CurrentCount == 0;
 
@@ -179,13 +179,13 @@ namespace osu.Server.Spectator.Entities
             /// </summary>
             public void Destroy()
             {
-                if (isDestroyed)
+                if (IsDestroyed)
                     return;
 
                 // we should already have a lock when calling destroy.
                 checkValidForUse();
 
-                isDestroyed = true;
+                IsDestroyed = true;
 
                 store.remove(id);
                 semaphore.Release();
@@ -210,7 +210,7 @@ namespace osu.Server.Spectator.Entities
 
             public void ReleaseLock()
             {
-                if (!isDestroyed)
+                if (!IsDestroyed)
                     semaphore.Release();
             }
 
@@ -221,7 +221,7 @@ namespace osu.Server.Spectator.Entities
             /// <exception cref="InvalidOperationException">Thrown if this usage is not in a valid state to perform the requested operation.</exception>
             private void checkValidForUse(bool shouldBeLocked = true)
             {
-                if (isDestroyed) throw new InvalidOperationException("Attempted to use an item which has already been destroyed");
+                if (IsDestroyed) throw new InvalidOperationException("Attempted to use an item which has already been destroyed");
                 if (shouldBeLocked && !isLocked) throw new InvalidOperationException("Attempted to access a tracked entity without holding a lock");
             }
         }
