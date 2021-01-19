@@ -214,6 +214,9 @@ namespace osu.Server.Spectator.Tests
         public async Task UserCantLeaveWhenNotAlreadyJoined()
         {
             await Assert.ThrowsAsync<NotJoinedRoomException>(() => hub.LeaveRoom());
+
+            // ensure no state was left behind.
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStore.GetForUse(user_id));
         }
 
         [Fact]
