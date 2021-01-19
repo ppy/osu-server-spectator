@@ -7,7 +7,7 @@ namespace osu.Server.Spectator.Entities
 {
     /// <summary>
     /// A usage of an item, returned after ensuring locked control.
-    /// Should be disposed after usage.
+    /// Should be disposed after usage. If <see cref="Item"/> is null at the point of disposal, the state will automatically be destroyed and no longer be tracked.
     /// </summary>
     public class ItemUsage<T> : InvokeOnDisposal<EntityStore<T>.TrackedEntity>
         where T : class
@@ -37,7 +37,7 @@ namespace osu.Server.Spectator.Entities
 
         private static void returnLock(EntityStore<T>.TrackedEntity entity)
         {
-            if (entity.Item == null)
+            if (!entity.IsDestroyed && entity.Item == null)
                 entity.Destroy();
 
             entity.ReleaseLock();
