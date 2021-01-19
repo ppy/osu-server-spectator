@@ -11,7 +11,9 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using osu.Framework.Utils;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 
 namespace SampleMultiplayerClient
 {
@@ -33,11 +35,11 @@ namespace SampleMultiplayerClient
 
                 foreach (var c in clients)
                 {
-                    Console.WriteLine($"Client {c.UserID}  state: {c.State} room: {c.Room}");
+                    Console.WriteLine($"Client {c.UserID}  state: {c.State} beatmap: {c.BeatmapAvailability} room: {c.Room}");
                 }
 
                 Console.WriteLine("Usage: <client_id> <command> [params]");
-                Console.WriteLine("Valid commands [ JoinRoom LeaveRoom TransferHost ChangeSettings ChangeState StartMatch ]");
+                Console.WriteLine("Valid commands [ JoinRoom LeaveRoom TransferHost ChangeSettings ChangeState ChangeBeatmapAvailability StartMatch ]");
 
                 Console.Write(">");
 
@@ -74,6 +76,28 @@ namespace SampleMultiplayerClient
 
                         case "changestate":
                             await targetClient.ChangeState(Enum.Parse<MultiplayerUserState>(args[0], true));
+                            break;
+
+                        case "changebeatmapavailability":
+                            switch (Enum.Parse<DownloadState>(args[0], true))
+                            {
+                                case DownloadState.NotDownloaded:
+                                    await targetClient.ChangeBeatmapAvailability(BeatmapAvailability.NotDownloaded());
+                                    break;
+
+                                case DownloadState.Downloading:
+                                    await targetClient.ChangeBeatmapAvailability(BeatmapAvailability.Downloading(double.Parse(args[1])));
+                                    break;
+
+                                case DownloadState.Importing:
+                                    await targetClient.ChangeBeatmapAvailability(BeatmapAvailability.Importing());
+                                    break;
+
+                                case DownloadState.LocallyAvailable:
+                                    await targetClient.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+                                    break;
+                            }
+
                             break;
 
                         case "startmatch":

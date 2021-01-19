@@ -4,7 +4,7 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
-using osu.Game.Online.RealtimeMultiplayer;
+using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Database
