@@ -566,8 +566,10 @@ namespace osu.Server.Spectator.Tests
             await hub.JoinRoom(room_id);
 
             await hub.ChangeBeatmapAvailability(BeatmapAvailability.Importing());
-            await hub.ChangeBeatmapAvailability(BeatmapAvailability.Importing());
+            mockReceiver.Verify(b => b.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.State == DownloadState.Importing)), Times.Once);
 
+            // should not fire a second time.
+            await hub.ChangeBeatmapAvailability(BeatmapAvailability.Importing());
             mockReceiver.Verify(b => b.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.State == DownloadState.Importing)), Times.Once);
         }
 
