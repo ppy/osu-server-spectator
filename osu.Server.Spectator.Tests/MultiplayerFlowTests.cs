@@ -13,6 +13,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -29,11 +30,12 @@ namespace osu.Server.Spectator.Tests
         private const int user_id_2 = 2345;
 
         private const long room_id = 8888;
+        private const long room_id_2 = 9999;
 
         private readonly Mock<IDatabaseFactory> mockDatabaseFactory;
         private readonly Mock<IDatabaseAccess> mockDatabase;
 
-        private readonly Mock<IMultiplayerClient> mockReceiver;
+        private readonly Mock<IMultiplayerClient> mockReceiver, mockReceiver2;
         private readonly Mock<IMultiplayerClient> mockGameplayReceiver;
 
         private readonly Mock<HubCallerContext> mockContextUser1;
@@ -71,6 +73,9 @@ namespace osu.Server.Spectator.Tests
             mockGameplayReceiver = new Mock<IMultiplayerClient>();
             mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id, true))).Returns(mockGameplayReceiver.Object);
 
+            mockReceiver2 = new Mock<IMultiplayerClient>();
+            mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id_2, false))).Returns(mockReceiver2.Object);
+
             hub.Groups = mockGroups.Object;
             hub.Clients = mockClients.Object;
 
@@ -80,12 +85,19 @@ namespace osu.Server.Spectator.Tests
         private void setUpMockDatabase()
         {
             mockDatabaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
-            mockDatabase.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+            mockDatabase.Setup(db => db.GetRoomAsync(room_id))
                         .ReturnsAsync(new multiplayer_room
                         {
                             ends_at = DateTimeOffset.Now.AddMinutes(5),
                             user_id = user_id
                         });
+            mockDatabase.Setup(db => db.GetRoomAsync(room_id_2))
+                        .ReturnsAsync(new multiplayer_room
+                        {
+                            ends_at = DateTimeOffset.Now.AddMinutes(5),
+                            user_id = user_id_2
+                        });
+
             mockDatabase.Setup(db => db.GetCurrentPlaylistItemAsync(It.IsAny<long>()))
                         .ReturnsAsync(new multiplayer_playlist_item
                         {
