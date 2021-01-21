@@ -2,15 +2,15 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="3.1.10" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="3.1.10" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.1.9" />
-        <PackageReference Include="ppy.osu.Game" Version="2021.118.0" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="5.0.2" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="5.0.2" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
+        <PackageReference Include="ppy.osu.Game" Version="2021.118.1" />
     </ItemGroup>
 
 </Project>
