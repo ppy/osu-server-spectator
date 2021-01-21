@@ -43,13 +43,13 @@ namespace SampleMultiplayerClient
 
                 Console.Write(">");
 
-                string input = Console.ReadLine();
+                string? input = Console.ReadLine();
 
                 try
                 {
-                    var pieces = input.Split(' ');
+                    var pieces = input?.Split(' ');
 
-                    if (pieces.Length < 2)
+                    if (pieces == null || pieces.Length < 2)
                         continue;
 
                     var args = pieces.Skip(2).ToArray();
