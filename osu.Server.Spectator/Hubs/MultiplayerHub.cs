@@ -139,7 +139,7 @@ namespace osu.Server.Spectator.Hubs
                     }
                 }
 
-                return room;
+                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room));
             }
         }
 
