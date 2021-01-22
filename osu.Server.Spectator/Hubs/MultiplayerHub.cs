@@ -105,7 +105,7 @@ namespace osu.Server.Spectator.Hubs
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
-                        Log($"Joining room {room.RoomID}");
+                        Log($"Joined room {room.RoomID}");
                     }
                     catch
                     {
