@@ -125,23 +125,24 @@ namespace osu.Server.Spectator.Tests
         public async Task HostTransfer()
         {
             setUserContext(mockContextUser1);
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
 
             setUserContext(mockContextUser2);
-            Assert.Equal(room, await hub.JoinRoom(room_id));
+            await hub.JoinRoom(room_id);
 
             setUserContext(mockContextUser1);
             await hub.TransferHost(user_id_2);
 
             mockReceiver.Verify(r => r.HostChanged(user_id_2), Times.Once);
-            Assert.True(room.Host?.UserID == user_id_2);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.True(room.Item?.Host?.UserID == user_id_2);
         }
 
         [Fact]
         public async Task HostLeavingCausesHostTransfer()
         {
             setUserContext(mockContextUser1);
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
 
             setUserContext(mockContextUser2);
             await hub.JoinRoom(room_id);
@@ -150,7 +151,8 @@ namespace osu.Server.Spectator.Tests
             await hub.LeaveRoom();
 
             mockReceiver.Verify(r => r.HostChanged(user_id_2), Times.Once);
-            Assert.True(room.Host?.UserID == user_id_2);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.True(room.Item?.Host?.UserID == user_id_2);
         }
 
         #endregion
@@ -329,15 +331,17 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task StartingAlreadyStartedMatchFails()
         {
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
 
             await hub.ChangeState(MultiplayerUserState.Ready);
 
-            Assert.Equal(MultiplayerRoomState.Open, room.State);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
 
             await hub.StartMatch();
 
-            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
 
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.StartMatch());
         }
@@ -345,7 +349,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task AllUsersBackingOutFromLoadCancelsTransitionToPlay()
         {
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
 
             setUserContext(mockContextUser2);
             await hub.JoinRoom(room_id);
@@ -356,19 +360,21 @@ namespace osu.Server.Spectator.Tests
             await hub.ChangeState(MultiplayerUserState.Ready);
             await hub.StartMatch();
 
-            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
 
             await hub.ChangeState(MultiplayerUserState.Idle);
             setUserContext(mockContextUser2);
             await hub.ChangeState(MultiplayerUserState.Idle);
 
-            Assert.Equal(MultiplayerRoomState.Open, room.State);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
         }
 
         [Fact]
         public async Task OnlyReadiedUpUsersTransitionToPlay()
         {
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
             await hub.ChangeState(MultiplayerUserState.Ready);
 
             setUserContext(mockContextUser2);
@@ -376,19 +382,28 @@ namespace osu.Server.Spectator.Tests
 
             setUserContext(mockContextUser1);
             await hub.StartMatch();
-            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
-            Assert.Single(room.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
-            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
+
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
+
+                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
+                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Idle);
+            }
 
             await hub.ChangeState(MultiplayerUserState.Loaded);
-            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Playing);
-            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
+
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Playing);
+                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Idle);
+            }
         }
 
         [Fact]
         public async Task OnlyFinishedUsersTransitionToResults()
         {
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
             await hub.ChangeState(MultiplayerUserState.Ready);
 
             setUserContext(mockContextUser2);
@@ -404,8 +419,11 @@ namespace osu.Server.Spectator.Tests
             verifyRemovedFromGameplayGroup(mockContextUser1, room_id);
             verifyRemovedFromGameplayGroup(mockContextUser2, room_id, false);
 
-            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Results);
-            Assert.Single(room.Users, u => u.State == MultiplayerUserState.Idle);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Results);
+                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Idle);
+            }
         }
 
         [Fact]
@@ -437,14 +455,19 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task SingleUserMatchFlow()
         {
-            var room = await hub.JoinRoom(room_id);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+            await hub.JoinRoom(room_id);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
 
             // some users enter a ready state.
             await hub.ChangeState(MultiplayerUserState.Ready);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
 
-            Assert.Equal(MultiplayerRoomState.Open, room.State);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
+
+                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+            }
 
             // host requests the start of the match.
             await hub.StartMatch();
@@ -452,29 +475,36 @@ namespace osu.Server.Spectator.Tests
             // server requests the all users start loading.
             mockGameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
             mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.WaitingForLoad), Times.Once);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
 
             // all users finish loading.
             await hub.ChangeState(MultiplayerUserState.Loaded);
             mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Playing), Times.Once);
-            Assert.Equal(MultiplayerRoomState.Playing, room.State);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
 
             // server requests users start playing.
             mockReceiver.Verify(r => r.MatchStarted(), Times.Once);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
 
             // all users finish playing.
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
-            Assert.Equal(MultiplayerRoomState.Open, room.State);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
 
             // server lets players know that results are ready for consumption (all players have finished).
             mockReceiver.Verify(r => r.ResultsReady(), Times.Once);
             mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Results), Times.Once);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Results, u.State));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Results, u.State));
 
             // players return back to idle state as they please.
             await hub.ChangeState(MultiplayerUserState.Idle);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
         }
 
         /// <summary>
@@ -484,12 +514,13 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task MultiUserMatchFlow()
         {
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
 
             setUserContext(mockContextUser2);
             await hub.JoinRoom(room_id);
 
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
 
             // both users become ready.
             setUserContext(mockContextUser1);
@@ -497,7 +528,8 @@ namespace osu.Server.Spectator.Tests
             setUserContext(mockContextUser2);
             await hub.ChangeState(MultiplayerUserState.Ready);
 
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
 
             // host requests the start of the match.
             setUserContext(mockContextUser1);
@@ -505,7 +537,8 @@ namespace osu.Server.Spectator.Tests
 
             // server requests the all users start loading.
             mockGameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
             mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.WaitingForLoad), Times.Once);
             mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.WaitingForLoad), Times.Once);
 
@@ -514,61 +547,75 @@ namespace osu.Server.Spectator.Tests
             await hub.ChangeState(MultiplayerUserState.Loaded);
 
             // room is still waiting for second user to load.
-            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
             mockReceiver.Verify(r => r.MatchStarted(), Times.Never);
 
             // second user finishes loading, which triggers gameplay to start.
             setUserContext(mockContextUser2);
             await hub.ChangeState(MultiplayerUserState.Loaded);
 
-            Assert.Equal(MultiplayerRoomState.Playing, room.State);
-            mockReceiver.Verify(r => r.MatchStarted(), Times.Once);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
-            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Playing), Times.Once);
-            mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.Playing), Times.Once);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
+                mockReceiver.Verify(r => r.MatchStarted(), Times.Once);
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
+                mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Playing), Times.Once);
+                mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.Playing), Times.Once);
+            }
 
             // first user finishes playing.
             setUserContext(mockContextUser1);
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-            // room is still waiting for second user to finish playing.
-            Assert.Equal(MultiplayerRoomState.Playing, room.State);
-            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.FinishedPlay), Times.Once);
-            mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.Playing), Times.Once);
-            mockReceiver.Verify(r => r.ResultsReady(), Times.Never);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                // room is still waiting for second user to finish playing.
+                Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
+                mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.FinishedPlay), Times.Once);
+                mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.Playing), Times.Once);
+                mockReceiver.Verify(r => r.ResultsReady(), Times.Never);
+            }
 
             // second user finishes playing.
             setUserContext(mockContextUser2);
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-            // server lets players know that results are ready for consumption (all players have finished).
-            mockReceiver.Verify(r => r.ResultsReady(), Times.Once);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Results, u.State));
-            mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Results), Times.Once);
-            mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.Results), Times.Once);
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                // server lets players know that results are ready for consumption (all players have finished).
+                mockReceiver.Verify(r => r.ResultsReady(), Times.Once);
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Results, u.State));
+                mockReceiver.Verify(r => r.UserStateChanged(user_id, MultiplayerUserState.Results), Times.Once);
+                mockReceiver.Verify(r => r.UserStateChanged(user_id_2, MultiplayerUserState.Results), Times.Once);
 
-            Assert.Equal(MultiplayerRoomState.Open, room.State);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+            }
         }
 
         [Fact]
         public async void NotReadyUsersDontGetLoadRequest()
         {
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
 
             setUserContext(mockContextUser2);
             await hub.JoinRoom(room_id);
 
             setUserContext(mockContextUser1);
 
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
 
             // one user enters a ready state.
             await hub.ChangeState(MultiplayerUserState.Ready);
 
-            Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.Idle));
-            Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.Ready));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.Idle));
+                Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.Ready));
 
-            Assert.Equal(MultiplayerRoomState.Open, room.State);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+            }
 
             // host requests the start of the match.
             await hub.StartMatch();
@@ -576,8 +623,11 @@ namespace osu.Server.Spectator.Tests
             mockGameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
             mockReceiver.Verify(r => r.LoadRequested(), Times.Never);
 
-            Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad));
-            Assert.Single(room.Users.Where(u => u.State == MultiplayerUserState.Idle));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad));
+                Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.Idle));
+            }
         }
 
         #endregion
@@ -606,21 +656,23 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task OnlyClientsInSameRoomReceiveAvailabilityChange()
         {
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
 
             setUserContext(mockContextUser2);
-            var room2 = await hub.JoinRoom(room_id_2);
+            await hub.JoinRoom(room_id_2);
 
             var user1Availability = BeatmapAvailability.Importing();
             var user2Availability = BeatmapAvailability.Downloading(0.5);
 
             setUserContext(mockContextUser1);
             await hub.ChangeBeatmapAvailability(user1Availability);
-            Assert.True(room.Users.Single().BeatmapAvailability.Equals(user1Availability));
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.True(room.Item?.Users.Single().BeatmapAvailability.Equals(user1Availability));
 
             setUserContext(mockContextUser2);
             await hub.ChangeBeatmapAvailability(user2Availability);
-            Assert.True(room2.Users.Single().BeatmapAvailability.Equals(user2Availability));
+            using (var room2 = await hub.RoomStore.GetForUse(room_id_2))
+                Assert.True(room2.Item?.Users.Single().BeatmapAvailability.Equals(user2Availability));
 
             mockReceiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(user_id, It.Is<BeatmapAvailability>(b => b.Equals(user1Availability))), Times.Once);
             mockReceiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(user_id_2, It.Is<BeatmapAvailability>(b => b.Equals(user2Availability))), Times.Never);
@@ -689,10 +741,13 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task UserCantChangeSettingsWhenGameIsActive()
         {
-            var room = await hub.JoinRoom(room_id);
+            await hub.JoinRoom(room_id);
             await hub.ChangeState(MultiplayerUserState.Ready);
             await hub.StartMatch();
-            Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.State);
+
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
+
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(new MultiplayerRoomSettings()));
         }
 
