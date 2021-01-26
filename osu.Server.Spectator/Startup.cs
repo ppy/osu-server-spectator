@@ -21,6 +21,7 @@ namespace osu.Server.Spectator
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSignalR()
+                    .AddMessagePackProtocol()
                     .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; });
 
             services.AddDatabaseServices();
