@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using osu.Framework.Utils;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
@@ -58,7 +57,7 @@ namespace SampleSpectatorClient
         private static SpectatorClient getConnectedClient()
         {
             var connection = new HubConnectionBuilder()
-                             .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; })
+                             .AddMessagePackProtocol()
                              .WithUrl("http://localhost:80/spectator")
                              .ConfigureLogging(logging =>
                              {

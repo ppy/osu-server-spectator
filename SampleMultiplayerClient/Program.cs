@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using osu.Framework.Utils;
 using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
@@ -128,7 +127,7 @@ namespace SampleMultiplayerClient
         private static MultiplayerClient getConnectedClient(int userId)
         {
             var connection = new HubConnectionBuilder()
-                             .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; })
+                             .AddMessagePackProtocol()
                              .WithUrl("http://localhost:80/multiplayer", http => http.Headers.Add("user_id", userId.ToString()))
                              .ConfigureLogging(logging =>
                              {
