@@ -301,6 +301,33 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        public async Task ChangeUserMods(IEnumerable<APIMod> newMods)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                var oldModList = user.UserMods.ToList();
+                var newModList = newMods.ToList();
+
+                if (oldModList.SequenceEqual(newModList))
+                    return;
+
+                user.UserMods = newModList;
+
+                await Clients.Group(GetGroupId(room.RoomID)).UserModsChanged(CurrentContextUserId, newModList);
+            }
+        }
+
         public async Task StartMatch()
         {
             using (var userUsage = await GetOrCreateLocalUserState())
