@@ -178,7 +178,7 @@ namespace osu.Server.Spectator.Hubs
                         BeatmapID = playlistItem.beatmap_id,
                         RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
-                        Mods = playlistItem.required_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods) : Array.Empty<APIMod>(),
+                        RequiredMods = playlistItem.required_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods) : Array.Empty<APIMod>(),
                         AllowedMods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>()
                     }
                 };
@@ -316,13 +316,13 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                var oldModList = user.UserMods.ToList();
+                var oldModList = user.Mods.ToList();
                 var newModList = newMods.ToList();
 
                 if (oldModList.SequenceEqual(newModList))
                     return;
 
-                user.UserMods = newModList;
+                user.Mods = newModList;
 
                 await Clients.Group(GetGroupId(room.RoomID)).UserModsChanged(CurrentContextUserId, newModList);
             }
