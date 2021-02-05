@@ -662,7 +662,7 @@ namespace osu.Server.Spectator.Tests
             await hub.JoinRoom(room_id_2);
 
             var user1Availability = BeatmapAvailability.Importing();
-            var user2Availability = BeatmapAvailability.Downloading(0.5);
+            var user2Availability = BeatmapAvailability.Downloading(0.5f);
 
             setUserContext(mockContextUser1);
             await hub.ChangeBeatmapAvailability(user1Availability);

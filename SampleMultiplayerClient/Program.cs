@@ -86,7 +86,7 @@ namespace SampleMultiplayerClient
                                     break;
 
                                 case DownloadState.Downloading:
-                                    await targetClient.ChangeBeatmapAvailability(BeatmapAvailability.Downloading(double.Parse(args[1])));
+                                    await targetClient.ChangeBeatmapAvailability(BeatmapAvailability.Downloading(float.Parse(args[1])));
                                     break;
 
                                 case DownloadState.Importing:

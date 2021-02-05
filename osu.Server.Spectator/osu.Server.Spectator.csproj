@@ -14,7 +14,7 @@
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="5.0.2" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.2" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
-        <PackageReference Include="ppy.osu.Game" Version="2021.127.0" />
+        <PackageReference Include="ppy.osu.Game" Version="2021.205.0" />
         <PackageReference Include="ppy.osu.Server.OsuQueueProcessor" Version="2021.119.0" />
         <PackageReference Include="Microsoft.NETCore.Targets" Version="5.0.0" />
     </ItemGroup>
