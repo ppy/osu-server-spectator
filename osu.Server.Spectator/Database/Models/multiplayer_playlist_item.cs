@@ -37,7 +37,8 @@ namespace osu.Server.Spectator.Database.Models
 
             beatmap_id = room.Settings.BeatmapID;
             ruleset_id = (short)room.Settings.RulesetID;
-            required_mods = JsonConvert.SerializeObject(room.Settings.Mods);
+            required_mods = JsonConvert.SerializeObject(room.Settings.RequiredMods);
+            allowed_mods = JsonConvert.SerializeObject(room.Settings.AllowedMods);
             updated_at = DateTimeOffset.Now;
         }
     }

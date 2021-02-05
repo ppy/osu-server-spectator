@@ -2,10 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.SignalR.Client;
+using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 
@@ -34,11 +37,15 @@ namespace SampleMultiplayerClient
             connection.On(nameof(IMultiplayerClient.LoadRequested), ((IMultiplayerClient)this).LoadRequested);
             connection.On(nameof(IMultiplayerClient.MatchStarted), ((IMultiplayerClient)this).MatchStarted);
             connection.On(nameof(IMultiplayerClient.ResultsReady), ((IMultiplayerClient)this).ResultsReady);
+            connection.On<int, IEnumerable<APIMod>>(nameof(IMultiplayerClient.UserModsChanged), ((IMultiplayerClient)this).UserModsChanged);
         }
 
         public MultiplayerUserState State { get; private set; }
 
         public BeatmapAvailability BeatmapAvailability { get; private set; } = BeatmapAvailability.LocallyAvailable();
+
+        [NotNull]
+        public IEnumerable<APIMod> UserMods { get; private set; } = Enumerable.Empty<APIMod>();
 
         public MultiplayerRoom? Room { get; private set; }
 
@@ -64,6 +71,9 @@ namespace SampleMultiplayerClient
 
         public Task ChangeBeatmapAvailability(BeatmapAvailability newBeatmapAvailability) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.ChangeBeatmapAvailability), newBeatmapAvailability);
+
+        public Task ChangeUserMods(IEnumerable<APIMod> newMods) =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.ChangeUserMods), newMods);
 
         public Task StartMatch() =>
             connection.InvokeAsync(nameof(IMultiplayerServer.StartMatch));
@@ -120,6 +130,14 @@ namespace SampleMultiplayerClient
         {
             if (userId == this.UserID)
                 BeatmapAvailability = beatmapAvailability;
+
+            return Task.CompletedTask;
+        }
+
+        public Task UserModsChanged(int userId, IEnumerable<APIMod> mods)
+        {
+            if (userId == this.UserID)
+                UserMods = mods;
 
             return Task.CompletedTask;
         }

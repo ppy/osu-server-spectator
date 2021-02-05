@@ -178,7 +178,8 @@ namespace osu.Server.Spectator.Hubs
                         BeatmapID = playlistItem.beatmap_id,
                         RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
-                        Mods = playlistItem.required_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods) : Array.Empty<APIMod>()
+                        RequiredMods = playlistItem.required_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods) : Array.Empty<APIMod>(),
+                        AllowedMods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>()
                     }
                 };
             }
@@ -297,6 +298,33 @@ namespace osu.Server.Spectator.Hubs
                 user.BeatmapAvailability = newBeatmapAvailability;
 
                 await Clients.Group(GetGroupId(room.RoomID)).UserBeatmapAvailabilityChanged(CurrentContextUserId, newBeatmapAvailability);
+            }
+        }
+
+        public async Task ChangeUserMods(IEnumerable<APIMod> newMods)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                var oldModList = user.Mods.ToList();
+                var newModList = newMods.ToList();
+
+                if (oldModList.SequenceEqual(newModList))
+                    return;
+
+                user.Mods = newModList;
+
+                await Clients.Group(GetGroupId(room.RoomID)).UserModsChanged(CurrentContextUserId, newModList);
             }
         }
 

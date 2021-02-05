@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using osu.Framework.Utils;
 using osu.Game.Online;
+using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 
@@ -34,11 +35,11 @@ namespace SampleMultiplayerClient
 
                 foreach (var c in clients)
                 {
-                    Console.WriteLine($"Client {c.UserID}  state: {c.State} beatmap: {c.BeatmapAvailability} room: {c.Room}");
+                    Console.WriteLine($"Client {c.UserID} room: {c.Room} state: {c.State} beatmap: {c.BeatmapAvailability} mods: {string.Join(',', c.UserMods.Select(m => m.Acronym))}");
                 }
 
                 Console.WriteLine("Usage: <client_id> <command> [params]");
-                Console.WriteLine("Valid commands [ JoinRoom LeaveRoom TransferHost ChangeSettings ChangeState ChangeBeatmapAvailability StartMatch ]");
+                Console.WriteLine("Valid commands [ JoinRoom LeaveRoom TransferHost ChangeSettings ChangeState ChangeBeatmapAvailability ChangeMods StartMatch ]");
 
                 Console.Write(">");
 
@@ -85,7 +86,7 @@ namespace SampleMultiplayerClient
                                     break;
 
                                 case DownloadState.Downloading:
-                                    await targetClient.ChangeBeatmapAvailability(BeatmapAvailability.Downloading(double.Parse(args[1])));
+                                    await targetClient.ChangeBeatmapAvailability(BeatmapAvailability.Downloading(float.Parse(args[1])));
                                     break;
 
                                 case DownloadState.Importing:
@@ -96,6 +97,16 @@ namespace SampleMultiplayerClient
                                     await targetClient.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
                                     break;
                             }
+
+                            break;
+
+                        case "changemods":
+                            var mods = new List<APIMod>();
+
+                            for (int i = 0; i < args.Length; i++)
+                                mods.Add(new APIMod { Acronym = args[i] });
+
+                            await targetClient.ChangeUserMods(mods);
 
                             break;
 
