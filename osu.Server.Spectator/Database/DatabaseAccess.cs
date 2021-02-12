@@ -91,7 +91,13 @@ namespace osu.Server.Spectator.Database
                 Name = room.Settings.Name
             });
 
-            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET beatmap_id = @beatmap_id, ruleset_id = @ruleset_id, required_mods = @required_mods, updated_at = NOW() WHERE room_id = @room_id", dbPlaylistItem);
+            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET "
+                                          + " beatmap_id = @beatmap_id,"
+                                          + " ruleset_id = @ruleset_id,"
+                                          + " required_mods = @required_mods,"
+                                          + " allowed_mods = @allowed_mods,"
+                                          + " updated_at = NOW()"
+                                          + " WHERE room_id = @room_id", dbPlaylistItem);
         }
 
         public async Task UpdateRoomHostAsync(MultiplayerRoom room)
