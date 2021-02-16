@@ -351,7 +351,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Host != null && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
-                await clearDatabaseScores(room);
+                await commitPlaylistItem(room);
 
                 foreach (var u in readyUsers)
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
@@ -409,10 +409,10 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
-        private async Task clearDatabaseScores(MultiplayerRoom room)
+        private async Task commitPlaylistItem(MultiplayerRoom room)
         {
             using (var db = databaseFactory.GetInstance())
-                await db.ClearRoomScoresAsync(room);
+                await db.CommitPlaylistItem(room);
         }
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)

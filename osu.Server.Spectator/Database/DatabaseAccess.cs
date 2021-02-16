@@ -59,10 +59,11 @@ namespace osu.Server.Spectator.Database
 
         public Task<multiplayer_playlist_item> GetCurrentPlaylistItemAsync(long roomId)
         {
-            return connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
-            {
-                RoomID = roomId
-            });
+            return connection.QuerySingleAsync<multiplayer_playlist_item>(
+                "SELECT * FROM multiplayer_playlist_items WHERE id = (SELECT MAX(id) FROM multiplayer_playlist_items WHERE room_id = @RoomId)", new
+                {
+                    RoomID = roomId
+                });
         }
 
         public Task<string> GetBeatmapChecksumAsync(int beatmapId)
@@ -83,13 +84,14 @@ namespace osu.Server.Spectator.Database
 
         public async Task UpdateRoomSettingsAsync(MultiplayerRoom room)
         {
-            var dbPlaylistItem = new multiplayer_playlist_item(room);
-
             await connection.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new
             {
                 RoomID = room.RoomID,
                 Name = room.Settings.Name
             });
+
+            var currentItem = await GetCurrentPlaylistItemAsync(room.RoomID);
+            var newItem = new multiplayer_playlist_item(room) { id = currentItem.id };
 
             await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET "
                                           + " beatmap_id = @beatmap_id,"
@@ -97,7 +99,7 @@ namespace osu.Server.Spectator.Database
                                           + " required_mods = @required_mods,"
                                           + " allowed_mods = @allowed_mods,"
                                           + " updated_at = NOW()"
-                                          + " WHERE room_id = @room_id", dbPlaylistItem);
+                                          + " WHERE id = @id", newItem);
         }
 
         public async Task UpdateRoomHostAsync(MultiplayerRoom room)
@@ -154,17 +156,12 @@ namespace osu.Server.Spectator.Database
             }
         }
 
-        public async Task ClearRoomScoresAsync(MultiplayerRoom room)
+        public async Task CommitPlaylistItem(MultiplayerRoom room)
         {
-            // for now, clear all existing scores out of the playlist item to ensure no duplicates.
-            // eventually we will want to increment to a new playlist item rather than reusing the same one.
-            long playlistItemId = await connection.QuerySingleAsync<long>("SELECT id FROM multiplayer_playlist_items WHERE room_id = @RoomID", new
-            {
-                RoomID = room.RoomID,
-            });
-
-            await connection.ExecuteAsync("DELETE FROM multiplayer_scores WHERE playlist_item_id = @PlaylistItemID", new { PlaylistItemID = playlistItemId });
-            await connection.ExecuteAsync("DELETE FROM multiplayer_scores_high WHERE playlist_item_id = @PlaylistItemID", new { PlaylistItemID = playlistItemId });
+            var currentItem = await GetCurrentPlaylistItemAsync(room.RoomID);
+            await connection.ExecuteAsync(
+                "INSERT INTO multiplayer_playlist_items (room_id, beatmap_id, ruleset_id, allowed_mods, required_mods) VALUES (@room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods)",
+                currentItem);
         }
 
         public Task EndMatchAsync(MultiplayerRoom room)
