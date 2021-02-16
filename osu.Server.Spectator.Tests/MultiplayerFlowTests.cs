@@ -108,6 +108,32 @@ namespace osu.Server.Spectator.Tests
                         .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
         }
 
+        [Fact]
+        public async Task RoomHasNewPlaylistItemAfterMatchStart()
+        {
+            var room = await hub.JoinRoom(room_id);
+            long playlistItemId = room.Settings.PlaylistItemId;
+
+            mockDatabase.Setup(db => db.CommitPlaylistItem(It.IsAny<MultiplayerRoom>()))
+                        .ReturnsAsync(() => playlistItemId + 1);
+
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            await hub.StartMatch();
+
+            var newSettings = new MultiplayerRoomSettings
+            {
+                BeatmapID = room.Settings.BeatmapID,
+                RulesetID = room.Settings.RulesetID,
+                BeatmapChecksum = room.Settings.BeatmapChecksum,
+                Name = room.Settings.Name,
+                RequiredMods = room.Settings.RequiredMods,
+                AllowedMods = room.Settings.AllowedMods,
+                PlaylistItemId = playlistItemId + 1
+            };
+
+            mockReceiver.Verify(r => r.SettingsChanged(newSettings), Times.Once);
+        }
+
         #region Host assignment and transfer
 
         [Fact]
