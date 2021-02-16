@@ -165,9 +165,14 @@ namespace osu.Server.Spectator.Database
                 currentItem);
         }
 
-        public Task EndMatchAsync(MultiplayerRoom room)
+        public async Task EndMatchAsync(MultiplayerRoom room)
         {
-            return connection.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
+            // Remove all non-played items from the playlist. For now this is only the current item.
+            var currentItem = await GetCurrentPlaylistItemAsync(room.RoomID);
+            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items WHERE id=@id", currentItem);
+
+            // Close the room.
+            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
             {
                 RoomID = room.RoomID
             });
