@@ -156,13 +156,16 @@ namespace osu.Server.Spectator.Database
             }
         }
 
-        public async Task CommitPlaylistItem(MultiplayerRoom room)
+        public async Task<long> CommitPlaylistItem(MultiplayerRoom room)
         {
             var currentItem = await GetCurrentPlaylistItemAsync(room.RoomID);
+
             await connection.ExecuteAsync(
                 "INSERT INTO multiplayer_playlist_items (room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, created_at, updated_at)"
                 + " VALUES (@room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, NOW(), NOW())",
                 currentItem);
+
+            return (await GetCurrentPlaylistItemAsync(room.RoomID)).id;
         }
 
         public async Task EndMatchAsync(MultiplayerRoom room)

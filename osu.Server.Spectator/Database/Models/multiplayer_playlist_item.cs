@@ -33,8 +33,8 @@ namespace osu.Server.Spectator.Database.Models
         /// <param name="room">The room to retrieve settings from.</param>
         public multiplayer_playlist_item(MultiplayerRoom room)
         {
+            id = room.Settings.PlaylistItemId;
             room_id = room.RoomID;
-
             beatmap_id = room.Settings.BeatmapID;
             ruleset_id = (short)room.Settings.RulesetID;
             required_mods = JsonConvert.SerializeObject(room.Settings.RequiredMods);

@@ -179,7 +179,8 @@ namespace osu.Server.Spectator.Hubs
                         RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
                         RequiredMods = playlistItem.required_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods) : Array.Empty<APIMod>(),
-                        AllowedMods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>()
+                        AllowedMods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>(),
+                        PlaylistItemId = playlistItem.id
                     }
                 };
             }
@@ -351,7 +352,8 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Host != null && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
-                await commitPlaylistItem(room);
+                // Commit the current playlist item ID, retrieve a new one to update the room settings to later on.
+                var newPlaylistItemId = await commitPlaylistItem(room);
 
                 foreach (var u in readyUsers)
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
@@ -359,6 +361,10 @@ namespace osu.Server.Spectator.Hubs
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
+
+                // Distribute the new playlist item ID to clients after the match has been started. All future playlist changes will affect this new one.
+                room.Settings.PlaylistItemId = newPlaylistItemId;
+                await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
             }
         }
 
@@ -409,10 +415,10 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
-        private async Task commitPlaylistItem(MultiplayerRoom room)
+        private async Task<long> commitPlaylistItem(MultiplayerRoom room)
         {
             using (var db = databaseFactory.GetInstance())
-                await db.CommitPlaylistItem(room);
+                return await db.CommitPlaylistItem(room);
         }
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)

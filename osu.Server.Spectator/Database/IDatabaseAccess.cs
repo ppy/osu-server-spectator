@@ -62,7 +62,8 @@ namespace osu.Server.Spectator.Database
         /// Commits a playlist item, making it immutable in the database.
         /// A new item is inserted with the existing settings for any new modifications.
         /// </summary>
-        Task CommitPlaylistItem(MultiplayerRoom room);
+        /// <returns>The new playlist item id to be used for any future setting changes.</returns>
+        Task<long> CommitPlaylistItem(MultiplayerRoom room);
 
         /// <summary>
         /// Marks the given <paramref name="room"/> as ended and no longer accepting new players or scores.
