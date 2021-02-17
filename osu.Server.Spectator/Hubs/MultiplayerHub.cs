@@ -358,8 +358,6 @@ namespace osu.Server.Spectator.Hubs
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
-
-                await selectNextPlaylistItem(room);
             }
         }
 
@@ -414,16 +412,17 @@ namespace osu.Server.Spectator.Hubs
         {
             multiplayer_playlist_item currentItem;
 
+            // Expire the current playlist item.
             using (var db = databaseFactory.GetInstance())
             {
                 // Don't trust the playlist item ID from clients - re-retrieve using the server's own knowledge.
                 currentItem = await db.GetCurrentPlaylistItemAsync(room.RoomID);
-
                 await db.ExpirePlaylistItemAsync(currentItem.id);
             }
 
-            // Todo: Only run the following code for non-host-rotate matches.
             long newPlaylistItemId;
+
+            // Todo: Host-rotate matches will require different logic here.
             using (var db = databaseFactory.GetInstance())
                 newPlaylistItemId = await db.AddPlaylistItemAsync(currentItem);
 
@@ -520,6 +519,8 @@ namespace osu.Server.Spectator.Hubs
 
                         await changeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
+
+                        await selectNextPlaylistItem(room);
                     }
 
                     break;
