@@ -15,6 +15,7 @@ using Moq;
 using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -764,6 +765,52 @@ namespace osu.Server.Spectator.Tests
             await hub.JoinRoom(room_id);
             await hub.ChangeSettings(testSettings);
             mockReceiver.Verify(r => r.SettingsChanged(testSettings), Times.Once);
+        }
+
+        [Fact]
+        public async Task ChangingSettingsToNonExistentBeatmapThrows()
+        {
+            mockDatabase.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync((string)null!);
+
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "checksum",
+            };
+
+            await hub.JoinRoom(room_id);
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(testSettings));
+        }
+
+        [Fact]
+        public async Task ChangingSettingsToCustomizedBeatmapThrows()
+        {
+            mockDatabase.Setup(d => d.GetBeatmapChecksumAsync(9999)).ReturnsAsync("correct checksum");
+
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                BeatmapID = 9999,
+                BeatmapChecksum = "incorrect checksum",
+            };
+
+            await hub.JoinRoom(room_id);
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(testSettings));
+        }
+
+        [Theory]
+        [InlineData(ILegacyRuleset.MAX_LEGACY_RULESET_ID + 1)]
+        [InlineData(-1)]
+        public async Task ChangingSettingsToCustomRulesetThrows(int rulesetID)
+        {
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                BeatmapID = 1234,
+                BeatmapChecksum = "checksum",
+                RulesetID = rulesetID,
+            };
+
+            await hub.JoinRoom(room_id);
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(testSettings));
         }
 
         #endregion
