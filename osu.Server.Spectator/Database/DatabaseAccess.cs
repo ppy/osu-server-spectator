@@ -171,9 +171,9 @@ namespace osu.Server.Spectator.Database
 
         public async Task EndMatchAsync(MultiplayerRoom room)
         {
-            // Remove all non-played items from the playlist. For now this is only the current item.
+            // Remove all non-expired items from the playlist as they have no scores.
             var currentItem = await GetCurrentPlaylistItemAsync(room.RoomID);
-            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items WHERE id=@id", currentItem);
+            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items WHERE expired = 0");
 
             // Close the room.
             await connection.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
