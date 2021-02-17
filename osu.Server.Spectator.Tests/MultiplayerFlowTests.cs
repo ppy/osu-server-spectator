@@ -114,7 +114,7 @@ namespace osu.Server.Spectator.Tests
             long playlistItemId = (await hub.JoinRoom(room_id)).Settings.PlaylistItemId;
             long expectedPlaylistItemId = playlistItemId + 1;
 
-            mockDatabase.Setup(db => db.CreatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
+            mockDatabase.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
                         .ReturnsAsync(() => expectedPlaylistItemId);
 
             await hub.ChangeState(MultiplayerUserState.Ready);

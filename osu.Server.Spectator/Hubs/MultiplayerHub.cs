@@ -425,7 +425,7 @@ namespace osu.Server.Spectator.Hubs
             // Todo: Only run the following code for non-host-rotate matches.
             long newPlaylistItemId;
             using (var db = databaseFactory.GetInstance())
-                newPlaylistItemId = await db.CreatePlaylistItemAsync(currentItem);
+                newPlaylistItemId = await db.AddPlaylistItemAsync(currentItem);
 
             // Distribute the new playlist item ID to clients. All future playlist changes will affect this new one.
             room.Settings.PlaylistItemId = newPlaylistItemId;

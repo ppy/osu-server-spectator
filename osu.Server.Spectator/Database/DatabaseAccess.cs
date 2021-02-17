@@ -156,7 +156,7 @@ namespace osu.Server.Spectator.Database
             }
         }
 
-        public async Task<long> CreatePlaylistItemAsync(multiplayer_playlist_item item)
+        public async Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item)
         {
             await connection.ExecuteAsync(
                 "INSERT INTO multiplayer_playlist_items (room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, created_at, updated_at)"

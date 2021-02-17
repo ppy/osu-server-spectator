@@ -62,7 +62,7 @@ namespace osu.Server.Spectator.Database
         /// Creates a new playlist item.
         /// </summary>
         /// <returns>The playlist item ID.</returns>
-        Task<long> CreatePlaylistItemAsync(multiplayer_playlist_item item);
+        Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item);
 
         /// <summary>
         /// Marks a playlist item as expired.
