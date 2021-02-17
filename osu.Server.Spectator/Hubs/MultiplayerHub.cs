@@ -412,13 +412,20 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task commitPlaylistItem(MultiplayerRoom room)
         {
+            multiplayer_playlist_item currentItem;
+
             using (var db = databaseFactory.GetInstance())
-                await db.ExpirePlaylistItemAsync(room.Settings.PlaylistItemId);
+            {
+                // Don't trust the playlist item ID from clients - re-retrieve using the server's own knowledge.
+                currentItem = await db.GetCurrentPlaylistItemAsync(room.RoomID);
+
+                await db.ExpirePlaylistItemAsync(currentItem.id);
+            }
 
             // Todo: Only run the following code for non-host-rotate matches.
             long newPlaylistItemId;
             using (var db = databaseFactory.GetInstance())
-                newPlaylistItemId = await db.CreatePlaylistItemAsync(new multiplayer_playlist_item(room));
+                newPlaylistItemId = await db.CreatePlaylistItemAsync(currentItem);
 
             // Distribute the new playlist item ID to clients. All future playlist changes will affect this new one.
             room.Settings.PlaylistItemId = newPlaylistItemId;
