@@ -412,9 +412,9 @@ namespace osu.Server.Spectator.Hubs
         {
             long newPlaylistItemId;
 
-            // Expire the current playlist item.
             using (var db = databaseFactory.GetInstance())
             {
+                // Expire the current playlist item.
                 var currentItem = await db.GetCurrentPlaylistItemAsync(room.RoomID);
                 await db.ExpirePlaylistItemAsync(currentItem.id);
 
@@ -436,6 +436,9 @@ namespace osu.Server.Spectator.Hubs
 
                 if (dbItem == null)
                     throw new InvalidStateException("Attempted to select a playlist item not contained by the room.");
+
+                if (dbItem.expired)
+                    throw new InvalidStateException("Attempted to select an expired playlist item.");
 
                 string beatmapChecksum = await db.GetBeatmapChecksumAsync(item.beatmap_id);
 

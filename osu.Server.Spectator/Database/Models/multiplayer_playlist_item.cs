@@ -21,6 +21,7 @@ namespace osu.Server.Spectator.Database.Models
         public string? required_mods { get; set; }
         public DateTimeOffset? created_at { get; set; }
         public DateTimeOffset? updated_at { get; set; }
+        public bool expired { get; set; }
 
         // for deserialization
         public multiplayer_playlist_item()
