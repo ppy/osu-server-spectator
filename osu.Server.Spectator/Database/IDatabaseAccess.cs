@@ -59,6 +59,12 @@ namespace osu.Server.Spectator.Database
         Task UpdateRoomParticipantsAsync(MultiplayerRoom room);
 
         /// <summary>
+        /// Retrieves a playlist item from the given room's playlist.
+        /// </summary>
+        /// <returns>The item if it's in the room's playlist, otherwise null.</returns>
+        Task<multiplayer_playlist_item> GetPlaylistItemFromRoomAsync(long roomId, long playlistItemId);
+
+        /// <summary>
         /// Creates a new playlist item.
         /// </summary>
         /// <returns>The playlist item ID.</returns>

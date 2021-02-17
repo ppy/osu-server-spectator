@@ -156,6 +156,15 @@ namespace osu.Server.Spectator.Database
             }
         }
 
+        public async Task<multiplayer_playlist_item> GetPlaylistItemFromRoomAsync(long roomId, long playlistItemId)
+        {
+            return await connection.QueryFirstOrDefaultAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE id = @Id AND room_id = @RoomId", new
+            {
+                Id = playlistItemId,
+                RoomId = roomId
+            });
+        }
+
         public async Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item)
         {
             await connection.ExecuteAsync(

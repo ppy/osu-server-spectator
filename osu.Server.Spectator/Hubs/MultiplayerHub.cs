@@ -410,21 +410,17 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task selectNextPlaylistItem(MultiplayerRoom room)
         {
-            multiplayer_playlist_item currentItem;
+            long newPlaylistItemId;
 
             // Expire the current playlist item.
             using (var db = databaseFactory.GetInstance())
             {
-                // Don't trust the playlist item ID from clients - re-retrieve using the server's own knowledge.
-                currentItem = await db.GetCurrentPlaylistItemAsync(room.RoomID);
+                var currentItem = await db.GetCurrentPlaylistItemAsync(room.RoomID);
                 await db.ExpirePlaylistItemAsync(currentItem.id);
-            }
 
-            long newPlaylistItemId;
-
-            // Todo: Host-rotate matches will require different logic here.
-            using (var db = databaseFactory.GetInstance())
+                // Todo: Host-rotate matches will require different logic here.
                 newPlaylistItemId = await db.AddPlaylistItemAsync(currentItem);
+            }
 
             // Distribute the new playlist item ID to clients. All future playlist changes will affect this new one.
             room.Settings.PlaylistItemId = newPlaylistItemId;
@@ -435,9 +431,13 @@ namespace osu.Server.Spectator.Hubs
         {
             using (var db = databaseFactory.GetInstance())
             {
-                var dbPlaylistItem = new multiplayer_playlist_item(room);
+                var item = new multiplayer_playlist_item(room);
+                var dbItem = await db.GetPlaylistItemFromRoomAsync(room.RoomID, item.id);
 
-                string beatmapChecksum = await db.GetBeatmapChecksumAsync(dbPlaylistItem.beatmap_id);
+                if (dbItem == null)
+                    throw new InvalidStateException("Attempted to select a playlist item not contained by the room.");
+
+                string beatmapChecksum = await db.GetBeatmapChecksumAsync(item.beatmap_id);
 
                 if (beatmapChecksum == null)
                     throw new InvalidStateException("Attempted to select a beatmap which does not exist online.");
