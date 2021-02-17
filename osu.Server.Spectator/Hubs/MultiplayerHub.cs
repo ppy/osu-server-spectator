@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -417,6 +418,9 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
+            if (room.Settings.RulesetID < 0 || room.Settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                throw new InvalidStateException("Attempted to select a beatmap of a custom ruleset.");
+
             using (var db = databaseFactory.GetInstance())
             {
                 var dbPlaylistItem = new multiplayer_playlist_item(room);
