@@ -770,7 +770,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ChangingSettingsToNonExistentBeatmapThrows()
         {
-            mockDatabase.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync((string)null!);
+            mockDatabase.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync((string?)null);
 
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {

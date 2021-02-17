@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -170,6 +171,8 @@ namespace osu.Server.Spectator.Hubs
 
                 var playlistItem = await db.GetCurrentPlaylistItemAsync(roomId);
                 var beatmapChecksum = await db.GetBeatmapChecksumAsync(playlistItem.beatmap_id);
+
+                Debug.Assert(beatmapChecksum != null);
 
                 return new MultiplayerRoom(roomId)
                 {
@@ -425,7 +428,7 @@ namespace osu.Server.Spectator.Hubs
             {
                 var dbPlaylistItem = new multiplayer_playlist_item(room);
 
-                string beatmapChecksum = await db.GetBeatmapChecksumAsync(dbPlaylistItem.beatmap_id);
+                string? beatmapChecksum = await db.GetBeatmapChecksumAsync(dbPlaylistItem.beatmap_id);
 
                 if (beatmapChecksum == null)
                     throw new InvalidStateException("Attempted to select a beatmap which does not exist online.");
