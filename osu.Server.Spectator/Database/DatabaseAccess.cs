@@ -59,11 +59,11 @@ namespace osu.Server.Spectator.Database
 
         public Task<multiplayer_playlist_item> GetCurrentPlaylistItemAsync(long roomId)
         {
-            return connection.QuerySingleAsync<multiplayer_playlist_item>(
-                "SELECT * FROM multiplayer_playlist_items WHERE id = (SELECT MAX(id) FROM multiplayer_playlist_items WHERE room_id = @RoomId)", new
-                {
-                    RoomID = roomId
-                });
+            // Todo: Add ordering.
+            return connection.QueryFirstAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId AND expired = 0", new
+            {
+                RoomID = roomId
+            });
         }
 
         public Task<string> GetBeatmapChecksumAsync(int beatmapId)
