@@ -163,13 +163,7 @@ namespace osu.Server.Spectator.Database
                 + " VALUES (@room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, NOW(), NOW())",
                 item);
 
-            var lastItem = await connection.QuerySingleAsync<multiplayer_playlist_item>(
-                "SELECT * FROM multiplayer_playlist_items WHERE id = (SELECT MAX(id) FROM multiplayer_playlist_items WHERE room_id = @RoomId)", new
-                {
-                    RoomID = item.room_id
-                });
-
-            return lastItem.id;
+            return await connection.QuerySingleAsync<long>("SELECT max(id) FROM multiplayer_playlist_items WHERE room_id = @room_id", item);
         }
 
         public async Task ExpirePlaylistItemAsync(long playlistItemId)
