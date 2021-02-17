@@ -111,27 +111,23 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task RoomHasNewPlaylistItemAfterMatchStart()
         {
-            var room = await hub.JoinRoom(room_id);
-            long playlistItemId = room.Settings.PlaylistItemId;
+            long playlistItemId = (await hub.JoinRoom(room_id)).Settings.PlaylistItemId;
+            long expectedPlaylistItemId = playlistItemId + 1;
 
-            mockDatabase.Setup(db => db.CommitPlaylistItem(It.IsAny<MultiplayerRoom>()))
-                        .ReturnsAsync(() => playlistItemId + 1);
+            mockDatabase.Setup(db => db.CreatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
+                        .ReturnsAsync(() => expectedPlaylistItemId);
 
             await hub.ChangeState(MultiplayerUserState.Ready);
             await hub.StartMatch();
 
-            var newSettings = new MultiplayerRoomSettings
+            using (var usage = hub.GetRoom(room_id))
             {
-                BeatmapID = room.Settings.BeatmapID,
-                RulesetID = room.Settings.RulesetID,
-                BeatmapChecksum = room.Settings.BeatmapChecksum,
-                Name = room.Settings.Name,
-                RequiredMods = room.Settings.RequiredMods,
-                AllowedMods = room.Settings.AllowedMods,
-                PlaylistItemId = playlistItemId + 1
-            };
+                var room = usage.Item;
+                Debug.Assert(room != null);
 
-            mockReceiver.Verify(r => r.SettingsChanged(newSettings), Times.Once);
+                Assert.Equal(expectedPlaylistItemId, room.Settings.PlaylistItemId);
+                mockReceiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
+            }
         }
 
         #region Host assignment and transfer

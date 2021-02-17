@@ -352,9 +352,6 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Host != null && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
-                // Commit the current playlist item ID, retrieve a new one to update the room settings to later on.
-                var newPlaylistItemId = await commitPlaylistItem(room);
-
                 foreach (var u in readyUsers)
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
 
@@ -362,9 +359,7 @@ namespace osu.Server.Spectator.Hubs
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
 
-                // Distribute the new playlist item ID to clients after the match has been started. All future playlist changes will affect this new one.
-                room.Settings.PlaylistItemId = newPlaylistItemId;
-                await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
+                await commitPlaylistItem(room);
             }
         }
 
@@ -415,10 +410,19 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
-        private async Task<long> commitPlaylistItem(MultiplayerRoom room)
+        private async Task commitPlaylistItem(MultiplayerRoom room)
         {
             using (var db = databaseFactory.GetInstance())
-                return await db.CommitPlaylistItem(room);
+                await db.ExpirePlaylistItemAsync(room.Settings.PlaylistItemId);
+
+            // Todo: Only run the following code for non-host-rotate matches.
+            long newPlaylistItemId;
+            using (var db = databaseFactory.GetInstance())
+                newPlaylistItemId = await db.CreatePlaylistItemAsync(new multiplayer_playlist_item(room));
+
+            // Distribute the new playlist item ID to clients. All future playlist changes will affect this new one.
+            room.Settings.PlaylistItemId = newPlaylistItemId;
+            await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
         }
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)

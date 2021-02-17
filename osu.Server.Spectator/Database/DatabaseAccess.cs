@@ -156,17 +156,28 @@ namespace osu.Server.Spectator.Database
             }
         }
 
-        public async Task<long> CommitPlaylistItem(MultiplayerRoom room)
+        public async Task<long> CreatePlaylistItemAsync(multiplayer_playlist_item item)
         {
-            var currentItem = await GetCurrentPlaylistItemAsync(room.RoomID);
-
-            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, updated_at = NOW() WHERE id=@id", currentItem);
             await connection.ExecuteAsync(
                 "INSERT INTO multiplayer_playlist_items (room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, created_at, updated_at)"
                 + " VALUES (@room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, NOW(), NOW())",
-                currentItem);
+                item);
 
-            return (await GetCurrentPlaylistItemAsync(room.RoomID)).id;
+            var lastItem = await connection.QuerySingleAsync<multiplayer_playlist_item>(
+                "SELECT * FROM multiplayer_playlist_items WHERE id = (SELECT MAX(id) FROM multiplayer_playlist_items WHERE room_id = @RoomId)", new
+                {
+                    RoomID = item.room_id
+                });
+
+            return lastItem.id;
+        }
+
+        public async Task ExpirePlaylistItemAsync(long playlistItemId)
+        {
+            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, updated_at = NOW() WHERE id = @PlaylistItemId", new
+            {
+                PlaylistItemId = playlistItemId
+            });
         }
 
         public async Task EndMatchAsync(MultiplayerRoom room)

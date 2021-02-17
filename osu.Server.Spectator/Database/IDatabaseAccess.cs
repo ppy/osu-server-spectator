@@ -59,11 +59,15 @@ namespace osu.Server.Spectator.Database
         Task UpdateRoomParticipantsAsync(MultiplayerRoom room);
 
         /// <summary>
-        /// Commits a playlist item, making it immutable in the database.
-        /// A new item is inserted with the existing settings for any new modifications.
+        /// Creates a new playlist item.
         /// </summary>
-        /// <returns>The new playlist item id to be used for any future setting changes.</returns>
-        Task<long> CommitPlaylistItem(MultiplayerRoom room);
+        /// <returns>The playlist item ID.</returns>
+        Task<long> CreatePlaylistItemAsync(multiplayer_playlist_item item);
+
+        /// <summary>
+        /// Marks a playlist item as expired.
+        /// </summary>
+        Task ExpirePlaylistItemAsync(long playlistItemId);
 
         /// <summary>
         /// Marks the given <paramref name="room"/> as ended and no longer accepting new players or scores.
