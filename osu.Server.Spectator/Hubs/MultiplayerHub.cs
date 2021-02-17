@@ -359,7 +359,7 @@ namespace osu.Server.Spectator.Hubs
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
 
-                await commitPlaylistItem(room);
+                await selectNextPlaylistItem(room);
             }
         }
 
@@ -410,7 +410,7 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
-        private async Task commitPlaylistItem(MultiplayerRoom room)
+        private async Task selectNextPlaylistItem(MultiplayerRoom room)
         {
             multiplayer_playlist_item currentItem;
 
