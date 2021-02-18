@@ -376,6 +376,10 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureIsHost(room);
 
+                // Server is authoritative over the playlist item ID.
+                // Todo: This needs to change for tournament mode.
+                settings.PlaylistItemId = room.Settings.PlaylistItemId;
+
                 if (room.Settings.Equals(settings))
                     return;
 

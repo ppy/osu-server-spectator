@@ -106,6 +106,14 @@ namespace osu.Server.Spectator.Tests
                         });
             mockDatabase.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
                         .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
+
+            mockDatabase.Setup(db => db.GetPlaylistItemFromRoomAsync(It.IsAny<long>(), It.IsAny<long>()))
+                        .Returns<long, long>((roomId, playlistItemId) => Task.FromResult<multiplayer_playlist_item?>(new multiplayer_playlist_item
+                        {
+                            id = playlistItemId,
+                            room_id = roomId,
+                            beatmap_id = 1234,
+                        }));
         }
 
         [Fact]
@@ -119,6 +127,8 @@ namespace osu.Server.Spectator.Tests
 
             await hub.ChangeState(MultiplayerUserState.Ready);
             await hub.StartMatch();
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+            await hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
             using (var usage = hub.GetRoom(room_id))
             {
@@ -126,6 +136,30 @@ namespace osu.Server.Spectator.Tests
                 Debug.Assert(room != null);
 
                 Assert.Equal(expectedPlaylistItemId, room.Settings.PlaylistItemId);
+                mockReceiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task ServerDoesNotAcceptClientPlaylistItemId()
+        {
+            await hub.JoinRoom(room_id);
+
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                Name = "bestest room ever",
+                BeatmapChecksum = "checksum",
+                PlaylistItemId = 1
+            };
+
+            await hub.ChangeSettings(testSettings);
+
+            using (var usage = hub.GetRoom(room_id))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(0, room.Settings.PlaylistItemId);
                 mockReceiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
             }
         }
