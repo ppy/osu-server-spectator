@@ -268,6 +268,7 @@ namespace osu.Server.Spectator.Hubs
                         break;
 
                     case MultiplayerUserState.Ready:
+                    case MultiplayerUserState.Spectating:
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
                         break;
                 }
@@ -592,6 +593,12 @@ namespace osu.Server.Spectator.Hubs
                 case MultiplayerUserState.Results:
                     // state is managed by the server.
                     throw new InvalidStateChangeException(oldState, newState);
+
+                case MultiplayerUserState.Spectating:
+                    if (oldState > MultiplayerUserState.Ready)
+                        throw new InvalidStateChangeException(oldState, newState);
+
+                    break;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
