@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -172,7 +171,8 @@ namespace osu.Server.Spectator.Hubs
                 var playlistItem = await db.GetCurrentPlaylistItemAsync(roomId);
                 var beatmapChecksum = await db.GetBeatmapChecksumAsync(playlistItem.beatmap_id);
 
-                Debug.Assert(beatmapChecksum != null);
+                if (beatmapChecksum == null)
+                    throw new InvalidOperationException($"Expected non-null checksum on beatmap ID {playlistItem.beatmap_id}");
 
                 return new MultiplayerRoom(roomId)
                 {
