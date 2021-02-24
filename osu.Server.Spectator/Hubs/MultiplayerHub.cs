@@ -422,7 +422,7 @@ namespace osu.Server.Spectator.Hubs
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
             if (room.Settings.RulesetID < 0 || room.Settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
-                throw new InvalidStateException("Attempted to select a beatmap of a custom ruleset.");
+                throw new InvalidStateException("Attempted to select an unsupported ruleset.");
 
             using (var db = databaseFactory.GetInstance())
             {
