@@ -183,7 +183,8 @@ namespace osu.Server.Spectator.Hubs
                         RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
                         RequiredMods = playlistItem.required_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods) : Array.Empty<APIMod>(),
-                        AllowedMods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>()
+                        AllowedMods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>(),
+                        PlaylistItemId = playlistItem.id
                     }
                 };
             }
@@ -355,8 +356,6 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Host != null && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
-                await clearDatabaseScores(room);
-
                 foreach (var u in readyUsers)
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
 
@@ -380,6 +379,10 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidStateException("Attempted to change settings while game is active");
 
                 ensureIsHost(room);
+
+                // Server is authoritative over the playlist item ID.
+                // Todo: This needs to change for tournament mode.
+                settings.PlaylistItemId = room.Settings.PlaylistItemId;
 
                 if (room.Settings.Equals(settings))
                     return;
@@ -413,10 +416,23 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
-        private async Task clearDatabaseScores(MultiplayerRoom room)
+        private async Task selectNextPlaylistItem(MultiplayerRoom room)
         {
+            long newPlaylistItemId;
+
             using (var db = databaseFactory.GetInstance())
-                await db.ClearRoomScoresAsync(room);
+            {
+                // Expire the current playlist item.
+                var currentItem = await db.GetCurrentPlaylistItemAsync(room.RoomID);
+                await db.ExpirePlaylistItemAsync(currentItem.id);
+
+                // Todo: Host-rotate matches will require different logic here.
+                newPlaylistItemId = await db.AddPlaylistItemAsync(currentItem);
+            }
+
+            // Distribute the new playlist item ID to clients. All future playlist changes will affect this new one.
+            room.Settings.PlaylistItemId = newPlaylistItemId;
+            await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
         }
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)
@@ -426,9 +442,16 @@ namespace osu.Server.Spectator.Hubs
 
             using (var db = databaseFactory.GetInstance())
             {
-                var dbPlaylistItem = new multiplayer_playlist_item(room);
+                var item = new multiplayer_playlist_item(room);
+                var dbItem = await db.GetPlaylistItemFromRoomAsync(room.RoomID, item.id);
 
-                string? beatmapChecksum = await db.GetBeatmapChecksumAsync(dbPlaylistItem.beatmap_id);
+                if (dbItem == null)
+                    throw new InvalidStateException("Attempted to select a playlist item not contained by the room.");
+
+                if (dbItem.expired)
+                    throw new InvalidStateException("Attempted to select an expired playlist item.");
+
+                string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.beatmap_id);
 
                 if (beatmapChecksum == null)
                     throw new InvalidStateException("Attempted to select a beatmap which does not exist online.");
@@ -510,6 +533,8 @@ namespace osu.Server.Spectator.Hubs
 
                         await changeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
+
+                        await selectNextPlaylistItem(room);
                     }
 
                     break;

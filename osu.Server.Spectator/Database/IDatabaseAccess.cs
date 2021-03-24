@@ -59,9 +59,21 @@ namespace osu.Server.Spectator.Database
         Task UpdateRoomParticipantsAsync(MultiplayerRoom room);
 
         /// <summary>
-        /// Clears all user scores associated with the given <paramref name="room"/>.
+        /// Retrieves a playlist item from the given room's playlist.
         /// </summary>
-        Task ClearRoomScoresAsync(MultiplayerRoom room);
+        /// <returns>The item if it's in the room's playlist, otherwise null.</returns>
+        Task<multiplayer_playlist_item?> GetPlaylistItemFromRoomAsync(long roomId, long playlistItemId);
+
+        /// <summary>
+        /// Creates a new playlist item.
+        /// </summary>
+        /// <returns>The playlist item ID.</returns>
+        Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item);
+
+        /// <summary>
+        /// Marks a playlist item as expired.
+        /// </summary>
+        Task ExpirePlaylistItemAsync(long playlistItemId);
 
         /// <summary>
         /// Marks the given <paramref name="room"/> as ended and no longer accepting new players or scores.
