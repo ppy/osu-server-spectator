@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -169,6 +170,9 @@ namespace osu.Server.Spectator.Hubs
 
                 var playlistItem = await db.GetCurrentPlaylistItemAsync(roomId);
                 var beatmapChecksum = await db.GetBeatmapChecksumAsync(playlistItem.beatmap_id);
+
+                if (beatmapChecksum == null)
+                    throw new InvalidOperationException($"Expected non-null checksum on beatmap ID {playlistItem.beatmap_id}");
 
                 return new MultiplayerRoom(roomId)
                 {
@@ -433,6 +437,9 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
+            if (room.Settings.RulesetID < 0 || room.Settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                throw new InvalidStateException("Attempted to select an unsupported ruleset.");
+
             using (var db = databaseFactory.GetInstance())
             {
                 var item = new multiplayer_playlist_item(room);
@@ -444,7 +451,7 @@ namespace osu.Server.Spectator.Hubs
                 if (dbItem.expired)
                     throw new InvalidStateException("Attempted to select an expired playlist item.");
 
-                string beatmapChecksum = await db.GetBeatmapChecksumAsync(item.beatmap_id);
+                string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.beatmap_id);
 
                 if (beatmapChecksum == null)
                     throw new InvalidStateException("Attempted to select a beatmap which does not exist online.");
