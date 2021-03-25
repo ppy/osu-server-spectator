@@ -458,6 +458,51 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task UserDisconnectsDuringGameplayUpdatesRoomState()
+        {
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser1);
+            await hub.StartMatch();
+
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
+            }
+
+            setUserContext(mockContextUser1);
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+            setUserContext(mockContextUser2);
+            await hub.ChangeState(MultiplayerUserState.Loaded);
+
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+            {
+                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
+                Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
+            }
+
+            // first user exits gameplay
+            setUserContext(mockContextUser1);
+            await hub.ChangeState(MultiplayerUserState.Idle);
+
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
+
+            // second user gets disconnected
+            setUserContext(mockContextUser2);
+            await hub.LeaveRoom();
+
+            using (var room = await hub.RoomStore.GetForUse(room_id))
+                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+        }
+
+        [Fact]
         public async Task OnlyFinishedUsersTransitionToResults()
         {
             await hub.JoinRoom(room_id);

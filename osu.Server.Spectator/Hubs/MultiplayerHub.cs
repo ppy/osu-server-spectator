@@ -663,6 +663,7 @@ namespace osu.Server.Spectator.Hubs
 
             room.Users.Remove(user);
             await updateDatabaseParticipants(room);
+            await updateRoomStateIfRequired(room);
 
             var clients = Clients.Group(GetGroupId(room.RoomID));
 
