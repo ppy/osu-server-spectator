@@ -276,6 +276,13 @@ namespace osu.Server.Spectator.Hubs
                 await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(CurrentContextUserId, newState);
 
                 await updateRoomStateIfRequired(room);
+
+                // If the user is spectating and the match has started, notify them to start loading.
+                if (newState == MultiplayerUserState.Spectating
+                    && room.State == MultiplayerRoomState.WaitingForLoad || room.State == MultiplayerRoomState.Playing)
+                {
+                    await Clients.Caller.LoadRequested();
+                }
             }
         }
 

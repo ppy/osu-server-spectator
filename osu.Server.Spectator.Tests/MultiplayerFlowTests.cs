@@ -44,6 +44,7 @@ namespace osu.Server.Spectator.Tests
 
         private readonly Mock<IHubCallerClients<IMultiplayerClient>> mockClients;
         private readonly Mock<IGroupManager> mockGroups;
+        private readonly Mock<IMultiplayerClient> mockCaller;
 
         public MultiplayerFlowTests()
         {
@@ -76,6 +77,9 @@ namespace osu.Server.Spectator.Tests
 
             var mockReceiver2 = new Mock<IMultiplayerClient>();
             mockClients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(room_id_2, false))).Returns(mockReceiver2.Object);
+
+            mockCaller = new Mock<IMultiplayerClient>();
+            mockClients.Setup(client => client.Caller).Returns(mockCaller.Object);
 
             hub.Groups = mockGroups.Object;
             hub.Clients = mockClients.Object;
@@ -861,6 +865,25 @@ namespace osu.Server.Spectator.Tests
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
             mockReceiver.Verify(c => c.ResultsReady(), Times.Once);
             mockClients.Verify(clients => clients.Client(mockContextUser2.Object.ConnectionId).UserStateChanged(user_id_2, MultiplayerUserState.Results), Times.Never);
+        }
+
+        [Fact]
+        public async Task SpectatingUserReceivesLoadRequestedAfterMatchStarted()
+        {
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            await hub.StartMatch();
+            mockReceiver.Verify(c => c.LoadRequested(), Times.Never);
+            mockGameplayReceiver.Verify(c => c.LoadRequested(), Times.Once);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Spectating);
+            mockCaller.Verify(c => c.LoadRequested(), Times.Once);
+
+            // Ensure no other clients received LoadRequested().
+            mockReceiver.Verify(c => c.LoadRequested(), Times.Never);
+            mockGameplayReceiver.Verify(c => c.LoadRequested(), Times.Once);
         }
 
         #endregion
