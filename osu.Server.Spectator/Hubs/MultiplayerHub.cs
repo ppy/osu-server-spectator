@@ -601,7 +601,7 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidStateChangeException(oldState, newState);
 
                 case MultiplayerUserState.Spectating:
-                    if (oldState != MultiplayerUserState.Idle)
+                    if (oldState != MultiplayerUserState.Idle && oldState != MultiplayerUserState.Ready)
                         throw new InvalidStateChangeException(oldState, newState);
 
                     break;
