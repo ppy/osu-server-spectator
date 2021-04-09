@@ -919,6 +919,22 @@ namespace osu.Server.Spectator.Tests
         #region Spectating
 
         [Fact]
+        public async Task CanTransitionBetweenIdleAndSpectating()
+        {
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Spectating);
+            await hub.ChangeState(MultiplayerUserState.Idle);
+        }
+
+        [Fact]
+        public async Task CanTransitionFromReadyToSpectating()
+        {
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+            await hub.ChangeState(MultiplayerUserState.Spectating);
+        }
+
+        [Fact]
         public async Task SpectatingUserStateDoesNotChange()
         {
             await hub.JoinRoom(room_id);
@@ -941,6 +957,21 @@ namespace osu.Server.Spectator.Tests
             await hub.ChangeState(MultiplayerUserState.FinishedPlay);
             mockReceiver.Verify(c => c.ResultsReady(), Times.Once);
             mockClients.Verify(clients => clients.Client(mockContextUser2.Object.ConnectionId).UserStateChanged(user_id_2, MultiplayerUserState.Results), Times.Never);
+        }
+
+        [Fact]
+        public async Task SpectatingHostCanStartMatch()
+        {
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Spectating);
+
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+            await hub.ChangeState(MultiplayerUserState.Ready);
+
+            setUserContext(mockContextUser1);
+            await hub.StartMatch();
+            mockGameplayReceiver.Verify(c => c.LoadRequested(), Times.Once);
         }
 
         #endregion
