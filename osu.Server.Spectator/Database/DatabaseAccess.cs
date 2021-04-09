@@ -27,10 +27,11 @@ namespace osu.Server.Spectator.Database
         {
             string host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
             string user = Environment.GetEnvironmentVariable("DB_USER") ?? "root";
+            string port = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
             DapperExtensions.InstallDateTimeOffsetMapper();
 
-            var connection = new MySqlConnection($"Server={host};Database=osu;User ID={user};ConnectionTimeout=5;ConnectionReset=false;Pooling=true;");
+            var connection = new MySqlConnection($"Server={host};Port={port};Database=osu;User ID={user};ConnectionTimeout=5;ConnectionReset=false;Pooling=true;");
             connection.Open();
             return connection;
         }
