@@ -353,7 +353,7 @@ namespace osu.Server.Spectator.Hubs
                 if (readyUsers.Length == 0)
                     throw new InvalidStateException("Can't start match when no users are ready.");
 
-                if (room.Host != null && room.Host.State != MultiplayerUserState.Ready)
+                if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
                 foreach (var u in readyUsers)
@@ -599,6 +599,12 @@ namespace osu.Server.Spectator.Hubs
                 case MultiplayerUserState.Results:
                     // state is managed by the server.
                     throw new InvalidStateChangeException(oldState, newState);
+
+                case MultiplayerUserState.Spectating:
+                    if (oldState != MultiplayerUserState.Idle && oldState != MultiplayerUserState.Ready)
+                        throw new InvalidStateChangeException(oldState, newState);
+
+                    break;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
