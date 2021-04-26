@@ -272,11 +272,18 @@ namespace osu.Server.Spectator.Hubs
                         break;
 
                     case MultiplayerUserState.Ready:
+                    case MultiplayerUserState.Spectating:
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
                         break;
                 }
 
                 await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(CurrentContextUserId, newState);
+
+                if (newState == MultiplayerUserState.Spectating
+                    && (room.State == MultiplayerRoomState.WaitingForLoad || room.State == MultiplayerRoomState.Playing))
+                {
+                    await Clients.Caller.LoadRequested();
+                }
 
                 await updateRoomStateIfRequired(room);
             }
