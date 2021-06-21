@@ -451,6 +451,7 @@ namespace osu.Server.Spectator.Hubs
 
             bool proposedWereValid = true;
 
+            // add all valid for ruleset
             foreach (var apiMod in proposedMods)
             {
                 try
@@ -464,6 +465,17 @@ namespace osu.Server.Spectator.Hubs
                 }
             }
 
+            // check allowed by room
+            foreach (var mod in valid.ToList())
+            {
+                if (room.Settings.AllowedMods.All(m => m.Acronym != mod.Acronym))
+                {
+                    valid.Remove(mod);
+                    proposedWereValid = false;
+                }
+            }
+
+            // check valid as combination
             if (!ModUtils.CheckCompatibleSet(valid, out var invalid))
             {
                 proposedWereValid = false;

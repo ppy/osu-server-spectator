@@ -796,6 +796,16 @@ namespace osu.Server.Spectator.Tests
         {
             await hub.JoinRoom(room_id);
 
+            await hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                AllowedMods = new[]
+                {
+                    new APIMod(new OsuModFlashlight()),
+                    new APIMod(new OsuModApproachDifferent())
+                },
+            });
+
             var setMods = new[] { new APIMod(new OsuModApproachDifferent()) };
             await hub.ChangeUserMods(setMods);
 
@@ -822,6 +832,16 @@ namespace osu.Server.Spectator.Tests
         {
             await hub.JoinRoom(room_id);
 
+            await hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                AllowedMods = new[]
+                {
+                    new APIMod(new OsuModHidden()),
+                    new APIMod(new OsuModApproachDifferent())
+                },
+            });
+
             await hub.ChangeUserMods(new[] { new APIMod(new OsuModApproachDifferent()) });
 
             IEnumerable<APIMod> originalMods;
@@ -847,6 +867,37 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task UserDisallowedModsFails()
+        {
+            await hub.JoinRoom(room_id);
+
+            await hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                RulesetID = 2,
+                BeatmapChecksum = "checksum",
+                AllowedMods = new[]
+                {
+                    new APIMod(new CatchModHidden()),
+                },
+            });
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeUserMods(new[]
+            {
+                new APIMod(new CatchModHidden()),
+                // this should cause the complete setting change to fail, including the hidden mod application.
+                new APIMod(new CatchModDaycore())
+            }));
+
+            using (var usage = hub.GetRoom(room_id))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Empty(room.Users.First().Mods);
+            }
+        }
+
+        [Fact]
         public async Task UserInvalidModsForRulesetFails()
         {
             await hub.JoinRoom(room_id);
@@ -854,7 +905,12 @@ namespace osu.Server.Spectator.Tests
             await hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 RulesetID = 2,
-                BeatmapChecksum = "checksum"
+                BeatmapChecksum = "checksum",
+                AllowedMods = new[]
+                {
+                    new APIMod(new CatchModHidden()),
+                    new APIMod(new OsuModApproachDifferent())
+                },
             });
 
             await hub.ChangeUserMods(new[] { new APIMod(new CatchModHidden()) });
@@ -882,9 +938,63 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task ChangingDisallowedModsRemovesUserMods()
+        {
+            await hub.JoinRoom(room_id);
+
+            await hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                AllowedMods = new[]
+                {
+                    new APIMod(new OsuModApproachDifferent()),
+                    new APIMod(new OsuModFlashlight())
+                },
+            });
+
+            await hub.ChangeUserMods(new[]
+            {
+                new APIMod(new OsuModApproachDifferent()),
+                new APIMod(new OsuModFlashlight())
+            });
+
+            using (var usage = hub.GetRoom(room_id))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+                Assert.Equal(2, room.Users.First().Mods.Count());
+            }
+
+            await hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                AllowedMods = new[] { new APIMod(new OsuModFlashlight()) },
+            });
+
+            using (var usage = hub.GetRoom(room_id))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+                Assert.Single(room.Users.First().Mods);
+                Assert.True(room.Users.First().Mods.Single().Acronym == "FL");
+            }
+        }
+
+        [Fact]
         public async Task ChangingRulesetRemovesInvalidMods()
         {
             await hub.JoinRoom(room_id);
+
+            var roomSettings = new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                AllowedMods = new[]
+                {
+                    new APIMod(new OsuModApproachDifferent())
+                },
+            };
+
+            await hub.ChangeSettings(roomSettings);
 
             await hub.ChangeUserMods(new[] { new APIMod(new OsuModApproachDifferent()) });
 
@@ -898,7 +1008,12 @@ namespace osu.Server.Spectator.Tests
             await hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 RulesetID = 2,
-                BeatmapChecksum = "checksum"
+                BeatmapChecksum = "checksum",
+                AllowedMods = new[]
+                {
+                    // not really valid in catch but for the purpose of testing ruleset specific mod logic, let's leave it in allowed mods.
+                    new APIMod(new OsuModApproachDifferent())
+                },
             });
 
             using (var usage = hub.GetRoom(room_id))
