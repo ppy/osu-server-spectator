@@ -828,7 +828,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async Task UserInvalidModCombinationFails()
+        public async Task UserSelectsInvalidModCombinationThrows()
         {
             await hub.JoinRoom(room_id);
 
@@ -867,7 +867,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async Task UserDisallowedModsFails()
+        public async Task UserSelectsDisallowedModsThrows()
         {
             await hub.JoinRoom(room_id);
 
@@ -898,7 +898,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async Task UserInvalidModsForRulesetFails()
+        public async Task UserSelectsInvalidModsForRulesetThrows()
         {
             await hub.JoinRoom(room_id);
 
@@ -981,7 +981,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async Task ChangingRulesetRemovesInvalidMods()
+        public async Task ChangingRulesetRemovesInvalidUserMods()
         {
             await hub.JoinRoom(room_id);
 
