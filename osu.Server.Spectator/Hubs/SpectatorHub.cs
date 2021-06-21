@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Online.Spectator;
 
@@ -12,7 +11,7 @@ namespace osu.Server.Spectator.Hubs
 {
     public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {
-        public SpectatorHub([NotNull] IDistributedCache cache)
+        public SpectatorHub(IDistributedCache cache)
             : base(cache)
         {
         }
