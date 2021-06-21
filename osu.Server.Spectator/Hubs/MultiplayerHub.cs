@@ -140,7 +140,7 @@ namespace osu.Server.Spectator.Hubs
                     }
                 }
 
-                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room));
+                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room)) ?? throw new InvalidOperationException();
             }
         }
 
@@ -174,6 +174,9 @@ namespace osu.Server.Spectator.Hubs
                 if (beatmapChecksum == null)
                     throw new InvalidOperationException($"Expected non-null checksum on beatmap ID {playlistItem.beatmap_id}");
 
+                var requiredMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods ?? string.Empty) ?? Array.Empty<APIMod>();
+                var allowedMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>();
+
                 return new MultiplayerRoom(roomId)
                 {
                     Settings = new MultiplayerRoomSettings
@@ -182,8 +185,8 @@ namespace osu.Server.Spectator.Hubs
                         BeatmapID = playlistItem.beatmap_id,
                         RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
-                        RequiredMods = playlistItem.required_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods) : Array.Empty<APIMod>(),
-                        AllowedMods = playlistItem.allowed_mods != null ? JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods) : Array.Empty<APIMod>(),
+                        RequiredMods = requiredMods,
+                        AllowedMods = allowedMods,
                         PlaylistItemId = playlistItem.id
                     }
                 };
