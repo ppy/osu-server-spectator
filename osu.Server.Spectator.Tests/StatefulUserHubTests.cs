@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -108,7 +107,7 @@ namespace osu.Server.Spectator.Tests
         {
             public EntityStore<ClientState> UserStore => ACTIVE_STATES;
 
-            public TestStatefulHub([NotNull] IDistributedCache cache)
+            public TestStatefulHub(IDistributedCache cache)
                 : base(cache)
             {
             }

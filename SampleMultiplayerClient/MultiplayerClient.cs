@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.SignalR.Client;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
@@ -44,7 +43,6 @@ namespace SampleMultiplayerClient
 
         public BeatmapAvailability BeatmapAvailability { get; private set; } = BeatmapAvailability.LocallyAvailable();
 
-        [NotNull]
         public IEnumerable<APIMod> UserMods { get; private set; } = Enumerable.Empty<APIMod>();
 
         public MultiplayerRoom? Room { get; private set; }
