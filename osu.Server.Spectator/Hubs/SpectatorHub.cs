@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Online.Spectator;
@@ -74,10 +73,7 @@ namespace osu.Server.Spectator.Hubs
             // for now, send *all* player states to users on connect.
             // we don't want this for long, but while the lazer user base is small it should be okay.
             foreach (var kvp in GetAllStates())
-            {
-                Debug.Assert(kvp.Value != null);
                 await Clients.Caller.UserBeganPlaying((int)kvp.Key, kvp.Value.State);
-            }
 
             await base.OnConnectedAsync();
         }
