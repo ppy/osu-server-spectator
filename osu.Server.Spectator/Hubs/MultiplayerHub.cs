@@ -459,13 +459,13 @@ namespace osu.Server.Spectator.Hubs
             }
 
             if (!ModUtils.CheckCompatibleSet(requiredMods, out var invalid))
-                throw new InvalidStateException($"Invalid combination of required mods: {invalid.Select(m => m.Acronym)}");
+                throw new InvalidStateException($"Invalid combination of required mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
             // check aggregate combinations with each allowed mod individually.
             foreach (var allowedMod in allowedMods)
             {
                 if (!ModUtils.CheckCompatibleSet(requiredMods.Concat(new[] { allowedMod }), out invalid))
-                    throw new InvalidStateException($"Invalid combination of required mods: {invalid.Select(m => m.Acronym)}");
+                    throw new InvalidStateException($"Invalid combination of required and allowed mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
             }
         }
 
