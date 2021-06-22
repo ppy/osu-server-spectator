@@ -449,24 +449,9 @@ namespace osu.Server.Spectator.Hubs
 
         private static bool validateMods(MultiplayerRoom room, IEnumerable<APIMod> proposedMods, [NotNullWhen(false)] out IEnumerable<APIMod>? validMods)
         {
-            List<Mod> valid = new List<Mod>();
-
             bool proposedWereValid = true;
 
-            var ruleset = LegacyHelper.GetRulesetFromLegacyID(room.Settings.RulesetID);
-
-            // add all valid for ruleset
-            foreach (var apiMod in proposedMods)
-            {
-                try
-                {
-                    valid.Add(apiMod.ToMod(ruleset));
-                }
-                catch
-                {
-                    proposedWereValid = false;
-                }
-            }
+            proposedWereValid &= populateValidModsForRuleset(room, proposedMods, out var valid);
 
             // check allowed by room
             foreach (var mod in valid.ToList())
@@ -487,6 +472,36 @@ namespace osu.Server.Spectator.Hubs
             }
 
             validMods = valid.Select(m => new APIMod(m));
+            return proposedWereValid;
+        }
+
+        /// <summary>
+        /// Verifies all proposed mods are valid for the room's ruleset, returning instantiated <see cref="Mod"/>s for further processing.
+        /// </summary>
+        /// <param name="room">The multiplayer room.</param>
+        /// <param name="proposedMods">The proposed mods.</param>
+        /// <param name="valid">A list of valid deserialised mods.</param>
+        /// <returns>Whether all <see cref="proposedMods"/> were valid.</returns>
+        private static bool populateValidModsForRuleset(MultiplayerRoom room, IEnumerable<APIMod> proposedMods, out List<Mod> valid)
+        {
+            valid = new List<Mod>();
+            bool proposedWereValid = true;
+
+            var ruleset = LegacyHelper.GetRulesetFromLegacyID(room.Settings.RulesetID);
+
+            foreach (var apiMod in proposedMods)
+            {
+                try
+                {
+                    // will throw if invalid
+                    valid.Add(apiMod.ToMod(ruleset));
+                }
+                catch
+                {
+                    proposedWereValid = false;
+                }
+            }
+
             return proposedWereValid;
         }
 
