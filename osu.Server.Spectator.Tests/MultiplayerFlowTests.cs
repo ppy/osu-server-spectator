@@ -880,7 +880,7 @@ namespace osu.Server.Spectator.Tests
             }));
         }
 
-        [Fact]
+        [Fact(Skip = "needs dedupe check logic somewhere")]
         public async Task HostSetsOverlappingRequiredAllowedMods()
         {
             await hub.JoinRoom(room_id);
