@@ -909,6 +909,7 @@ namespace osu.Server.Spectator.Tests
                 AllowedMods = new[]
                 {
                     new APIMod(new CatchModHidden()),
+                    // not really valid in catch but for the purpose of testing ruleset specific mod logic, let's leave it in allowed mods.
                     new APIMod(new OsuModApproachDifferent())
                 },
             });
