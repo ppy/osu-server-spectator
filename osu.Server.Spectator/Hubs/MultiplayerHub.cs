@@ -453,13 +453,14 @@ namespace osu.Server.Spectator.Hubs
 
             bool proposedWereValid = true;
 
+            var ruleset = LegacyHelper.GetRulesetFromLegacyID(room.Settings.RulesetID);
+
             // add all valid for ruleset
             foreach (var apiMod in proposedMods)
             {
                 try
                 {
-                    var mod = apiMod.ToMod(LegacyHelper.GetRulesetFromLegacyID(room.Settings.RulesetID));
-                    valid.Add(mod);
+                    valid.Add(apiMod.ToMod(ruleset));
                 }
                 catch
                 {
