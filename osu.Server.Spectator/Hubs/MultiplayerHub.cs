@@ -425,13 +425,12 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task changeUserMods(IEnumerable<APIMod> newMods, MultiplayerRoom room, MultiplayerRoomUser user)
         {
-            var oldModList = user.Mods.ToList();
             var newModList = newMods.ToList();
 
             if (!validateMods(room, newModList, out var validMods))
-                throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newMods.Except(validMods).Select(m => m.Acronym))}");
+                throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
 
-            if (oldModList.SequenceEqual(newModList))
+            if (user.Mods.SequenceEqual(newModList))
                 return;
 
             user.Mods = newModList;
