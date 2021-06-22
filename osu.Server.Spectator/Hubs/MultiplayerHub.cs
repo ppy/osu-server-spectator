@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -13,6 +14,8 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
+using osu.Game.Rulesets.Mods;
+using osu.Game.Utils;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -331,15 +334,7 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                var oldModList = user.Mods.ToList();
-                var newModList = newMods.ToList();
-
-                if (oldModList.SequenceEqual(newModList))
-                    return;
-
-                user.Mods = newModList;
-
-                await Clients.Group(GetGroupId(room.RoomID)).UserModsChanged(CurrentContextUserId, newModList);
+                await changeUserMods(newMods, room, user);
             }
         }
 
@@ -411,6 +406,8 @@ namespace osu.Server.Spectator.Hubs
                     throw;
                 }
 
+                await ensureAllUsersValidMods(room);
+
                 // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
                 foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
                     await changeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
@@ -425,6 +422,88 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="roomId">The databased room ID.</param>
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
+
+        private async Task changeUserMods(IEnumerable<APIMod> newMods, MultiplayerRoom room, MultiplayerRoomUser user)
+        {
+            var newModList = newMods.ToList();
+
+            if (!validateMods(room, newModList, out var validMods))
+                throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
+
+            if (user.Mods.SequenceEqual(newModList))
+                return;
+
+            user.Mods = newModList;
+
+            await Clients.Group(GetGroupId(room.RoomID)).UserModsChanged(CurrentContextUserId, newModList);
+        }
+
+        private async Task ensureAllUsersValidMods(MultiplayerRoom room)
+        {
+            foreach (var user in room.Users)
+            {
+                if (!validateMods(room, user.Mods, out var validMods))
+                    await changeUserMods(validMods, room, user);
+            }
+        }
+
+        private static bool validateMods(MultiplayerRoom room, IEnumerable<APIMod> proposedMods, [NotNullWhen(false)] out IEnumerable<APIMod>? validMods)
+        {
+            bool proposedWereValid = true;
+
+            proposedWereValid &= populateValidModsForRuleset(room.Settings.RulesetID, proposedMods, out var valid);
+
+            // check allowed by room
+            foreach (var mod in valid.ToList())
+            {
+                if (room.Settings.AllowedMods.All(m => m.Acronym != mod.Acronym))
+                {
+                    valid.Remove(mod);
+                    proposedWereValid = false;
+                }
+            }
+
+            // check valid as combination
+            if (!ModUtils.CheckCompatibleSet(valid, out var invalid))
+            {
+                proposedWereValid = false;
+                foreach (var mod in invalid)
+                    valid.Remove(mod);
+            }
+
+            validMods = valid.Select(m => new APIMod(m));
+            return proposedWereValid;
+        }
+
+        /// <summary>
+        /// Verifies all proposed mods are valid for the room's ruleset, returning instantiated <see cref="Mod"/>s for further processing.
+        /// </summary>
+        /// <param name="rulesetID">The legacy ruleset ID to check against.</param>
+        /// <param name="proposedMods">The proposed mods.</param>
+        /// <param name="valid">A list of valid deserialised mods.</param>
+        /// <returns>Whether all <see cref="proposedMods"/> were valid.</returns>
+        private static bool populateValidModsForRuleset(int rulesetID, IEnumerable<APIMod> proposedMods, out List<Mod> valid)
+        {
+            valid = new List<Mod>();
+            bool proposedWereValid = true;
+
+            var ruleset = LegacyHelper.GetRulesetFromLegacyID(rulesetID);
+
+            foreach (var apiMod in proposedMods)
+            {
+                try
+                {
+                    // will throw if invalid
+                    valid.Add(apiMod.ToMod(ruleset));
+                }
+                catch
+                {
+                    proposedWereValid = false;
+                }
+            }
+
+            return proposedWereValid;
+        }
 
         private async Task selectNextPlaylistItem(MultiplayerRoom room)
         {
