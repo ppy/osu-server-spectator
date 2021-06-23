@@ -792,6 +792,115 @@ namespace osu.Server.Spectator.Tests
         #region Mod validation
 
         [Fact]
+        public async Task HostCanSetIncompatibleAllowedModsCombination()
+        {
+            await hub.JoinRoom(room_id);
+
+            await hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                RulesetID = 0,
+                AllowedMods = new[]
+                {
+                    // setting an incompatible combination should be allowed.
+                    // will be enforced at the point of a user choosing from the allowed mods.
+                    new APIMod(new OsuModFlashlight()),
+                    new APIMod(new OsuModApproachDifferent()),
+                },
+            });
+        }
+
+        [Fact]
+        public async Task HostSetsInvalidAllowedModsForRulesetThrows()
+        {
+            await hub.JoinRoom(room_id);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                RulesetID = 3,
+                AllowedMods = new[]
+                {
+                    new APIMod(new OsuModBlinds()),
+                },
+            }));
+        }
+
+        [Fact]
+        public async Task HostSetsInvalidRequiredModsCombinationThrows()
+        {
+            await hub.JoinRoom(room_id);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                RulesetID = 0,
+                RequiredMods = new[]
+                {
+                    new APIMod(new OsuModHidden()),
+                    new APIMod(new OsuModApproachDifferent()),
+                },
+            }));
+        }
+
+        [Fact]
+        public async Task HostSetsInvalidRequiredModsForRulesetThrows()
+        {
+            await hub.JoinRoom(room_id);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                RulesetID = 3,
+                RequiredMods = new[]
+                {
+                    new APIMod(new OsuModBlinds()),
+                },
+            }));
+        }
+
+        [Fact]
+        public async Task HostSetsInvalidRequiredAllowedModsCombinationThrows()
+        {
+            await hub.JoinRoom(room_id);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                RulesetID = 0,
+                RequiredMods = new[]
+                {
+                    new APIMod(new OsuModHidden()),
+                },
+                AllowedMods = new[]
+                {
+                    // allowed and required mods should always be cross-compatible.
+                    new APIMod(new OsuModApproachDifferent()),
+                },
+            }));
+        }
+
+        [Fact(Skip = "needs dedupe check logic somewhere")]
+        public async Task HostSetsOverlappingRequiredAllowedMods()
+        {
+            await hub.JoinRoom(room_id);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                BeatmapChecksum = "checksum",
+                RequiredMods = new[]
+                {
+                    new APIMod(new OsuModFlashlight()),
+                },
+                AllowedMods = new[]
+                {
+                    // if a mod is in RequiredMods it shouldn't also be in AllowedMods.
+                    new APIMod(new OsuModFlashlight()),
+                },
+            }));
+        }
+
+        [Fact]
         public async Task UserChangesMods()
         {
             await hub.JoinRoom(room_id);
@@ -909,8 +1018,6 @@ namespace osu.Server.Spectator.Tests
                 AllowedMods = new[]
                 {
                     new APIMod(new CatchModHidden()),
-                    // not really valid in catch but for the purpose of testing ruleset specific mod logic, let's leave it in allowed mods.
-                    new APIMod(new OsuModApproachDifferent())
                 },
             });
 
@@ -1010,11 +1117,6 @@ namespace osu.Server.Spectator.Tests
             {
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
-                AllowedMods = new[]
-                {
-                    // not really valid in catch but for the purpose of testing ruleset specific mod logic, let's leave it in allowed mods.
-                    new APIMod(new OsuModApproachDifferent())
-                },
             });
 
             using (var usage = hub.GetRoom(room_id))

@@ -394,6 +394,11 @@ namespace osu.Server.Spectator.Hubs
 
                 var previousSettings = room.Settings;
 
+                if (settings.RulesetID < 0 || settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                    throw new InvalidStateException("Attempted to select an unsupported ruleset.");
+
+                ensureSettingsModsValid(settings);
+
                 try
                 {
                     room.Settings = settings;
@@ -436,6 +441,32 @@ namespace osu.Server.Spectator.Hubs
             user.Mods = newModList;
 
             await Clients.Group(GetGroupId(room.RoomID)).UserModsChanged(CurrentContextUserId, newModList);
+        }
+
+        private static void ensureSettingsModsValid(MultiplayerRoomSettings settings)
+        {
+            // check against ruleset
+            if (!populateValidModsForRuleset(settings.RulesetID, settings.RequiredMods, out var requiredMods))
+            {
+                var invalidRequiredAcronyms = string.Join(',', settings.RequiredMods.Where(m => requiredMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
+                throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidRequiredAcronyms}");
+            }
+
+            if (!populateValidModsForRuleset(settings.RulesetID, settings.AllowedMods, out var allowedMods))
+            {
+                var invalidAllowedAcronyms = string.Join(',', settings.AllowedMods.Where(m => allowedMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
+                throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidAllowedAcronyms}");
+            }
+
+            if (!ModUtils.CheckCompatibleSet(requiredMods, out var invalid))
+                throw new InvalidStateException($"Invalid combination of required mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
+
+            // check aggregate combinations with each allowed mod individually.
+            foreach (var allowedMod in allowedMods)
+            {
+                if (!ModUtils.CheckCompatibleSet(requiredMods.Concat(new[] { allowedMod }), out invalid))
+                    throw new InvalidStateException($"Invalid combination of required and allowed mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
+            }
         }
 
         private async Task ensureAllUsersValidMods(MultiplayerRoom room)
@@ -526,9 +557,6 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
-            if (room.Settings.RulesetID < 0 || room.Settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
-                throw new InvalidStateException("Attempted to select an unsupported ruleset.");
-
             using (var db = databaseFactory.GetInstance())
             {
                 var item = new multiplayer_playlist_item(room);
