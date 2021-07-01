@@ -121,35 +121,56 @@ namespace osu.Server.Spectator.Database
             }
         }
 
-        public async Task UpdateRoomParticipantsAsync(MultiplayerRoom room)
+        public async Task AddRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user)
         {
             try
             {
                 using (var transaction = await connection.BeginTransactionAsync())
                 {
-                    // This should be considered *very* temporary, and for display purposes only!
-                    await connection.ExecuteAsync("DELETE FROM multiplayer_rooms_high WHERE room_id = @RoomID", new
+                    await connection.ExecuteAsync("INSERT IGNORE INTO multiplayer_rooms_high (room_id, user_id, in_room) VALUES (@RoomID, @UserID, 1)", new
                     {
-                        RoomID = room.RoomID
+                        RoomID = room.RoomID,
+                        UserID = user.UserID
                     }, transaction);
 
+                    await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
+                    {
+                        RoomID = room.RoomID,
+                        Count = room.Users.Count
+                    });
+
+                    await transaction.CommitAsync();
+                }
+            }
+            catch (MySqlException)
+            {
+                // for now we really don't care about failures in this. it's updating display information each time a user joins/quits and doesn't need to be perfect.
+            }
+        }
+
+        public async Task RemoveRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user)
+        {
+            try
+            {
+                using (var transaction = await connection.BeginTransactionAsync())
+                {
                     foreach (var u in room.Users)
                     {
-                        await connection.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id) VALUES (@RoomID, @UserID)", new
+                        await connection.ExecuteAsync("UPDATE multiplayer_rooms_high SET in_room = 0 WHERE room_id = @RoomID AND user_id = @UserID", new
                         {
                             RoomID = room.RoomID,
                             UserID = u.UserID
                         }, transaction);
                     }
 
+                    await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
+                    {
+                        RoomID = room.RoomID,
+                        Count = room.Users.Count
+                    });
+
                     await transaction.CommitAsync();
                 }
-
-                await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
-                {
-                    RoomID = room.RoomID,
-                    Count = room.Users.Count
-                });
             }
             catch (MySqlException)
             {
@@ -187,17 +208,19 @@ namespace osu.Server.Spectator.Database
         public async Task EndMatchAsync(MultiplayerRoom room)
         {
             // Remove all non-expired items from the playlist as they have no scores.
-            await connection.ExecuteAsync(
-                "DELETE FROM multiplayer_playlist_items p WHERE p.room_id = @RoomID AND p.expired = 0 AND (SELECT COUNT(*) FROM multiplayer_scores s WHERE s.playlist_item_id = p.id) = 0",
+            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items p WHERE p.room_id = @RoomID AND p.expired = 0 AND (SELECT COUNT(*) FROM multiplayer_scores s WHERE s.playlist_item_id = p.id) = 0",
                 new
                 {
                     RoomID = room.RoomID
                 });
 
+            int totalUsers = connection.QuerySingle<int>("SELECT COUNT(*) FROM multiplayer_rooms_high WHERE room_id = @RoomID", new { RoomID = room.RoomID });
+
             // Close the room.
-            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = NOW() WHERE id = @RoomID", new
+            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count, ends_at = NOW() WHERE id = @RoomID", new
             {
-                RoomID = room.RoomID
+                RoomID = room.RoomID,
+                Count = totalUsers,
             });
         }
 

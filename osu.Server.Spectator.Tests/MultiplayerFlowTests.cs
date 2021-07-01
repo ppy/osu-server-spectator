@@ -341,7 +341,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task UserJoinPostJoinFailureCleansUpRoomAndUser()
         {
-            mockDatabase.Setup(db => db.UpdateRoomParticipantsAsync(It.IsAny<MultiplayerRoom>()))
+            mockDatabase.Setup(db => db.AddRoomParticipantAsync(It.IsAny<MultiplayerRoom>(), It.IsAny<MultiplayerRoomUser>()))
                         .ThrowsAsync(new Exception("error"));
             await Assert.ThrowsAnyAsync<Exception>(() => hub.JoinRoom(room_id));
 
