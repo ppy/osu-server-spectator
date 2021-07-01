@@ -133,6 +133,8 @@ namespace osu.Server.Spectator.Database
                         UserID = user.UserID
                     }, transaction);
 
+                    // TODO: set in_room to 1 if the user is already in the table.
+
                     await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
                     {
                         RoomID = room.RoomID,
