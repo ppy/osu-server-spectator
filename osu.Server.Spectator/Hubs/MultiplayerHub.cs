@@ -779,8 +779,11 @@ namespace osu.Server.Spectator.Hubs
             if (user == null)
                 throw new InvalidStateException("User was not in the expected room.");
 
+            room.Users.Remove(user);
+            await removeDatabaseUser(room, user);
+
             // handle closing the room if the only participant is the user which is leaving.
-            if (room.Users.Count == 1)
+            if (room.Users.Count == 0)
             {
                 await endDatabaseMatch(room);
 
@@ -790,8 +793,6 @@ namespace osu.Server.Spectator.Hubs
                 return;
             }
 
-            room.Users.Remove(user);
-            await removeDatabaseUser(room, user);
             await updateRoomStateIfRequired(room);
 
             var clients = Clients.Group(GetGroupId(room.RoomID));
