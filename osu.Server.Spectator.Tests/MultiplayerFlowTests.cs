@@ -303,18 +303,25 @@ namespace osu.Server.Spectator.Tests
 
             setUserContext(mockContextUser2);
             await hub.JoinRoom(room_id);
+
+            mockDatabase.Verify(db => db.AddRoomParticipantAsync(It.Is<MultiplayerRoom>(r => r.RoomID == room_id), It.Is<MultiplayerRoomUser>(u => u.UserID == user_id)), Times.Once);
+
+            var roomUser = new MultiplayerRoomUser(user_id_2);
+
             await Assert.ThrowsAsync<InvalidStateException>(() => hub.JoinRoom(room_id)); // invalid join
 
-            mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id_2)), Times.Once);
+            mockReceiver.Verify(r => r.UserJoined(roomUser), Times.Once);
+            mockDatabase.Verify(db => db.AddRoomParticipantAsync(It.Is<MultiplayerRoom>(r => r.RoomID == room_id), It.Is<MultiplayerRoomUser>(u => u.UserID == user_id_2)), Times.Once);
 
             await hub.LeaveRoom();
-            mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id_2)), Times.Once);
+            mockReceiver.Verify(r => r.UserLeft(roomUser), Times.Once);
+            mockDatabase.Verify(db => db.RemoveRoomParticipantAsync(It.Is<MultiplayerRoom>(r => r.RoomID == room_id), It.Is<MultiplayerRoomUser>(u => u.UserID == user_id_2)), Times.Once);
 
             await hub.JoinRoom(room_id);
-            mockReceiver.Verify(r => r.UserJoined(new MultiplayerRoomUser(user_id_2)), Times.Exactly(2));
+            mockReceiver.Verify(r => r.UserJoined(roomUser), Times.Exactly(2));
 
             await hub.LeaveRoom();
-            mockReceiver.Verify(r => r.UserLeft(new MultiplayerRoomUser(user_id_2)), Times.Exactly(2));
+            mockReceiver.Verify(r => r.UserLeft(roomUser), Times.Exactly(2));
         }
 
         [Fact]
