@@ -127,13 +127,12 @@ namespace osu.Server.Spectator.Database
             {
                 using (var transaction = await connection.BeginTransactionAsync())
                 {
-                    await connection.ExecuteAsync("INSERT IGNORE INTO multiplayer_rooms_high (room_id, user_id, in_room) VALUES (@RoomID, @UserID, 1)", new
+                    // the user may have previously been in the room and set some scores, so need to update their presence if existing.
+                    await connection.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id, in_room) VALUES (@RoomID, @UserID, 1) ON DUPLICATE KEY UPDATE in_room = 1", new
                     {
                         RoomID = room.RoomID,
                         UserID = user.UserID
                     }, transaction);
-
-                    // TODO: set in_room to 1 if the user is already in the table.
 
                     await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
                     {
