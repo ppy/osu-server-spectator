@@ -136,7 +136,7 @@ namespace osu.Server.Spectator.Database
                     {
                         RoomID = room.RoomID,
                         Count = room.Users.Count
-                    });
+                    }, transaction);
 
                     await transaction.CommitAsync();
                 }
@@ -166,7 +166,7 @@ namespace osu.Server.Spectator.Database
                     {
                         RoomID = room.RoomID,
                         Count = room.Users.Count
-                    });
+                    }, transaction);
 
                     await transaction.CommitAsync();
                 }
