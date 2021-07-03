@@ -102,7 +102,7 @@ namespace osu.Server.Spectator.Hubs
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
                         room.Users.Add(roomUser);
 
-                        await updateDatabaseParticipants(room);
+                        await addDatabaseUser(room, roomUser);
 
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
@@ -590,10 +590,16 @@ namespace osu.Server.Spectator.Hubs
                 await db.EndMatchAsync(room);
         }
 
-        private async Task updateDatabaseParticipants(MultiplayerRoom room)
+        private async Task addDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)
         {
             using (var db = databaseFactory.GetInstance())
-                await db.UpdateRoomParticipantsAsync(room);
+                await db.AddRoomParticipantAsync(room, user);
+        }
+
+        private async Task removeDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)
+        {
+            using (var db = databaseFactory.GetInstance())
+                await db.RemoveRoomParticipantAsync(room, user);
         }
 
         protected override async Task CleanUpState(MultiplayerClientState state)
@@ -771,8 +777,11 @@ namespace osu.Server.Spectator.Hubs
             if (user == null)
                 throw new InvalidStateException("User was not in the expected room.");
 
+            room.Users.Remove(user);
+            await removeDatabaseUser(room, user);
+
             // handle closing the room if the only participant is the user which is leaving.
-            if (room.Users.Count == 1)
+            if (room.Users.Count == 0)
             {
                 await endDatabaseMatch(room);
 
@@ -782,8 +791,6 @@ namespace osu.Server.Spectator.Hubs
                 return;
             }
 
-            room.Users.Remove(user);
-            await updateDatabaseParticipants(room);
             await updateRoomStateIfRequired(room);
 
             var clients = Clients.Group(GetGroupId(room.RoomID));

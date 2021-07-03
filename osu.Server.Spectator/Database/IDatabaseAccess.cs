@@ -54,9 +54,14 @@ namespace osu.Server.Spectator.Database
         Task UpdateRoomHostAsync(MultiplayerRoom room);
 
         /// <summary>
-        /// Updates the current participants of <paramref name="room"/> in the database.
+        /// Add a new participant for the specified <paramref name="room"/> in the database.
         /// </summary>
-        Task UpdateRoomParticipantsAsync(MultiplayerRoom room);
+        Task AddRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user);
+
+        /// <summary>
+        /// Remove a new participant for the specified <paramref name="room"/> in the database.
+        /// </summary>
+        Task RemoveRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user);
 
         /// <summary>
         /// Retrieves a playlist item from the given room's playlist.
