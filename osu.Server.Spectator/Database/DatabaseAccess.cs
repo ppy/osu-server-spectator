@@ -153,14 +153,11 @@ namespace osu.Server.Spectator.Database
             {
                 using (var transaction = await connection.BeginTransactionAsync())
                 {
-                    foreach (var u in room.Users)
+                    await connection.ExecuteAsync("UPDATE multiplayer_rooms_high SET in_room = 0 WHERE room_id = @RoomID AND user_id = @UserID", new
                     {
-                        await connection.ExecuteAsync("UPDATE multiplayer_rooms_high SET in_room = 0 WHERE room_id = @RoomID AND user_id = @UserID", new
-                        {
-                            RoomID = room.RoomID,
-                            UserID = u.UserID
-                        }, transaction);
-                    }
+                        RoomID = room.RoomID,
+                        UserID = user.UserID
+                    }, transaction);
 
                     await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
                     {
