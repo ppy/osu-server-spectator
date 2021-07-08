@@ -83,10 +83,11 @@ namespace osu.Server.Spectator.Database
 
         public async Task UpdateRoomSettingsAsync(MultiplayerRoom room)
         {
-            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name WHERE id = @RoomID", new
+            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name, password = @Password WHERE id = @RoomID", new
             {
                 RoomID = room.RoomID,
-                Name = room.Settings.Name
+                Name = room.Settings.Name,
+                Password = room.Settings.Password,
             });
 
             var currentItem = await GetCurrentPlaylistItemAsync(room.RoomID);
