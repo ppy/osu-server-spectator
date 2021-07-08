@@ -83,7 +83,11 @@ namespace osu.Server.Spectator.Hubs
                             // the requested room is not yet tracked by this server.
                             room = await retrieveRoom(roomId);
 
-                            // TODO: verify room password is empty or matches the provided password.
+                            if (!string.IsNullOrEmpty(room.Settings.Password))
+                            {
+                                if (room.Settings.Password != password)
+                                    throw new InvalidPasswordException();
+                            }
 
                             // the above call will only succeed if this user is the host.
                             room.Host = roomUser;
