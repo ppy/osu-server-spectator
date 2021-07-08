@@ -43,7 +43,9 @@ namespace osu.Server.Spectator.Hubs
             ACTIVE_ROOMS.Clear();
         }
 
-        public async Task<MultiplayerRoom> JoinRoom(long roomId)
+        public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoom(roomId, string.Empty);
+
+        public async Task<MultiplayerRoom> JoinRoom(long roomId, string password)
         {
             Log($"Joining room {roomId}");
 
@@ -80,6 +82,8 @@ namespace osu.Server.Spectator.Hubs
 
                             // the requested room is not yet tracked by this server.
                             room = await retrieveRoom(roomId);
+
+                            // TODO: verify room password is empty or matches the provided password.
 
                             // the above call will only succeed if this user is the host.
                             room.Host = roomUser;
@@ -186,6 +190,7 @@ namespace osu.Server.Spectator.Hubs
                         BeatmapID = playlistItem.beatmap_id,
                         RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
+                        Password = databaseRoom.password,
                         RequiredMods = requiredMods,
                         AllowedMods = allowedMods,
                         PlaylistItemId = playlistItem.id
