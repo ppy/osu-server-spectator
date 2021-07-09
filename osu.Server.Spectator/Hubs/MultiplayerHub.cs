@@ -43,9 +43,9 @@ namespace osu.Server.Spectator.Hubs
             ACTIVE_ROOMS.Clear();
         }
 
-        public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoom(roomId, string.Empty);
+        public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);
 
-        public async Task<MultiplayerRoom> JoinRoom(long roomId, string password)
+        public async Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string password)
         {
             Log($"Joining room {roomId}");
 

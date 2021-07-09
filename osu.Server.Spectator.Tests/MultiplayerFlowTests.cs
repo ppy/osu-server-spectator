@@ -226,7 +226,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task UserCanJoinWithPasswordEvenWhenNotRequired()
         {
-            await hub.JoinRoom(room_id, "password");
+            await hub.JoinRoomWithPassword(room_id, "password");
         }
 
         [Fact]
@@ -239,7 +239,7 @@ namespace osu.Server.Spectator.Tests
                             user_id = user_id
                         });
 
-            await hub.JoinRoom(room_id, "password");
+            await hub.JoinRoomWithPassword(room_id, "password");
         }
 
         [Fact]
