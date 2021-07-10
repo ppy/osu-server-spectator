@@ -67,7 +67,7 @@ namespace osu.Server.Spectator.Database
 
         public Task<string?> GetBeatmapChecksumAsync(int beatmapId)
         {
-            return connection.QuerySingleAsync<string?>("SELECT checksum from osu_beatmaps where beatmap_id = @BeatmapID", new
+            return connection.QuerySingleOrDefaultAsync<string?>("SELECT checksum from osu_beatmaps where beatmap_id = @BeatmapID", new
             {
                 BeatmapId = beatmapId
             });
