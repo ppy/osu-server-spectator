@@ -224,6 +224,38 @@ namespace osu.Server.Spectator.Tests
         #region Joining and leaving
 
         [Fact]
+        public async Task UserCanJoinWithPasswordEvenWhenNotRequired()
+        {
+            await hub.JoinRoomWithPassword(room_id, "password");
+        }
+
+        [Fact]
+        public async Task UserCanJoinWithCorrectPassword()
+        {
+            mockDatabase.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+                        .ReturnsAsync(new multiplayer_room
+                        {
+                            password = "password",
+                            user_id = user_id
+                        });
+
+            await hub.JoinRoomWithPassword(room_id, "password");
+        }
+
+        [Fact]
+        public async Task UserCantJoinWithIncorrectPassword()
+        {
+            mockDatabase.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+                        .ReturnsAsync(new multiplayer_room
+                        {
+                            password = "password",
+                            user_id = user_id
+                        });
+
+            await Assert.ThrowsAsync<InvalidPasswordException>(() => hub.JoinRoom(room_id));
+        }
+
+        [Fact]
         public async Task UserCantJoinWhenRestricted()
         {
             mockDatabase.Setup(db => db.IsUserRestrictedAsync(It.IsAny<int>())).ReturnsAsync(true);

@@ -14,6 +14,7 @@ namespace osu.Server.Spectator.Database.Models
         public long id { get; set; }
         public int user_id { get; set; }
         public string name { get; set; } = string.Empty;
+        public string password { get; set; } = string.Empty;
         public int channel_id { get; set; }
         public DateTimeOffset starts_at { get; set; }
         public DateTimeOffset? ends_at { get; set; }
