@@ -59,7 +59,12 @@ namespace SampleMultiplayerClient
                     switch (pieces[1].ToLower())
                     {
                         case "joinroom":
-                            await targetClient.JoinRoom(long.Parse(args[0]));
+                            long roomId = long.Parse(args[0]);
+
+                            if (args.Length > 1)
+                                await targetClient.JoinRoomWithPassword(roomId, args[1]);
+                            else
+                                await targetClient.JoinRoom(roomId);
                             break;
 
                         case "leaveroom":
