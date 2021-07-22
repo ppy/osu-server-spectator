@@ -78,6 +78,11 @@ namespace SampleMultiplayerClient
         public Task ChangeUserMods(IEnumerable<APIMod> newMods) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.ChangeUserMods), newMods);
 
+        public Task SendMatchRulesetRequest(MatchRulesetUserRequest request)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task StartMatch() =>
             connection.InvokeAsync(nameof(IMultiplayerServer.StartMatch));
 
@@ -127,6 +132,16 @@ namespace SampleMultiplayerClient
                 State = state;
 
             return Task.CompletedTask;
+        }
+
+        public Task MatchRulesetUserStateChanged(int userId, MatchRulesetUserState state)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchRulesetRoomStateChanged(MatchRulesetRoomState state)
+        {
+            throw new NotImplementedException();
         }
 
         public Task UserBeatmapAvailabilityChanged(int userId, BeatmapAvailability beatmapAvailability)

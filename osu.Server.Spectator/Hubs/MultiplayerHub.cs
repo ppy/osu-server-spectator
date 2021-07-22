@@ -335,6 +335,12 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        public Task SendMatchRulesetRequest(MatchRulesetUserRequest request)
+        {
+            // TODO: forward to active match ruleset.
+            return Task.CompletedTask;
+        }
+
         public async Task StartMatch()
         {
             using (var userUsage = await GetOrCreateLocalUserState())
