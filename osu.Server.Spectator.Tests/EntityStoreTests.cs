@@ -143,16 +143,16 @@ namespace osu.Server.Spectator.Tests
             var firstLockAchieved = new ManualResetEventSlim();
             var firstLockDelayComplete = new ManualResetEventSlim();
 
-            new Thread(async () =>
+            new Thread(() =>
             {
-                using (var firstGet = await store.GetForUse(1, true))
+                using (var firstGet = store.GetForUse(1, true).Result)
                 {
                     // signal the second fetch to start once the first lock has been achieved.
                     firstLockAchieved.Set();
 
                     firstGet.Item = new TestItem("test data");
 
-                    await Task.Delay(2000);
+                    Thread.Sleep(2000);
 
                     firstLockDelayComplete.Set();
                 }
