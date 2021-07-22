@@ -22,11 +22,11 @@ namespace osu.Server.Spectator.Hubs
 {
     public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
-        protected readonly EntityStore<MultiplayerRoom> Rooms;
+        protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
 
         private readonly IDatabaseFactory databaseFactory;
 
-        public MultiplayerHub(IDistributedCache cache, EntityStore<MultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
+        public MultiplayerHub(IDistributedCache cache, EntityStore<ServerMultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
             : base(cache, users)
         {
             Rooms = rooms;
@@ -60,7 +60,7 @@ namespace osu.Server.Spectator.Hubs
                 // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
                 bool newRoomFetchStarted = false;
 
-                MultiplayerRoom? room = null;
+                ServerMultiplayerRoom? room = null;
 
                 using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
@@ -150,7 +150,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="roomId">The proposed room ID.</param>
         /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
-        private async Task<MultiplayerRoom> retrieveRoom(long roomId)
+        private async Task<ServerMultiplayerRoom> retrieveRoom(long roomId)
         {
             Log($"Retrieving room {roomId} from database");
 
@@ -176,7 +176,7 @@ namespace osu.Server.Spectator.Hubs
                 var requiredMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods ?? string.Empty) ?? Array.Empty<APIMod>();
                 var allowedMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>();
 
-                return new MultiplayerRoom(roomId)
+                return new ServerMultiplayerRoom(roomId)
                 {
                     Settings = new MultiplayerRoomSettings
                     {
@@ -396,6 +396,9 @@ namespace osu.Server.Spectator.Hubs
                     return;
 
                 var previousSettings = room.Settings;
+
+                if (room.MatchRuleset == null || previousSettings.MatchRulesetType != settings.MatchRulesetType)
+                    room.MatchRuleset = getMatchRuleset(settings, room);
 
                 if (settings.RulesetID < 0 || settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
                     throw new InvalidStateException("Attempted to select an unsupported ruleset.");
@@ -749,7 +752,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Retrieve the <see cref="MultiplayerRoom"/> for the local context user.
         /// </summary>
-        private async Task<ItemUsage<MultiplayerRoom>> getLocalUserRoom(MultiplayerClientState? state)
+        private async Task<ItemUsage<ServerMultiplayerRoom>> getLocalUserRoom(MultiplayerClientState? state)
         {
             if (state == null)
                 throw new NotJoinedRoomException();
@@ -765,7 +768,7 @@ namespace osu.Server.Spectator.Hubs
                 await leaveRoom(state, roomUsage);
         }
 
-        private async Task leaveRoom(MultiplayerClientState state, ItemUsage<MultiplayerRoom> roomUsage)
+        private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage)
         {
             var room = roomUsage.Item;
 
@@ -810,6 +813,24 @@ namespace osu.Server.Spectator.Hubs
             }
 
             await clients.UserLeft(user);
+        }
+
+        private static MatchRuleset getMatchRuleset(MultiplayerRoomSettings settings, ServerMultiplayerRoom room)
+        {
+            MatchRuleset ruleset;
+
+            switch (settings.MatchRulesetType)
+            {
+                case MatchRulesetType.TeamVs:
+                    ruleset = new TeamVsRuleset(room);
+                    break;
+
+                default:
+                    ruleset = new HeadToHeadRuleset(room);
+                    break;
+            }
+
+            return ruleset;
         }
     }
 }

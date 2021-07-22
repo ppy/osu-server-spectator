@@ -2,25 +2,18 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchRulesets.TeamVs;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class TeamVsRuleset : MatchRuleset
+    public class HeadToHeadRuleset : MatchRuleset
     {
-        public TeamVsRuleset(MultiplayerRoom room)
+        public HeadToHeadRuleset(ServerMultiplayerRoom room)
             : base(room)
         {
         }
 
         public override void HandleUserRequest(MatchRulesetUserRequest request)
         {
-            switch (request)
-            {
-                case ChangeTeamRequest _:
-                    // handle changeTeam.TeamID;
-                    break;
-            }
         }
     }
 }

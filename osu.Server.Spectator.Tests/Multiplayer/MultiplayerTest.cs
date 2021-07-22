@@ -29,7 +29,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected const long ROOM_ID_2 = 9999;
 
         protected TestMultiplayerHub Hub { get; }
-        protected EntityStore<MultiplayerRoom> Rooms { get; }
+        protected EntityStore<ServerMultiplayerRoom> Rooms { get; }
         protected EntityStore<MultiplayerClientState> UserStates { get; }
 
         private readonly Mock<IDatabaseFactory> mockDatabaseFactory;
@@ -54,7 +54,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
-            Rooms = new EntityStore<MultiplayerRoom>();
+            Rooms = new EntityStore<ServerMultiplayerRoom>();
             UserStates = new EntityStore<MultiplayerClientState>();
             Hub = new TestMultiplayerHub(cache, Rooms, UserStates, mockDatabaseFactory.Object);
 
