@@ -100,8 +100,6 @@ namespace osu.Server.Spectator.Hubs
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
                         room.Users.Add(roomUser);
 
-                        room.MatchRuleset.HandleUserJoined(roomUser);
-
                         await addDatabaseUser(room, roomUser);
 
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
@@ -238,7 +236,7 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureIsHost(room);
 
-                var newHost = room.Users.Find(u => u.UserID == userId);
+                var newHost = room.Users.FirstOrDefault(u => u.UserID == userId);
 
                 if (newHost == null)
                     throw new Exception("Target user is not in the current room");
@@ -257,7 +255,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
                     throw new InvalidStateException("Local user was not found in the expected room");
@@ -304,7 +302,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
@@ -328,7 +326,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
@@ -402,6 +400,7 @@ namespace osu.Server.Spectator.Hubs
                 if (previousSettings.MatchRulesetType != settings.MatchRulesetType)
                 {
                     room.MatchRuleset = getMatchRuleset(settings, room);
+                    Log($"Switching room ruleset to {room.MatchRuleset}");
                 }
 
                 if (settings.RulesetID < 0 || settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
@@ -784,7 +783,7 @@ namespace osu.Server.Spectator.Hubs
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
 
-            var user = room.Users.Find(u => u.UserID == state.UserId);
+            var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);
 
             if (user == null)
                 throw new InvalidStateException("User was not in the expected room.");
@@ -804,8 +803,6 @@ namespace osu.Server.Spectator.Hubs
             }
 
             await updateRoomStateIfRequired(room);
-
-            room.MatchRuleset.HandleUserJoined(user);
 
             var clients = Clients.Group(GetGroupId(room.RoomID));
 
