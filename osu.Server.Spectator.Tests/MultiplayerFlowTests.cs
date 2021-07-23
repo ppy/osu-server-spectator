@@ -1097,41 +1097,56 @@ namespace osu.Server.Spectator.Tests
         {
             await hub.JoinRoom(room_id);
 
+            setUserContext(mockContextUser2);
+            await hub.JoinRoom(room_id);
+
+            setUserContext(mockContextUser1);
             await hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModApproachDifferent()),
-                    new APIMod(new OsuModFlashlight())
+                    new APIMod(new OsuModFlashlight()),
+                    new APIMod(new OsuModHardRock())
                 },
             });
 
-            await hub.ChangeUserMods(new[]
-            {
-                new APIMod(new OsuModApproachDifferent()),
-                new APIMod(new OsuModFlashlight())
-            });
+            await hub.ChangeUserMods(new[] { new APIMod(new OsuModFlashlight()), new APIMod(new OsuModApproachDifferent()) });
+            assertUserMods(user_id, "FL", "AD");
 
-            using (var usage = hub.GetRoom(room_id))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-                Assert.Equal(2, room.Users.First().Mods.Count());
-            }
+            setUserContext(mockContextUser2);
+            await hub.ChangeUserMods(new[] { new APIMod(new OsuModHardRock()), new APIMod(new OsuModApproachDifferent()) });
+            assertUserMods(user_id_2, "HR", "AD");
 
+            setUserContext(mockContextUser1);
             await hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
-                AllowedMods = new[] { new APIMod(new OsuModFlashlight()) },
+                AllowedMods = new[]
+                {
+                    new APIMod(new OsuModFlashlight()),
+                    new APIMod(new OsuModHardRock())
+                },
             });
 
-            using (var usage = hub.GetRoom(room_id))
+            assertUserMods(user_id, "FL");
+            assertUserMods(user_id_2, "HR");
+
+            void assertUserMods(int userId, params string[] modAcronyms)
             {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-                Assert.Single(room.Users.First().Mods);
-                Assert.True(room.Users.First().Mods.Single().Acronym == "FL");
+                mockReceiver.Verify(c =>
+                    c.UserModsChanged(userId, It.Is<IEnumerable<APIMod>>(mods =>
+                        mods.Select(m => m.Acronym).SequenceEqual(modAcronyms))), Times.Once);
+
+                using (var usage = hub.GetRoom(room_id))
+                {
+                    var room = usage.Item;
+                    Debug.Assert(room != null);
+
+                    var userMods = room.Users.Single(u => u.UserID == userId).Mods;
+                    Assert.Equal(modAcronyms, userMods.Select(m => m.Acronym));
+                }
             }
         }
 
