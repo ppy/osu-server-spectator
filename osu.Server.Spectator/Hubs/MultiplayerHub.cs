@@ -447,7 +447,7 @@ namespace osu.Server.Spectator.Hubs
 
             user.Mods = newModList;
 
-            await Clients.Group(GetGroupId(room.RoomID)).UserModsChanged(CurrentContextUserId, newModList);
+            await Clients.Group(GetGroupId(room.RoomID)).UserModsChanged(user.UserID, newModList);
         }
 
         private static void ensureSettingsModsValid(MultiplayerRoomSettings settings)
