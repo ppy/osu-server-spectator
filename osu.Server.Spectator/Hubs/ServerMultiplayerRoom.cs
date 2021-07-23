@@ -7,11 +7,24 @@ namespace osu.Server.Spectator.Hubs
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
-        public MatchRuleset? MatchRuleset { get; set; }
+        private MatchRuleset matchRuleset;
+
+        public MatchRuleset MatchRuleset
+        {
+            get => matchRuleset;
+            set
+            {
+                matchRuleset = value;
+
+                foreach (var u in Users)
+                    matchRuleset.HandleUserJoined(u);
+            }
+        }
 
         public ServerMultiplayerRoom(long roomId)
             : base(roomId)
         {
+            matchRuleset = new HeadToHeadRuleset(this);
         }
     }
 }

@@ -100,6 +100,8 @@ namespace osu.Server.Spectator.Hubs
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
                         room.Users.Add(roomUser);
 
+                        room.MatchRuleset.HandleUserJoined(roomUser);
+
                         await addDatabaseUser(room, roomUser);
 
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
@@ -397,8 +399,10 @@ namespace osu.Server.Spectator.Hubs
 
                 var previousSettings = room.Settings;
 
-                if (room.MatchRuleset == null || previousSettings.MatchRulesetType != settings.MatchRulesetType)
+                if (previousSettings.MatchRulesetType != settings.MatchRulesetType)
+                {
                     room.MatchRuleset = getMatchRuleset(settings, room);
+                }
 
                 if (settings.RulesetID < 0 || settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
                     throw new InvalidStateException("Attempted to select an unsupported ruleset.");
@@ -800,6 +804,8 @@ namespace osu.Server.Spectator.Hubs
             }
 
             await updateRoomStateIfRequired(room);
+
+            room.MatchRuleset.HandleUserJoined(user);
 
             var clients = Clients.Group(GetGroupId(room.RoomID));
 
