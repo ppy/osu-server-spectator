@@ -851,15 +851,11 @@ namespace osu.Server.Spectator.Hubs
 
         public Task UpdateMatchRulesetRoomState(MultiplayerRoom room)
         {
-            // for the time being, let's assume the request has resulted in the local user state being updated.
-            // eventually this won't be the only case, ie. a host changing the team of another user in the room.
             return Clients.Group(GetGroupId(room.RoomID)).MatchRulesetRoomStateChanged(room.MatchRulesetState);
         }
 
         public Task UpdateMatchRulesetUserState(MultiplayerRoom room, MultiplayerRoomUser user)
         {
-            // for the time being, let's assume the request has resulted in the local user state being updated.
-            // eventually this won't be the only case, ie. a host changing the team of another user in the room.
             return Clients.Group(GetGroupId(room.RoomID)).MatchRulesetUserStateChanged(user.UserID, user.MatchRulesetState);
         }
     }
