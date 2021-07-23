@@ -11,8 +11,10 @@ namespace osu.Server.Spectator.Tests
 {
     public class TeamVsTests
     {
-        [Fact]
-        public void UserRequestsTeamChange()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        public void UserRequestsValidTeamChange(int team)
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchRulesetCallbacks>();
             var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
@@ -25,10 +27,35 @@ namespace osu.Server.Spectator.Tests
 
             room.Users.Add(user);
 
-            teamVs.HandleUserRequest(user, new ChangeTeamRequest { TeamID = 2 });
-            checkUserOnTeam(user, 2);
+            teamVs.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
 
+            checkUserOnTeam(user, team);
             hubCallbacks.Verify(h => h.UpdateMatchRulesetUserState(room, user), Times.Once());
+        }
+
+        [Theory]
+        [InlineData(-1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        public void UserRequestsInvalidTeamChange(int team)
+        {
+            var hubCallbacks = new Mock<IMultiplayerServerMatchRulesetCallbacks>();
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+            var teamVs = new TeamVsRuleset(room);
+
+            // change the match ruleset
+            room.MatchRuleset = teamVs;
+
+            var user = new MultiplayerRoomUser(1);
+
+            room.Users.Add(user);
+
+            var previousTeam = ((TeamVsMatchUserState)user.MatchRulesetState!).TeamID;
+
+            Assert.Throws<InvalidStateException>(() => teamVs.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team }));
+
+            checkUserOnTeam(user, previousTeam);
+            hubCallbacks.Verify(h => h.UpdateMatchRulesetUserState(room, user), Times.Never());
         }
 
         [Fact]

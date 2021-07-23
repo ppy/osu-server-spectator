@@ -27,6 +27,9 @@ namespace osu.Server.Spectator.Hubs
             switch (request)
             {
                 case ChangeTeamRequest changeTeam:
+                    if (changeTeam.TeamID < 0 || changeTeam.TeamID >= TeamCount)
+                        throw new InvalidStateException("Attempted to set team out of valid range");
+
                     if (user.MatchRulesetState is TeamVsMatchUserState state)
                         state.TeamID = changeTeam.TeamID;
 
