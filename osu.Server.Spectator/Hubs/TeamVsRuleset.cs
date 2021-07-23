@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Hubs
                     if (user.MatchRulesetState is TeamVsMatchUserState state)
                         state.TeamID = changeTeam.TeamID;
 
-                    Room.HubCallbacks.UpdateMatchRulesetUserState(Room, user);
+                    Room.UpdateMatchRulesetUserState(Room, user);
                     break;
             }
         }
