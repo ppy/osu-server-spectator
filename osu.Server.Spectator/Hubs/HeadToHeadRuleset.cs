@@ -12,7 +12,7 @@ namespace osu.Server.Spectator.Hubs
         {
         }
 
-        public override void HandleUserRequest(MatchRulesetUserRequest request)
+        public override void HandleUserRequest(MultiplayerRoomUser user, MatchRulesetUserRequest request)
         {
         }
     }

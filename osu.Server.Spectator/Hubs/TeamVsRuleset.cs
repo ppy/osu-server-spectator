@@ -13,12 +13,13 @@ namespace osu.Server.Spectator.Hubs
         {
         }
 
-        public override void HandleUserRequest(MatchRulesetUserRequest request)
+        public override void HandleUserRequest(MultiplayerRoomUser user, MatchRulesetUserRequest request)
         {
             switch (request)
             {
-                case ChangeTeamRequest _:
-                    // handle changeTeam.TeamID;
+                case ChangeTeamRequest changeTeam:
+                    if (user.MatchRulesetState is TeamVsMatchUserState state)
+                        state.TeamID = changeTeam.TeamID;
                     break;
             }
         }

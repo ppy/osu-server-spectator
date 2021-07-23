@@ -14,6 +14,13 @@ namespace osu.Server.Spectator.Hubs
             this.Room = room;
         }
 
-        public abstract void HandleUserRequest(MatchRulesetUserRequest request);
+        /// <summary>
+        /// Called when a user has requested a match ruleset specific action.
+        /// </summary>
+        /// <param name="user">The user requesting the action.</param>
+        /// <param name="request">The nature of the action.</param>
+        public virtual void HandleUserRequest(MultiplayerRoomUser user, MatchRulesetUserRequest request)
+        {
+        }
     }
 }
