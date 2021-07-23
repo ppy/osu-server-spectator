@@ -335,10 +335,27 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public Task SendMatchRulesetRequest(MatchRulesetUserRequest request)
+        public async Task SendMatchRulesetRequest(MatchRulesetUserRequest request)
         {
-            // TODO: forward to active match ruleset.
-            return Task.CompletedTask;
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                room.MatchRuleset.HandleUserRequest(user, request);
+
+                // for the time being, let's assume the request has resulted in the local user state being updated.
+                // eventually this won't be the only case, ie. a host changing the team of another user in the room.
+                await Clients.Group(GetGroupId(room.RoomID)).MatchRulesetUserStateChanged(user.UserID, user.MatchRulesetState);
+            }
         }
 
         public async Task StartMatch()
