@@ -34,6 +34,24 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
+        public async Task MatchRulesetEventPropagatesToUsers()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                var mockEvent = new Mock<MatchRulesetServerEvent>();
+
+                await room.SendMatchRulesetEvent(room, mockEvent.Object);
+
+                Receiver.Verify(c => c.MatchRulesetEvent(mockEvent.Object), Times.Once);
+            }
+        }
+
+        [Fact]
         public async Task MatchRulesetUserStateUpdatePropagatesToUsers()
         {
             await Hub.JoinRoom(ROOM_ID);

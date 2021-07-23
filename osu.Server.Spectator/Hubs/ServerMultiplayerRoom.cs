@@ -70,6 +70,8 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        public Task SendMatchRulesetEvent(MultiplayerRoom room, MatchRulesetServerEvent e) => hubCallbacks.SendMatchRulesetEvent(room, e);
+
         public Task UpdateMatchRulesetRoomState(MultiplayerRoom room) => hubCallbacks.UpdateMatchRulesetRoomState(room);
 
         public Task UpdateMatchRulesetUserState(MultiplayerRoom room, MultiplayerRoomUser user) => hubCallbacks.UpdateMatchRulesetUserState(room, user);

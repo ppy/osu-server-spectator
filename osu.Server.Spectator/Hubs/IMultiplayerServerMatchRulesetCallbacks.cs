@@ -8,6 +8,8 @@ namespace osu.Server.Spectator.Hubs
 {
     public interface IMultiplayerServerMatchRulesetCallbacks
     {
+        Task SendMatchRulesetEvent(MultiplayerRoom room, MatchRulesetServerEvent e);
+
         Task UpdateMatchRulesetRoomState(MultiplayerRoom room);
 
         Task UpdateMatchRulesetUserState(MultiplayerRoom room, MultiplayerRoomUser user);

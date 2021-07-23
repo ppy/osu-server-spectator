@@ -849,6 +849,11 @@ namespace osu.Server.Spectator.Hubs
             return ruleset;
         }
 
+        public Task SendMatchRulesetEvent(MultiplayerRoom room, MatchRulesetServerEvent e)
+        {
+            return Clients.Group(GetGroupId(room.RoomID)).MatchRulesetEvent(e);
+        }
+
         public Task UpdateMatchRulesetRoomState(MultiplayerRoom room)
         {
             return Clients.Group(GetGroupId(room.RoomID)).MatchRulesetRoomStateChanged(room.MatchRulesetState);

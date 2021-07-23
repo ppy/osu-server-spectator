@@ -37,6 +37,8 @@ namespace SampleMultiplayerClient
             connection.On(nameof(IMultiplayerClient.MatchStarted), ((IMultiplayerClient)this).MatchStarted);
             connection.On(nameof(IMultiplayerClient.ResultsReady), ((IMultiplayerClient)this).ResultsReady);
             connection.On<int, IEnumerable<APIMod>>(nameof(IMultiplayerClient.UserModsChanged), ((IMultiplayerClient)this).UserModsChanged);
+            connection.On<MatchRulesetRoomState>(nameof(IMultiplayerClient.MatchRulesetRoomStateChanged), ((IMultiplayerClient)this).MatchRulesetRoomStateChanged);
+            connection.On<int, MatchRulesetUserState>(nameof(IMultiplayerClient.MatchRulesetUserStateChanged), ((IMultiplayerClient)this).MatchRulesetUserStateChanged);
         }
 
         public MultiplayerUserState State { get; private set; }
@@ -140,6 +142,11 @@ namespace SampleMultiplayerClient
         }
 
         public Task MatchRulesetRoomStateChanged(MatchRulesetRoomState state)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchRulesetEvent(MatchRulesetServerEvent e)
         {
             throw new NotImplementedException();
         }

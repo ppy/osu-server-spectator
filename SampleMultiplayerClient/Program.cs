@@ -19,6 +19,8 @@ namespace SampleMultiplayerClient
 {
     internal static class Program
     {
+        private static MultiplayerRoomSettings? settings;
+
         private const long room_id = 1234;
 
         public static async Task Main()
@@ -75,8 +77,16 @@ namespace SampleMultiplayerClient
                             await targetClient.TransferHost(int.Parse(args[0]));
                             break;
 
+                        case "changeruleset":
+                            settings ??= new MultiplayerRoomSettings();
+                            settings.MatchRulesetType = MatchRulesetType.TeamVs;
+                            await targetClient.ChangeSettings(settings);
+                            break;
+
                         case "changesettings":
-                            await targetClient.ChangeSettings(new MultiplayerRoomSettings { BeatmapID = RNG.Next(0, 65536) });
+                            settings ??= new MultiplayerRoomSettings();
+                            settings.BeatmapID = RNG.Next(0, 65536);
+                            await targetClient.ChangeSettings(settings);
                             break;
 
                         case "changestate":
