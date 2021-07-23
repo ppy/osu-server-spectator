@@ -20,7 +20,7 @@ using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
+    public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer, IMultiplayerServerMatchRulesetCallbacks
     {
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
 
@@ -176,7 +176,7 @@ namespace osu.Server.Spectator.Hubs
                 var requiredMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods ?? string.Empty) ?? Array.Empty<APIMod>();
                 var allowedMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>();
 
-                return new ServerMultiplayerRoom(roomId)
+                return new ServerMultiplayerRoom(roomId, this)
                 {
                     Settings = new MultiplayerRoomSettings
                     {
@@ -351,10 +351,6 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 room.MatchRuleset.HandleUserRequest(user, request);
-
-                // for the time being, let's assume the request has resulted in the local user state being updated.
-                // eventually this won't be the only case, ie. a host changing the team of another user in the room.
-                await Clients.Group(GetGroupId(room.RoomID)).MatchRulesetUserStateChanged(user.UserID, user.MatchRulesetState);
             }
         }
 
@@ -851,6 +847,20 @@ namespace osu.Server.Spectator.Hubs
             }
 
             return ruleset;
+        }
+
+        public Task UpdateMatchRulesetRoomState(MultiplayerRoom room)
+        {
+            // for the time being, let's assume the request has resulted in the local user state being updated.
+            // eventually this won't be the only case, ie. a host changing the team of another user in the room.
+            return Clients.Group(GetGroupId(room.RoomID)).MatchRulesetRoomStateChanged(room.MatchRulesetState);
+        }
+
+        public Task UpdateMatchRulesetUserState(MultiplayerRoom room, MultiplayerRoomUser user)
+        {
+            // for the time being, let's assume the request has resulted in the local user state being updated.
+            // eventually this won't be the only case, ie. a host changing the team of another user in the room.
+            return Clients.Group(GetGroupId(room.RoomID)).MatchRulesetUserStateChanged(user.UserID, user.MatchRulesetState);
         }
     }
 }

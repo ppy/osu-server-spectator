@@ -11,7 +11,7 @@ namespace osu.Server.Spectator.Hubs
     {
         public int TeamCount => 2; // eventually this will be extendable.
 
-        public TeamVsRuleset(MultiplayerRoom room)
+        public TeamVsRuleset(ServerMultiplayerRoom room)
             : base(room)
         {
         }
@@ -29,6 +29,8 @@ namespace osu.Server.Spectator.Hubs
                 case ChangeTeamRequest changeTeam:
                     if (user.MatchRulesetState is TeamVsMatchUserState state)
                         state.TeamID = changeTeam.TeamID;
+
+                    Room.HubCallbacks.UpdateMatchRulesetUserState(Room, user);
                     break;
             }
         }

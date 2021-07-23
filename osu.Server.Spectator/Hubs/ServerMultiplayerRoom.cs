@@ -13,6 +13,8 @@ namespace osu.Server.Spectator.Hubs
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
+        internal readonly IMultiplayerServerMatchRulesetCallbacks HubCallbacks;
+
         private MatchRuleset matchRuleset;
 
         [UsedImplicitly]
@@ -33,9 +35,10 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public ServerMultiplayerRoom(long roomId)
+        public ServerMultiplayerRoom(long roomId, IMultiplayerServerMatchRulesetCallbacks hubCallbacks)
             : base(roomId)
         {
+            HubCallbacks = hubCallbacks;
             matchRuleset = new HeadToHeadRuleset(this);
 
             Users = bindableUsers = new BindableList<MultiplayerRoomUser>();

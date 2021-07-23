@@ -16,7 +16,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void NewUserJoinedTriggersRulesetHook()
         {
-            var room = new ServerMultiplayerRoom(1);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchRulesetCallbacks>().Object);
 
             Mock<MatchRuleset> matchRuleset = new Mock<MatchRuleset>(room);
             room.MatchRuleset = matchRuleset.Object;
@@ -29,7 +29,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void UserLeavesTriggersRulesetHook()
         {
-            var room = new ServerMultiplayerRoom(1);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchRulesetCallbacks>().Object);
             var user = new MultiplayerRoomUser(1);
 
             room.Users.Add(user);
@@ -44,7 +44,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void MatchRulesetChangeTriggersInitialJoins()
         {
-            var room = new ServerMultiplayerRoom(1);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchRulesetCallbacks>().Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)

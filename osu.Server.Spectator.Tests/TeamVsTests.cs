@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchRulesets.TeamVs;
 using osu.Server.Spectator.Hubs;
@@ -33,7 +34,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void NewUsersAssignedToTeamWithFewerUsers()
         {
-            var room = new ServerMultiplayerRoom(1);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchRulesetCallbacks>().Object);
             var teamVs = new TeamVsRuleset(room);
 
             // change the match ruleset
@@ -63,7 +64,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void InitialUsersAssignedToTeamsEqually()
         {
-            var room = new ServerMultiplayerRoom(1);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchRulesetCallbacks>().Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)

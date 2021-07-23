@@ -7,9 +7,9 @@ namespace osu.Server.Spectator.Hubs
 {
     public abstract class MatchRuleset
     {
-        protected readonly MultiplayerRoom Room;
+        protected readonly ServerMultiplayerRoom Room;
 
-        protected MatchRuleset(MultiplayerRoom room)
+        protected MatchRuleset(ServerMultiplayerRoom room)
         {
             Room = room;
         }
