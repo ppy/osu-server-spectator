@@ -15,7 +15,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests
 {
-    public class StatefulUserHubTests
+    public class StatefulUserHubTest
     {
         private readonly TestStatefulHub hub;
 
@@ -23,7 +23,7 @@ namespace osu.Server.Spectator.Tests
 
         private readonly Mock<HubCallerContext> mockContext;
 
-        public StatefulUserHubTests()
+        public StatefulUserHubTest()
         {
             TestStatefulHub.Reset();
 
