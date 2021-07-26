@@ -16,7 +16,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests
 {
-    public class SpectatorFlowTests
+    public class SpectatorHubTest
     {
         private readonly SpectatorHub hub;
 
@@ -25,7 +25,7 @@ namespace osu.Server.Spectator.Tests
 
         private static readonly SpectatorState state = new SpectatorState { BeatmapID = 88 };
 
-        public SpectatorFlowTests()
+        public SpectatorHubTest()
         {
             SpectatorHub.Reset();
 

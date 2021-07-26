@@ -11,11 +11,11 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests
 {
-    public class EntityStoreTests
+    public class EntityStoreTest
     {
         private readonly EntityStore<TestItem> store;
 
-        public EntityStoreTests()
+        public EntityStoreTest()
         {
             store = new EntityStore<TestItem>();
         }
