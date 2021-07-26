@@ -7,7 +7,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class HostManagementTest : MultiplayerTest
+    public class HostManagementTests : MultiplayerTest
     {
         [Fact]
         public async Task FirstUserBecomesHost()

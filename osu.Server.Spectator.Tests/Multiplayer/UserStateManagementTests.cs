@@ -9,7 +9,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class UserStateManagementTest : MultiplayerTest
+    public class UserStateManagementTests : MultiplayerTest
     {
         [Fact]
         public async Task UserStateChangeNotifiesOtherUsers()

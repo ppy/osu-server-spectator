@@ -8,7 +8,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class MultiplayerFlowTest : MultiplayerTest
+    public class MultiplayerFlowTests : MultiplayerTest
     {
         /// <summary>
         /// Tests a full game flow with one user in the room.

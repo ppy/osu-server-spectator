@@ -14,7 +14,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class ModValidationTest : MultiplayerTest
+    public class ModValidationTests : MultiplayerTest
     {
         [Fact]
         public async Task HostCanSetIncompatibleAllowedModsCombination()

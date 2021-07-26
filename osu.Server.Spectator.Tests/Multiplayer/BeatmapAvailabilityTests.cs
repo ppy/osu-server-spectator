@@ -11,7 +11,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class BeatmapAvailabilityStateTest : MultiplayerTest
+    public class BeatmapAvailabilityTests : MultiplayerTest
     {
         [Fact]
         public async Task ClientCantChangeAvailabilityWhenNotJoinedRoom()

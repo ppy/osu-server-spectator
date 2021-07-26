@@ -11,7 +11,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class RoomParticipationTest : MultiplayerTest
+    public class RoomParticipationTests : MultiplayerTest
     {
         [Fact]
         public async Task UserCanJoinWithPasswordEvenWhenNotRequired()

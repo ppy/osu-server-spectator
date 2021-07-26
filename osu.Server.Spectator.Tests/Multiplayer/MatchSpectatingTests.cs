@@ -8,7 +8,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class SpectatingStateTest : MultiplayerTest
+    public class MatchSpectatingTests : MultiplayerTest
     {
         [Fact]
         public async Task CanTransitionBetweenIdleAndSpectating()

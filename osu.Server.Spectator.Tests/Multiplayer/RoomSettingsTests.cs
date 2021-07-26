@@ -10,7 +10,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class RoomSettingsTest : MultiplayerTest
+    public class RoomSettingsTests : MultiplayerTest
     {
         [Fact]
         public async Task ChangingSettingsUpdatesModel()

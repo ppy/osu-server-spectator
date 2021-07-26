@@ -10,7 +10,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class RoomPlaylistTest : MultiplayerTest
+    public class RoomPlaylistTests : MultiplayerTest
     {
         [Fact]
         public async Task RoomHasNewPlaylistItemAfterMatchStart()
