@@ -84,6 +84,36 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
         }
 
+        /// <summary>
+        /// Verifies that the given user context was either added or not added to the gameplay group.
+        /// </summary>
+        /// <param name="context">The user context.</param>
+        /// <param name="roomId">The room ID.</param>
+        /// <param name="wasAdded">Whether to verify that the user context was added, otherwise verify not.</param>
+        protected void VerifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasAdded = true)
+            => Groups.Verify(groups => groups.AddToGroupAsync(
+                context.Object.ConnectionId,
+                MultiplayerHub.GetGroupId(roomId, true),
+                It.IsAny<CancellationToken>()), wasAdded ? Times.Once : Times.Never);
+
+        /// <summary>
+        /// Verifies that the given user context was either removed or not removed from the gameplay group.
+        /// </summary>
+        /// <param name="context">The user context.</param>
+        /// <param name="roomId">The room ID.</param>
+        /// <param name="wasRemoved">Whether to verify that the user context was removed, otherwise verify not.</param>
+        protected void VerifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasRemoved = true)
+            => Groups.Verify(groups => groups.RemoveFromGroupAsync(
+                context.Object.ConnectionId,
+                MultiplayerHub.GetGroupId(roomId, true),
+                It.IsAny<CancellationToken>()), wasRemoved ? Times.Once : Times.Never);
+
+        /// <summary>
+        /// Sets the multiplayer hub's current user context.
+        /// </summary>
+        /// <param name="context">The user context.</param>
+        protected void SetUserContext(Mock<HubCallerContext> context) => Hub.Context = context.Object;
+
         private void setUpMockDatabase()
         {
             mockDatabaseFactory.Setup(factory => factory.GetInstance()).Returns(Database.Object);
@@ -116,35 +146,5 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         beatmap_id = 1234,
                     }));
         }
-
-        /// <summary>
-        /// Verifies that the given user context was either added or not added to the gameplay group.
-        /// </summary>
-        /// <param name="context">The user context.</param>
-        /// <param name="roomId">The room ID.</param>
-        /// <param name="wasAdded">Whether to verify that the user context was added, otherwise verify not.</param>
-        protected void VerifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasAdded = true)
-            => Groups.Verify(groups => groups.AddToGroupAsync(
-                context.Object.ConnectionId,
-                MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasAdded ? Times.Once : Times.Never);
-
-        /// <summary>
-        /// Verifies that the given user context was either removed or not removed from the gameplay group.
-        /// </summary>
-        /// <param name="context">The user context.</param>
-        /// <param name="roomId">The room ID.</param>
-        /// <param name="wasRemoved">Whether to verify that the user context was removed, otherwise verify not.</param>
-        protected void VerifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasRemoved = true)
-            => Groups.Verify(groups => groups.RemoveFromGroupAsync(
-                context.Object.ConnectionId,
-                MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasRemoved ? Times.Once : Times.Never);
-
-        /// <summary>
-        /// Sets the multiplayer hub's current user context.
-        /// </summary>
-        /// <param name="context">The user context.</param>
-        protected void SetUserContext(Mock<HubCallerContext> context) => Hub.Context = context.Object;
     }
 }
