@@ -27,12 +27,11 @@ namespace osu.Server.Spectator.Tests
 
         public SpectatorHubTest()
         {
-            SpectatorHub.Reset();
-
             // not used for now, but left here for potential future usage.
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+            SpectatorHubEntities entities = new SpectatorHubEntities();
 
-            hub = new SpectatorHub(cache);
+            hub = new SpectatorHub(cache, entities);
         }
 
         [Fact]

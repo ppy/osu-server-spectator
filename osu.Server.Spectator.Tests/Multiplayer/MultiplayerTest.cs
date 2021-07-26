@@ -45,15 +45,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
         protected MultiplayerTest()
         {
-            MultiplayerHub.Reset();
-
             mockDatabaseFactory = new Mock<IDatabaseFactory>();
             Database = new Mock<IDatabaseAccess>();
             setUpMockDatabase();
 
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+            MultiplayerHubEntities entities = new MultiplayerHubEntities();
 
-            Hub = new TestMultiplayerHub(cache, mockDatabaseFactory.Object);
+            Hub = new TestMultiplayerHub(cache, entities, mockDatabaseFactory.Object);
 
             Clients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             Groups = new Mock<IGroupManager>();
