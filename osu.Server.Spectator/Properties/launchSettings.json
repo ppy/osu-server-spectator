@@ -9,15 +9,6 @@
     }
   },
   "profiles": {
-    "IIS Express": {
-      "commandName": "IISExpress",
-      "launchBrowser": false,
-      "launchUrl": "ranklookup",
-      "environmentVariables": {
-        "DB_USER": "osuweb",
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
     "osu.Server.Spectator": {
       "commandName": "Project",
       "launchBrowser": false,
