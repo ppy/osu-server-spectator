@@ -9,20 +9,13 @@
     }
   },
   "profiles": {
-    "IIS Express": {
-      "commandName": "IISExpress",
-      "launchBrowser": false,
-      "launchUrl": "ranklookup",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
     "osu.Server.Spectator": {
       "commandName": "Project",
       "launchBrowser": false,
       "launchUrl": "spectator",
       "applicationUrl": "http://localhost:5009",
       "environmentVariables": {
+        "DB_USER": "osuweb",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
