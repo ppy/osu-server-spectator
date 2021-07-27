@@ -11,6 +11,7 @@ using Moq;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Scoring;
+using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 

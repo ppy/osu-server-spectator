@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using osu.Server.Spectator.Database;
-using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Extensions
 {

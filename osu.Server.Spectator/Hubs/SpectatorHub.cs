@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Online.Spectator;
+using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
 {

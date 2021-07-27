@@ -12,6 +12,7 @@ using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
