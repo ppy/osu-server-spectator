@@ -14,6 +14,7 @@
       "launchBrowser": false,
       "launchUrl": "ranklookup",
       "environmentVariables": {
+        "DB_USER": "osuweb",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
@@ -23,6 +24,7 @@
       "launchUrl": "spectator",
       "applicationUrl": "http://localhost:5009",
       "environmentVariables": {
+        "DB_USER": "osuweb",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
