@@ -9,11 +9,21 @@ namespace osu.Server.Spectator.Hubs
 {
     public class TeamVsRuleset : MatchRuleset
     {
-        public int TeamCount => 2; // eventually this will be extendable.
+        private readonly TeamVsMatchRoomState state;
 
         public TeamVsRuleset(ServerMultiplayerRoom room)
             : base(room)
         {
+            room.MatchRulesetState = state = new TeamVsMatchRoomState
+            {
+                Teams =
+                {
+                    new MultiplayerTeam { ID = 0, Name = "Team Red" },
+                    new MultiplayerTeam { ID = 1, Name = "Team Blue" },
+                }
+            };
+
+            room.UpdateMatchRulesetRoomState(room);
         }
 
         public override void HandleUserJoined(MultiplayerRoomUser user)
@@ -27,11 +37,11 @@ namespace osu.Server.Spectator.Hubs
             switch (request)
             {
                 case ChangeTeamRequest changeTeam:
-                    if (changeTeam.TeamID < 0 || changeTeam.TeamID >= TeamCount)
+                    if (state.Teams.All(t => t.ID != changeTeam.TeamID))
                         throw new InvalidStateException("Attempted to set team out of valid range");
 
-                    if (user.MatchRulesetState is TeamVsMatchUserState state)
-                        state.TeamID = changeTeam.TeamID;
+                    if (user.MatchRulesetState is TeamVsMatchUserState userState)
+                        userState.TeamID = changeTeam.TeamID;
 
                     Room.UpdateMatchRulesetUserState(Room, user);
                     break;
@@ -44,10 +54,10 @@ namespace osu.Server.Spectator.Hubs
         private int getBestAvailableTeam()
         {
             // initially check for any teams which don't yet have players, but are lower than TeamCount.
-            for (int i = 0; i < TeamCount; i++)
+            foreach (var team in state.Teams)
             {
-                if (Room.Users.Count(u => (u.MatchRulesetState as TeamVsMatchUserState)?.TeamID == i) == 0)
-                    return i;
+                if (Room.Users.Count(u => (u.MatchRulesetState as TeamVsMatchUserState)?.TeamID == team.ID) == 0)
+                    return team.ID;
             }
 
             var countsByTeams = Room.Users
