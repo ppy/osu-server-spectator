@@ -11,6 +11,7 @@ using Moq;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Scoring;
+using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -27,12 +28,11 @@ namespace osu.Server.Spectator.Tests
 
         public SpectatorHubTest()
         {
-            SpectatorHub.Reset();
-
             // not used for now, but left here for potential future usage.
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
-            hub = new SpectatorHub(cache);
+            var clientStates = new EntityStore<SpectatorClientState>();
+            hub = new SpectatorHub(cache, clientStates);
         }
 
         [Fact]

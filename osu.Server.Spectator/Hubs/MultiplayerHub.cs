@@ -22,25 +22,15 @@ namespace osu.Server.Spectator.Hubs
 {
     public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
-        protected static readonly EntityStore<MultiplayerRoom> ACTIVE_ROOMS = new EntityStore<MultiplayerRoom>();
+        protected readonly EntityStore<MultiplayerRoom> Rooms;
 
         private readonly IDatabaseFactory databaseFactory;
 
-        public MultiplayerHub(IDistributedCache cache, IDatabaseFactory databaseFactory)
-            : base(cache)
+        public MultiplayerHub(IDistributedCache cache, EntityStore<MultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
+            : base(cache, users)
         {
+            Rooms = rooms;
             this.databaseFactory = databaseFactory;
-        }
-
-        /// <summary>
-        /// Temporary method to reset in-memory storage (used only for tests).
-        /// </summary>
-        public new static void Reset()
-        {
-            StatefulUserHub<IMultiplayerClient, MultiplayerClientState>.Reset();
-
-            Console.WriteLine("Resetting ALL tracked rooms.");
-            ACTIVE_ROOMS.Clear();
         }
 
         public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);
@@ -67,12 +57,12 @@ namespace osu.Server.Spectator.Hubs
                 // add the user to the room.
                 var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
-                // track whether this join necessitated starting the process of fetching the room and adding it to the ACTIVE_ROOMS store.
+                // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
                 bool newRoomFetchStarted = false;
 
                 MultiplayerRoom? room = null;
 
-                using (var roomUsage = await ACTIVE_ROOMS.GetForUse(roomId, true))
+                using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
                     try
                     {
@@ -760,7 +750,7 @@ namespace osu.Server.Spectator.Hubs
 
             long roomId = state.CurrentRoomID;
 
-            return await ACTIVE_ROOMS.GetForUse(roomId);
+            return await Rooms.GetForUse(roomId);
         }
 
         private async Task leaveRoom(MultiplayerClientState state)

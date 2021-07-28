@@ -5,13 +5,14 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Online.Spectator;
+using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
 {
     public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {
-        public SpectatorHub(IDistributedCache cache)
-            : base(cache)
+        public SpectatorHub(IDistributedCache cache, EntityStore<SpectatorClientState> users)
+            : base(cache, users)
         {
         }
 

@@ -20,13 +20,14 @@ namespace osu.Server.Spectator.Hubs
         where TUserState : ClientState
         where TClient : class
     {
-        protected static readonly EntityStore<TUserState> ACTIVE_STATES = new EntityStore<TUserState>();
+        protected readonly EntityStore<TUserState> UserStates;
 
-        protected StatefulUserHub(IDistributedCache cache)
+        protected StatefulUserHub(IDistributedCache cache, EntityStore<TUserState> userStates)
         {
+            this.UserStates = userStates;
         }
 
-        protected static KeyValuePair<long, TUserState>[] GetAllStates() => ACTIVE_STATES.GetAllEntities();
+        protected KeyValuePair<long, TUserState>[] GetAllStates() => UserStates.GetAllEntities();
 
         /// <summary>
         /// The osu! user id for the currently processing context.
@@ -77,7 +78,7 @@ namespace osu.Server.Spectator.Hubs
 
             try
             {
-                usage = await ACTIVE_STATES.GetForUse(CurrentContextUserId);
+                usage = await UserStates.GetForUse(CurrentContextUserId);
             }
             catch (KeyNotFoundException)
             {
@@ -124,7 +125,7 @@ namespace osu.Server.Spectator.Hubs
 
         protected async Task<ItemUsage<TUserState>> GetOrCreateLocalUserState()
         {
-            var usage = await ACTIVE_STATES.GetForUse(CurrentContextUserId, true);
+            var usage = await UserStates.GetForUse(CurrentContextUserId, true);
 
             if (usage.Item != null && usage.Item.ConnectionId != Context.ConnectionId)
             {
@@ -135,10 +136,7 @@ namespace osu.Server.Spectator.Hubs
             return usage;
         }
 
-        protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) =>
-            ACTIVE_STATES.GetForUse(userId);
-
-        public static void Reset() => ACTIVE_STATES.Clear();
+        protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) => UserStates.GetForUse(userId);
 
         protected void Log(string message) => Console.WriteLine($@"{DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)} [{CurrentContextUserId}]: {message.Trim()}");
     }

@@ -11,21 +11,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 {
     public class TestMultiplayerHub : MultiplayerHub
     {
-        public EntityStore<MultiplayerRoom> RoomStore => ACTIVE_ROOMS;
-        public EntityStore<MultiplayerClientState> UserStore => ACTIVE_STATES;
-
-        public TestMultiplayerHub(MemoryDistributedCache cache, IDatabaseFactory databaseFactory)
-            : base(cache, databaseFactory)
+        public TestMultiplayerHub(IDistributedCache cache, EntityStore<MultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
+            : base(cache, rooms, users, databaseFactory)
         {
         }
 
-        public ItemUsage<MultiplayerRoom> GetRoom(long roomId) => RoomStore.GetForUse(roomId).Result;
+        public ItemUsage<MultiplayerRoom> GetRoom(long roomId) => Rooms.GetForUse(roomId).Result;
 
         public bool CheckRoomExists(long roomId)
         {
             try
             {
-                using (var usage = RoomStore.GetForUse(roomId).Result)
+                using (var usage = Rooms.GetForUse(roomId).Result)
                     return usage.Item != null;
             }
             catch
