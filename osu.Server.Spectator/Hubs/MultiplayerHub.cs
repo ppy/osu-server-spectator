@@ -57,7 +57,7 @@ namespace osu.Server.Spectator.Hubs
                 // add the user to the room.
                 var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
 
-                // track whether this join necessitated starting the process of fetching the room and adding it to the ActiveRooms store.
+                // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
                 bool newRoomFetchStarted = false;
 
                 MultiplayerRoom? room = null;
