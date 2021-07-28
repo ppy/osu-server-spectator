@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.TransferHost(USER_ID_2);
 
             Receiver.Verify(r => r.HostChanged(USER_ID_2), Times.Once);
-            using (var room = await Hub.Rooms.GetForUse(ROOM_ID))
+            using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.True(room.Item?.Host?.UserID == USER_ID_2);
         }
 
@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.LeaveRoom();
 
             Receiver.Verify(r => r.HostChanged(USER_ID_2), Times.Once);
-            using (var room = await Hub.Rooms.GetForUse(ROOM_ID))
+            using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.True(room.Item?.Host?.UserID == USER_ID_2);
         }
     }

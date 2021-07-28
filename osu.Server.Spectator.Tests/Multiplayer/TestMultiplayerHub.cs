@@ -11,11 +11,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 {
     public class TestMultiplayerHub : MultiplayerHub
     {
-        public new EntityStore<MultiplayerRoom> Rooms => base.Rooms;
-        public new EntityStore<MultiplayerClientState> UserStates => base.UserStates;
-
-        public TestMultiplayerHub(MemoryDistributedCache cache, IDatabaseFactory databaseFactory)
-            : base(cache, new EntityStore<MultiplayerRoom>(), new EntityStore<MultiplayerClientState>(), databaseFactory)
+        public TestMultiplayerHub(IDistributedCache cache, EntityStore<MultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
+            : base(cache, rooms, users, databaseFactory)
         {
         }
 
