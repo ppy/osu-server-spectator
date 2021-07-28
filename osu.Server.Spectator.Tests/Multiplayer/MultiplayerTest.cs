@@ -12,7 +12,6 @@ using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
-using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -51,9 +50,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             setUpMockDatabase();
 
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-            MultiplayerHubEntities entities = new MultiplayerHubEntities();
 
-            Hub = new TestMultiplayerHub(cache, entities, mockDatabaseFactory.Object);
+            Hub = new TestMultiplayerHub(cache, mockDatabaseFactory.Object);
 
             Clients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             Groups = new Mock<IGroupManager>();

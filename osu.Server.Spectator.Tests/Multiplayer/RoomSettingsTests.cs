@@ -75,7 +75,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
 
-            using (var room = await Hub.ActiveRooms.GetForUse(ROOM_ID))
+            using (var room = await Hub.Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings()));

@@ -11,6 +11,6 @@ namespace osu.Server.Spectator.Entities
     /// </summary>
     public class MultiplayerHubEntities : UserHubEntities<MultiplayerClientState>
     {
-        public readonly EntityStore<MultiplayerRoom> ActiveRooms = new EntityStore<MultiplayerRoom>();
+        public readonly EntityStore<MultiplayerRoom> Rooms = new EntityStore<MultiplayerRoom>();
     }
 }

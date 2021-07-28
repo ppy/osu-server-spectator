@@ -8,6 +8,6 @@ namespace osu.Server.Spectator.Entities
     public abstract class UserHubEntities<TUserState>
         where TUserState : ClientState
     {
-        public readonly EntityStore<TUserState> ActiveUsers = new EntityStore<TUserState>();
+        public readonly EntityStore<TUserState> Users = new EntityStore<TUserState>();
     }
 }

@@ -22,13 +22,14 @@ namespace osu.Server.Spectator.Hubs
 {
     public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
-        private readonly MultiplayerHubEntities entities;
+        protected readonly EntityStore<MultiplayerRoom> Rooms;
+
         private readonly IDatabaseFactory databaseFactory;
 
-        public MultiplayerHub(IDistributedCache cache, MultiplayerHubEntities entities, IDatabaseFactory databaseFactory)
-            : base(cache, entities)
+        public MultiplayerHub(IDistributedCache cache, EntityStore<MultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
+            : base(cache, users)
         {
-            this.entities = entities;
+            Rooms = rooms;
             this.databaseFactory = databaseFactory;
         }
 
@@ -61,7 +62,7 @@ namespace osu.Server.Spectator.Hubs
 
                 MultiplayerRoom? room = null;
 
-                using (var roomUsage = await entities.ActiveRooms.GetForUse(roomId, true))
+                using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
                     try
                     {
@@ -749,7 +750,7 @@ namespace osu.Server.Spectator.Hubs
 
             long roomId = state.CurrentRoomID;
 
-            return await entities.ActiveRooms.GetForUse(roomId);
+            return await Rooms.GetForUse(roomId);
         }
 
         private async Task leaveRoom(MultiplayerClientState state)

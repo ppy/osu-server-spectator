@@ -45,12 +45,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser);
             await Hub.ChangeBeatmapAvailability(user1Availability);
-            using (var room = await Hub.ActiveRooms.GetForUse(ROOM_ID))
+            using (var room = await Hub.Rooms.GetForUse(ROOM_ID))
                 Assert.True(room.Item?.Users.Single().BeatmapAvailability.Equals(user1Availability));
 
             SetUserContext(ContextUser2);
             await Hub.ChangeBeatmapAvailability(user2Availability);
-            using (var room2 = await Hub.ActiveRooms.GetForUse(ROOM_ID_2))
+            using (var room2 = await Hub.Rooms.GetForUse(ROOM_ID_2))
                 Assert.True(room2.Item?.Users.Single().BeatmapAvailability.Equals(user2Availability));
 
             Receiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(USER_ID, It.Is<BeatmapAvailability>(b => b.Equals(user1Availability))), Times.Once);

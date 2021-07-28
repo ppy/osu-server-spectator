@@ -11,8 +11,8 @@ namespace osu.Server.Spectator.Hubs
 {
     public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {
-        public SpectatorHub(IDistributedCache cache, SpectatorHubEntities entities)
-            : base(cache, entities)
+        public SpectatorHub(IDistributedCache cache, EntityStore<SpectatorClientState> users)
+            : base(cache, users)
         {
         }
 

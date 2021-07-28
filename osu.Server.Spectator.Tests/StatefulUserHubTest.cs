@@ -26,9 +26,8 @@ namespace osu.Server.Spectator.Tests
         public StatefulUserHubTest()
         {
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-            TestUserHubEntities entities = new TestUserHubEntities();
 
-            hub = new TestStatefulHub(cache, entities);
+            hub = new TestStatefulHub(cache);
 
             mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(context => context.UserIdentifier).Returns(user_id.ToString());
@@ -47,7 +46,7 @@ namespace osu.Server.Spectator.Tests
 
             await hub.OnDisconnectedAsync(null);
 
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.ActiveUsers.GetForUse(user_id));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStates.GetForUse(user_id));
         }
 
         [Fact]
@@ -56,7 +55,7 @@ namespace osu.Server.Spectator.Tests
             await hub.OnConnectedAsync();
             await hub.CreateUserState();
 
-            using (var state = await hub.ActiveUsers.GetForUse(user_id))
+            using (var state = await hub.UserStates.GetForUse(user_id))
             {
                 ClientState? firstState = state.Item;
 
@@ -69,7 +68,7 @@ namespace osu.Server.Spectator.Tests
             await hub.OnConnectedAsync();
 
             // original state should have been destroyed.
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.ActiveUsers.GetForUse(user_id));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStates.GetForUse(user_id));
         }
 
         [Fact]
@@ -85,7 +84,7 @@ namespace osu.Server.Spectator.Tests
             await hub.OnConnectedAsync();
 
             // original state should have been destroyed.
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.ActiveUsers.GetForUse(user_id));
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => hub.UserStates.GetForUse(user_id));
 
             // create a state using the second connection.
             await hub.CreateUserState();
@@ -95,7 +94,7 @@ namespace osu.Server.Spectator.Tests
             setNewConnectionId(originalConnectionId);
             await hub.OnDisconnectedAsync(null);
 
-            using (var state = await hub.ActiveUsers.GetForUse(user_id))
+            using (var state = await hub.UserStates.GetForUse(user_id))
                 Assert.Equal(lastConnectedConnectionId, state.Item?.ConnectionId);
         }
 
@@ -104,12 +103,11 @@ namespace osu.Server.Spectator.Tests
 
         private class TestStatefulHub : StatefulUserHub<object, ClientState>
         {
-            public EntityStore<ClientState> ActiveUsers { get; }
+            public new EntityStore<ClientState> UserStates => base.UserStates;
 
-            public TestStatefulHub(IDistributedCache cache, TestUserHubEntities entities)
-                : base(cache, entities)
+            public TestStatefulHub(IDistributedCache cache)
+                : base(cache, new EntityStore<ClientState>())
             {
-                ActiveUsers = entities.ActiveUsers;
             }
 
             public async Task CreateUserState()
@@ -117,10 +115,6 @@ namespace osu.Server.Spectator.Tests
                 using (var state = await GetOrCreateLocalUserState())
                     state.Item = new ClientState(Context.ConnectionId, CurrentContextUserId);
             }
-        }
-
-        private class TestUserHubEntities : UserHubEntities<ClientState>
-        {
         }
     }
 }

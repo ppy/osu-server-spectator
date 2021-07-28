@@ -30,9 +30,8 @@ namespace osu.Server.Spectator.Tests
         {
             // not used for now, but left here for potential future usage.
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-            SpectatorHubEntities entities = new SpectatorHubEntities();
 
-            hub = new SpectatorHub(cache, entities);
+            hub = new SpectatorHub(cache, new EntityStore<SpectatorClientState>());
         }
 
         [Fact]
