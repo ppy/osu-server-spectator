@@ -14,14 +14,7 @@ namespace osu.Server.Spectator.Hubs
         public TeamVsRuleset(ServerMultiplayerRoom room)
             : base(room)
         {
-            room.MatchRulesetState = state = new TeamVsMatchRoomState
-            {
-                Teams =
-                {
-                    new MultiplayerTeam { ID = 0, Name = "Team Red" },
-                    new MultiplayerTeam { ID = 1, Name = "Team Blue" },
-                }
-            };
+            room.MatchRulesetState = state = TeamVsMatchRoomState.CreateDefault();
 
             room.UpdateMatchRulesetRoomState(room);
         }
