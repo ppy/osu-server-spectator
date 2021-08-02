@@ -138,5 +138,30 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             Receiver.Verify(r => r.MatchRulesetUserStateChanged(USER_ID, It.IsAny<TeamVsMatchUserState>()), Times.Once);
         }
+
+        [Fact]
+        public async Task ExistingUserInformedOfNewUserStateCorrectOrder()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                BeatmapID = 1234,
+                BeatmapChecksum = "checksum",
+                MatchRulesetType = MatchRulesetType.TeamVs,
+            };
+
+            await Hub.ChangeSettings(testSettings);
+
+            int callOrder = 0;
+            Receiver.Setup(r => r.UserJoined(It.IsAny<MultiplayerRoomUser>())).Callback(() => Assert.Equal(0, callOrder++));
+            Receiver.Setup(r => r.MatchRulesetUserStateChanged(It.IsAny<int>(), It.IsAny<MatchRulesetUserState>())).Callback(() => Assert.Equal(1, callOrder++));
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            // ensure the calls actually happened.
+            Assert.Equal(2, callOrder);
+        }
     }
 }
