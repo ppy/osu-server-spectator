@@ -23,6 +23,10 @@ namespace osu.Server.Spectator.Hubs
         {
             base.HandleUserJoined(user);
 
+            // if the state already has a team specification we can reuse it (and keep the user's chosen team).
+            if (user.MatchRulesetState is TeamVsMatchUserState)
+                return;
+
             user.MatchRulesetState = new TeamVsMatchUserState { TeamID = getBestAvailableTeam() };
             Room.UpdateMatchRulesetUserState(Room, user);
         }

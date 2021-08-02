@@ -111,6 +111,34 @@ namespace osu.Server.Spectator.Tests
             checkUserOnTeam(room.Users[4], 0);
         }
 
+        [Fact]
+        public void StateMaintainedBetweenRulesetSwitch()
+        {
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchRulesetCallbacks>().Object);
+
+            room.MatchRuleset = new TeamVsRuleset(room);
+
+            // join a number of users initially to the room
+            for (int i = 0; i < 5; i++)
+                room.Users.Add(new MultiplayerRoomUser(i));
+
+            checkUserOnTeam(room.Users[0], 0);
+            checkUserOnTeam(room.Users[1], 1);
+            checkUserOnTeam(room.Users[2], 0);
+            checkUserOnTeam(room.Users[3], 1);
+            checkUserOnTeam(room.Users[4], 0);
+
+            // change the match ruleset
+            room.MatchRuleset = new HeadToHeadRuleset(room);
+            room.MatchRuleset = new TeamVsRuleset(room);
+
+            checkUserOnTeam(room.Users[0], 0);
+            checkUserOnTeam(room.Users[1], 1);
+            checkUserOnTeam(room.Users[2], 0);
+            checkUserOnTeam(room.Users[3], 1);
+            checkUserOnTeam(room.Users[4], 0);
+        }
+
         private void checkUserOnTeam(MultiplayerRoomUser u, int team) =>
             Assert.Equal(team, (u.MatchRulesetState as TeamVsMatchUserState)?.TeamID);
     }
