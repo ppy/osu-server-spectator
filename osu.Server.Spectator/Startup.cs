@@ -22,7 +22,14 @@ namespace osu.Server.Spectator
         {
             services.AddSignalR()
                     .AddMessagePackProtocol()
-                    .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; });
+                    .AddNewtonsoftJsonProtocol(options =>
+                    {
+                        options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                        options.PayloadSerializerSettings = new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.Auto
+                        };
+                    });
 
             services.AddHubEntities()
                     .AddDatabaseServices();
