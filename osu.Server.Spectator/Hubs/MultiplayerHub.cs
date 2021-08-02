@@ -98,11 +98,14 @@ namespace osu.Server.Spectator.Hubs
                         }
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
+                        // because match rulesets may send subsequent information via Users collection hooks,
+                        // inform clients before adding user to the room.
+                        await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
+
                         room.Users.Add(roomUser);
 
                         await addDatabaseUser(room, roomUser);
 
-                        await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
                         Log($"Joined room {room.RoomID}");
