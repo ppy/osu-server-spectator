@@ -29,7 +29,9 @@ namespace osu.Server.Spectator.Hubs
         public override void HandleUserJoined(MultiplayerRoomUser user)
         {
             base.HandleUserJoined(user);
+
             user.MatchRulesetState = new TeamVsMatchUserState { TeamID = getBestAvailableTeam() };
+            Room.UpdateMatchRulesetUserState(Room, user);
         }
 
         public override void HandleUserRequest(MultiplayerRoomUser user, MatchRulesetUserRequest request)

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchRulesets.TeamVs;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -134,6 +135,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
             }
+
+            Receiver.Verify(r => r.MatchRulesetUserStateChanged(USER_ID, It.IsAny<TeamVsMatchUserState>()), Times.Once);
         }
     }
 }
