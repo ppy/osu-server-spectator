@@ -142,7 +142,14 @@ namespace osu.Server.Spectator.Hubs
                     }
                 }
 
-                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room)) ?? throw new InvalidOperationException();
+                var settings = new JsonSerializerSettings
+                {
+                    // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
+                    TypeNameHandling = TypeNameHandling.Auto,
+                };
+
+                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
+                       ?? throw new InvalidOperationException();
             }
         }
 
