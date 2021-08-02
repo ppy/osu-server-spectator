@@ -12,6 +12,16 @@ namespace osu.Server.Spectator.Hubs
         {
         }
 
+        public override void HandleUserJoined(MultiplayerRoomUser user)
+        {
+            base.HandleUserJoined(user);
+
+            // we don't need a state, but keep things simple by completely nulling the state.
+            // this allows the client to see a user state change and handle match ruleset specifics based on that alone.
+            user.MatchRulesetState = null;
+            Room.UpdateMatchRulesetUserState(Room, user);
+        }
+
         public override void HandleUserRequest(MultiplayerRoomUser user, MatchRulesetUserRequest request)
         {
         }
