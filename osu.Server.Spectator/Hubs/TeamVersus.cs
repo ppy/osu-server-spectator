@@ -51,7 +51,7 @@ namespace osu.Server.Spectator.Hubs
             // initially check for any teams which don't yet have players, but are lower than TeamCount.
             foreach (var team in state.Teams)
             {
-                if (Room.Users.Count(u => (u.MatchState as TeamVersusUserState)?.TeamID == team.ID) == 0)
+                if (Room.Users.All(u => (u.MatchState as TeamVersusUserState)?.TeamID != team.ID))
                     return team.ID;
             }
 
