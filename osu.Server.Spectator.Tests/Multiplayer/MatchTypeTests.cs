@@ -148,7 +148,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(db => db.GetRoomAsync(ROOM_ID))
                     .ReturnsAsync(new multiplayer_room
                     {
-                        type = MatchType.TeamVersus,
+                        type = database_match_type.team_versus,
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
                         user_id = USER_ID,
                     });
