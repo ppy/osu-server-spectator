@@ -16,10 +16,13 @@ namespace osu.Server.Spectator.Hubs
         {
             base.HandleUserJoined(user);
 
-            // we don't need a state, but keep things simple by completely nulling the state.
-            // this allows the client to see a user state change and handle match type specifics based on that alone.
-            user.MatchState = null;
-            Room.UpdateMatchUserState(Room, user);
+            if (user.MatchState != null)
+            {
+                // we don't need a state, but keep things simple by completely nulling the state.
+                // this allows the client to see a user state change and handle match type specifics based on that alone.
+                user.MatchState = null;
+                Room.UpdateMatchUserState(Room, user);
+            }
         }
 
         public override void HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
