@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -138,6 +140,29 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
 
             Receiver.Verify(r => r.MatchUserStateChanged(USER_ID, It.IsAny<TeamVersusUserState>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task JoinRoomWithTypeCreatesCorrectInstance()
+        {
+            Database.Setup(db => db.GetRoomAsync(ROOM_ID))
+                    .ReturnsAsync(new multiplayer_room
+                    {
+                        type = MatchType.TeamVersus,
+                        ends_at = DateTimeOffset.Now.AddMinutes(5),
+                        user_id = USER_ID,
+                    });
+
+            await Hub.JoinRoom(ROOM_ID);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(MatchType.TeamVersus, room.Settings.MatchType);
+                Assert.IsType<TeamVersus>(room.MatchTypeImplementation);
+            }
         }
 
         [Fact]

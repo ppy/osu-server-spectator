@@ -187,7 +187,7 @@ namespace osu.Server.Spectator.Hubs
                 var requiredMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods ?? string.Empty) ?? Array.Empty<APIMod>();
                 var allowedMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>();
 
-                return new ServerMultiplayerRoom(roomId, this)
+                var room = new ServerMultiplayerRoom(roomId, this)
                 {
                     Settings = new MultiplayerRoomSettings
                     {
@@ -202,6 +202,10 @@ namespace osu.Server.Spectator.Hubs
                         MatchType = databaseRoom.type
                     }
                 };
+
+                room.MatchTypeImplementation = createTypeImplementation(room, room.Settings.MatchType);
+
+                return room;
             }
         }
 
@@ -422,12 +426,6 @@ namespace osu.Server.Spectator.Hubs
 
                 var previousSettings = room.Settings;
 
-                if (previousSettings.MatchType != settings.MatchType)
-                {
-                    room.MatchTypeImplementation = getTypeImplementation(settings, room);
-                    Log($"Switching room ruleset to {room.MatchTypeImplementation}");
-                }
-
                 if (settings.RulesetID < 0 || settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
                     throw new InvalidStateException("Attempted to select an unsupported ruleset.");
 
@@ -443,6 +441,12 @@ namespace osu.Server.Spectator.Hubs
                     // rollback settings if an error occurred when updating the database.
                     room.Settings = previousSettings;
                     throw;
+                }
+
+                if (previousSettings.MatchType != settings.MatchType)
+                {
+                    room.MatchTypeImplementation = createTypeImplementation(room, settings.MatchType);
+                    Log($"Switching room ruleset to {room.MatchTypeImplementation}");
                 }
 
                 await ensureAllUsersValidMods(room);
@@ -843,11 +847,11 @@ namespace osu.Server.Spectator.Hubs
             await clients.UserLeft(user);
         }
 
-        private static MatchTypeImplementation getTypeImplementation(MultiplayerRoomSettings settings, ServerMultiplayerRoom room)
+        private static MatchTypeImplementation createTypeImplementation(ServerMultiplayerRoom room, MatchType type)
         {
             MatchTypeImplementation typeImplementation;
 
-            switch (settings.MatchType)
+            switch (type)
             {
                 case MatchType.TeamVersus:
                     typeImplementation = new TeamVersus(room);
