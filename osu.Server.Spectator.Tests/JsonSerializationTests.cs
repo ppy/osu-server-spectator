@@ -3,6 +3,7 @@
 
 using System.Linq;
 using Newtonsoft.Json;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using Xunit;
@@ -31,7 +32,7 @@ namespace osu.Server.Spectator.Tests
 
             Assert.NotNull(deserializedRoomState);
 
-            Assert.Equal(state.TeamID, deserializedRoomState!.TeamID);
+            Assert.Equal(state.TeamID, deserializedRoomState.AsNonNull().TeamID);
         }
 
         [Fact]
@@ -49,14 +50,13 @@ namespace osu.Server.Spectator.Tests
             };
             var serialized = JsonConvert.SerializeObject(state, typeof(MatchRoomState), settings);
 
-            var deserializedState = JsonConvert.DeserializeObject<MatchRoomState>(serialized, settings);
-            var deserializedRoomState = deserializedState as TeamVersusRoomState;
+            var deserializedState = JsonConvert.DeserializeObject<MatchRoomState>(serialized, settings).AsNonNull();
 
-            Assert.NotNull(deserializedRoomState);
+            var teamVersusRoomState = (TeamVersusRoomState)deserializedState;
 
-            Assert.Equal(state.Teams.Count, deserializedRoomState!.Teams.Count);
-            Assert.Equal(state.Teams.First().ID, deserializedRoomState.Teams.First().ID);
-            Assert.Equal(state.Teams.First().Name, deserializedRoomState.Teams.First().Name);
+            Assert.Equal(state.Teams.Count, teamVersusRoomState.Teams.Count);
+            Assert.Equal(state.Teams.First().ID, teamVersusRoomState.Teams.First().ID);
+            Assert.Equal(state.Teams.First().Name, teamVersusRoomState.Teams.First().Name);
         }
 
         [Fact]
@@ -72,9 +72,9 @@ namespace osu.Server.Spectator.Tests
 
             var serialized = JsonConvert.SerializeObject(room, typeof(MatchRoomState), settings);
 
-            var deserialisedRoom = JsonConvert.DeserializeObject<MultiplayerRoom>(serialized, settings);
+            var deserialisedRoom = JsonConvert.DeserializeObject<MultiplayerRoom>(serialized, settings).AsNonNull();
 
-            Assert.Equal(room.RoomID, deserialisedRoom!.RoomID);
+            Assert.Equal(room.RoomID, deserialisedRoom.RoomID);
             Assert.Equal(room.Users.Count, deserialisedRoom.Users.Count);
             Assert.Equal(room.Users.First().UserID, deserialisedRoom.Users.First().UserID);
         }
