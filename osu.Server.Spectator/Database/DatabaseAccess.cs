@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Database
 
         public Task<multiplayer_room> GetRoomAsync(long roomId)
         {
-            return connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE category = 'realtime' AND id = @RoomID", new
+            return connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE type != 'playlists' AND id = @RoomID", new
             {
                 RoomID = roomId
             });
