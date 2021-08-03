@@ -197,7 +197,8 @@ namespace osu.Server.Spectator.Hubs
                         Password = databaseRoom.password,
                         RequiredMods = requiredMods,
                         AllowedMods = allowedMods,
-                        PlaylistItemId = playlistItem.id
+                        PlaylistItemId = playlistItem.id,
+                        MatchType = databaseRoom.type
                     }
                 };
             }

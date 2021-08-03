@@ -24,5 +24,6 @@ namespace osu.Server.Spectator.Database.Models
         public DateTimeOffset? updated_at { get; set; }
         public DateTimeOffset? deleted_at { get; set; }
         public RoomCategory category { get; set; }
+        public MatchType type { get; set; }
     }
 }

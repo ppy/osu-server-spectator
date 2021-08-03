@@ -10,6 +10,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -123,12 +124,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(db => db.GetRoomAsync(ROOM_ID))
                     .ReturnsAsync(new multiplayer_room
                     {
+                        type = MatchType.HeadToHead,
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
-                        user_id = USER_ID
+                        user_id = USER_ID,
                     });
             Database.Setup(db => db.GetRoomAsync(ROOM_ID_2))
                     .ReturnsAsync(new multiplayer_room
                     {
+                        type = MatchType.HeadToHead,
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
                         user_id = USER_ID_2
                     });
@@ -146,7 +149,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     {
                         id = playlistItemId,
                         room_id = roomId,
-                        beatmap_id = 1234,
                     }));
         }
     }
