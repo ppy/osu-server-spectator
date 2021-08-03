@@ -40,7 +40,7 @@ namespace osu.Server.Spectator.Hubs
             : base(roomId)
         {
             this.hubCallbacks = hubCallbacks;
-            matchTypeImplementation = new HeadToHeadTypeImplementation(this);
+            matchTypeImplementation = new HeadToHead(this);
 
             Users = bindableUsers = new BindableList<MultiplayerRoomUser>();
 

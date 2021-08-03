@@ -853,7 +853,7 @@ namespace osu.Server.Spectator.Hubs
                     break;
 
                 default:
-                    typeImplementation = new HeadToHeadTypeImplementation(room);
+                    typeImplementation = new HeadToHead(room);
                     break;
             }
 

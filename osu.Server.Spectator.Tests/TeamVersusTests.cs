@@ -129,7 +129,7 @@ namespace osu.Server.Spectator.Tests
             checkUserOnTeam(room.Users[4], 0);
 
             // change the match type
-            room.MatchTypeImplementation = new HeadToHeadTypeImplementation(room);
+            room.MatchTypeImplementation = new HeadToHead(room);
             room.MatchTypeImplementation = new TeamVersus(room);
 
             checkUserOnTeam(room.Users[0], 0);

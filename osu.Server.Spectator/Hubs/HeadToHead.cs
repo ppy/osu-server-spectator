@@ -5,9 +5,9 @@ using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class HeadToHeadTypeImplementation : MatchTypeImplementation
+    public class HeadToHead : MatchTypeImplementation
     {
-        public HeadToHeadTypeImplementation(ServerMultiplayerRoom room)
+        public HeadToHead(ServerMultiplayerRoom room)
             : base(room)
         {
         }
@@ -23,10 +23,6 @@ namespace osu.Server.Spectator.Hubs
                 user.MatchState = null;
                 Room.UpdateMatchUserState(Room, user);
             }
-        }
-
-        public override void HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
-        {
         }
     }
 }
