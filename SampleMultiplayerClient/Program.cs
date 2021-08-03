@@ -79,7 +79,7 @@ namespace SampleMultiplayerClient
 
                         case "changeruleset":
                             settings ??= new MultiplayerRoomSettings();
-                            settings.MatchRulesetType = MatchRulesetType.TeamVs;
+                            settings.MatchType = MatchType.TeamVersus;
                             await targetClient.ChangeSettings(settings);
                             break;
 

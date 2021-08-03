@@ -12,35 +12,35 @@ using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class ServerMultiplayerRoom : MultiplayerRoom, IMultiplayerServerMatchRulesetCallbacks
+    public class ServerMultiplayerRoom : MultiplayerRoom, IMultiplayerServerMatchCallbacks
     {
-        private readonly IMultiplayerServerMatchRulesetCallbacks hubCallbacks;
+        private readonly IMultiplayerServerMatchCallbacks hubCallbacks;
 
-        private MatchRuleset matchRuleset;
+        private MatchTypeImplementation matchTypeImplementation;
 
         [UsedImplicitly]
         private readonly BindableList<MultiplayerRoomUser> bindableUsers;
 
-        public MatchRuleset MatchRuleset
+        public MatchTypeImplementation MatchTypeImplementation
         {
-            get => matchRuleset;
+            get => matchTypeImplementation;
             set
             {
-                if (matchRuleset == value)
+                if (matchTypeImplementation == value)
                     return;
 
-                matchRuleset = value;
+                matchTypeImplementation = value;
 
                 foreach (var u in Users)
-                    matchRuleset.HandleUserJoined(u);
+                    matchTypeImplementation.HandleUserJoined(u);
             }
         }
 
-        public ServerMultiplayerRoom(long roomId, IMultiplayerServerMatchRulesetCallbacks hubCallbacks)
+        public ServerMultiplayerRoom(long roomId, IMultiplayerServerMatchCallbacks hubCallbacks)
             : base(roomId)
         {
             this.hubCallbacks = hubCallbacks;
-            matchRuleset = new HeadToHeadRuleset(this);
+            matchTypeImplementation = new HeadToHeadTypeImplementation(this);
 
             Users = bindableUsers = new BindableList<MultiplayerRoomUser>();
 
@@ -55,14 +55,14 @@ namespace osu.Server.Spectator.Hubs
                     Debug.Assert(e.NewItems != null);
 
                     foreach (var u in e.NewItems.Cast<MultiplayerRoomUser>())
-                        matchRuleset.HandleUserJoined(u);
+                        matchTypeImplementation.HandleUserJoined(u);
                     break;
 
                 case NotifyCollectionChangedAction.Remove:
                     Debug.Assert(e.OldItems != null);
 
                     foreach (var u in e.OldItems.Cast<MultiplayerRoomUser>())
-                        matchRuleset.HandleUserLeft(u);
+                        matchTypeImplementation.HandleUserLeft(u);
                     break;
 
                 default:
@@ -70,10 +70,10 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public Task SendMatchRulesetEvent(MultiplayerRoom room, MatchRulesetServerEvent e) => hubCallbacks.SendMatchRulesetEvent(room, e);
+        public Task SendMatchEvent(MultiplayerRoom room, MatchServerEvent e) => hubCallbacks.SendMatchEvent(room, e);
 
-        public Task UpdateMatchRulesetRoomState(MultiplayerRoom room) => hubCallbacks.UpdateMatchRulesetRoomState(room);
+        public Task UpdateMatchRoomState(MultiplayerRoom room) => hubCallbacks.UpdateMatchRoomState(room);
 
-        public Task UpdateMatchRulesetUserState(MultiplayerRoom room, MultiplayerRoomUser user) => hubCallbacks.UpdateMatchRulesetUserState(room, user);
+        public Task UpdateMatchUserState(MultiplayerRoom room, MultiplayerRoomUser user) => hubCallbacks.UpdateMatchUserState(room, user);
     }
 }

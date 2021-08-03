@@ -37,8 +37,8 @@ namespace SampleMultiplayerClient
             connection.On(nameof(IMultiplayerClient.MatchStarted), ((IMultiplayerClient)this).MatchStarted);
             connection.On(nameof(IMultiplayerClient.ResultsReady), ((IMultiplayerClient)this).ResultsReady);
             connection.On<int, IEnumerable<APIMod>>(nameof(IMultiplayerClient.UserModsChanged), ((IMultiplayerClient)this).UserModsChanged);
-            connection.On<MatchRulesetRoomState>(nameof(IMultiplayerClient.MatchRulesetRoomStateChanged), ((IMultiplayerClient)this).MatchRulesetRoomStateChanged);
-            connection.On<int, MatchRulesetUserState>(nameof(IMultiplayerClient.MatchRulesetUserStateChanged), ((IMultiplayerClient)this).MatchRulesetUserStateChanged);
+            connection.On<MatchRoomState>(nameof(IMultiplayerClient.MatchRoomStateChanged), ((IMultiplayerClient)this).MatchRoomStateChanged);
+            connection.On<int, MatchUserState>(nameof(IMultiplayerClient.MatchUserStateChanged), ((IMultiplayerClient)this).MatchUserStateChanged);
         }
 
         public MultiplayerUserState State { get; private set; }
@@ -80,7 +80,7 @@ namespace SampleMultiplayerClient
         public Task ChangeUserMods(IEnumerable<APIMod> newMods) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.ChangeUserMods), newMods);
 
-        public Task SendMatchRulesetRequest(MatchRulesetUserRequest request)
+        public Task SendMatchRequest(MatchUserRequest request)
         {
             throw new NotImplementedException();
         }
@@ -136,17 +136,17 @@ namespace SampleMultiplayerClient
             return Task.CompletedTask;
         }
 
-        public Task MatchRulesetUserStateChanged(int userId, MatchRulesetUserState state)
+        public Task MatchUserStateChanged(int userId, MatchUserState state)
         {
             throw new NotImplementedException();
         }
 
-        public Task MatchRulesetRoomStateChanged(MatchRulesetRoomState state)
+        public Task MatchRoomStateChanged(MatchRoomState state)
         {
             throw new NotImplementedException();
         }
 
-        public Task MatchRulesetEvent(MatchRulesetServerEvent e)
+        public Task MatchEvent(MatchServerEvent e)
         {
             throw new NotImplementedException();
         }

@@ -34,7 +34,7 @@ namespace osu.Server.Spectator
                             // See JsonSerializationTests's calls to SerializeObject for an example of how it should be done.
                             //
                             // We are relying on this for *all* connections to MultiplayerHubs currently, as the same issue exists in MessagePack but is harder to work around.
-                            // This is required for MatchRuleset types, which are regularly sent as derived implementations where that type is not conveyed in the invocation signature itself.
+                            // This is required for match type states/events, which are regularly sent as derived implementations where that type is not conveyed in the invocation signature itself.
                             //
                             // Some references:
                             // https://github.com/neuecc/MessagePack-CSharp/issues/1171 ("it's not messagepack's issue")

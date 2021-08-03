@@ -4,7 +4,7 @@
 using System.Linq;
 using MessagePack;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchRulesets.TeamVs;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests
@@ -14,15 +14,15 @@ namespace osu.Server.Spectator.Tests
         [Fact(Skip = "Won't work without abstract class definitions (temporarily removed).")]
         public void TestMatchUserStateSerialization()
         {
-            var state = new TeamVsMatchUserState
+            var state = new TeamVersusUserState
             {
                 TeamID = 5,
             };
 
-            var serialized = MessagePackSerializer.Serialize((MatchRulesetUserState)state);
+            var serialized = MessagePackSerializer.Serialize((MatchUserState)state);
 
-            var deserializedState = MessagePackSerializer.Deserialize<MatchRulesetUserState>(serialized);
-            var deserializedRoomState = deserializedState as TeamVsMatchUserState;
+            var deserializedState = MessagePackSerializer.Deserialize<MatchUserState>(serialized);
+            var deserializedRoomState = deserializedState as TeamVersusUserState;
 
             Assert.NotNull(deserializedRoomState);
 
@@ -32,7 +32,7 @@ namespace osu.Server.Spectator.Tests
         [Fact(Skip = "Won't work without abstract class definitions (temporarily removed).")]
         public void TestMatchRoomStateSerialization()
         {
-            var state = new TeamVsMatchRoomState
+            var state = new TeamVersusRoomState
             {
                 Teams =
                 {
@@ -42,10 +42,10 @@ namespace osu.Server.Spectator.Tests
                     }
                 }
             };
-            var serialized = MessagePackSerializer.Serialize((MatchRulesetRoomState)state);
+            var serialized = MessagePackSerializer.Serialize((MatchRoomState)state);
 
-            var deserializedState = MessagePackSerializer.Deserialize<MatchRulesetRoomState>(serialized);
-            var deserializedRoomState = deserializedState as TeamVsMatchRoomState;
+            var deserializedState = MessagePackSerializer.Deserialize<MatchRoomState>(serialized);
+            var deserializedRoomState = deserializedState as TeamVersusRoomState;
 
             Assert.NotNull(deserializedRoomState);
 

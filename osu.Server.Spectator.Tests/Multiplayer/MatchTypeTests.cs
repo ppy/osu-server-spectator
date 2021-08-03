@@ -6,16 +6,17 @@ using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchRulesets.TeamVs;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class MatchRulesetTests : MultiplayerTest
+    public class MatchTypeTests : MultiplayerTest
     {
         [Fact]
-        public async Task MatchRulesetRoomStateUpdatePropagatesToUsers()
+        public async Task MatchRoomStateUpdatePropagatesToUsers()
         {
             await Hub.JoinRoom(ROOM_ID);
 
@@ -24,18 +25,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                var mockRoomState = new Mock<MatchRulesetRoomState>();
+                var mockRoomState = new Mock<MatchRoomState>();
 
-                room.MatchRulesetState = mockRoomState.Object;
+                room.MatchState = mockRoomState.Object;
 
-                await room.UpdateMatchRulesetRoomState(room);
+                await room.UpdateMatchRoomState(room);
 
-                Receiver.Verify(c => c.MatchRulesetRoomStateChanged(mockRoomState.Object), Times.Once);
+                Receiver.Verify(c => c.MatchRoomStateChanged(mockRoomState.Object), Times.Once);
             }
         }
 
         [Fact]
-        public async Task MatchRulesetEventPropagatesToUsers()
+        public async Task MatchEventPropagatesToUsers()
         {
             await Hub.JoinRoom(ROOM_ID);
 
@@ -44,16 +45,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                var mockEvent = new Mock<MatchRulesetServerEvent>();
+                var mockEvent = new Mock<MatchServerEvent>();
 
-                await room.SendMatchRulesetEvent(room, mockEvent.Object);
+                await room.SendMatchEvent(room, mockEvent.Object);
 
-                Receiver.Verify(c => c.MatchRulesetEvent(mockEvent.Object), Times.Once);
+                Receiver.Verify(c => c.MatchEvent(mockEvent.Object), Times.Once);
             }
         }
 
         [Fact]
-        public async Task MatchRulesetUserStateUpdatePropagatesToUsers()
+        public async Task MatchUserStateUpdatePropagatesToUsers()
         {
             await Hub.JoinRoom(ROOM_ID);
 
@@ -62,22 +63,22 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
 
-                var mockRoomState = new Mock<MatchRulesetUserState>();
+                var mockRoomState = new Mock<MatchUserState>();
 
                 var user = room.Users.First();
 
-                user.MatchRulesetState = mockRoomState.Object;
+                user.MatchState = mockRoomState.Object;
 
-                await room.UpdateMatchRulesetUserState(room, user);
+                await room.UpdateMatchUserState(room, user);
 
-                Receiver.Verify(c => c.MatchRulesetUserStateChanged(user.UserID, mockRoomState.Object), Times.Once);
+                Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, mockRoomState.Object), Times.Once);
             }
         }
 
         [Fact]
-        public async Task MatchRulesetUserRequestForwardsToMatchRuleset()
+        public async Task MatchUserRequestForwardsToImplementation()
         {
-            Mock<MatchRuleset> matchRuleset;
+            Mock<MatchTypeImplementation> typeImplementation;
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -86,24 +87,24 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
 
-                matchRuleset = new Mock<MatchRuleset>(room);
-                room.MatchRuleset = matchRuleset.Object;
+                typeImplementation = new Mock<MatchTypeImplementation>(room);
+                room.MatchTypeImplementation = typeImplementation.Object;
             }
 
-            var mockRequest = new Mock<MatchRulesetUserRequest>();
+            var mockRequest = new Mock<MatchUserRequest>();
 
-            await Hub.SendMatchRulesetRequest(mockRequest.Object);
+            await Hub.SendMatchRequest(mockRequest.Object);
 
             using (var roomUsage = Hub.GetRoom(ROOM_ID))
             {
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
-                matchRuleset.Verify(r => r.HandleUserRequest(room.Users.First(), mockRequest.Object), Times.Once());
+                typeImplementation.Verify(r => r.HandleUserRequest(room.Users.First(), mockRequest.Object), Times.Once());
             }
         }
 
         [Fact]
-        public async Task ChangeMatchRulesetType()
+        public async Task ChangeMatchType()
         {
             await Hub.JoinRoom(ROOM_ID);
 
@@ -113,14 +114,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 // initially default
-                Assert.Equal(MatchRulesetType.HeadToHead, room.Settings.MatchRulesetType);
+                Assert.Equal(MatchType.HeadToHead, room.Settings.MatchType);
             }
 
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 BeatmapID = 1234,
                 BeatmapChecksum = "checksum",
-                MatchRulesetType = MatchRulesetType.TeamVs,
+                MatchType = MatchType.TeamVersus,
             };
 
             await Hub.ChangeSettings(testSettings);
@@ -130,13 +131,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.True(room.MatchRuleset is TeamVsRuleset);
-                Assert.Equal(MatchRulesetType.TeamVs, room.Settings.MatchRulesetType);
+                Assert.True(room.MatchTypeImplementation is TeamVersus);
+                Assert.Equal(MatchType.TeamVersus, room.Settings.MatchType);
 
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
             }
 
-            Receiver.Verify(r => r.MatchRulesetUserStateChanged(USER_ID, It.IsAny<TeamVsMatchUserState>()), Times.Once);
+            Receiver.Verify(r => r.MatchUserStateChanged(USER_ID, It.IsAny<TeamVersusUserState>()), Times.Once);
         }
 
         [Fact]
@@ -148,14 +149,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 BeatmapID = 1234,
                 BeatmapChecksum = "checksum",
-                MatchRulesetType = MatchRulesetType.TeamVs,
+                MatchType = MatchType.TeamVersus,
             };
 
             await Hub.ChangeSettings(testSettings);
 
             int callOrder = 0;
             Receiver.Setup(r => r.UserJoined(It.IsAny<MultiplayerRoomUser>())).Callback(() => Assert.Equal(0, callOrder++));
-            Receiver.Setup(r => r.MatchRulesetUserStateChanged(It.IsAny<int>(), It.IsAny<MatchRulesetUserState>())).Callback(() => Assert.Equal(1, callOrder++));
+            Receiver.Setup(r => r.MatchUserStateChanged(It.IsAny<int>(), It.IsAny<MatchUserState>())).Callback(() => Assert.Equal(1, callOrder++));
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);

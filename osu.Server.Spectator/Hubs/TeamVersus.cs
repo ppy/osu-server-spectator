@@ -3,20 +3,20 @@
 
 using System.Linq;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchRulesets.TeamVs;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class TeamVsRuleset : MatchRuleset
+    public class TeamVersus : MatchTypeImplementation
     {
-        private readonly TeamVsMatchRoomState state;
+        private readonly TeamVersusRoomState state;
 
-        public TeamVsRuleset(ServerMultiplayerRoom room)
+        public TeamVersus(ServerMultiplayerRoom room)
             : base(room)
         {
-            room.MatchRulesetState = state = TeamVsMatchRoomState.CreateDefault();
+            room.MatchState = state = TeamVersusRoomState.CreateDefault();
 
-            room.UpdateMatchRulesetRoomState(room);
+            room.UpdateMatchRoomState(room);
         }
 
         public override void HandleUserJoined(MultiplayerRoomUser user)
@@ -24,14 +24,14 @@ namespace osu.Server.Spectator.Hubs
             base.HandleUserJoined(user);
 
             // if the state already has a team specification we can reuse it (and keep the user's chosen team).
-            if (user.MatchRulesetState is TeamVsMatchUserState)
+            if (user.MatchState is TeamVersusUserState)
                 return;
 
-            user.MatchRulesetState = new TeamVsMatchUserState { TeamID = getBestAvailableTeam() };
-            Room.UpdateMatchRulesetUserState(Room, user);
+            user.MatchState = new TeamVersusUserState { TeamID = getBestAvailableTeam() };
+            Room.UpdateMatchUserState(Room, user);
         }
 
-        public override void HandleUserRequest(MultiplayerRoomUser user, MatchRulesetUserRequest request)
+        public override void HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
         {
             switch (request)
             {
@@ -39,10 +39,10 @@ namespace osu.Server.Spectator.Hubs
                     if (state.Teams.All(t => t.ID != changeTeam.TeamID))
                         throw new InvalidStateException("Attempted to set team out of valid range");
 
-                    if (user.MatchRulesetState is TeamVsMatchUserState userState)
+                    if (user.MatchState is TeamVersusUserState userState)
                         userState.TeamID = changeTeam.TeamID;
 
-                    Room.UpdateMatchRulesetUserState(Room, user);
+                    Room.UpdateMatchUserState(Room, user);
                     break;
             }
         }
@@ -55,12 +55,12 @@ namespace osu.Server.Spectator.Hubs
             // initially check for any teams which don't yet have players, but are lower than TeamCount.
             foreach (var team in state.Teams)
             {
-                if (Room.Users.Count(u => (u.MatchRulesetState as TeamVsMatchUserState)?.TeamID == team.ID) == 0)
+                if (Room.Users.Count(u => (u.MatchState as TeamVersusUserState)?.TeamID == team.ID) == 0)
                     return team.ID;
             }
 
             var countsByTeams = Room.Users
-                                    .GroupBy(u => (u.MatchRulesetState as TeamVsMatchUserState)?.TeamID)
+                                    .GroupBy(u => (u.MatchState as TeamVersusUserState)?.TeamID)
                                     .Where(g => g.Key.HasValue)
                                     .OrderBy(g => g.Count());
 

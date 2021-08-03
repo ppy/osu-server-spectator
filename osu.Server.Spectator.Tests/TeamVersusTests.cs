@@ -3,35 +3,35 @@
 
 using Moq;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchRulesets.TeamVs;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests
 {
-    public class TeamVsTests
+    public class TeamVersusTests
     {
         [Theory]
         [InlineData(0)]
         [InlineData(1)]
         public void UserRequestsValidTeamChange(int team)
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchRulesetCallbacks>();
+            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
             var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
-            var teamVs = new TeamVsRuleset(room);
+            var teamVersus = new TeamVersus(room);
 
-            // change the match ruleset
-            room.MatchRuleset = teamVs;
+            // change the match type
+            room.MatchTypeImplementation = teamVersus;
 
             var user = new MultiplayerRoomUser(1);
 
             room.Users.Add(user);
-            hubCallbacks.Verify(h => h.UpdateMatchRulesetUserState(room, user), Times.Once());
+            hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
 
-            teamVs.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
+            teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
 
             checkUserOnTeam(user, team);
-            hubCallbacks.Verify(h => h.UpdateMatchRulesetUserState(room, user), Times.Exactly(2));
+            hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Exactly(2));
         }
 
         [Theory]
@@ -40,36 +40,36 @@ namespace osu.Server.Spectator.Tests
         [InlineData(3)]
         public void UserRequestsInvalidTeamChange(int team)
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchRulesetCallbacks>();
+            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
             var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
-            var teamVs = new TeamVsRuleset(room);
+            var teamVersus = new TeamVersus(room);
 
-            // change the match ruleset
-            room.MatchRuleset = teamVs;
+            // change the match type
+            room.MatchTypeImplementation = teamVersus;
 
             var user = new MultiplayerRoomUser(1);
 
             room.Users.Add(user);
             // called once on the initial user join operation (to inform other clients in the room).
-            hubCallbacks.Verify(h => h.UpdateMatchRulesetUserState(room, user), Times.Once());
+            hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
 
-            var previousTeam = ((TeamVsMatchUserState)user.MatchRulesetState!).TeamID;
+            var previousTeam = ((TeamVersusUserState)user.MatchState!).TeamID;
 
-            Assert.Throws<InvalidStateException>(() => teamVs.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team }));
+            Assert.Throws<InvalidStateException>(() => teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team }));
 
             checkUserOnTeam(user, previousTeam);
             // was not called a second time from the invalid change.
-            hubCallbacks.Verify(h => h.UpdateMatchRulesetUserState(room, user), Times.Once());
+            hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
         }
 
         [Fact]
         public void NewUsersAssignedToTeamWithFewerUsers()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchRulesetCallbacks>().Object);
-            var teamVs = new TeamVsRuleset(room);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            var teamVersus = new TeamVersus(room);
 
-            // change the match ruleset
-            room.MatchRuleset = teamVs;
+            // change the match type
+            room.MatchTypeImplementation = teamVersus;
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -77,7 +77,7 @@ namespace osu.Server.Spectator.Tests
 
             // change all users to team 0
             for (int i = 0; i < 5; i++)
-                teamVs.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
+                teamVersus.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
 
             Assert.All(room.Users, u => checkUserOnTeam(u, 0));
 
@@ -95,14 +95,14 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void InitialUsersAssignedToTeamsEqually()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchRulesetCallbacks>().Object);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
                 room.Users.Add(new MultiplayerRoomUser(i));
 
-            // change the match ruleset
-            room.MatchRuleset = new TeamVsRuleset(room);
+            // change the match type
+            room.MatchTypeImplementation = new TeamVersus(room);
 
             checkUserOnTeam(room.Users[0], 0);
             checkUserOnTeam(room.Users[1], 1);
@@ -114,9 +114,9 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void StateMaintainedBetweenRulesetSwitch()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchRulesetCallbacks>().Object);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
 
-            room.MatchRuleset = new TeamVsRuleset(room);
+            room.MatchTypeImplementation = new TeamVersus(room);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -128,9 +128,9 @@ namespace osu.Server.Spectator.Tests
             checkUserOnTeam(room.Users[3], 1);
             checkUserOnTeam(room.Users[4], 0);
 
-            // change the match ruleset
-            room.MatchRuleset = new HeadToHeadRuleset(room);
-            room.MatchRuleset = new TeamVsRuleset(room);
+            // change the match type
+            room.MatchTypeImplementation = new HeadToHeadTypeImplementation(room);
+            room.MatchTypeImplementation = new TeamVersus(room);
 
             checkUserOnTeam(room.Users[0], 0);
             checkUserOnTeam(room.Users[1], 1);
@@ -140,6 +140,6 @@ namespace osu.Server.Spectator.Tests
         }
 
         private void checkUserOnTeam(MultiplayerRoomUser u, int team) =>
-            Assert.Equal(team, (u.MatchRulesetState as TeamVsMatchUserState)?.TeamID);
+            Assert.Equal(team, (u.MatchState as TeamVersusUserState)?.TeamID);
     }
 }

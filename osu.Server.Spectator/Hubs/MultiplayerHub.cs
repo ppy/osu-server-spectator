@@ -20,7 +20,7 @@ using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer, IMultiplayerServerMatchRulesetCallbacks
+    public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer, IMultiplayerServerMatchCallbacks
     {
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
 
@@ -98,7 +98,7 @@ namespace osu.Server.Spectator.Hubs
                         }
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
-                        // because match rulesets may send subsequent information via Users collection hooks,
+                        // because match types may send subsequent information via Users collection hooks,
                         // inform clients before adding user to the room.
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
@@ -345,7 +345,7 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task SendMatchRulesetRequest(MatchRulesetUserRequest request)
+        public async Task SendMatchRequest(MatchUserRequest request)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
@@ -360,7 +360,7 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                room.MatchRuleset.HandleUserRequest(user, request);
+                room.MatchTypeImplementation.HandleUserRequest(user, request);
             }
         }
 
@@ -420,10 +420,10 @@ namespace osu.Server.Spectator.Hubs
 
                 var previousSettings = room.Settings;
 
-                if (previousSettings.MatchRulesetType != settings.MatchRulesetType)
+                if (previousSettings.MatchType != settings.MatchType)
                 {
-                    room.MatchRuleset = getMatchRuleset(settings, room);
-                    Log($"Switching room ruleset to {room.MatchRuleset}");
+                    room.MatchTypeImplementation = getTypeImplementation(settings, room);
+                    Log($"Switching room ruleset to {room.MatchTypeImplementation}");
                 }
 
                 if (settings.RulesetID < 0 || settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
@@ -841,37 +841,37 @@ namespace osu.Server.Spectator.Hubs
             await clients.UserLeft(user);
         }
 
-        private static MatchRuleset getMatchRuleset(MultiplayerRoomSettings settings, ServerMultiplayerRoom room)
+        private static MatchTypeImplementation getTypeImplementation(MultiplayerRoomSettings settings, ServerMultiplayerRoom room)
         {
-            MatchRuleset ruleset;
+            MatchTypeImplementation typeImplementation;
 
-            switch (settings.MatchRulesetType)
+            switch (settings.MatchType)
             {
-                case MatchRulesetType.TeamVs:
-                    ruleset = new TeamVsRuleset(room);
+                case MatchType.TeamVersus:
+                    typeImplementation = new TeamVersus(room);
                     break;
 
                 default:
-                    ruleset = new HeadToHeadRuleset(room);
+                    typeImplementation = new HeadToHeadTypeImplementation(room);
                     break;
             }
 
-            return ruleset;
+            return typeImplementation;
         }
 
-        public Task SendMatchRulesetEvent(MultiplayerRoom room, MatchRulesetServerEvent e)
+        public Task SendMatchEvent(MultiplayerRoom room, MatchServerEvent e)
         {
-            return Clients.Group(GetGroupId(room.RoomID)).MatchRulesetEvent(e);
+            return Clients.Group(GetGroupId(room.RoomID)).MatchEvent(e);
         }
 
-        public Task UpdateMatchRulesetRoomState(MultiplayerRoom room)
+        public Task UpdateMatchRoomState(MultiplayerRoom room)
         {
-            return Clients.Group(GetGroupId(room.RoomID)).MatchRulesetRoomStateChanged(room.MatchRulesetState);
+            return Clients.Group(GetGroupId(room.RoomID)).MatchRoomStateChanged(room.MatchState);
         }
 
-        public Task UpdateMatchRulesetUserState(MultiplayerRoom room, MultiplayerRoomUser user)
+        public Task UpdateMatchUserState(MultiplayerRoom room, MultiplayerRoomUser user)
         {
-            return Clients.Group(GetGroupId(room.RoomID)).MatchRulesetUserStateChanged(user.UserID, user.MatchRulesetState);
+            return Clients.Group(GetGroupId(room.RoomID)).MatchUserStateChanged(user.UserID, user.MatchState);
         }
     }
 }

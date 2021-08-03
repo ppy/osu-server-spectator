@@ -5,21 +5,21 @@ using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public abstract class MatchRuleset
+    public abstract class MatchTypeImplementation
     {
         protected readonly ServerMultiplayerRoom Room;
 
-        protected MatchRuleset(ServerMultiplayerRoom room)
+        protected MatchTypeImplementation(ServerMultiplayerRoom room)
         {
             Room = room;
         }
 
         /// <summary>
-        /// Called when a user has requested a match ruleset specific action.
+        /// Called when a user has requested a match type specific action.
         /// </summary>
         /// <param name="user">The user requesting the action.</param>
         /// <param name="request">The nature of the action.</param>
-        public virtual void HandleUserRequest(MultiplayerRoomUser user, MatchRulesetUserRequest request)
+        public virtual void HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
         {
         }
 

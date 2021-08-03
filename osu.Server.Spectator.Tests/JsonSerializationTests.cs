@@ -4,7 +4,7 @@
 using System.Linq;
 using Newtonsoft.Json;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchRulesets.TeamVs;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests
@@ -19,15 +19,15 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void TestMatchUserStateSerialization()
         {
-            var state = new TeamVsMatchUserState
+            var state = new TeamVersusUserState
             {
                 TeamID = 5,
             };
 
-            var serialized = JsonConvert.SerializeObject(state, typeof(MatchRulesetUserState), settings);
+            var serialized = JsonConvert.SerializeObject(state, typeof(MatchUserState), settings);
 
             var deserializedState = JsonConvert.DeserializeObject(serialized, settings);
-            var deserializedRoomState = deserializedState as TeamVsMatchUserState;
+            var deserializedRoomState = deserializedState as TeamVersusUserState;
 
             Assert.NotNull(deserializedRoomState);
 
@@ -37,7 +37,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void TestMatchRoomStateSerialization()
         {
-            var state = new TeamVsMatchRoomState
+            var state = new TeamVersusRoomState
             {
                 Teams =
                 {
@@ -47,10 +47,10 @@ namespace osu.Server.Spectator.Tests
                     }
                 }
             };
-            var serialized = JsonConvert.SerializeObject(state, typeof(MatchRulesetRoomState), settings);
+            var serialized = JsonConvert.SerializeObject(state, typeof(MatchRoomState), settings);
 
-            var deserializedState = JsonConvert.DeserializeObject<MatchRulesetRoomState>(serialized, settings);
-            var deserializedRoomState = deserializedState as TeamVsMatchRoomState;
+            var deserializedState = JsonConvert.DeserializeObject<MatchRoomState>(serialized, settings);
+            var deserializedRoomState = deserializedState as TeamVersusRoomState;
 
             Assert.NotNull(deserializedRoomState);
 
@@ -70,7 +70,7 @@ namespace osu.Server.Spectator.Tests
                 }
             };
 
-            var serialized = JsonConvert.SerializeObject(room, typeof(MatchRulesetRoomState), settings);
+            var serialized = JsonConvert.SerializeObject(room, typeof(MatchRoomState), settings);
 
             var deserialisedRoom = JsonConvert.DeserializeObject<MultiplayerRoom>(serialized, settings);
 
