@@ -77,7 +77,7 @@ namespace SampleMultiplayerClient
                             await targetClient.TransferHost(int.Parse(args[0]));
                             break;
 
-                        case "changeruleset":
+                        case "changematchtype":
                             settings ??= new MultiplayerRoomSettings();
                             settings.MatchType = MatchType.TeamVersus;
                             await targetClient.ChangeSettings(settings);
