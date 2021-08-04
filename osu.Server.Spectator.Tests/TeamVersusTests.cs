@@ -26,7 +26,7 @@ namespace osu.Server.Spectator.Tests
 
             var user = new MultiplayerRoomUser(1);
 
-            room.Users.Add(user);
+            room.AddUser(user);
             hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
 
             teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Tests
 
             var user = new MultiplayerRoomUser(1);
 
-            room.Users.Add(user);
+            room.AddUser(user);
             // called once on the initial user join operation (to inform other clients in the room).
             hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
 
@@ -73,7 +73,7 @@ namespace osu.Server.Spectator.Tests
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
-                room.Users.Add(new MultiplayerRoomUser(i));
+                room.AddUser(new MultiplayerRoomUser(i));
 
             // change all users to team 0
             for (int i = 0; i < 5; i++)
@@ -85,7 +85,7 @@ namespace osu.Server.Spectator.Tests
             {
                 var newUser = new MultiplayerRoomUser(i);
 
-                room.Users.Add(newUser);
+                room.AddUser(newUser);
 
                 // all new users should be joined to team 1 to balance the user counts.
                 checkUserOnTeam(newUser, 1);
@@ -99,7 +99,7 @@ namespace osu.Server.Spectator.Tests
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
-                room.Users.Add(new MultiplayerRoomUser(i));
+                room.AddUser(new MultiplayerRoomUser(i));
 
             // change the match type
             room.ChangeMatchType(MatchType.TeamVersus);
@@ -120,7 +120,7 @@ namespace osu.Server.Spectator.Tests
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
-                room.Users.Add(new MultiplayerRoomUser(i));
+                room.AddUser(new MultiplayerRoomUser(i));
 
             checkUserOnTeam(room.Users[0], 0);
             checkUserOnTeam(room.Users[1], 1);

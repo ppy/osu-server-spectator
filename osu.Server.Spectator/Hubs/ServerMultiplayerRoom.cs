@@ -1,12 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
-using System.Collections.Specialized;
-using System.Diagnostics;
-using System.Linq;
-using JetBrains.Annotations;
-using osu.Framework.Bindables;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 
@@ -15,9 +9,6 @@ namespace osu.Server.Spectator.Hubs
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
         private readonly IMultiplayerServerMatchCallbacks hubCallbacks;
-
-        [UsedImplicitly]
-        private readonly BindableList<MultiplayerRoomUser> bindableUsers;
 
         private MatchTypeImplementation matchTypeImplementation;
 
@@ -43,13 +34,21 @@ namespace osu.Server.Spectator.Hubs
 
             // just to ensure non-null.
             matchTypeImplementation = createTypeImplementation(MatchType.HeadToHead);
-
-            Users = bindableUsers = new BindableList<MultiplayerRoomUser>();
-
-            bindableUsers.BindCollectionChanged(usersChanged);
         }
 
         public void ChangeMatchType(MatchType type) => MatchTypeImplementation = createTypeImplementation(type);
+
+        public void AddUser(MultiplayerRoomUser user)
+        {
+            Users.Add(user);
+            MatchTypeImplementation.HandleUserJoined(user);
+        }
+
+        public void RemoveUser(MultiplayerRoomUser user)
+        {
+            Users.Remove(user);
+            MatchTypeImplementation.HandleUserLeft(user);
+        }
 
         private MatchTypeImplementation createTypeImplementation(MatchType type)
         {
@@ -60,29 +59,6 @@ namespace osu.Server.Spectator.Hubs
 
                 default:
                     return new HeadToHead(this, hubCallbacks);
-            }
-        }
-
-        private void usersChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        {
-            switch (e.Action)
-            {
-                case NotifyCollectionChangedAction.Add:
-                    Debug.Assert(e.NewItems != null);
-
-                    foreach (var u in e.NewItems.Cast<MultiplayerRoomUser>())
-                        MatchTypeImplementation.HandleUserJoined(u);
-                    break;
-
-                case NotifyCollectionChangedAction.Remove:
-                    Debug.Assert(e.OldItems != null);
-
-                    foreach (var u in e.OldItems.Cast<MultiplayerRoomUser>())
-                        MatchTypeImplementation.HandleUserLeft(u);
-                    break;
-
-                default:
-                    throw new NotImplementedException();
             }
         }
     }

@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Tests
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
 
-            room.Users.Add(new MultiplayerRoomUser(1));
+            room.AddUser(new MultiplayerRoomUser(1));
 
             typeImplementation.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
@@ -35,12 +35,12 @@ namespace osu.Server.Spectator.Tests
 
             var user = new MultiplayerRoomUser(1);
 
-            room.Users.Add(user);
+            room.AddUser(user);
 
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
 
-            room.Users.Remove(user);
+            room.RemoveUser(user);
             typeImplementation.Verify(m => m.HandleUserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
 
@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Tests
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
-                room.Users.Add(new MultiplayerRoomUser(i));
+                room.AddUser(new MultiplayerRoomUser(i));
 
             // change the match type
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);

@@ -103,7 +103,7 @@ namespace osu.Server.Spectator.Hubs
                         // inform clients before adding user to the room.
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
-                        room.Users.Add(roomUser);
+                        room.AddUser(roomUser);
 
                         await addDatabaseUser(room, roomUser);
 
@@ -833,7 +833,7 @@ namespace osu.Server.Spectator.Hubs
             if (user == null)
                 throw new InvalidStateException("User was not in the expected room.");
 
-            room.Users.Remove(user);
+            room.RemoveUser(user);
             await removeDatabaseUser(room, user);
 
             // handle closing the room if the only participant is the user which is leaving.
