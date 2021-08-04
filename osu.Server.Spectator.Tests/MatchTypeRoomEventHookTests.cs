@@ -16,9 +16,10 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void NewUserJoinedTriggersRulesetHook()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
 
-            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room);
+            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
 
             room.Users.Add(new MultiplayerRoomUser(1));
@@ -29,12 +30,14 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void UserLeavesTriggersRulesetHook()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+
             var user = new MultiplayerRoomUser(1);
 
             room.Users.Add(user);
 
-            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room);
+            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
 
             room.Users.Remove(user);
@@ -44,14 +47,15 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void TypeChangeTriggersInitialJoins()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
                 room.Users.Add(new MultiplayerRoomUser(i));
 
             // change the match type
-            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room);
+            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
 
             // ensure the match type received hook events for all already joined users.

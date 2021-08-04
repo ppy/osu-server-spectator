@@ -7,8 +7,8 @@ namespace osu.Server.Spectator.Hubs
 {
     public class HeadToHead : MatchTypeImplementation
     {
-        public HeadToHead(ServerMultiplayerRoom room)
-            : base(room)
+        public HeadToHead(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
+            : base(room, hub)
         {
         }
 
@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Hubs
                 // we don't need a state, but keep things simple by completely nulling the state.
                 // this allows the client to see a user state change and handle match type specifics based on that alone.
                 user.MatchState = null;
-                Room.UpdateMatchUserState(Room, user);
+                Hub.UpdateMatchUserState(Room, user);
             }
         }
     }

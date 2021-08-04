@@ -203,7 +203,7 @@ namespace osu.Server.Spectator.Hubs
                     }
                 };
 
-                room.MatchTypeImplementation = createTypeImplementation(room, room.Settings.MatchType);
+                room.ChangeMatchType(room.Settings.MatchType);
 
                 return room;
             }
@@ -461,7 +461,7 @@ namespace osu.Server.Spectator.Hubs
 
                 if (previousSettings.MatchType != settings.MatchType)
                 {
-                    room.MatchTypeImplementation = createTypeImplementation(room, settings.MatchType);
+                    room.ChangeMatchType(settings.MatchType);
                     Log($"Switching room ruleset to {room.MatchTypeImplementation}");
                 }
 
@@ -861,24 +861,6 @@ namespace osu.Server.Spectator.Hubs
             }
 
             await clients.UserLeft(user);
-        }
-
-        private static MatchTypeImplementation createTypeImplementation(ServerMultiplayerRoom room, MatchType type)
-        {
-            MatchTypeImplementation typeImplementation;
-
-            switch (type)
-            {
-                case MatchType.TeamVersus:
-                    typeImplementation = new TeamVersus(room);
-                    break;
-
-                default:
-                    typeImplementation = new HeadToHead(room);
-                    break;
-            }
-
-            return typeImplementation;
         }
 
         public Task SendMatchEvent(MultiplayerRoom room, MatchServerEvent e)

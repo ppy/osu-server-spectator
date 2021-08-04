@@ -4,6 +4,7 @@
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -18,7 +19,7 @@ namespace osu.Server.Spectator.Tests
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
             var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
-            var teamVersus = new TeamVersus(room);
+            var teamVersus = new TeamVersus(room, hubCallbacks.Object);
 
             // change the match type
             room.MatchTypeImplementation = teamVersus;
@@ -42,7 +43,7 @@ namespace osu.Server.Spectator.Tests
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
             var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
-            var teamVersus = new TeamVersus(room);
+            var teamVersus = new TeamVersus(room, hubCallbacks.Object);
 
             // change the match type
             room.MatchTypeImplementation = teamVersus;
@@ -66,10 +67,9 @@ namespace osu.Server.Spectator.Tests
         public void NewUsersAssignedToTeamWithFewerUsers()
         {
             var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
-            var teamVersus = new TeamVersus(room);
 
             // change the match type
-            room.MatchTypeImplementation = teamVersus;
+            room.ChangeMatchType(MatchType.TeamVersus);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -77,7 +77,7 @@ namespace osu.Server.Spectator.Tests
 
             // change all users to team 0
             for (int i = 0; i < 5; i++)
-                teamVersus.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
+                room.MatchTypeImplementation.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
 
             Assert.All(room.Users, u => checkUserOnTeam(u, 0));
 
@@ -102,7 +102,7 @@ namespace osu.Server.Spectator.Tests
                 room.Users.Add(new MultiplayerRoomUser(i));
 
             // change the match type
-            room.MatchTypeImplementation = new TeamVersus(room);
+            room.ChangeMatchType(MatchType.TeamVersus);
 
             checkUserOnTeam(room.Users[0], 0);
             checkUserOnTeam(room.Users[1], 1);
@@ -116,7 +116,7 @@ namespace osu.Server.Spectator.Tests
         {
             var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
 
-            room.MatchTypeImplementation = new TeamVersus(room);
+            room.ChangeMatchType(MatchType.TeamVersus);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -129,8 +129,8 @@ namespace osu.Server.Spectator.Tests
             checkUserOnTeam(room.Users[4], 0);
 
             // change the match type
-            room.MatchTypeImplementation = new HeadToHead(room);
-            room.MatchTypeImplementation = new TeamVersus(room);
+            room.ChangeMatchType(MatchType.HeadToHead);
+            room.ChangeMatchType(MatchType.TeamVersus);
 
             checkUserOnTeam(room.Users[0], 0);
             checkUserOnTeam(room.Users[1], 1);

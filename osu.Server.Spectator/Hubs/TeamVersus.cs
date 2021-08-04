@@ -11,12 +11,12 @@ namespace osu.Server.Spectator.Hubs
     {
         private readonly TeamVersusRoomState state;
 
-        public TeamVersus(ServerMultiplayerRoom room)
-            : base(room)
+        public TeamVersus(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
+            : base(room, hub)
         {
             room.MatchState = state = TeamVersusRoomState.CreateDefault();
 
-            room.UpdateMatchRoomState(room);
+            Hub.UpdateMatchRoomState(room);
         }
 
         public override void HandleUserJoined(MultiplayerRoomUser user)
@@ -24,7 +24,7 @@ namespace osu.Server.Spectator.Hubs
             base.HandleUserJoined(user);
 
             user.MatchState = new TeamVersusUserState { TeamID = getBestAvailableTeam() };
-            Room.UpdateMatchUserState(Room, user);
+            Hub.UpdateMatchUserState(Room, user);
         }
 
         public override void HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Hubs
                     if (user.MatchState is TeamVersusUserState userState)
                         userState.TeamID = changeTeam.TeamID;
 
-                    Room.UpdateMatchUserState(Room, user);
+                    Hub.UpdateMatchUserState(Room, user);
                     break;
             }
         }

@@ -31,7 +31,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 room.MatchState = mockRoomState.Object;
 
-                await room.UpdateMatchRoomState(room);
+                await Hub.UpdateMatchRoomState(room);
 
                 Receiver.Verify(c => c.MatchRoomStateChanged(mockRoomState.Object), Times.Once);
             }
@@ -49,7 +49,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 var mockEvent = new Mock<MatchServerEvent>();
 
-                await room.SendMatchEvent(room, mockEvent.Object);
+                await Hub.SendMatchEvent(room, mockEvent.Object);
 
                 Receiver.Verify(c => c.MatchEvent(mockEvent.Object), Times.Once);
             }
@@ -71,7 +71,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 user.MatchState = mockRoomState.Object;
 
-                await room.UpdateMatchUserState(room, user);
+                await Hub.UpdateMatchUserState(room, user);
 
                 Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, mockRoomState.Object), Times.Once);
             }
@@ -89,7 +89,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
 
-                typeImplementation = new Mock<MatchTypeImplementation>(room);
+                typeImplementation = new Mock<MatchTypeImplementation>(room, Hub);
                 room.MatchTypeImplementation = typeImplementation.Object;
             }
 

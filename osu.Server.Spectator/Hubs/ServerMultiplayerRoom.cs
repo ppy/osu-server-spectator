@@ -5,21 +5,21 @@ using System;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
 using osu.Framework.Bindables;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class ServerMultiplayerRoom : MultiplayerRoom, IMultiplayerServerMatchCallbacks
+    public class ServerMultiplayerRoom : MultiplayerRoom
     {
         private readonly IMultiplayerServerMatchCallbacks hubCallbacks;
 
-        private MatchTypeImplementation matchTypeImplementation;
-
         [UsedImplicitly]
         private readonly BindableList<MultiplayerRoomUser> bindableUsers;
+
+        private MatchTypeImplementation matchTypeImplementation;
 
         public MatchTypeImplementation MatchTypeImplementation
         {
@@ -40,11 +40,27 @@ namespace osu.Server.Spectator.Hubs
             : base(roomId)
         {
             this.hubCallbacks = hubCallbacks;
-            matchTypeImplementation = new HeadToHead(this);
+
+            // just to ensure non-null.
+            matchTypeImplementation = createTypeImplementation(MatchType.HeadToHead);
 
             Users = bindableUsers = new BindableList<MultiplayerRoomUser>();
 
             bindableUsers.BindCollectionChanged(usersChanged);
+        }
+
+        public void ChangeMatchType(MatchType type) => MatchTypeImplementation = createTypeImplementation(type);
+
+        private MatchTypeImplementation createTypeImplementation(MatchType type)
+        {
+            switch (type)
+            {
+                case MatchType.TeamVersus:
+                    return new TeamVersus(this, hubCallbacks);
+
+                default:
+                    return new HeadToHead(this, hubCallbacks);
+            }
         }
 
         private void usersChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -55,25 +71,19 @@ namespace osu.Server.Spectator.Hubs
                     Debug.Assert(e.NewItems != null);
 
                     foreach (var u in e.NewItems.Cast<MultiplayerRoomUser>())
-                        matchTypeImplementation.HandleUserJoined(u);
+                        MatchTypeImplementation.HandleUserJoined(u);
                     break;
 
                 case NotifyCollectionChangedAction.Remove:
                     Debug.Assert(e.OldItems != null);
 
                     foreach (var u in e.OldItems.Cast<MultiplayerRoomUser>())
-                        matchTypeImplementation.HandleUserLeft(u);
+                        MatchTypeImplementation.HandleUserLeft(u);
                     break;
 
                 default:
                     throw new NotImplementedException();
             }
         }
-
-        public Task SendMatchEvent(MultiplayerRoom room, MatchServerEvent e) => hubCallbacks.SendMatchEvent(room, e);
-
-        public Task UpdateMatchRoomState(MultiplayerRoom room) => hubCallbacks.UpdateMatchRoomState(room);
-
-        public Task UpdateMatchUserState(MultiplayerRoom room, MultiplayerRoomUser user) => hubCallbacks.UpdateMatchUserState(room, user);
     }
 }
