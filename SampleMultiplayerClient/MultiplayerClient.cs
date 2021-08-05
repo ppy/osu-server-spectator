@@ -37,9 +37,16 @@ namespace SampleMultiplayerClient
             connection.On(nameof(IMultiplayerClient.MatchStarted), ((IMultiplayerClient)this).MatchStarted);
             connection.On(nameof(IMultiplayerClient.ResultsReady), ((IMultiplayerClient)this).ResultsReady);
             connection.On<int, IEnumerable<APIMod>>(nameof(IMultiplayerClient.UserModsChanged), ((IMultiplayerClient)this).UserModsChanged);
+            connection.On<MatchRoomState>(nameof(IMultiplayerClient.MatchRoomStateChanged), ((IMultiplayerClient)this).MatchRoomStateChanged);
+            connection.On<int, MatchUserState>(nameof(IMultiplayerClient.MatchUserStateChanged), ((IMultiplayerClient)this).MatchUserStateChanged);
+            connection.On<MatchServerEvent>(nameof(IMultiplayerClient.MatchEvent), ((IMultiplayerClient)this).MatchEvent);
         }
 
         public MultiplayerUserState State { get; private set; }
+
+        public MatchUserState? MatchState { get; private set; }
+
+        public MatchServerEvent? LastMatchEvent { get; set; }
 
         public BeatmapAvailability BeatmapAvailability { get; private set; } = BeatmapAvailability.LocallyAvailable();
 
@@ -77,6 +84,9 @@ namespace SampleMultiplayerClient
 
         public Task ChangeUserMods(IEnumerable<APIMod> newMods) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.ChangeUserMods), newMods);
+
+        public Task SendMatchRequest(MatchUserRequest request) =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.SendMatchRequest), request);
 
         public Task StartMatch() =>
             connection.InvokeAsync(nameof(IMultiplayerServer.StartMatch));
@@ -123,15 +133,39 @@ namespace SampleMultiplayerClient
 
         Task IMultiplayerClient.UserStateChanged(int userId, MultiplayerUserState state)
         {
-            if (userId == this.UserID)
+            if (userId == UserID)
                 State = state;
+
+            return Task.CompletedTask;
+        }
+
+        public Task MatchUserStateChanged(int userId, MatchUserState state)
+        {
+            if (userId == UserID)
+                MatchState = state;
+
+            return Task.CompletedTask;
+        }
+
+        public Task MatchRoomStateChanged(MatchRoomState state)
+        {
+            Debug.Assert(Room != null);
+            Room.MatchState = state;
+
+            return Task.CompletedTask;
+        }
+
+        public Task MatchEvent(MatchServerEvent e)
+        {
+            Console.WriteLine($"Match event received {e}");
+            LastMatchEvent = e;
 
             return Task.CompletedTask;
         }
 
         public Task UserBeatmapAvailabilityChanged(int userId, BeatmapAvailability beatmapAvailability)
         {
-            if (userId == this.UserID)
+            if (userId == UserID)
                 BeatmapAvailability = beatmapAvailability;
 
             return Task.CompletedTask;
@@ -139,7 +173,7 @@ namespace SampleMultiplayerClient
 
         public Task UserModsChanged(int userId, IEnumerable<APIMod> mods)
         {
-            if (userId == this.UserID)
+            if (userId == UserID)
                 UserMods = mods;
 
             return Task.CompletedTask;

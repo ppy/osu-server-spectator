@@ -20,13 +20,13 @@ using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
+    public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer, IMultiplayerServerMatchCallbacks
     {
-        protected readonly EntityStore<MultiplayerRoom> Rooms;
+        protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
 
         private readonly IDatabaseFactory databaseFactory;
 
-        public MultiplayerHub(IDistributedCache cache, EntityStore<MultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
+        public MultiplayerHub(IDistributedCache cache, EntityStore<ServerMultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
             : base(cache, users)
         {
             Rooms = rooms;
@@ -60,7 +60,7 @@ namespace osu.Server.Spectator.Hubs
                 // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
                 bool newRoomFetchStarted = false;
 
-                MultiplayerRoom? room = null;
+                ServerMultiplayerRoom? room = null;
 
                 using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
@@ -98,11 +98,15 @@ namespace osu.Server.Spectator.Hubs
                         }
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
-                        room.Users.Add(roomUser);
+
+                        // because match type implementations may send subsequent information via Users collection hooks,
+                        // inform clients before adding user to the room.
+                        await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
+
+                        room.AddUser(roomUser);
 
                         await addDatabaseUser(room, roomUser);
 
-                        await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
                         Log($"Joined room {room.RoomID}");
@@ -139,7 +143,14 @@ namespace osu.Server.Spectator.Hubs
                     }
                 }
 
-                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room)) ?? throw new InvalidOperationException();
+                var settings = new JsonSerializerSettings
+                {
+                    // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
+                    TypeNameHandling = TypeNameHandling.Auto,
+                };
+
+                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
+                       ?? throw new InvalidOperationException();
             }
         }
 
@@ -150,7 +161,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="roomId">The proposed room ID.</param>
         /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
-        private async Task<MultiplayerRoom> retrieveRoom(long roomId)
+        private async Task<ServerMultiplayerRoom> retrieveRoom(long roomId)
         {
             Log($"Retrieving room {roomId} from database");
 
@@ -176,7 +187,7 @@ namespace osu.Server.Spectator.Hubs
                 var requiredMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods ?? string.Empty) ?? Array.Empty<APIMod>();
                 var allowedMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>();
 
-                return new MultiplayerRoom(roomId)
+                var room = new ServerMultiplayerRoom(roomId, this)
                 {
                     Settings = new MultiplayerRoomSettings
                     {
@@ -187,9 +198,30 @@ namespace osu.Server.Spectator.Hubs
                         Password = databaseRoom.password,
                         RequiredMods = requiredMods,
                         AllowedMods = allowedMods,
-                        PlaylistItemId = playlistItem.id
+                        PlaylistItemId = playlistItem.id,
+                        MatchType = convertMatchType(databaseRoom.type)
                     }
                 };
+
+                room.ChangeMatchType(room.Settings.MatchType);
+
+                return room;
+            }
+        }
+
+        private MatchType convertMatchType(database_match_type databaseMatchType)
+        {
+            switch (databaseMatchType)
+            {
+                case database_match_type.playlists:
+                    return MatchType.Playlists;
+
+                case database_match_type.head_to_head:
+                default:
+                    return MatchType.HeadToHead;
+
+                case database_match_type.team_versus:
+                    return MatchType.TeamVersus;
             }
         }
 
@@ -236,7 +268,7 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureIsHost(room);
 
-                var newHost = room.Users.Find(u => u.UserID == userId);
+                var newHost = room.Users.FirstOrDefault(u => u.UserID == userId);
 
                 if (newHost == null)
                     throw new Exception("Target user is not in the current room");
@@ -255,7 +287,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
                     throw new InvalidStateException("Local user was not found in the expected room");
@@ -302,7 +334,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
@@ -326,12 +358,31 @@ namespace osu.Server.Spectator.Hubs
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.Find(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
 
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 await changeUserMods(newMods, room, user);
+            }
+        }
+
+        public async Task SendMatchRequest(MatchUserRequest request)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                room.MatchTypeImplementation.HandleUserRequest(user, request);
             }
         }
 
@@ -406,6 +457,12 @@ namespace osu.Server.Spectator.Hubs
                     // rollback settings if an error occurred when updating the database.
                     room.Settings = previousSettings;
                     throw;
+                }
+
+                if (previousSettings.MatchType != settings.MatchType)
+                {
+                    room.ChangeMatchType(settings.MatchType);
+                    Log($"Switching room ruleset to {room.MatchTypeImplementation}");
                 }
 
                 await ensureAllUsersValidMods(room);
@@ -743,7 +800,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Retrieve the <see cref="MultiplayerRoom"/> for the local context user.
         /// </summary>
-        private async Task<ItemUsage<MultiplayerRoom>> getLocalUserRoom(MultiplayerClientState? state)
+        private async Task<ItemUsage<ServerMultiplayerRoom>> getLocalUserRoom(MultiplayerClientState? state)
         {
             if (state == null)
                 throw new NotJoinedRoomException();
@@ -759,7 +816,7 @@ namespace osu.Server.Spectator.Hubs
                 await leaveRoom(state, roomUsage);
         }
 
-        private async Task leaveRoom(MultiplayerClientState state, ItemUsage<MultiplayerRoom> roomUsage)
+        private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage)
         {
             var room = roomUsage.Item;
 
@@ -771,12 +828,12 @@ namespace osu.Server.Spectator.Hubs
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
 
-            var user = room.Users.Find(u => u.UserID == state.UserId);
+            var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);
 
             if (user == null)
                 throw new InvalidStateException("User was not in the expected room.");
 
-            room.Users.Remove(user);
+            room.RemoveUser(user);
             await removeDatabaseUser(room, user);
 
             // handle closing the room if the only participant is the user which is leaving.
@@ -804,6 +861,21 @@ namespace osu.Server.Spectator.Hubs
             }
 
             await clients.UserLeft(user);
+        }
+
+        public Task SendMatchEvent(MultiplayerRoom room, MatchServerEvent e)
+        {
+            return Clients.Group(GetGroupId(room.RoomID)).MatchEvent(e);
+        }
+
+        public Task UpdateMatchRoomState(MultiplayerRoom room)
+        {
+            return Clients.Group(GetGroupId(room.RoomID)).MatchRoomStateChanged(room.MatchState);
+        }
+
+        public Task UpdateMatchUserState(MultiplayerRoom room, MultiplayerRoomUser user)
+        {
+            return Clients.Group(GetGroupId(room.RoomID)).MatchUserStateChanged(user.UserID, user.MatchState);
         }
     }
 }

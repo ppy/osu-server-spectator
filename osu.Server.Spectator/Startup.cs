@@ -22,7 +22,25 @@ namespace osu.Server.Spectator
         {
             services.AddSignalR()
                     .AddMessagePackProtocol()
-                    .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore; });
+                    .AddNewtonsoftJsonProtocol(options =>
+                    {
+                        options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+
+                        // TODO: This is required to make root class serialisation work in the case of derived classes.
+                        // Optimally, we only want to set `TypeNameHandling.Auto` here, as this will currently be sending overly verbose responses.
+                        //
+                        // This is a shortcoming of SignalR, in that it does not pass the (base) class specification through to NewtonsoftJson's Serialize method.
+                        // See JsonSerializationTests's calls to SerializeObject for an example of how it should be done.
+                        //
+                        // We are relying on this for *all* connections to MultiplayerHubs currently, as the same issue exists in MessagePack but is harder to work around.
+                        // This is required for match type states/events, which are regularly sent as derived implementations where that type is not conveyed in the invocation signature itself.
+                        //
+                        // Some references:
+                        // https://github.com/neuecc/MessagePack-CSharp/issues/1171 ("it's not messagepack's issue")
+                        // https://github.com/dotnet/aspnetcore/issues/30096 ("it's definitely broken")
+                        // https://github.com/dotnet/aspnetcore/issues/7298 (current tracking issue, though weirdly described as a javascript client issue)
+                        options.PayloadSerializerSettings.TypeNameHandling = TypeNameHandling.All;
+                    });
 
             services.AddHubEntities()
                     .AddDatabaseServices();
