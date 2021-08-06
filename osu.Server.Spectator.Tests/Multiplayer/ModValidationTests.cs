@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Game.Rulesets.Catch.Mods;
 using osu.Game.Rulesets.Osu.Mods;
 using Xunit;
@@ -24,6 +25,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 RulesetID = 0,
                 AllowedMods = new[]
                 {
@@ -43,6 +45,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 RulesetID = 3,
                 AllowedMods = new[]
                 {
@@ -59,6 +62,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 RulesetID = 0,
                 RequiredMods = new[]
                 {
@@ -76,6 +80,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 RulesetID = 3,
                 RequiredMods = new[]
                 {
@@ -92,6 +97,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 RulesetID = 0,
                 RequiredMods = new[]
                 {
@@ -113,6 +119,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 RequiredMods = new[]
                 {
                     new APIMod(new OsuModFlashlight()),
@@ -133,6 +140,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModFlashlight()),
@@ -169,6 +177,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModHidden()),
@@ -209,6 +218,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new CatchModHidden()),
@@ -240,6 +250,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new CatchModHidden()),
@@ -282,6 +293,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModApproachDifferent()),
@@ -301,6 +313,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModFlashlight()),
@@ -336,6 +349,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             var roomSettings = new MultiplayerRoomSettings
             {
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModApproachDifferent())
@@ -357,6 +371,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
             });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
