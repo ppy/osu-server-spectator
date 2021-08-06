@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
 using Xunit;
 
@@ -18,7 +19,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 Name = "bestest room ever",
-                BeatmapChecksum = "checksum"
+                BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead
             };
 
             await Hub.JoinRoom(ROOM_ID);
@@ -39,7 +41,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 Name = "bestest room ever",
-                BeatmapChecksum = "checksum"
+                BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead
             };
 
             await Hub.JoinRoom(ROOM_ID);
@@ -88,6 +91,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 BeatmapID = 1234567,
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.HeadToHead,
                 RulesetID = 2
             };
 
@@ -104,6 +108,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 BeatmapID = 3333,
+                MatchType = MatchType.Playlists,
                 BeatmapChecksum = "checksum",
             };
 
@@ -119,6 +124,23 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 BeatmapID = 9999,
+                MatchType = MatchType.HeadToHead,
+                BeatmapChecksum = "incorrect checksum",
+            };
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(testSettings));
+        }
+
+        [Fact]
+        public async Task ChangingSettingsToUnsupportedMatchTypeThrows()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(9999)).ReturnsAsync("correct checksum");
+
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                BeatmapID = 9999,
+                MatchType = MatchType.Playlists,
                 BeatmapChecksum = "incorrect checksum",
             };
 
@@ -135,6 +157,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 BeatmapID = 1234,
                 BeatmapChecksum = "checksum",
+                MatchType = MatchType.Playlists,
                 RulesetID = rulesetID,
             };
 

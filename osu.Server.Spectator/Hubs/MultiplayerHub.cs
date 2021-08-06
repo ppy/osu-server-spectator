@@ -447,6 +447,9 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureSettingsModsValid(settings);
 
+                if (settings.MatchType == MatchType.Playlists)
+                    throw new InvalidStateException($"Invalid match type selected");
+
                 try
                 {
                     room.Settings = settings;
