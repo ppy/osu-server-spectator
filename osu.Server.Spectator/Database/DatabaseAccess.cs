@@ -88,7 +88,7 @@ namespace osu.Server.Spectator.Database
                 RoomID = room.RoomID,
                 Name = room.Settings.Name,
                 Password = room.Settings.Password,
-                // needs ToString() to store properly, see https://github.com/DapperLib/Dapper/issues/813.
+                // needs ToString() to store as enums correctly, see https://github.com/DapperLib/Dapper/issues/813.
                 MatchType = room.Settings.MatchType.ToDatabaseMatchType().ToString(),
             });
 
