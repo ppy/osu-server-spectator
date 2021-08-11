@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Hubs;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -65,13 +66,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
 
+            var kickedUserReceiver = new Mock<IMultiplayerClient>();
+            Clients.Setup(clients => clients.Client(USER_ID_2.ToString())).Returns(kickedUserReceiver.Object);
+
             SetUserContext(ContextUser);
             await Hub.KickUser(USER_ID_2);
 
+            // other players received the event.
             Receiver.Verify(r => r.UserKicked(It.Is<MultiplayerRoomUser>(u => u.UserID == USER_ID_2)), Times.Once);
 
+            // the kicked user received the event.
+            kickedUserReceiver.Verify(r => r.UserKicked(It.Is<MultiplayerRoomUser>(u => u.UserID == USER_ID_2)), Times.Once);
+
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.True(room.Item?.Users?.All(u => u.UserID != USER_ID_2));
+                Assert.True(room.Item?.Users.All(u => u.UserID != USER_ID_2));
         }
 
         [Fact]
@@ -89,7 +97,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Never);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.True(room.Item?.Users?.Any(u => u.UserID != USER_ID_2));
+                Assert.True(room.Item?.Users.Any(u => u.UserID != USER_ID_2));
         }
 
         [Fact]
@@ -106,7 +114,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Never);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.True(room.Item?.Users?.Any(u => u.UserID != USER_ID_2));
+                Assert.True(room.Item?.Users.Any(u => u.UserID != USER_ID_2));
         }
     }
 }

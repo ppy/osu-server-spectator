@@ -894,7 +894,11 @@ namespace osu.Server.Spectator.Hubs
             }
 
             if (wasKick)
+            {
+                // the target user has already been removed from the group, so send the message to them separately.
+                await Clients.Client(state.ConnectionId).UserKicked(user);
                 await clients.UserKicked(user);
+            }
             else
                 await clients.UserLeft(user);
         }
