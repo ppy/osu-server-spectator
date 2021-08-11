@@ -302,7 +302,14 @@ namespace osu.Server.Spectator.Hubs
                     if (targetUserUsage.Item == null)
                         throw new InvalidOperationException();
 
-                    await leaveRoom(targetUserUsage.Item, roomUsage, true);
+                    try
+                    {
+                        await leaveRoom(targetUserUsage.Item, roomUsage, true);
+                    }
+                    finally
+                    {
+                        targetUserUsage.Destroy();
+                    }
                 }
             }
         }
