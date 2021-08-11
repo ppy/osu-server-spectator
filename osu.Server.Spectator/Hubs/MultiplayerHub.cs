@@ -295,7 +295,7 @@ namespace osu.Server.Spectator.Hubs
                 var kickTarget = room.Users.FirstOrDefault(u => u.UserID == userId);
 
                 if (kickTarget == null)
-                    throw new Exception("Target user is not in the current room");
+                    throw new InvalidOperationException("Target user is not in the current room");
 
                 using (var targetUserUsage = await GetStateFromUser(kickTarget.UserID))
                 {
@@ -856,7 +856,7 @@ namespace osu.Server.Spectator.Hubs
             if (room == null)
                 throw new InvalidOperationException("Attempted to operate on a null room");
 
-            Log($"Leaving room {room.RoomID}");
+            Log(wasKick ? $"User kicked from room {room.RoomID}" : $"Leaving room {room.RoomID}");
 
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
