@@ -119,7 +119,7 @@ namespace osu.Server.Spectator.Hubs
                             {
                                 // the user was joined to the room, so we can run the standard leaveRoom method.
                                 // this will handle closing the room if this was the only user.
-                                await leaveRoom(userUsage.Item, roomUsage);
+                                await leaveRoom(userUsage.Item, roomUsage, false);
                             }
                             else if (newRoomFetchStarted)
                             {
@@ -274,6 +274,36 @@ namespace osu.Server.Spectator.Hubs
                     throw new Exception("Target user is not in the current room");
 
                 await setNewHost(room, newHost);
+            }
+        }
+
+        public async Task KickUser(int userId)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                if (userId == userUsage.Item?.UserId)
+                    throw new InvalidStateException("Can't kick self");
+
+                ensureIsHost(room);
+
+                var kickTarget = room.Users.FirstOrDefault(u => u.UserID == userId);
+
+                if (kickTarget == null)
+                    throw new Exception("Target user is not in the current room");
+
+                using (var targetUserUsage = await GetStateFromUser(kickTarget.UserID))
+                {
+                    if (targetUserUsage.Item == null)
+                        throw new InvalidOperationException();
+
+                    await leaveRoom(targetUserUsage.Item, roomUsage, true);
+                }
             }
         }
 
@@ -448,7 +478,7 @@ namespace osu.Server.Spectator.Hubs
                 ensureSettingsModsValid(settings);
 
                 if (settings.MatchType == MatchType.Playlists)
-                    throw new InvalidStateException($"Invalid match type selected");
+                    throw new InvalidStateException("Invalid match type selected");
 
                 try
                 {
@@ -816,10 +846,10 @@ namespace osu.Server.Spectator.Hubs
         private async Task leaveRoom(MultiplayerClientState state)
         {
             using (var roomUsage = await getLocalUserRoom(state))
-                await leaveRoom(state, roomUsage);
+                await leaveRoom(state, roomUsage, false);
         }
 
-        private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage)
+        private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage, bool wasKick)
         {
             var room = roomUsage.Item;
 
@@ -863,7 +893,10 @@ namespace osu.Server.Spectator.Hubs
                 await setNewHost(room, newHost);
             }
 
-            await clients.UserLeft(user);
+            if (wasKick)
+                await clients.UserKicked(user);
+            else
+                await clients.UserLeft(user);
         }
 
         public Task SendMatchEvent(MultiplayerRoom room, MatchServerEvent e)

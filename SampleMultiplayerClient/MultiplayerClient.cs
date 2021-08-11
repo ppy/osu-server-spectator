@@ -73,6 +73,9 @@ namespace SampleMultiplayerClient
         public Task TransferHost(int userId) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.TransferHost), userId);
 
+        public Task KickUser(int userId) =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.KickUser), userId);
+
         public Task ChangeSettings(MultiplayerRoomSettings settings) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.ChangeSettings), settings);
 
@@ -114,6 +117,8 @@ namespace SampleMultiplayerClient
 
             return Task.CompletedTask;
         }
+
+        public Task UserKicked(MultiplayerRoomUser user) => ((IMultiplayerClient)this).UserLeft(user);
 
         Task IMultiplayerClient.HostChanged(int userId)
         {
