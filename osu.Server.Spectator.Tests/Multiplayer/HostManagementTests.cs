@@ -99,7 +99,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Never);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.True(room.Item?.Users.Any(u => u.UserID != USER_ID_2));
+                Assert.True(room.Item?.Users.Any(u => u.UserID == USER_ID));
         }
 
         [Fact]
@@ -116,7 +116,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Never);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.True(room.Item?.Users.Any(u => u.UserID != USER_ID_2));
+                Assert.True(room.Item?.Users.Any(u => u.UserID == USER_ID));
         }
     }
 }
