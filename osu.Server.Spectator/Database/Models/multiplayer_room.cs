@@ -26,12 +26,4 @@ namespace osu.Server.Spectator.Database.Models
         public RoomCategory category { get; set; }
         public database_match_type type { get; set; }
     }
-
-    [Serializable]
-    public enum database_match_type
-    {
-        playlists,
-        head_to_head,
-        team_versus,
-    }
 }

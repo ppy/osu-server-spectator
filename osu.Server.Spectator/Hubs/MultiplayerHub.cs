@@ -199,29 +199,13 @@ namespace osu.Server.Spectator.Hubs
                         RequiredMods = requiredMods,
                         AllowedMods = allowedMods,
                         PlaylistItemId = playlistItem.id,
-                        MatchType = convertMatchType(databaseRoom.type)
+                        MatchType = databaseRoom.type.ToMatchType(),
                     }
                 };
 
                 room.ChangeMatchType(room.Settings.MatchType);
 
                 return room;
-            }
-        }
-
-        private MatchType convertMatchType(database_match_type databaseMatchType)
-        {
-            switch (databaseMatchType)
-            {
-                case database_match_type.playlists:
-                    return MatchType.Playlists;
-
-                case database_match_type.head_to_head:
-                default:
-                    return MatchType.HeadToHead;
-
-                case database_match_type.team_versus:
-                    return MatchType.TeamVersus;
             }
         }
 
