@@ -227,7 +227,7 @@ namespace osu.Server.Spectator.Hubs
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 if (userUsage.Item == null)
-                    throw new NotJoinedRoomException();
+                    return;
 
                 try
                 {
