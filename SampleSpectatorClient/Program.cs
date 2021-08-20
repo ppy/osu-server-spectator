@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using osu.Framework.Utils;
+using osu.Game.Online;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Scoring;
@@ -57,7 +58,7 @@ namespace SampleSpectatorClient
         private static SpectatorClient getConnectedClient()
         {
             var connection = new HubConnectionBuilder()
-                             .AddMessagePackProtocol()
+                             .AddMessagePackProtocol(options => { options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS; })
                              .WithUrl("http://localhost:80/spectator")
                              .ConfigureLogging(logging =>
                              {

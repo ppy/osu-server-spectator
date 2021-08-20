@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using osu.Game.Online;
 using osu.Server.Spectator.Authentication;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs;
@@ -21,7 +22,7 @@ namespace osu.Server.Spectator
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSignalR()
-                    .AddMessagePackProtocol()
+                    .AddMessagePackProtocol(options => { options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS; })
                     .AddNewtonsoftJsonProtocol(options =>
                     {
                         options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
