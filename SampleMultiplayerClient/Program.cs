@@ -153,7 +153,7 @@ namespace SampleMultiplayerClient
         private static MultiplayerClient getConnectedClient(int userId)
         {
             var connection = new HubConnectionBuilder()
-                             .AddMessagePackProtocol()
+                             .AddMessagePackProtocol(options => { options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS; })
                              .WithUrl("http://localhost:80/multiplayer", http => http.Headers.Add("user_id", userId.ToString()))
                              .ConfigureLogging(logging =>
                              {
