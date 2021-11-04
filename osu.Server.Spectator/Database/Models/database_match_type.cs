@@ -7,6 +7,7 @@ using osu.Game.Online.Rooms;
 namespace osu.Server.Spectator.Database.Models
 {
     [Serializable]
+    // ReSharper disable once InconsistentNaming
     public enum database_match_type
     {
         playlists,
