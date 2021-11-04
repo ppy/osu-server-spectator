@@ -76,6 +76,12 @@ namespace osu.Server.Spectator.Database
         Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item);
 
         /// <summary>
+        /// Removes a playlist item.
+        /// </summary>
+        /// <param name="playlistItemId">The playlist item ID to remove.</param>
+        Task RemovePlaylistItem(long playlistItemId);
+
+        /// <summary>
         /// Marks a playlist item as expired.
         /// </summary>
         Task ExpirePlaylistItemAsync(long playlistItemId);

@@ -196,6 +196,14 @@ namespace osu.Server.Spectator.Database
             return await connection.QuerySingleAsync<long>("SELECT max(id) FROM multiplayer_playlist_items WHERE room_id = @room_id", item);
         }
 
+        public async Task RemovePlaylistItem(long playlistItemId)
+        {
+            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items WHERE id = @Id", new
+            {
+                Id = playlistItemId
+            });
+        }
+
         public async Task ExpirePlaylistItemAsync(long playlistItemId)
         {
             await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, updated_at = NOW() WHERE id = @PlaylistItemId", new
