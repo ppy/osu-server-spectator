@@ -184,26 +184,20 @@ namespace osu.Server.Spectator.Hubs
                 if (beatmapChecksum == null)
                     throw new InvalidOperationException($"Expected non-null checksum on beatmap ID {playlistItem.beatmap_id}");
 
-                var requiredMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.required_mods ?? string.Empty) ?? Array.Empty<APIMod>();
-                var allowedMods = JsonConvert.DeserializeObject<IEnumerable<APIMod>>(playlistItem.allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>();
-
                 var room = new ServerMultiplayerRoom(roomId, this)
                 {
                     Settings = new MultiplayerRoomSettings
                     {
-                        BeatmapChecksum = beatmapChecksum,
-                        BeatmapID = playlistItem.beatmap_id,
-                        RulesetID = playlistItem.ruleset_id,
                         Name = databaseRoom.name,
                         Password = databaseRoom.password,
-                        RequiredMods = requiredMods,
-                        AllowedMods = allowedMods,
                         PlaylistItemId = playlistItem.id,
                         MatchType = databaseRoom.type.ToMatchType(),
+                        QueueMode = databaseRoom.queue_mode.ToQueueMode()
                     }
                 };
 
                 room.ChangeMatchType(room.Settings.MatchType);
+                room.ChangeQueueMode(room.Settings.QueueMode);
 
                 return room;
             }
@@ -506,11 +500,11 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
         public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
 
-        private async Task changeUserMods(IEnumerable<APIMod> newMods, MultiplayerRoom room, MultiplayerRoomUser user)
+        private async Task changeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user)
         {
             var newModList = newMods.ToList();
 
-            if (!validateMods(room, newModList, out var validMods))
+            if (!room.QueueImplementation.ValidateMods(newModList, out var validMods))
                 throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
 
             if (user.Mods.SequenceEqual(newModList))
@@ -521,97 +515,13 @@ namespace osu.Server.Spectator.Hubs
             await Clients.Group(GetGroupId(room.RoomID)).UserModsChanged(user.UserID, newModList);
         }
 
-        private static void ensureSettingsModsValid(MultiplayerRoomSettings settings)
-        {
-            // check against ruleset
-            if (!populateValidModsForRuleset(settings.RulesetID, settings.RequiredMods, out var requiredMods))
-            {
-                var invalidRequiredAcronyms = string.Join(',', settings.RequiredMods.Where(m => requiredMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
-                throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidRequiredAcronyms}");
-            }
-
-            if (!populateValidModsForRuleset(settings.RulesetID, settings.AllowedMods, out var allowedMods))
-            {
-                var invalidAllowedAcronyms = string.Join(',', settings.AllowedMods.Where(m => allowedMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
-                throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidAllowedAcronyms}");
-            }
-
-            if (!ModUtils.CheckCompatibleSet(requiredMods, out var invalid))
-                throw new InvalidStateException($"Invalid combination of required mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
-
-            // check aggregate combinations with each allowed mod individually.
-            foreach (var allowedMod in allowedMods)
-            {
-                if (!ModUtils.CheckCompatibleSet(requiredMods.Concat(new[] { allowedMod }), out invalid))
-                    throw new InvalidStateException($"Invalid combination of required and allowed mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
-            }
-        }
-
-        private async Task ensureAllUsersValidMods(MultiplayerRoom room)
+        private async Task ensureAllUsersValidMods(ServerMultiplayerRoom room)
         {
             foreach (var user in room.Users)
             {
-                if (!validateMods(room, user.Mods, out var validMods))
+                if (!room.QueueImplementation.ValidateMods(user.Mods, out var validMods))
                     await changeUserMods(validMods, room, user);
             }
-        }
-
-        private static bool validateMods(MultiplayerRoom room, IEnumerable<APIMod> proposedMods, [NotNullWhen(false)] out IEnumerable<APIMod>? validMods)
-        {
-            bool proposedWereValid = true;
-
-            proposedWereValid &= populateValidModsForRuleset(room.Settings.RulesetID, proposedMods, out var valid);
-
-            // check allowed by room
-            foreach (var mod in valid.ToList())
-            {
-                if (room.Settings.AllowedMods.All(m => m.Acronym != mod.Acronym))
-                {
-                    valid.Remove(mod);
-                    proposedWereValid = false;
-                }
-            }
-
-            // check valid as combination
-            if (!ModUtils.CheckCompatibleSet(valid, out var invalid))
-            {
-                proposedWereValid = false;
-                foreach (var mod in invalid)
-                    valid.Remove(mod);
-            }
-
-            validMods = valid.Select(m => new APIMod(m));
-            return proposedWereValid;
-        }
-
-        /// <summary>
-        /// Verifies all proposed mods are valid for the room's ruleset, returning instantiated <see cref="Mod"/>s for further processing.
-        /// </summary>
-        /// <param name="rulesetID">The legacy ruleset ID to check against.</param>
-        /// <param name="proposedMods">The proposed mods.</param>
-        /// <param name="valid">A list of valid deserialised mods.</param>
-        /// <returns>Whether all <see cref="proposedMods"/> were valid.</returns>
-        private static bool populateValidModsForRuleset(int rulesetID, IEnumerable<APIMod> proposedMods, out List<Mod> valid)
-        {
-            valid = new List<Mod>();
-            bool proposedWereValid = true;
-
-            var ruleset = LegacyHelper.GetRulesetFromLegacyID(rulesetID);
-
-            foreach (var apiMod in proposedMods)
-            {
-                try
-                {
-                    // will throw if invalid
-                    valid.Add(apiMod.ToMod(ruleset));
-                }
-                catch
-                {
-                    proposedWereValid = false;
-                }
-            }
-
-            return proposedWereValid;
         }
 
         private async Task selectNextPlaylistItem(MultiplayerRoom room)
@@ -637,22 +547,13 @@ namespace osu.Server.Spectator.Hubs
         {
             using (var db = databaseFactory.GetInstance())
             {
-                var item = new multiplayer_playlist_item(room);
-                var dbItem = await db.GetPlaylistItemFromRoomAsync(room.RoomID, item.id);
+                var dbItem = await db.GetPlaylistItemFromRoomAsync(room.RoomID, room.Settings.PlaylistItemId);
 
                 if (dbItem == null)
                     throw new InvalidStateException("Attempted to select a playlist item not contained by the room.");
 
                 if (dbItem.expired)
                     throw new InvalidStateException("Attempted to select an expired playlist item.");
-
-                string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.beatmap_id);
-
-                if (beatmapChecksum == null)
-                    throw new InvalidStateException("Attempted to select a beatmap which does not exist online.");
-
-                if (room.Settings.BeatmapChecksum != beatmapChecksum)
-                    throw new InvalidStateException("Attempted to select a beatmap which has been modified.");
 
                 await db.UpdateRoomSettingsAsync(room);
             }
