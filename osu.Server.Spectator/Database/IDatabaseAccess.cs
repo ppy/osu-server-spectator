@@ -76,10 +76,17 @@ namespace osu.Server.Spectator.Database
         Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item);
 
         /// <summary>
+        /// Updates an existing playlist item.
+        /// </summary>
+        /// <param name="item">The new playlist item settings.</param>
+        Task UpdatePlaylistItemAsync(multiplayer_playlist_item item);
+
+        /// <summary>
         /// Removes a playlist item.
         /// </summary>
+        /// <param name="roomId">The room.</param>
         /// <param name="playlistItemId">The playlist item ID to remove.</param>
-        Task RemovePlaylistItem(long playlistItemId);
+        Task RemovePlaylistItemAsync(long roomId, long playlistItemId);
 
         /// <summary>
         /// Marks a playlist item as expired.
@@ -90,5 +97,7 @@ namespace osu.Server.Spectator.Database
         /// Marks the given <paramref name="room"/> as ended and no longer accepting new players or scores.
         /// </summary>
         Task EndMatchAsync(MultiplayerRoom room);
+
+        Task<multiplayer_playlist_item[]> GetValidPlaylistItemsAsync(long roomId);
     }
 }

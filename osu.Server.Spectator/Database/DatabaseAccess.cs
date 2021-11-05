@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
@@ -92,17 +93,6 @@ namespace osu.Server.Spectator.Database
                 MatchType = room.Settings.MatchType.ToDatabaseMatchType().ToString(),
                 QueueMode = room.Settings.QueueMode.ToDatabaseQueueModes().ToString()
             });
-
-            var currentItem = await GetCurrentPlaylistItemAsync(room.RoomID);
-            var newItem = new multiplayer_playlist_item(room) { id = currentItem.id };
-
-            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET "
-                                          + " beatmap_id = @beatmap_id,"
-                                          + " ruleset_id = @ruleset_id,"
-                                          + " required_mods = @required_mods,"
-                                          + " allowed_mods = @allowed_mods,"
-                                          + " updated_at = NOW()"
-                                          + " WHERE id = @id", newItem);
         }
 
         public async Task UpdateRoomHostAsync(MultiplayerRoom room)
@@ -197,11 +187,24 @@ namespace osu.Server.Spectator.Database
             return await connection.QuerySingleAsync<long>("SELECT max(id) FROM multiplayer_playlist_items WHERE room_id = @room_id", item);
         }
 
-        public async Task RemovePlaylistItem(long playlistItemId)
+        public async Task UpdatePlaylistItemAsync(multiplayer_playlist_item item)
         {
-            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items WHERE id = @Id", new
+            await connection.ExecuteAsync(
+                @"UPDATE multiplayer_playlist_items SET
+                beatmap_id = @beatmap_id,
+                ruleset_id = @ruleset_id,
+                required_mods = @required_mods,
+                allowed_mods = @allowed_mods,
+                updated_at = NOW()
+                WHERE id = @id", item);
+        }
+
+        public async Task RemovePlaylistItemAsync(long roomId, long playlistItemId)
+        {
+            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items WHERE id = @Id and room_id = @RoomId", new
             {
-                Id = playlistItemId
+                Id = playlistItemId,
+                RoomId = roomId
             });
         }
 
@@ -233,6 +236,19 @@ namespace osu.Server.Spectator.Database
                 RoomID = room.RoomID,
                 Count = totalUsers,
             });
+        }
+
+        public async Task<multiplayer_playlist_item[]> GetValidPlaylistItemsAsync(long roomId)
+        {
+            var items = (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId AND expired = 0", new
+            {
+                RoomId = roomId
+            })).ToArray();
+
+            if (items.Length > 0)
+                return items;
+
+            return new[] { await connection.QueryFirstAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items ORDER BY id DESC") };
         }
 
         public void Dispose()

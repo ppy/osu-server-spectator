@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.Queueing;
 using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Hubs
@@ -27,6 +28,8 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        public readonly MultiplayerQueue QueueImplementation;
+
         public ServerMultiplayerRoom(long roomId, IMultiplayerServerMatchCallbacks hubCallbacks)
             : base(roomId)
         {
@@ -34,9 +37,12 @@ namespace osu.Server.Spectator.Hubs
 
             // just to ensure non-null.
             matchTypeImplementation = createTypeImplementation(MatchType.HeadToHead);
+            QueueImplementation = new MultiplayerQueue(this, hubCallbacks);
         }
 
         public void ChangeMatchType(MatchType type) => MatchTypeImplementation = createTypeImplementation(type);
+
+        public void ChangeQueueMode(QueueModes mode) => QueueImplementation.Mode = mode;
 
         public void AddUser(MultiplayerRoomUser user)
         {
