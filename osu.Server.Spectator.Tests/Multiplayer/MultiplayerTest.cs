@@ -92,6 +92,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapID = 1234,
                 BeatmapChecksum = "checksum"
             });
+
+            Database.Setup(db => db.GetCandidatePlaylistItemByExpiry(It.IsAny<long>())).ReturnsAsync(new multiplayer_playlist_item
+            {
+                id = ROOM_ID,
+                beatmap_id = 1234
+            });
         }
 
         /// <summary>
