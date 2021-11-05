@@ -37,6 +37,7 @@ namespace osu.Server.Spectator.Database.Models
         /// <param name="item">The <see cref="APIPlaylistItem"/> to retrieve data from.</param>
         public multiplayer_playlist_item(long roomId, APIPlaylistItem item)
         {
+            id = item.ID;
             room_id = roomId;
             beatmap_id = item.BeatmapID;
             ruleset_id = (short)item.RulesetID;

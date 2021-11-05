@@ -63,8 +63,6 @@ namespace osu.Server.Spectator.Hubs
             if (Mode == QueueModes.HostOnly && (room.Host == null || !user.Equals(room.Host)))
                 throw new NotHostException();
 
-            ensureModsValid(item);
-
             string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.BeatmapID);
             if (beatmapChecksum == null)
                 throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
@@ -73,6 +71,8 @@ namespace osu.Server.Spectator.Hubs
 
             if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
                 throw new InvalidStateException("Attempted to select an unsupported ruleset.");
+
+            ensureModsValid(item);
 
             bool hasItems = await db.HasPlaylistItems(room.RoomID);
 
