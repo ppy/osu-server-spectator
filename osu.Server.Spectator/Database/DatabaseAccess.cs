@@ -4,7 +4,6 @@
 using System;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
@@ -238,17 +237,25 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<multiplayer_playlist_item[]> GetValidPlaylistItemsAsync(long roomId)
+        public async Task<multiplayer_playlist_item> GetCandidatePlaylistItemByExpiry(long roomId)
         {
-            var items = (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId AND expired = 0", new
+            // Pick the first available non-expired playlist item, or default to the last item for when all items are expired.
+            return await connection.QueryFirstOrDefaultAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId AND expired = 0", new { RoomId = roomId })
+                   ?? await connection.QueryFirstAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId ORDER by id DESC", new { RoomId = roomId });
+        }
+
+        public Task<multiplayer_playlist_item> GetCandidatePlaylistItemByFairness(long roomId)
+        {
+            // Todo: Group playlist items by (user_id -> count_expired), and select the first available playlist item from a user that has available beatmaps where count_expired is the lowest.
+            throw new NotImplementedException();
+        }
+
+        public async Task<bool> HasPlaylistItems(long roomId)
+        {
+            return await connection.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM multiplayer_playlist_items WHERE room_id = @RoomId", new
             {
                 RoomId = roomId
-            })).ToArray();
-
-            if (items.Length > 0)
-                return items;
-
-            return new[] { await connection.QueryFirstAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items ORDER BY id DESC") };
+            }) > 0;
         }
 
         public void Dispose()

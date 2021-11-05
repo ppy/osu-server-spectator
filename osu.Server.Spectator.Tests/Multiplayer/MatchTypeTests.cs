@@ -119,14 +119,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(MatchType.HeadToHead, room.Settings.MatchType);
             }
 
-            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
-            {
-                BeatmapID = 1234,
-                BeatmapChecksum = "checksum",
-                MatchType = MatchType.TeamVersus,
-            };
-
-            await Hub.ChangeSettings(testSettings);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { MatchType = MatchType.TeamVersus });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
             {
@@ -170,14 +163,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
-            {
-                BeatmapID = 1234,
-                BeatmapChecksum = "checksum",
-                MatchType = MatchType.TeamVersus,
-            };
-
-            await Hub.ChangeSettings(testSettings);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { MatchType = MatchType.TeamVersus });
 
             int callOrder = 0;
             Receiver.Setup(r => r.UserJoined(It.IsAny<MultiplayerRoomUser>())).Callback(() => Assert.Equal(0, callOrder++));

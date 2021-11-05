@@ -10,6 +10,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -85,6 +86,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Hub.Clients = Clients.Object;
 
             SetUserContext(ContextUser);
+
+            Hub.AddPlaylistItem(new APIPlaylistItem
+            {
+                BeatmapID = 1234,
+                BeatmapChecksum = "checksum"
+            });
         }
 
         /// <summary>

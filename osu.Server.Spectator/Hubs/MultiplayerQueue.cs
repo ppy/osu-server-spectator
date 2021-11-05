@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +12,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Queueing;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Utils;
 using osu.Server.Spectator.Database;
@@ -32,19 +35,13 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<multiplayer_playlist_item> GetCurrentItem(IDatabaseAccess db)
         {
-            var items = await db.GetValidPlaylistItemsAsync(room.RoomID);
-
             switch (Mode)
             {
                 default:
-                case QueueModes.HostOnly:
-                case QueueModes.FreeForAll:
-                    // Pick the first available non-expired playlist item, or default to the last item.
-                    return items.FirstOrDefault(i => !i.expired) ?? items.Last();
+                    return await db.GetCandidatePlaylistItemByExpiry(room.RoomID);
 
                 case QueueModes.FairRotate:
-                    // Todo: Group playlist items by (user_id -> count_expired), and select the first available playlist item from a user that has available beatmaps where count_expired is the lowest.
-                    throw new NotImplementedException();
+                    return await db.GetCandidatePlaylistItemByFairness(room.RoomID);
             }
         }
 
@@ -74,18 +71,20 @@ namespace osu.Server.Spectator.Hubs
             if (item.BeatmapChecksum != beatmapChecksum)
                 throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
 
+            if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                throw new InvalidStateException("Attempted to select an unsupported ruleset.");
+
+            bool hasItems = await db.HasPlaylistItems(room.RoomID);
+
             switch (Mode)
             {
-                default:
-                case QueueModes.HostOnly:
-                    // In host-only mode, re-use the current item.
+                case QueueModes.HostOnly when hasItems: // In host-only mode, re-use the current item if able to.
                     item.ID = (await GetCurrentItem(db)).id;
                     await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                     await hub.OnPlaylistItemChanged(room, item);
                     break;
 
-                case QueueModes.FreeForAll:
-                case QueueModes.FairRotate:
+                default:
                     item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                     await hub.OnPlaylistItemAdded(room, item);
                     break;
@@ -100,7 +99,7 @@ namespace osu.Server.Spectator.Hubs
             await db.RemovePlaylistItemAsync(room.RoomID, item.ID);
         }
 
-        public async Task<(bool valid, IEnumerable<APIMod>? validMods)> ValidateMods(IDatabaseAccess db, IEnumerable<APIMod> proposedMods)
+        public async Task<(bool isValid, IEnumerable<APIMod> validMods)> ValidateMods(IDatabaseAccess db, IEnumerable<APIMod> proposedMods)
         {
             multiplayer_playlist_item currentItem = await GetCurrentItem(db);
             APIMod[] allowedMods = JsonConvert.DeserializeObject<APIMod[]>(currentItem.allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>();

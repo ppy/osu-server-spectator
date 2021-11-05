@@ -10,7 +10,6 @@ using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using osu.Game.Rulesets;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -430,6 +429,42 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        public async Task AddPlaylistItem(APIPlaylistItem item)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                using (var db = databaseFactory.GetInstance())
+                    await room.QueueImplementation.AddItem(item, user, db);
+            }
+        }
+
+        public async Task RemovePlaylistItem(APIPlaylistItem item)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                using (var db = databaseFactory.GetInstance())
+                    await room.QueueImplementation.RemoveItem(item, user, db);
+            }
+        }
+
         public async Task ChangeSettings(MultiplayerRoomSettings settings)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
@@ -453,11 +488,6 @@ namespace osu.Server.Spectator.Hubs
                     return;
 
                 var previousSettings = room.Settings;
-
-                if (settings.RulesetID < 0 || settings.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
-                    throw new InvalidStateException("Attempted to select an unsupported ruleset.");
-
-                ensureSettingsModsValid(settings);
 
                 if (settings.MatchType == MatchType.Playlists)
                     throw new InvalidStateException("Invalid match type selected");
@@ -501,8 +531,12 @@ namespace osu.Server.Spectator.Hubs
         {
             var newModList = newMods.ToList();
 
-            if (!room.QueueImplementation.ValidateMods(newModList, out var validMods))
-                throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
+            using (var db = databaseFactory.GetInstance())
+            {
+                var (isValid, validMods) = await room.QueueImplementation.ValidateMods(db, newModList);
+                if (!isValid)
+                    throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
+            }
 
             if (user.Mods.SequenceEqual(newModList))
                 return;
@@ -514,10 +548,14 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task ensureAllUsersValidMods(ServerMultiplayerRoom room)
         {
-            foreach (var user in room.Users)
+            using (var db = databaseFactory.GetInstance())
             {
-                if (!room.QueueImplementation.ValidateMods(user.Mods, out var validMods))
-                    await changeUserMods(validMods, room, user);
+                foreach (var user in room.Users)
+                {
+                    var (isValid, validMods) = await room.QueueImplementation.ValidateMods(db, user.Mods);
+                    if (!isValid)
+                        await changeUserMods(validMods, room, user);
+                }
             }
         }
 
@@ -805,6 +843,21 @@ namespace osu.Server.Spectator.Hubs
         public Task UpdateMatchUserState(MultiplayerRoom room, MultiplayerRoomUser user)
         {
             return Clients.Group(GetGroupId(room.RoomID)).MatchUserStateChanged(user.UserID, user.MatchState);
+        }
+
+        public Task OnPlaylistItemAdded(MultiplayerRoom room, APIPlaylistItem item)
+        {
+            return Clients.Group(GetGroupId(room.RoomID)).PlaylistItemAdded(item);
+        }
+
+        public Task OnPlaylistItemRemoved(MultiplayerRoom room, APIPlaylistItem item)
+        {
+            return Clients.Group(GetGroupId(room.RoomID)).PlaylistItemRemoved(item);
+        }
+
+        public Task OnPlaylistItemChanged(MultiplayerRoom room, APIPlaylistItem item)
+        {
+            return Clients.Group(GetGroupId(room.RoomID)).PlaylistItemChanged(item);
         }
     }
 }
