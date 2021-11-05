@@ -845,19 +845,38 @@ namespace osu.Server.Spectator.Hubs
             return Clients.Group(GetGroupId(room.RoomID)).MatchUserStateChanged(user.UserID, user.MatchState);
         }
 
-        public Task OnPlaylistItemAdded(MultiplayerRoom room, APIPlaylistItem item)
+        public async Task OnPlaylistItemAdded(ServerMultiplayerRoom room, APIPlaylistItem item)
         {
-            return Clients.Group(GetGroupId(room.RoomID)).PlaylistItemAdded(item);
+            await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemAdded(item);
+            await updateCurrentPlaylistItem(room);
+            await ensureAllUsersValidMods(room);
         }
 
-        public Task OnPlaylistItemRemoved(MultiplayerRoom room, APIPlaylistItem item)
+        public async Task OnPlaylistItemRemoved(ServerMultiplayerRoom room, APIPlaylistItem item)
         {
-            return Clients.Group(GetGroupId(room.RoomID)).PlaylistItemRemoved(item);
+            await updateCurrentPlaylistItem(room);
+            await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemRemoved(item);
+            await ensureAllUsersValidMods(room);
         }
 
-        public Task OnPlaylistItemChanged(MultiplayerRoom room, APIPlaylistItem item)
+        public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, APIPlaylistItem item)
         {
-            return Clients.Group(GetGroupId(room.RoomID)).PlaylistItemChanged(item);
+            await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemChanged(item);
+            await ensureAllUsersValidMods(room);
+        }
+
+        private async Task updateCurrentPlaylistItem(ServerMultiplayerRoom room)
+        {
+            multiplayer_playlist_item currentItem;
+
+            using (var db = databaseFactory.GetInstance())
+                currentItem = await room.QueueImplementation.GetCurrentItem(db);
+
+            if (currentItem.id != room.Settings.PlaylistItemId)
+            {
+                room.Settings.PlaylistItemId = currentItem.id;
+                await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
+            }
         }
     }
 }
