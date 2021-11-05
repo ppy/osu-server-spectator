@@ -2,6 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -10,7 +12,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -87,17 +88,38 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser);
 
-            Hub.AddPlaylistItem(new APIPlaylistItem
+            int currentItemId = 0;
+            var playlistItems = new List<multiplayer_playlist_item>
             {
-                BeatmapID = 1234,
-                BeatmapChecksum = "checksum"
-            });
+                new multiplayer_playlist_item
+                {
+                    id = ++currentItemId,
+                    room_id = ROOM_ID,
+                    beatmap_id = 1234,
+                }
+            };
 
-            Database.Setup(db => db.GetCandidatePlaylistItemByExpiry(It.IsAny<long>())).ReturnsAsync(new multiplayer_playlist_item
-            {
-                id = ROOM_ID,
-                beatmap_id = 1234
-            });
+            Database.Setup(db => db.HasPlaylistItems(It.IsAny<long>()))
+                    .ReturnsAsync(() => playlistItems.Any());
+
+            Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
+                    .Callback<multiplayer_playlist_item>(item =>
+                    {
+                        item.id = ++currentItemId;
+                        item.room_id = ROOM_ID;
+                        playlistItems.Add(item);
+                    })
+                    .ReturnsAsync(() => playlistItems.Last().id);
+
+            Database.Setup(db => db.UpdatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
+                    .Callback<multiplayer_playlist_item>(item =>
+                    {
+                        int index = playlistItems.FindIndex(i => i.id == item.id);
+                        playlistItems[index] = item;
+                    });
+
+            Database.Setup(db => db.GetCandidatePlaylistItemByExpiry(It.IsAny<long>()))
+                    .ReturnsAsync(() => playlistItems.FirstOrDefault(i => !i.expired) ?? playlistItems.Last());
         }
 
         /// <summary>
