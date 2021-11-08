@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.Queueing;
 using osu.Game.Online.Rooms;
 using Xunit;
 
@@ -125,6 +126,24 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Assert.Equal(0, room.Settings.PlaylistItemId);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task ChangingQueueModeUpdatesModel()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                QueueMode = QueueModes.FreeForAll
+            });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+
+                Debug.Assert(room != null);
+                Assert.Equal(QueueModes.FreeForAll, room.Settings.QueueMode);
             }
         }
     }

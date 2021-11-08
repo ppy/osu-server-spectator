@@ -510,6 +510,12 @@ namespace osu.Server.Spectator.Hubs
                     Log($"Switching room ruleset to {room.MatchTypeImplementation}");
                 }
 
+                if (previousSettings.QueueMode != settings.QueueMode)
+                {
+                    room.ChangeQueueMode(settings.QueueMode);
+                    Log($"Switching queue mode to {room.QueueImplementation}");
+                }
+
                 await ensureAllUsersValidMods(room);
 
                 // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
