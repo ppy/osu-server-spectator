@@ -55,6 +55,21 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
+        public async Task RoomStartsWithCurrentPlaylistItem()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                var expectedPlaylistItem = await Database.Object.GetCandidatePlaylistItemByExpiry(ROOM_ID);
+                Assert.Equal(expectedPlaylistItem.id, room.Settings.PlaylistItemId);
+            }
+        }
+
+        [Fact]
         public async Task RoomHasNewPlaylistItemAfterMatchStartInHostOnlyMode()
         {
             long playlistItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;

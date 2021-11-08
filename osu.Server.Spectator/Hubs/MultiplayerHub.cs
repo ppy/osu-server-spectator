@@ -174,19 +174,12 @@ namespace osu.Server.Spectator.Hubs
                 if (databaseRoom.user_id != CurrentContextUserId)
                     throw new InvalidStateException("Non-host is attempting to join match before host");
 
-                var playlistItem = await db.GetCurrentPlaylistItemAsync(roomId);
-                var beatmapChecksum = await db.GetBeatmapChecksumAsync(playlistItem.beatmap_id);
-
-                if (beatmapChecksum == null)
-                    throw new InvalidOperationException($"Expected non-null checksum on beatmap ID {playlistItem.beatmap_id}");
-
                 var room = new ServerMultiplayerRoom(roomId, this)
                 {
                     Settings = new MultiplayerRoomSettings
                     {
                         Name = databaseRoom.name,
                         Password = databaseRoom.password,
-                        PlaylistItemId = playlistItem.id,
                         MatchType = databaseRoom.type.ToMatchType(),
                         QueueMode = databaseRoom.queue_mode.ToQueueMode()
                     }
@@ -194,6 +187,8 @@ namespace osu.Server.Spectator.Hubs
 
                 room.ChangeMatchType(room.Settings.MatchType);
                 room.ChangeQueueMode(room.Settings.QueueMode);
+
+                room.Settings.PlaylistItemId = (await room.QueueImplementation.GetCurrentItem(db)).id;
 
                 return room;
             }
