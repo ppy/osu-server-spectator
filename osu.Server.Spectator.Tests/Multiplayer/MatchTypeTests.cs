@@ -139,6 +139,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task JoinRoomWithTypeCreatesCorrectInstance()
         {
             Database.Setup(db => db.GetRoomAsync(ROOM_ID))
+                    .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(new multiplayer_room
                     {
                         type = database_match_type.team_versus,

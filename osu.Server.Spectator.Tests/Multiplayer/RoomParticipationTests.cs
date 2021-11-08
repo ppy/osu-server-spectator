@@ -23,6 +23,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UserCanJoinWithCorrectPassword()
         {
             Database.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+                    .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(new multiplayer_room
                     {
                         password = "password",
@@ -36,6 +37,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UserCantJoinWithIncorrectPassword()
         {
             Database.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+                    .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(new multiplayer_room
                     {
                         password = "password",

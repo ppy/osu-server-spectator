@@ -11,6 +11,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using Newtonsoft.Json;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -48,8 +49,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected readonly Mock<IGroupManager> Groups;
         protected readonly Mock<IMultiplayerClient> Caller;
 
+        private readonly List<multiplayer_playlist_item> playlistItems;
+        private int currentItemId;
+
         protected MultiplayerTest()
         {
+            currentItemId = 0;
+            playlistItems = new List<multiplayer_playlist_item>();
+
             mockDatabaseFactory = new Mock<IDatabaseFactory>();
             Database = new Mock<IDatabaseAccess>();
             setUpMockDatabase();
@@ -123,11 +130,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             mockDatabaseFactory.Setup(factory => factory.GetInstance()).Returns(Database.Object);
 
-            int currentItemId = 0;
-            var playlistItems = new List<multiplayer_playlist_item>();
-
             Database.Setup(db => db.GetRoomAsync(ROOM_ID))
-                    .Callback<long>(initialiseRoom)
+                    .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(() => new multiplayer_room
                     {
                         type = database_match_type.head_to_head,
@@ -136,18 +140,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     });
 
             Database.Setup(db => db.GetRoomAsync(ROOM_ID_2))
-                    .Callback<long>(initialiseRoom)
+                    .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(new multiplayer_room
                     {
                         type = database_match_type.head_to_head,
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
                         user_id = USER_ID_2
-                    });
-
-            Database.Setup(db => db.GetCurrentPlaylistItemAsync(It.IsAny<long>()))
-                    .ReturnsAsync(new multiplayer_playlist_item
-                    {
-                        beatmap_id = 1234
                     });
 
             Database.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
@@ -162,9 +160,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
                     .Callback<multiplayer_playlist_item>(item =>
                     {
-                        item.id = ++currentItemId;
-                        item.room_id = ROOM_ID;
-                        playlistItems.Add(item);
+                        var copy = JsonConvert.DeserializeObject<multiplayer_playlist_item>(JsonConvert.SerializeObject(item))!;
+                        copy.id = ++currentItemId;
+                        playlistItems.Add(copy);
                     })
                     .ReturnsAsync(() => currentItemId);
 
@@ -182,17 +180,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         return Task.FromResult(roomItems.FirstOrDefault(i => !i.expired) ?? roomItems.Last());
                     });
 
-            void initialiseRoom(long roomId)
+            Database.Setup(db => db.ExpirePlaylistItemAsync(It.IsAny<long>()))
+                    .Callback<long>(playlistItemId => playlistItems.Single(i => i.id == playlistItemId).expired = true);
+        }
+
+        protected void InitialiseRoom(long roomId)
+        {
+            if (playlistItems.All(i => i.room_id != roomId))
             {
-                if (playlistItems.All(i => i.room_id != roomId))
+                playlistItems.Add(new multiplayer_playlist_item
                 {
-                    playlistItems.Add(new multiplayer_playlist_item
-                    {
-                        id = ++currentItemId,
-                        room_id = roomId,
-                        beatmap_id = 1234,
-                    });
-                }
+                    id = ++currentItemId,
+                    room_id = roomId,
+                    beatmap_id = 1234,
+                });
             }
         }
     }

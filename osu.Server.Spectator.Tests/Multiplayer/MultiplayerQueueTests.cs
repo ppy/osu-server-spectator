@@ -75,9 +75,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             long playlistItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
             long expectedPlaylistItemId = playlistItemId + 1;
 
-            Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
-                    .ReturnsAsync(() => expectedPlaylistItemId);
-
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
             await Hub.ChangeState(MultiplayerUserState.Loaded);
@@ -88,8 +85,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
+                // Room has new playlist item.
                 Assert.Equal(expectedPlaylistItemId, room.Settings.PlaylistItemId);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
+
+                // Playlist item is expired.
+                Assert.True((await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, playlistItemId))!.expired);
             }
         }
     }

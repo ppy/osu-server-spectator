@@ -28,12 +28,6 @@ namespace osu.Server.Spectator.Database
         Task<multiplayer_room> GetRoomAsync(long roomId);
 
         /// <summary>
-        /// Returns the single current <see cref="multiplayer_playlist_item"/> of a multiplayer room with ID <paramref name="roomId"/>.
-        /// This method is not valid for use with playlists "rooms".
-        /// </summary>
-        Task<multiplayer_playlist_item> GetCurrentPlaylistItemAsync(long roomId);
-
-        /// <summary>
         /// Returns the checksum of the beatmap with the given <paramref name="beatmapId"/>.
         /// </summary>
         Task<string?> GetBeatmapChecksumAsync(int beatmapId);

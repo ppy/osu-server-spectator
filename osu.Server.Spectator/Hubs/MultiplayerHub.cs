@@ -560,25 +560,6 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        private async Task selectNextPlaylistItem(MultiplayerRoom room)
-        {
-            long newPlaylistItemId;
-
-            using (var db = databaseFactory.GetInstance())
-            {
-                // Expire the current playlist item.
-                var currentItem = await db.GetCurrentPlaylistItemAsync(room.RoomID);
-                await db.ExpirePlaylistItemAsync(currentItem.id);
-
-                // Todo: Host-rotate matches will require different logic here.
-                newPlaylistItemId = await db.AddPlaylistItemAsync(currentItem);
-            }
-
-            // Distribute the new playlist item ID to clients. All future playlist changes will affect this new one.
-            room.Settings.PlaylistItemId = newPlaylistItemId;
-            await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
-        }
-
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
             using (var db = databaseFactory.GetInstance())
@@ -636,7 +617,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.
         /// </summary>
-        private async Task updateRoomStateIfRequired(MultiplayerRoom room)
+        private async Task updateRoomStateIfRequired(ServerMultiplayerRoom room)
         {
             //check whether a room state change is required.
             switch (room.State)
@@ -672,7 +653,10 @@ namespace osu.Server.Spectator.Hubs
                         await changeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
 
-                        await selectNextPlaylistItem(room);
+                        using (var db = databaseFactory.GetInstance())
+                            await room.QueueImplementation.FinishCurrentItem(db);
+
+                        await updateCurrentPlaylistItem(room);
                     }
 
                     break;
