@@ -124,24 +124,19 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             mockDatabaseFactory.Setup(factory => factory.GetInstance()).Returns(Database.Object);
 
             int currentItemId = 0;
-            var playlistItems = new List<multiplayer_playlist_item>
-            {
-                new multiplayer_playlist_item
-                {
-                    id = ++currentItemId,
-                    room_id = ROOM_ID,
-                    beatmap_id = 1234,
-                }
-            };
+            var playlistItems = new List<multiplayer_playlist_item>();
 
             Database.Setup(db => db.GetRoomAsync(ROOM_ID))
-                    .ReturnsAsync(new multiplayer_room
+                    .Callback<long>(initialiseRoom)
+                    .ReturnsAsync(() => new multiplayer_room
                     {
                         type = database_match_type.head_to_head,
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
                         user_id = USER_ID,
                     });
+
             Database.Setup(db => db.GetRoomAsync(ROOM_ID_2))
+                    .Callback<long>(initialiseRoom)
                     .ReturnsAsync(new multiplayer_room
                     {
                         type = database_match_type.head_to_head,
@@ -159,14 +154,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
 
             Database.Setup(db => db.GetPlaylistItemFromRoomAsync(It.IsAny<long>(), It.IsAny<long>()))
-                    .Returns<long, long>((roomId, playlistItemId) => Task.FromResult<multiplayer_playlist_item?>(new multiplayer_playlist_item
-                    {
-                        id = playlistItemId,
-                        room_id = roomId,
-                    }));
+                    .Returns<long, long>((roomId, playlistItemId) => Task.FromResult(playlistItems.SingleOrDefault(i => i.room_id == roomId && i.id == playlistItemId)));
 
             Database.Setup(db => db.HasPlaylistItems(It.IsAny<long>()))
-                    .ReturnsAsync(() => playlistItems.Any());
+                    .Returns<long>(roomId => Task.FromResult(playlistItems.Any(i => i.room_id == roomId)));
 
             Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
                     .Callback<multiplayer_playlist_item>(item =>
@@ -175,7 +166,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         item.room_id = ROOM_ID;
                         playlistItems.Add(item);
                     })
-                    .ReturnsAsync(() => playlistItems.Last().id);
+                    .ReturnsAsync(() => currentItemId);
 
             Database.Setup(db => db.UpdatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
                     .Callback<multiplayer_playlist_item>(item =>
@@ -185,7 +176,24 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     });
 
             Database.Setup(db => db.GetCandidatePlaylistItemByExpiry(It.IsAny<long>()))
-                    .ReturnsAsync(() => playlistItems.FirstOrDefault(i => !i.expired) ?? playlistItems.Last());
+                    .Returns<long>(roomId =>
+                    {
+                        var roomItems = playlistItems.Where(i => i.room_id == roomId);
+                        return Task.FromResult(roomItems.FirstOrDefault(i => !i.expired) ?? roomItems.Last());
+                    });
+
+            void initialiseRoom(long roomId)
+            {
+                if (playlistItems.All(i => i.room_id != roomId))
+                {
+                    playlistItems.Add(new multiplayer_playlist_item
+                    {
+                        id = ++currentItemId,
+                        room_id = roomId,
+                        beatmap_id = 1234,
+                    });
+                }
+            }
         }
     }
 }

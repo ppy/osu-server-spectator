@@ -109,22 +109,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task ServerDoesNotAcceptClientPlaylistItemId()
         {
-            await Hub.JoinRoom(ROOM_ID);
+            long playlistItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
 
-            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            await Hub.ChangeSettings(new MultiplayerRoomSettings
             {
                 Name = "bestest room ever",
                 PlaylistItemId = 1
-            };
-
-            await Hub.ChangeSettings(testSettings);
+            });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(0, room.Settings.PlaylistItemId);
+                Assert.Equal(playlistItemId, room.Settings.PlaylistItemId);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
             }
         }
