@@ -87,39 +87,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Hub.Clients = Clients.Object;
 
             SetUserContext(ContextUser);
-
-            int currentItemId = 0;
-            var playlistItems = new List<multiplayer_playlist_item>
-            {
-                new multiplayer_playlist_item
-                {
-                    id = ++currentItemId,
-                    room_id = ROOM_ID,
-                    beatmap_id = 1234,
-                }
-            };
-
-            Database.Setup(db => db.HasPlaylistItems(It.IsAny<long>()))
-                    .ReturnsAsync(() => playlistItems.Any());
-
-            Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
-                    .Callback<multiplayer_playlist_item>(item =>
-                    {
-                        item.id = ++currentItemId;
-                        item.room_id = ROOM_ID;
-                        playlistItems.Add(item);
-                    })
-                    .ReturnsAsync(() => playlistItems.Last().id);
-
-            Database.Setup(db => db.UpdatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
-                    .Callback<multiplayer_playlist_item>(item =>
-                    {
-                        int index = playlistItems.FindIndex(i => i.id == item.id);
-                        playlistItems[index] = item;
-                    });
-
-            Database.Setup(db => db.GetCandidatePlaylistItemByExpiry(It.IsAny<long>()))
-                    .ReturnsAsync(() => playlistItems.FirstOrDefault(i => !i.expired) ?? playlistItems.Last());
         }
 
         /// <summary>
@@ -155,6 +122,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         private void setUpMockDatabase()
         {
             mockDatabaseFactory.Setup(factory => factory.GetInstance()).Returns(Database.Object);
+
+            int currentItemId = 0;
+            var playlistItems = new List<multiplayer_playlist_item>
+            {
+                new multiplayer_playlist_item
+                {
+                    id = ++currentItemId,
+                    room_id = ROOM_ID,
+                    beatmap_id = 1234,
+                }
+            };
+
             Database.Setup(db => db.GetRoomAsync(ROOM_ID))
                     .ReturnsAsync(new multiplayer_room
                     {
@@ -175,6 +154,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     {
                         beatmap_id = 1234
                     });
+
             Database.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
                     .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
 
@@ -184,6 +164,28 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         id = playlistItemId,
                         room_id = roomId,
                     }));
+
+            Database.Setup(db => db.HasPlaylistItems(It.IsAny<long>()))
+                    .ReturnsAsync(() => playlistItems.Any());
+
+            Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
+                    .Callback<multiplayer_playlist_item>(item =>
+                    {
+                        item.id = ++currentItemId;
+                        item.room_id = ROOM_ID;
+                        playlistItems.Add(item);
+                    })
+                    .ReturnsAsync(() => playlistItems.Last().id);
+
+            Database.Setup(db => db.UpdatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
+                    .Callback<multiplayer_playlist_item>(item =>
+                    {
+                        int index = playlistItems.FindIndex(i => i.id == item.id);
+                        playlistItems[index] = item;
+                    });
+
+            Database.Setup(db => db.GetCandidatePlaylistItemByExpiry(It.IsAny<long>()))
+                    .ReturnsAsync(() => playlistItems.FirstOrDefault(i => !i.expired) ?? playlistItems.Last());
         }
     }
 }
