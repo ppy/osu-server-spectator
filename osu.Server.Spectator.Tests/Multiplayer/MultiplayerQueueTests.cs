@@ -230,6 +230,46 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
+        [Fact]
+        public async Task ItemLastInQueueWhenChangingToFreeForAllMode()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.AddPlaylistItem(new APIPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Results);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                // First item (played) still exists in the database.
+                var firstItem = await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, 1);
+                Assert.NotNull(firstItem);
+                Assert.True(firstItem!.expired);
+
+                // Second item (previously current) still exists and is the current item.
+                var secondItem = await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, 2);
+                Assert.NotNull(secondItem);
+                Assert.False(secondItem!.expired);
+                Assert.Equal(secondItem.id, room.Settings.PlaylistItemId);
+            }
+        }
+
         #endregion
 
         #region Free-For-All Mode
@@ -342,6 +382,61 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(newItem.BeatmapID, currentItem.beatmap_id);
                 Assert.Equal(currentItem.id, room.Settings.PlaylistItemId);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
+            }
+        }
+
+        [Fact]
+        public async Task AllNonExpiredItemsExceptCurrentRemovedWhenChangingToHostOnlyMode()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+
+            await Hub.AddPlaylistItem(new APIPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            await Hub.AddPlaylistItem(new APIPlaylistItem
+            {
+                BeatmapID = 4444,
+                BeatmapChecksum = "4444"
+            });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Results);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.HostOnly });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                // First item (played) still exists in the database.
+                var firstItem = await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, 1);
+                Assert.NotNull(firstItem);
+                Assert.True(firstItem!.expired);
+
+                // Second item (previously current) still exists and is the current item.
+                var secondItem = await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, 2);
+                Assert.NotNull(secondItem);
+                Assert.False(secondItem!.expired);
+                Assert.Equal(secondItem.id, room.Settings.PlaylistItemId);
+
+                // Third item (future item) removed.
+                var thirdItem = await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, 3);
+                Assert.Null(thirdItem);
+
+                // Players received callbacks.
+                Receiver.Verify(r => r.PlaylistItemRemoved(It.Is<APIPlaylistItem>(p => p.ID == 3)), Times.Once);
             }
         }
 
