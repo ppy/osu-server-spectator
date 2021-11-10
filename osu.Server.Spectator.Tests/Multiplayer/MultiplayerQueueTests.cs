@@ -153,6 +153,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 // Room has new playlist item.
                 Assert.NotEqual(firstItemId, newItem.id);
                 Assert.Equal(newItem.id, room.Settings.PlaylistItemId);
+                Assert.False(newItem.expired);
 
                 // Previous item is expired.
                 Assert.True((await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, firstItemId))!.expired);

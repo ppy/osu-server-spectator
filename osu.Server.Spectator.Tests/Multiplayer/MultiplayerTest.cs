@@ -11,7 +11,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
-using Newtonsoft.Json;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -152,7 +151,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
 
             Database.Setup(db => db.GetPlaylistItemFromRoomAsync(It.IsAny<long>(), It.IsAny<long>()))
-                    .Returns<long, long>((roomId, playlistItemId) => Task.FromResult(playlistItems.SingleOrDefault(i => i.room_id == roomId && i.id == playlistItemId)));
+                    .Returns<long, long>((roomId, playlistItemId) => Task.FromResult(playlistItems.SingleOrDefault(i => i.room_id == roomId && i.id == playlistItemId)?.Clone()));
 
             Database.Setup(db => db.HasPlaylistItems(It.IsAny<long>()))
                     .Returns<long>(roomId => Task.FromResult(playlistItems.Any(i => i.room_id == roomId)));
@@ -160,8 +159,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
                     .Callback<multiplayer_playlist_item>(item =>
                     {
-                        var copy = JsonConvert.DeserializeObject<multiplayer_playlist_item>(JsonConvert.SerializeObject(item))!;
+                        var copy = item.Clone();
                         copy.id = ++currentItemId;
+                        copy.expired = false;
                         playlistItems.Add(copy);
                     })
                     .ReturnsAsync(() => currentItemId);
@@ -170,18 +170,24 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     .Callback<multiplayer_playlist_item>(item =>
                     {
                         int index = playlistItems.FindIndex(i => i.id == item.id);
-                        playlistItems[index] = item;
+                        playlistItems[index] = item.Clone();
                     });
 
             Database.Setup(db => db.GetCandidatePlaylistItemByExpiry(It.IsAny<long>()))
                     .Returns<long>(roomId =>
                     {
                         var roomItems = playlistItems.Where(i => i.room_id == roomId);
-                        return Task.FromResult(roomItems.FirstOrDefault(i => !i.expired) ?? roomItems.Last());
+                        return Task.FromResult((roomItems.FirstOrDefault(i => !i.expired) ?? roomItems.Last()).Clone());
                     });
 
             Database.Setup(db => db.ExpirePlaylistItemAsync(It.IsAny<long>()))
-                    .Callback<long>(playlistItemId => playlistItems.Single(i => i.id == playlistItemId).expired = true);
+                    .Callback<long>(playlistItemId =>
+                    {
+                        int index = playlistItems.FindIndex(i => i.id == playlistItemId);
+                        var copy = playlistItems[index].Clone();
+                        copy.expired = true;
+                        playlistItems[index] = copy;
+                    });
         }
 
         protected void InitialiseRoom(long roomId)

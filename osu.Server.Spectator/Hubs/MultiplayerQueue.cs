@@ -48,19 +48,22 @@ namespace osu.Server.Spectator.Hubs
         public async Task FinishCurrentItem(IDatabaseAccess db)
         {
             // Expire the current playlist item.
-            var currentItem = await GetCurrentItem(db);
-            await db.ExpirePlaylistItemAsync(currentItem.id);
-            await hub.OnPlaylistItemChanged(room, await currentItem.ToAPIPlaylistItem(db));
+            var item = await GetCurrentItem(db);
+            await db.ExpirePlaylistItemAsync(item.id);
+
+            // Re-retrieve the updated item to notify clients with.
+            item = (await db.GetPlaylistItemFromRoomAsync(room.RoomID, item.id))!;
+            await hub.OnPlaylistItemChanged(room, await item.ToAPIPlaylistItem(db));
 
             if (Mode != QueueModes.HostOnly)
                 return;
 
-            // In host-only mode, a duplicate playlist item will be used for the next round.
-            var newItem = currentItem.Clone();
-            newItem.expired = false;
-            newItem.id = await db.AddPlaylistItemAsync(newItem);
+            // In host-only mode, duplicate the playlist item for the next round.
+            item.id = await db.AddPlaylistItemAsync(item);
 
-            await hub.OnPlaylistItemAdded(room, await newItem.ToAPIPlaylistItem(db));
+            // Re-retrieve the updated item to notify clients with.
+            item = (await db.GetPlaylistItemFromRoomAsync(room.RoomID, item.id))!;
+            await hub.OnPlaylistItemAdded(room, await item.ToAPIPlaylistItem(db));
         }
 
         public async Task AddItem(APIPlaylistItem item, MultiplayerRoomUser user, IDatabaseAccess db)
