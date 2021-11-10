@@ -16,7 +16,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     public class MultiplayerQueueTests : MultiplayerTest
     {
         [Fact]
-        public async Task AddNonExistentBeatmapThrows()
+        public async Task AddNonExistentBeatmap()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync((string?)null);
 
@@ -140,12 +140,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
+            long secondItemId;
+
             using (var usage = Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
                 var newItem = await room.QueueImplementation.GetCurrentItem(Database.Object);
+                secondItemId = newItem.id;
 
                 // Room has new playlist item.
                 Assert.NotEqual(firstItemId, newItem.id);
@@ -158,6 +161,33 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Receiver.Verify(r => r.PlaylistItemAdded(It.Is<APIPlaylistItem>(i => i.ID == newItem.id)), Times.Once);
                 Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == firstItemId && i.Expired)), Times.Once);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
+            }
+
+            // And a second time...
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                var newItem = await room.QueueImplementation.GetCurrentItem(Database.Object);
+
+                // Room has new playlist item.
+                Assert.NotEqual(secondItemId, newItem.id);
+                Assert.Equal(newItem.id, room.Settings.PlaylistItemId);
+
+                // Previous item is expired.
+                Assert.True((await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, secondItemId))!.expired);
+
+                // Players received callbacks.
+                Receiver.Verify(r => r.PlaylistItemAdded(It.Is<APIPlaylistItem>(i => i.ID == newItem.id)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == secondItemId && i.Expired)), Times.Once);
+                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
             }
         }
 
@@ -204,7 +234,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         #region Free-For-All Mode
 
         [Fact]
-        public async Task AddingItemDoesNotReplaceExistingInFreeForAllMode()
+        public async Task AddingItemAppendsToQueueInFreeForAllMode()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
@@ -228,6 +258,89 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Database.Verify(db => db.UpdatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()), Times.Never);
                 Database.Verify(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()), Times.Once);
                 Receiver.Verify(r => r.PlaylistItemAdded(newItem), Times.Once);
+                Receiver.Verify(r => r.SettingsChanged(It.IsAny<MultiplayerRoomSettings>()), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task CompletingItemExpiresAndDoesNotAddNewItemsInFreeForAllMode()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                var currentItem = await room.QueueImplementation.GetCurrentItem(Database.Object);
+
+                // Room maintains playlist item.
+                Assert.Equal(currentItem.id, room.Settings.PlaylistItemId);
+                Assert.True(currentItem.expired);
+
+                // Players received callbacks.
+                Receiver.Verify(r => r.PlaylistItemAdded(It.IsAny<APIPlaylistItem>()), Times.Never);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == currentItem.id && i.Expired)), Times.Once);
+                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task CanNotStartExpiredItemInFreeForAllMode()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Results);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.StartMatch());
+        }
+
+        [Fact]
+        public async Task NewItemImmediatelySelectedWhenAllItemsExpiredInFreeForAllMode()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Results);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            var newItem = new APIPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            };
+
+            await Hub.AddPlaylistItem(newItem);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                var currentItem = await room.QueueImplementation.GetCurrentItem(Database.Object);
+
+                // New playlist item selected.
+                Assert.Equal(newItem.BeatmapID, currentItem.beatmap_id);
+                Assert.Equal(currentItem.id, room.Settings.PlaylistItemId);
+                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
             }
         }
 
