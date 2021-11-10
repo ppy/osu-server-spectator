@@ -4,6 +4,8 @@
 using System;
 using osu.Game.Online.Rooms;
 
+// ReSharper disable InconsistentNaming (matches database table)
+
 namespace osu.Server.Spectator.Database.Models
 {
     [Serializable]
