@@ -25,9 +25,9 @@ namespace osu.Server.Spectator.Tests
                 TeamID = 5,
             };
 
-            var serialized = JsonConvert.SerializeObject(state, typeof(MatchUserState), settings);
+            var serialized = JsonConvert.SerializeObject(state, settings);
 
-            var deserializedState = JsonConvert.DeserializeObject(serialized, settings);
+            var deserializedState = JsonConvert.DeserializeObject<MatchUserState>(serialized, settings);
             var deserializedRoomState = deserializedState as TeamVersusUserState;
 
             Assert.NotNull(deserializedRoomState);
@@ -48,7 +48,7 @@ namespace osu.Server.Spectator.Tests
                     }
                 }
             };
-            var serialized = JsonConvert.SerializeObject(state, typeof(MatchRoomState), settings);
+            var serialized = JsonConvert.SerializeObject(state, settings);
 
             var deserializedState = JsonConvert.DeserializeObject<MatchRoomState>(serialized, settings).AsNonNull();
 
@@ -70,7 +70,7 @@ namespace osu.Server.Spectator.Tests
                 }
             };
 
-            var serialized = JsonConvert.SerializeObject(room, typeof(MatchRoomState), settings);
+            var serialized = JsonConvert.SerializeObject(room, settings);
 
             var deserialisedRoom = JsonConvert.DeserializeObject<MultiplayerRoom>(serialized, settings).AsNonNull();
 
