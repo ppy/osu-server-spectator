@@ -89,15 +89,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task GuestsCannotRemoveItemsInHostOnlyMode()
+        public async Task ItemsCannotBeRemovedInHostOnlyMode()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-            long playlistItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
 
-            SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
+            await Hub.AddPlaylistItem(new APIPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
 
-            await Assert.ThrowsAsync<NotHostException>(() => Hub.RemovePlaylistItem(playlistItemId));
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(0));
         }
 
         [Fact]

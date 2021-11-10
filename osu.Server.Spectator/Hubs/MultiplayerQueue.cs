@@ -119,21 +119,9 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task RemoveItem(long playlistItemId, MultiplayerRoomUser user, IDatabaseAccess db)
+        public Task RemoveItem(long playlistItemId, MultiplayerRoomUser user, IDatabaseAccess db)
         {
-            switch (mode)
-            {
-                case QueueModes.HostOnly:
-                    if (room.Host == null || !user.Equals(room.Host))
-                        throw new NotHostException();
-
-                    break;
-
-                default:
-                    throw new NotImplementedException();
-            }
-
-            await removeItem(playlistItemId, db);
+            throw new InvalidStateException("Items cannot yet be removed from the playlist.");
         }
 
         private async Task removeItem(long playlistItemId, IDatabaseAccess db)
