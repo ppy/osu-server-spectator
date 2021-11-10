@@ -22,10 +22,10 @@ namespace osu.Server.Spectator.Hubs
 {
     public class MultiplayerQueue
     {
-        public QueueModes Mode { get; set; }
-
         private readonly ServerMultiplayerRoom room;
         private readonly IMultiplayerServerMatchCallbacks hub;
+
+        private QueueModes mode;
 
         public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
         {
@@ -35,7 +35,7 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<multiplayer_playlist_item> GetCurrentItem(IDatabaseAccess db)
         {
-            switch (Mode)
+            switch (mode)
             {
                 default:
                     return await db.GetCandidatePlaylistItemByExpiry(room.RoomID);
@@ -43,6 +43,26 @@ namespace osu.Server.Spectator.Hubs
                 case QueueModes.FairRotate:
                     return await db.GetCandidatePlaylistItemByFairness(room.RoomID);
             }
+        }
+
+        public async Task ChangeMode(QueueModes newMode, IDatabaseAccess db)
+        {
+            if (mode == newMode)
+                return;
+
+            if (newMode == QueueModes.HostOnly)
+            {
+                // Remove all but the current and expired items. The current item will be used for the host-only queue.
+                foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
+                {
+                    if (item.expired || item.id == room.Settings.PlaylistItemId)
+                        continue;
+
+                    await removeItem(item.id, db);
+                }
+            }
+
+            mode = newMode;
         }
 
         public async Task FinishCurrentItem(IDatabaseAccess db)
@@ -55,7 +75,7 @@ namespace osu.Server.Spectator.Hubs
             item = (await db.GetPlaylistItemFromRoomAsync(room.RoomID, item.id))!;
             await hub.OnPlaylistItemChanged(room, await item.ToAPIPlaylistItem(db));
 
-            if (Mode != QueueModes.HostOnly)
+            if (mode != QueueModes.HostOnly)
                 return;
 
             // In host-only mode, duplicate the playlist item for the next round.
@@ -68,7 +88,7 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task AddItem(APIPlaylistItem item, MultiplayerRoomUser user, IDatabaseAccess db)
         {
-            if (Mode == QueueModes.HostOnly && (room.Host == null || !user.Equals(room.Host)))
+            if (mode == QueueModes.HostOnly && (room.Host == null || !user.Equals(room.Host)))
                 throw new NotHostException();
 
             string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.BeatmapID);
@@ -84,7 +104,7 @@ namespace osu.Server.Spectator.Hubs
 
             bool hasItems = await db.HasPlaylistItems(room.RoomID);
 
-            switch (Mode)
+            switch (mode)
             {
                 case QueueModes.HostOnly when hasItems: // In host-only mode, re-use the current item if able to.
                     item.ID = (await GetCurrentItem(db)).id;
@@ -99,12 +119,27 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task RemoveItem(APIPlaylistItem item, MultiplayerRoomUser user, IDatabaseAccess db)
+        public async Task RemoveItem(long playlistItemId, MultiplayerRoomUser user, IDatabaseAccess db)
         {
-            if (room.Host == null || !user.Equals(room.Host))
-                throw new NotHostException();
+            switch (mode)
+            {
+                case QueueModes.HostOnly:
+                    if (room.Host == null || !user.Equals(room.Host))
+                        throw new NotHostException();
 
-            await db.RemovePlaylistItemAsync(room.RoomID, item.ID);
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+
+            await removeItem(playlistItemId, db);
+        }
+
+        private async Task removeItem(long playlistItemId, IDatabaseAccess db)
+        {
+            await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
+            await hub.OnPlaylistItemRemoved(room, playlistItemId);
         }
 
         public async Task<(bool isValid, IEnumerable<APIMod> validMods)> ValidateMods(IDatabaseAccess db, IEnumerable<APIMod> proposedMods)

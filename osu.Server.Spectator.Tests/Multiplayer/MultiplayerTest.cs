@@ -188,6 +188,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         copy.expired = true;
                         playlistItems[index] = copy;
                     });
+
+            Database.Setup(db => db.GetAllPlaylistItems(It.IsAny<long>()))
+                    .Returns<long>(roomId => Task.FromResult(playlistItems.Where(i => i.room_id == roomId).Select(i => i.Clone()).ToArray()));
+
+            Database.Setup(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()))
+                    .Callback<long, long>((roomId, playlistItemId) => playlistItems.RemoveAll(i => i.room_id == roomId && i.id == playlistItemId));
         }
 
         protected void InitialiseRoom(long roomId)

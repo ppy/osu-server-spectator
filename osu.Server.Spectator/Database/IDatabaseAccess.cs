@@ -92,6 +92,8 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         Task EndMatchAsync(MultiplayerRoom room);
 
+        Task<multiplayer_playlist_item[]> GetAllPlaylistItems(long roomId);
+
         Task<multiplayer_playlist_item> GetCandidatePlaylistItemByExpiry(long roomId);
 
         Task<multiplayer_playlist_item> GetCandidatePlaylistItemByFairness(long roomId);

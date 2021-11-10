@@ -186,9 +186,10 @@ namespace osu.Server.Spectator.Hubs
                 };
 
                 room.ChangeMatchType(room.Settings.MatchType);
-                room.ChangeQueueMode(room.Settings.QueueMode);
 
-                room.Settings.PlaylistItemId = (await room.QueueImplementation.GetCurrentItem(db)).id;
+                await room.QueueImplementation.ChangeMode(room.Settings.QueueMode, db);
+                var currentItem = await room.QueueImplementation.GetCurrentItem(db);
+                room.Settings.PlaylistItemId = currentItem.id;
 
                 return room;
             }
@@ -514,7 +515,8 @@ namespace osu.Server.Spectator.Hubs
 
                 if (previousSettings.QueueMode != settings.QueueMode)
                 {
-                    room.ChangeQueueMode(settings.QueueMode);
+                    using (var db = databaseFactory.GetInstance())
+                        await room.QueueImplementation.ChangeMode(settings.QueueMode, db);
                     Log($"Switching queue mode to {room.QueueImplementation}");
                 }
 
