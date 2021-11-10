@@ -64,6 +64,7 @@ namespace osu.Server.Spectator.Tests
         {
             MultiplayerRoom room = new MultiplayerRoom(1234)
             {
+                MatchState = new TeamVersusRoomState(),
                 Users =
                 {
                     new MultiplayerRoomUser(888),
@@ -77,6 +78,7 @@ namespace osu.Server.Spectator.Tests
             Assert.Equal(room.RoomID, deserialisedRoom.RoomID);
             Assert.Equal(room.Users.Count, deserialisedRoom.Users.Count);
             Assert.Equal(room.Users.First().UserID, deserialisedRoom.Users.First().UserID);
+            Assert.Equal(typeof(TeamVersusRoomState), deserialisedRoom.MatchState?.GetType());
         }
     }
 }
