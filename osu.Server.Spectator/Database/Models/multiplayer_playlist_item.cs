@@ -57,5 +57,7 @@ namespace osu.Server.Spectator.Database.Models
             AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
             Expired = expired
         };
+
+        public multiplayer_playlist_item Clone() => (multiplayer_playlist_item)MemberwiseClone();
     }
 }
