@@ -407,6 +407,13 @@ namespace osu.Server.Spectator.Hubs
                 if (room.State != MultiplayerRoomState.Open)
                     throw new InvalidStateException("Can't start match when already in a running state.");
 
+                using (var db = databaseFactory.GetInstance())
+                {
+                    var currentItem = await room.QueueImplementation.GetCurrentItem(db);
+                    if (currentItem.expired)
+                        throw new InvalidStateException("Cannot start an expired playlist item.");
+                }
+
                 var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
 
                 if (readyUsers.Length == 0)
