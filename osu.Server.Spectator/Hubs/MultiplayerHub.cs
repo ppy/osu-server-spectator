@@ -449,7 +449,7 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task RemovePlaylistItem(APIPlaylistItem item)
+        public async Task RemovePlaylistItem(long playlistItemId)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
@@ -463,7 +463,7 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 using (var db = databaseFactory.GetInstance())
-                    await room.QueueImplementation.RemoveItem(item, user, db);
+                    await room.QueueImplementation.RemoveItem(playlistItemId, user, db);
             }
         }
 
@@ -844,10 +844,10 @@ namespace osu.Server.Spectator.Hubs
             await ensureAllUsersValidMods(room);
         }
 
-        public async Task OnPlaylistItemRemoved(ServerMultiplayerRoom room, APIPlaylistItem item)
+        public async Task OnPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId)
         {
             await updateCurrentPlaylistItem(room);
-            await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemRemoved(item);
+            await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemRemoved(playlistItemId);
             await ensureAllUsersValidMods(room);
         }
 

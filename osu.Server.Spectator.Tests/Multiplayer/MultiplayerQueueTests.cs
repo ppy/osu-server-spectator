@@ -97,10 +97,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<NotHostException>(() => Hub.RemovePlaylistItem(new APIPlaylistItem
-            {
-                ID = playlistItemId
-            }));
+            await Assert.ThrowsAsync<NotHostException>(() => Hub.RemovePlaylistItem(playlistItemId));
         }
 
         [Fact]
@@ -436,7 +433,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Null(thirdItem);
 
                 // Players received callbacks.
-                Receiver.Verify(r => r.PlaylistItemRemoved(It.Is<APIPlaylistItem>(p => p.ID == 3)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemRemoved(It.Is<long>(id => id == 3)), Times.Once);
             }
         }
 

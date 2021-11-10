@@ -97,8 +97,8 @@ namespace SampleMultiplayerClient
         public Task AddPlaylistItem(APIPlaylistItem item) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.AddPlaylistItem), item);
 
-        public Task RemovePlaylistItem(APIPlaylistItem item) =>
-            connection.InvokeAsync(nameof(IMultiplayerServer.RemovePlaylistItem), item);
+        public Task RemovePlaylistItem(long playlistItemId) =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.RemovePlaylistItem), playlistItemId);
 
         Task IMultiplayerClient.RoomStateChanged(MultiplayerRoomState state)
         {
@@ -214,9 +214,9 @@ namespace SampleMultiplayerClient
             return Task.CompletedTask;
         }
 
-        public Task PlaylistItemRemoved(APIPlaylistItem item)
+        public Task PlaylistItemRemoved(long playlistItemId)
         {
-            Console.WriteLine($"Playlist item removed (id: {item.ID})");
+            Console.WriteLine($"Playlist item removed (id: {playlistItemId})");
             return Task.CompletedTask;
         }
 

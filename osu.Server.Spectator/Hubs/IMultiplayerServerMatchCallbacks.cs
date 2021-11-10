@@ -44,8 +44,8 @@ namespace osu.Server.Spectator.Hubs
         /// Let the hub know that a playlist item has been removed.
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
-        /// <param name="item">The removed item.</param>
-        Task OnPlaylistItemRemoved(ServerMultiplayerRoom room, APIPlaylistItem item);
+        /// <param name="playlistItemId">The removed item.</param>
+        Task OnPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId);
 
         /// <summary>
         /// Let the hub know that a playlist item has been changed.
