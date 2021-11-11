@@ -15,6 +15,7 @@ namespace osu.Server.Spectator.Database.Models
     public class multiplayer_playlist_item
     {
         public long id { get; set; }
+        public int user_id { get; set; }
         public long room_id { get; set; }
         public int beatmap_id { get; set; }
         public short ruleset_id { get; set; }

@@ -117,7 +117,7 @@ namespace osu.Server.Spectator.Hubs
                     break;
 
                 default:
-                    item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                    item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item) { user_id = user.UserID });
                     await hub.OnPlaylistItemAdded(room, item);
                     break;
             }
