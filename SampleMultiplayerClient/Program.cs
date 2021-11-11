@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
+using osu.Framework.Utils;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
@@ -87,15 +88,9 @@ namespace SampleMultiplayerClient
                             await targetClient.ChangeSettings(settings);
                             break;
 
-                        // Todo:
-                        // case "additem":
-                        //     break;
-                        //
-                        // case "removeitem":
-                        //     break;
-                        //
-                        // case "changeitem":
-                        //     break;
+                        case "additem":
+                            await targetClient.AddPlaylistItem(new APIPlaylistItem { BeatmapID = RNG.Next(0, 65536) });
+                            break;
 
                         case "changestate":
                             await targetClient.ChangeState(Enum.Parse<MultiplayerUserState>(args[0], true));
