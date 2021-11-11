@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     public class MultiplayerFreeForAllQueueTests : MultiplayerTest
     {
         [Fact]
-        public async Task AddingItemAppendsToQueueInFreeForAllMode()
+        public async Task AddingItemAppendsToQueue()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
@@ -44,7 +44,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task CompletingItemExpiresAndDoesNotAddNewItemsInFreeForAllMode()
+        public async Task CompletingItemExpiresAndDoesNotAddNewItems()
         {
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
@@ -73,7 +73,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task CanNotStartExpiredItemInFreeForAllMode()
+        public async Task CanNotStartExpiredItem()
         {
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
@@ -89,7 +89,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task NewItemImmediatelySelectedWhenAllItemsExpiredInFreeForAllMode()
+        public async Task NewItemImmediatelySelectedWhenAllItemsExpired()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 

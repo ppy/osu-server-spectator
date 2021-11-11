@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     public class MultiplayerHostOnlyQueueTests : MultiplayerTest
     {
         [Fact]
-        public async Task GuestsCannotAddItemsInHostOnlyMode()
+        public async Task GuestsCannotAddItems()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
             await Hub.JoinRoom(ROOM_ID);
@@ -31,7 +31,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task ItemsCannotBeRemovedInHostOnlyMode()
+        public async Task ItemsCannotBeRemoved()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task AddingItemUpdatesExistingInHostOnlyMode()
+        public async Task AddingItemUpdatesExisting()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
@@ -73,7 +73,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task RoomHasNewPlaylistItemAfterMatchStartInHostOnlyMode()
+        public async Task RoomHasNewPlaylistItemAfterMatchStart()
         {
             long firstItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
 
@@ -135,7 +135,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task AddingItemDoesNotAffectPastItemsInHostOnlyMode()
+        public async Task AddingItemDoesNotAffectPastItems()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
