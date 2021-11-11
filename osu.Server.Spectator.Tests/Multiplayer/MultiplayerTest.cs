@@ -198,6 +198,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     id = ++currentItemId,
                     room_id = roomId,
                     beatmap_id = 1234,
+                    user_id = int.Parse(Hub.Context.UserIdentifier!)
                 });
             }
         }
