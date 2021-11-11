@@ -94,10 +94,6 @@ namespace osu.Server.Spectator.Database
 
         Task<multiplayer_playlist_item[]> GetAllPlaylistItems(long roomId);
 
-        Task<multiplayer_playlist_item> GetCandidatePlaylistItemByExpiry(long roomId);
-
-        Task<multiplayer_playlist_item> GetCandidatePlaylistItemByFairness(long roomId);
-
         Task<bool> HasPlaylistItems(long roomId);
     }
 }

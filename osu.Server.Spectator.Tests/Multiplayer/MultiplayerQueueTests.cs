@@ -65,8 +65,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                var expectedPlaylistItem = await Database.Object.GetCandidatePlaylistItemByExpiry(ROOM_ID);
-                Assert.Equal(expectedPlaylistItem.id, room.Settings.PlaylistItemId);
+                Assert.Equal(1, room.Settings.PlaylistItemId);
             }
         }
 

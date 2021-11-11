@@ -173,13 +173,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         playlistItems[index] = item.Clone();
                     });
 
-            Database.Setup(db => db.GetCandidatePlaylistItemByExpiry(It.IsAny<long>()))
-                    .Returns<long>(roomId =>
-                    {
-                        var roomItems = playlistItems.Where(i => i.room_id == roomId);
-                        return Task.FromResult((roomItems.FirstOrDefault(i => !i.expired) ?? roomItems.Last()).Clone());
-                    });
-
             Database.Setup(db => db.ExpirePlaylistItemAsync(It.IsAny<long>()))
                     .Callback<long>(playlistItemId =>
                     {

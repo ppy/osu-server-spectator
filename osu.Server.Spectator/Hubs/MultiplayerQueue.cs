@@ -35,13 +35,17 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<multiplayer_playlist_item> GetCurrentItem(IDatabaseAccess db)
         {
+            var allItems = await db.GetAllPlaylistItems(room.RoomID);
+
             switch (mode)
             {
                 default:
-                    return await db.GetCandidatePlaylistItemByExpiry(room.RoomID);
+                    // Pick the first available non-expired playlist item, or default to the last item for when all items are expired.
+                    return allItems.FirstOrDefault(i => !i.expired) ?? allItems.Last();
 
                 case QueueModes.FairRotate:
-                    return await db.GetCandidatePlaylistItemByFairness(room.RoomID);
+                    // Todo: Group playlist items by (user_id -> count_expired), and select the first available playlist item from a user that has available beatmaps where count_expired is the lowest.
+                    throw new NotImplementedException();
             }
         }
 
