@@ -1,9 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using osu.Framework.Extensions.ObjectExtensions;
+using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using Xunit;
@@ -14,7 +16,10 @@ namespace osu.Server.Spectator.Tests
     {
         private readonly JsonSerializerSettings settings = new JsonSerializerSettings
         {
-            TypeNameHandling = TypeNameHandling.Auto
+            Converters = new List<JsonConverter>
+            {
+                new SignalRDerivedTypeWorkaroundJsonConverter(),
+            },
         };
 
         [Fact]

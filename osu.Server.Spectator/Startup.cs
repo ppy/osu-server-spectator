@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -27,7 +28,7 @@ namespace osu.Server.Spectator
                     {
                         options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
 
-                        // TODO: This is required to make root class serialisation work in the case of derived classes.
+                        // This is required to make derived class serialisation work.
                         // Optimally, we only want to set `TypeNameHandling.Auto` here, as this will currently be sending overly verbose responses.
                         //
                         // This is a shortcoming of SignalR, in that it does not pass the (base) class specification through to NewtonsoftJson's Serialize method.
@@ -40,7 +41,10 @@ namespace osu.Server.Spectator
                         // https://github.com/neuecc/MessagePack-CSharp/issues/1171 ("it's not messagepack's issue")
                         // https://github.com/dotnet/aspnetcore/issues/30096 ("it's definitely broken")
                         // https://github.com/dotnet/aspnetcore/issues/7298 (current tracking issue, though weirdly described as a javascript client issue)
-                        options.PayloadSerializerSettings.TypeNameHandling = TypeNameHandling.All;
+                        options.PayloadSerializerSettings.Converters = new List<JsonConverter>
+                        {
+                            new SignalRDerivedTypeWorkaroundJsonConverter(),
+                        };
                     });
 
             services.AddHubEntities()
