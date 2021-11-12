@@ -56,6 +56,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public async Task Initialise()
         {
+            mode = room.Settings.QueueMode;
             await updateCurrentItem(false);
         }
 
