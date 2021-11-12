@@ -105,13 +105,6 @@ namespace osu.Server.Spectator.Hubs
 
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
-                        // Ensure the client's playlist is up to date.
-                        using (var db = databaseFactory.GetInstance())
-                        {
-                            foreach (var playlistItem in await db.GetAllPlaylistItems(room.RoomID))
-                                await Clients.Caller.PlaylistItemAdded(await playlistItem.ToAPIPlaylistItem(db));
-                        }
-
                         Log($"Joined room {room.RoomID}");
                     }
                     catch
@@ -428,6 +421,25 @@ namespace osu.Server.Spectator.Hubs
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
+            }
+        }
+
+        public async Task RequestAllPlaylistItems()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                // Ensure the client's playlist is up to date.
+                using (var db = databaseFactory.GetInstance())
+                {
+                    foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
+                        await Clients.Caller.PlaylistItemAdded(await item.ToAPIPlaylistItem(db));
+                }
             }
         }
 
