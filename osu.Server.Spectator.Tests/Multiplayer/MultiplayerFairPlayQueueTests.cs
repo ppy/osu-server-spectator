@@ -86,30 +86,88 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 // Item 3 selected (user 1). User 2 has no more items available.
                 Assert.Equal(3, room.Settings.PlaylistItemId);
             }
+        }
 
-            async Task runGameplay()
+        [Fact]
+        public async Task CurrentItemUpdatedWhenChangingToAndFromFreeForAll()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+
+            // The room is free-for-all initially.
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.AddPlaylistItem(new APIPlaylistItem
             {
-                SetUserContext(ContextUser2);
-                await Hub.ChangeState(MultiplayerUserState.Ready);
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
 
-                SetUserContext(ContextUser);
-                await Hub.ChangeState(MultiplayerUserState.Ready);
-                await Hub.StartMatch();
-                await Hub.ChangeState(MultiplayerUserState.Loaded);
+            SetUserContext(ContextUser2);
 
-                SetUserContext(ContextUser2);
-                await Hub.ChangeState(MultiplayerUserState.Loaded);
-                await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.AddPlaylistItem(new APIPlaylistItem
+            {
+                BeatmapID = 4444,
+                BeatmapChecksum = "4444"
+            });
 
-                SetUserContext(ContextUser);
-                await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-                await Hub.ChangeState(MultiplayerUserState.Idle);
+            await runGameplay();
 
-                SetUserContext(ContextUser2);
-                await Hub.ChangeState(MultiplayerUserState.Idle);
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
 
-                SetUserContext(ContextUser);
+                // After playing the first item, the second item (by player 1) is selected.
+                Assert.Equal(2, room.Settings.PlaylistItemId);
             }
+
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FairRotate });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                // After changing to fair-play mode, we expect the third item (by player 2) to be selected.
+                Assert.Equal(3, room.Settings.PlaylistItemId);
+            }
+
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                // After changing back to free-for-all mode, we expect the second item (by player 1) to be selected.
+                Assert.Equal(2, room.Settings.PlaylistItemId);
+            }
+        }
+
+        private async Task runGameplay()
+        {
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            SetUserContext(ContextUser);
         }
     }
 }
