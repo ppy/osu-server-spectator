@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
@@ -305,8 +304,19 @@ namespace osu.Server.Spectator.Hubs
                         break;
 
                     case QueueModes.FairRotate:
-                        // Todo: Group playlist items by (user_id -> count_expired), and select the first available playlist item from a user that has available beatmaps where count_expired is the lowest.
-                        throw new NotImplementedException();
+                        CurrentItem = await (allItems
+                                             // Group items by user_id.
+                                             .GroupBy(i => i.user_id)
+                                             // Order users by descending number of expired (already played) items.
+                                             .OrderBy(g => g.Count(i => i.expired))
+                                             // Get the first unexpired item from each group.
+                                             .Select(g => g.FirstOrDefault(i => !i.expired))
+                                             // Select the first unexpired item in order.
+                                             .FirstOrDefault(i => i != null)
+                                             // Default to the last item for when all items are expired.
+                                             ?? allItems.Last())
+                            .ToAPIPlaylistItem(db);
+                        break;
                 }
             }
 
