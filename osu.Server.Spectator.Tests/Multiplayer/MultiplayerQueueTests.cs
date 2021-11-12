@@ -99,5 +99,24 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(2, (await Database.Object.GetAllPlaylistItems(ROOM_ID)).Length);
             }
         }
+
+        [Fact]
+        public async Task JoiningRoomInvokesPlaylistItemAddedCallbackForEveryItem()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            InitialiseRoom(ROOM_ID);
+
+            await Database.Object.AddPlaylistItemAsync(new multiplayer_playlist_item(ROOM_ID, new APIPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            }));
+
+            await Hub.JoinRoom(ROOM_ID);
+
+            Caller.Verify(c => c.PlaylistItemAdded(It.Is<APIPlaylistItem>(p => p.ID == 1)), Times.Once);
+            Caller.Verify(c => c.PlaylistItemAdded(It.Is<APIPlaylistItem>(p => p.ID == 2)), Times.Once);
+        }
     }
 }

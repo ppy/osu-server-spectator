@@ -105,6 +105,13 @@ namespace osu.Server.Spectator.Hubs
 
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
+                        // Ensure the client's playlist is up to date.
+                        using (var db = databaseFactory.GetInstance())
+                        {
+                            foreach (var playlistItem in await db.GetAllPlaylistItems(room.RoomID))
+                                await Clients.Caller.PlaylistItemAdded(await playlistItem.ToAPIPlaylistItem(db));
+                        }
+
                         Log($"Joined room {room.RoomID}");
                     }
                     catch
