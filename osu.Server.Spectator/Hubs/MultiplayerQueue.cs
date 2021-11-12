@@ -71,15 +71,25 @@ namespace osu.Server.Spectator.Hubs
             using (var db = dbFactory.GetInstance())
             {
                 // Expire the current playlist item.
+                CurrentItem.Expired = true;
                 await db.ExpirePlaylistItemAsync(CurrentItem.ID);
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
 
-                if (mode != QueueModes.HostOnly)
-                    return;
+                if (mode == QueueModes.HostOnly)
+                {
+                    // In host-only mode, duplicate the playlist item for the next round.
+                    var newItem = new APIPlaylistItem
+                    {
+                        BeatmapID = CurrentItem.BeatmapID,
+                        BeatmapChecksum = CurrentItem.BeatmapChecksum,
+                        RulesetID = CurrentItem.RulesetID,
+                        AllowedMods = CurrentItem.AllowedMods,
+                        RequiredMods = CurrentItem.RequiredMods
+                    };
 
-                // In host-only mode, duplicate the playlist item for the next round.
-                CurrentItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, CurrentItem));
-                await hub.OnPlaylistItemAdded(room, CurrentItem);
+                    newItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, newItem));
+                    await hub.OnPlaylistItemAdded(room, newItem);
+                }
             }
 
             await refreshCurrentItem();
