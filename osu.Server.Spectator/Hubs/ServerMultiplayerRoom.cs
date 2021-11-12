@@ -44,7 +44,6 @@ namespace osu.Server.Spectator.Hubs
         public async Task Initialise()
         {
             ChangeMatchType(Settings.MatchType);
-
             await QueueImplementation.Initialise();
         }
 

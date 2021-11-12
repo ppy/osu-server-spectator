@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,9 +27,9 @@ namespace osu.Server.Spectator.Hubs
         private readonly IDatabaseFactory dbFactory;
         private readonly IMultiplayerServerMatchCallbacks hub;
 
-        public APIPlaylistItem CurrentItem { get; private set; } = null!;
-
+        private APIPlaylistItem? currentItem;
         private QueueModes mode;
+        private bool initialised;
 
         public MultiplayerQueue(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hub)
         {
@@ -37,11 +38,36 @@ namespace osu.Server.Spectator.Hubs
             this.hub = hub;
         }
 
-        public async Task Initialise()
+        /// <summary>
+        /// The current <see cref="APIPlaylistItem"/>
+        /// </summary>
+        public APIPlaylistItem CurrentItem
         {
-            await refreshCurrentItem(false);
+            get
+            {
+                if (!initialised)
+                    throw new InvalidStateException("Room not initialised");
+
+                Debug.Assert(currentItem != null);
+
+                return currentItem;
+            }
+            private set => currentItem = value;
         }
 
+        /// <summary>
+        /// Initialises the queue from the database.
+        /// </summary>
+        public async Task Initialise()
+        {
+            await updateCurrentItem(false);
+            initialised = true;
+        }
+
+        /// <summary>
+        /// Changes the queueing mode.
+        /// </summary>
+        /// <param name="newMode">The new mode.</param>
         public async Task ChangeMode(QueueModes newMode)
         {
             if (mode == newMode)
@@ -55,7 +81,7 @@ namespace osu.Server.Spectator.Hubs
             // When changing to host-only mode, ensure that exactly one non-expired playlist item exists and is the current item.
             using (var db = dbFactory.GetInstance())
             {
-                // Remove all but the current and expired items. The current item will be used for the host-only queue.
+                // Remove all but the current and expired items. The current item may be re-used for host-only mode if it's non-expired.
                 foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
                 {
                     if (item.expired || item.id == room.Settings.PlaylistItemId)
@@ -65,20 +91,24 @@ namespace osu.Server.Spectator.Hubs
                     await hub.OnPlaylistItemRemoved(room, item.id);
                 }
 
+                // Always ensure that at least one non-expired item exists by duplicating the current item if required.
                 if (CurrentItem.Expired)
                 {
                     await duplicateCurrentItem(db);
-                    await refreshCurrentItem();
+                    await updateCurrentItem();
                 }
             }
         }
 
+        /// <summary>
+        /// Expires the current playlist item and advances to the next one in the order defined by the queueing mode.
+        /// </summary>
         public async Task FinishCurrentItem()
         {
             using (var db = dbFactory.GetInstance())
             {
+                // Expire and let clients know that the current item has finished.
                 await db.ExpirePlaylistItemAsync(CurrentItem.ID);
-
                 CurrentItem.Expired = true;
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
 
@@ -87,9 +117,16 @@ namespace osu.Server.Spectator.Hubs
                     await duplicateCurrentItem(db);
             }
 
-            await refreshCurrentItem();
+            await updateCurrentItem();
         }
 
+        /// <summary>
+        /// Add a playlist item to the room's queue.
+        /// </summary>
+        /// <param name="item">The item to add.</param>
+        /// <param name="user">The user adding the item.</param>
+        /// <exception cref="NotHostException">If the adding user is not the host in host-only mode.</exception>
+        /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
         public async Task AddItem(APIPlaylistItem item, MultiplayerRoomUser user)
         {
             if (mode == QueueModes.HostOnly && (room.Host == null || !user.Equals(room.Host)))
@@ -98,8 +135,10 @@ namespace osu.Server.Spectator.Hubs
             using (var db = dbFactory.GetInstance())
             {
                 string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.BeatmapID);
+
                 if (beatmapChecksum == null)
                     throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
+
                 if (item.BeatmapChecksum != beatmapChecksum)
                     throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
 
@@ -110,9 +149,14 @@ namespace osu.Server.Spectator.Hubs
 
                 switch (mode)
                 {
-                    case QueueModes.HostOnly: // In host-only mode, re-use the current item if able to.
+                    case QueueModes.HostOnly:
+                        // In host-only mode, the current item is re-used.
                         item.ID = CurrentItem.ID;
+
+                        // Although the playlist item ID doesn't change, its contents may.
+                        // We need to update the stored current item for the OnPlaylistItemChanged() callback to correctly validate user mods.
                         CurrentItem = item;
+
                         await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         await hub.OnPlaylistItemChanged(room, item);
                         break;
@@ -120,7 +164,9 @@ namespace osu.Server.Spectator.Hubs
                     default:
                         item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         await hub.OnPlaylistItemAdded(room, item);
-                        await refreshCurrentItem();
+
+                        // The current item can change as a result of an item being added. For example, if all items earlier in the queue were expired.
+                        await updateCurrentItem();
                         break;
                 }
             }
@@ -131,6 +177,12 @@ namespace osu.Server.Spectator.Hubs
             throw new InvalidStateException("Items cannot yet be removed from the playlist.");
         }
 
+        /// <summary>
+        /// Checks whether the given mods are compatible with the current playlist item's mods and ruleset.
+        /// </summary>
+        /// <param name="proposedMods">The mods to check against the current playlist item.</param>
+        /// <param name="validMods">The set of mods which _are_ valid.</param>
+        /// <returns>Whether all mods are valid for the current playlist item.</returns>
         public bool ValidateMods(IEnumerable<APIMod> proposedMods, [NotNullWhen(false)] out IEnumerable<APIMod>? validMods)
         {
             bool proposedWereValid = true;
@@ -159,6 +211,11 @@ namespace osu.Server.Spectator.Hubs
             return proposedWereValid;
         }
 
+        /// <summary>
+        /// Ensures that a <see cref="APIPlaylistItem"/>'s required and allowed mods are compatible with each other and the room's ruleset.
+        /// </summary>
+        /// <param name="item">The <see cref="APIPlaylistItem"/> to validate.</param>
+        /// <exception cref="InvalidStateException">If the mods are invalid.</exception>
         private static void ensureModsValid(APIPlaylistItem item)
         {
             // check against ruleset
@@ -215,6 +272,10 @@ namespace osu.Server.Spectator.Hubs
             return proposedWereValid;
         }
 
+        /// <summary>
+        /// Duplicates <see cref="CurrentItem"/> into the database.
+        /// </summary>
+        /// <param name="db">The database connection.</param>
         private async Task duplicateCurrentItem(IDatabaseAccess db)
         {
             var newItem = new APIPlaylistItem
@@ -230,7 +291,11 @@ namespace osu.Server.Spectator.Hubs
             await hub.OnPlaylistItemAdded(room, newItem);
         }
 
-        private async Task refreshCurrentItem(bool notifyHub = true)
+        /// <summary>
+        /// Updates <see cref="CurrentItem"/> and the playlist item ID stored in the room's settings.
+        /// </summary>
+        /// <param name="notifyHub">Whether to notify the <see cref="MultiplayerHub"/> of the change.</param>
+        private async Task updateCurrentItem(bool notifyHub = true)
         {
             using (var db = dbFactory.GetInstance())
             {
