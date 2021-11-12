@@ -153,9 +153,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(db => db.GetPlaylistItemFromRoomAsync(It.IsAny<long>(), It.IsAny<long>()))
                     .Returns<long, long>((roomId, playlistItemId) => Task.FromResult(playlistItems.SingleOrDefault(i => i.room_id == roomId && i.id == playlistItemId)?.Clone()));
 
-            Database.Setup(db => db.HasPlaylistItems(It.IsAny<long>()))
-                    .Returns<long>(roomId => Task.FromResult(playlistItems.Any(i => i.room_id == roomId)));
-
             Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
                     .Callback<multiplayer_playlist_item>(item =>
                     {
