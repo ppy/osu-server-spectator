@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
@@ -57,6 +56,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public async Task Initialise()
         {
+            mode = room.Settings.QueueMode;
             await updateCurrentItem(false);
         }
 
