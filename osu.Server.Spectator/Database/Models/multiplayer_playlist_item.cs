@@ -39,6 +39,7 @@ namespace osu.Server.Spectator.Database.Models
         public multiplayer_playlist_item(long roomId, APIPlaylistItem item)
         {
             id = item.ID;
+            user_id = item.UserID;
             room_id = roomId;
             beatmap_id = item.BeatmapID;
             ruleset_id = (short)item.RulesetID;
@@ -51,6 +52,7 @@ namespace osu.Server.Spectator.Database.Models
         public async Task<APIPlaylistItem> ToAPIPlaylistItem(IDatabaseAccess db) => new APIPlaylistItem
         {
             ID = id,
+            UserID = user_id,
             BeatmapID = beatmap_id,
             BeatmapChecksum = (await db.GetBeatmapChecksumAsync(beatmap_id)) ?? string.Empty,
             RulesetID = ruleset_id,
