@@ -560,9 +560,6 @@ namespace osu.Server.Spectator.Hubs
                 if (dbItem == null)
                     throw new InvalidStateException("Attempted to select a playlist item not contained by the room.");
 
-                if (dbItem.expired)
-                    throw new InvalidStateException("Attempted to select an expired playlist item.");
-
                 await db.UpdateRoomSettingsAsync(room);
             }
         }

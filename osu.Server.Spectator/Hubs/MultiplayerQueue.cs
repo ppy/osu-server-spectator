@@ -52,6 +52,7 @@ namespace osu.Server.Spectator.Hubs
             if (newMode != QueueModes.HostOnly)
                 return;
 
+            // When changing to host-only mode, ensure that exactly one non-expired playlist item exists and is the current item.
             using (var db = dbFactory.GetInstance())
             {
                 // Remove all but the current and expired items. The current item will be used for the host-only queue.
@@ -62,6 +63,12 @@ namespace osu.Server.Spectator.Hubs
 
                     await db.RemovePlaylistItemAsync(room.RoomID, item.id);
                     await hub.OnPlaylistItemRemoved(room, item.id);
+                }
+
+                if (CurrentItem.Expired)
+                {
+                    await duplicateCurrentItem(db);
+                    await refreshCurrentItem();
                 }
             }
         }
@@ -75,21 +82,9 @@ namespace osu.Server.Spectator.Hubs
                 CurrentItem.Expired = true;
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
 
+                // In host-only mode, duplicate the playlist item for the next round.
                 if (mode == QueueModes.HostOnly)
-                {
-                    // In host-only mode, duplicate the playlist item for the next round.
-                    var newItem = new APIPlaylistItem
-                    {
-                        BeatmapID = CurrentItem.BeatmapID,
-                        BeatmapChecksum = CurrentItem.BeatmapChecksum,
-                        RulesetID = CurrentItem.RulesetID,
-                        AllowedMods = CurrentItem.AllowedMods,
-                        RequiredMods = CurrentItem.RequiredMods
-                    };
-
-                    newItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, newItem));
-                    await hub.OnPlaylistItemAdded(room, newItem);
-                }
+                    await duplicateCurrentItem(db);
             }
 
             await refreshCurrentItem();
@@ -218,6 +213,21 @@ namespace osu.Server.Spectator.Hubs
             }
 
             return proposedWereValid;
+        }
+
+        private async Task duplicateCurrentItem(IDatabaseAccess db)
+        {
+            var newItem = new APIPlaylistItem
+            {
+                BeatmapID = CurrentItem.BeatmapID,
+                BeatmapChecksum = CurrentItem.BeatmapChecksum,
+                RulesetID = CurrentItem.RulesetID,
+                AllowedMods = CurrentItem.AllowedMods,
+                RequiredMods = CurrentItem.RequiredMods
+            };
+
+            newItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, newItem));
+            await hub.OnPlaylistItemAdded(room, newItem);
         }
 
         private async Task refreshCurrentItem(bool notifyHub = true)

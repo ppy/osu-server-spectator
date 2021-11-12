@@ -179,5 +179,32 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Receiver.Verify(r => r.PlaylistItemRemoved(It.Is<long>(id => id == 3)), Times.Once);
             }
         }
+
+        [Fact]
+        public async Task OneNonExpiredItemExistsWhenChangingToHostOnlyMode()
+        {
+            long firstItem = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Results);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.HostOnly });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                // First item (played) still exists in the database.
+                var currentItem = room.QueueImplementation.CurrentItem;
+                Assert.NotEqual(firstItem, currentItem.ID);
+                Assert.False(currentItem.Expired);
+            }
+        }
     }
 }
