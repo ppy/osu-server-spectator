@@ -23,14 +23,22 @@ namespace osu.Server.Spectator.Hubs
     public class MultiplayerQueue
     {
         private readonly ServerMultiplayerRoom room;
+        private readonly IDatabaseFactory dbFactory;
         private readonly IMultiplayerServerMatchCallbacks hub;
 
         private QueueModes mode;
 
-        public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
+        public MultiplayerQueue(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hub)
         {
             this.room = room;
+            this.dbFactory = dbFactory;
             this.hub = hub;
+        }
+
+        public async Task Initialise()
+        {
+            using (var db = dbFactory.GetInstance())
+                room.Settings.PlaylistItemId = (await GetCurrentItem(db)).id;
         }
 
         public async Task<multiplayer_playlist_item> GetCurrentItem(IDatabaseAccess db)
