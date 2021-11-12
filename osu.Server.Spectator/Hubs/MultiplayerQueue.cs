@@ -29,7 +29,6 @@ namespace osu.Server.Spectator.Hubs
 
         private APIPlaylistItem? currentItem;
         private QueueModes mode;
-        private bool initialised;
 
         public MultiplayerQueue(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hub)
         {
@@ -45,10 +44,8 @@ namespace osu.Server.Spectator.Hubs
         {
             get
             {
-                if (!initialised)
-                    throw new InvalidStateException("Room not initialised");
-
-                Debug.Assert(currentItem != null);
+                if (currentItem == null)
+                    throw new InvalidOperationException("Room not initialised.");
 
                 return currentItem;
             }
@@ -61,7 +58,6 @@ namespace osu.Server.Spectator.Hubs
         public async Task Initialise()
         {
             await updateCurrentItem(false);
-            initialised = true;
         }
 
         /// <summary>
