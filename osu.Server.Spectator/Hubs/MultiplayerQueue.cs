@@ -69,31 +69,31 @@ namespace osu.Server.Spectator.Hubs
             if (mode == newMode)
                 return;
 
-            mode = newMode;
-
-            if (newMode != QueueModes.HostOnly)
-                return;
-
-            // When changing to host-only mode, ensure that exactly one non-expired playlist item exists and is the current item.
-            using (var db = dbFactory.GetInstance())
+            if (newMode == QueueModes.HostOnly)
             {
-                // Remove all but the current and expired items. The current item may be re-used for host-only mode if it's non-expired.
-                foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
+                // When changing to host-only mode, ensure that exactly one non-expired playlist item exists.
+                using (var db = dbFactory.GetInstance())
                 {
-                    if (item.expired || item.id == room.Settings.PlaylistItemId)
-                        continue;
+                    // Remove all but the current and expired items. The current item may be re-used for host-only mode if it's non-expired.
+                    foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
+                    {
+                        if (item.expired || item.id == room.Settings.PlaylistItemId)
+                            continue;
 
-                    await db.RemovePlaylistItemAsync(room.RoomID, item.id);
-                    await hub.OnPlaylistItemRemoved(room, item.id);
-                }
+                        await db.RemovePlaylistItemAsync(room.RoomID, item.id);
+                        await hub.OnPlaylistItemRemoved(room, item.id);
+                    }
 
-                // Always ensure that at least one non-expired item exists by duplicating the current item if required.
-                if (CurrentItem.Expired)
-                {
-                    await duplicateCurrentItem(db);
-                    await updateCurrentItem();
+                    // Always ensure that at least one non-expired item exists by duplicating the current item if required.
+                    if (CurrentItem.Expired)
+                        await duplicateCurrentItem(db);
                 }
             }
+
+            mode = newMode;
+
+            // When changing modes, items could have been added (above) or the queueing order could have change.
+            await updateCurrentItem();
         }
 
         /// <summary>
