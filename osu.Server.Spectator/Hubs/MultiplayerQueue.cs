@@ -70,9 +70,9 @@ namespace osu.Server.Spectator.Hubs
         {
             using (var db = dbFactory.GetInstance())
             {
-                // Expire the current playlist item.
-                CurrentItem.Expired = true;
                 await db.ExpirePlaylistItemAsync(CurrentItem.ID);
+
+                CurrentItem.Expired = true;
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
 
                 if (mode == QueueModes.HostOnly)
