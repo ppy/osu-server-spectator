@@ -97,11 +97,5 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         /// <param name="roomId">The room to retrieve playlist items from.</param>
         Task<multiplayer_playlist_item[]> GetAllPlaylistItems(long roomId);
-
-        /// <summary>
-        /// Determines whether a given room has any playlist items.
-        /// </summary>
-        /// <param name="roomId">The room to check.</param>
-        Task<bool> HasPlaylistItems(long roomId);
     }
 }

@@ -89,19 +89,19 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                var newItem = await room.QueueImplementation.GetCurrentItem(Database.Object);
-                secondItemId = newItem.id;
+                var newItem = room.QueueImplementation.CurrentItem;
+                secondItemId = newItem.ID;
 
                 // Room has new playlist item.
-                Assert.NotEqual(firstItemId, newItem.id);
-                Assert.Equal(newItem.id, room.Settings.PlaylistItemId);
-                Assert.False(newItem.expired);
+                Assert.NotEqual(firstItemId, newItem.ID);
+                Assert.Equal(newItem.ID, room.Settings.PlaylistItemId);
+                Assert.False(newItem.Expired);
 
                 // Previous item is expired.
                 Assert.True((await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, firstItemId))!.expired);
 
                 // Players received callbacks.
-                Receiver.Verify(r => r.PlaylistItemAdded(It.Is<APIPlaylistItem>(i => i.ID == newItem.id)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemAdded(It.Is<APIPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
                 Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == firstItemId && i.Expired)), Times.Once);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
             }
@@ -118,17 +118,17 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                var newItem = await room.QueueImplementation.GetCurrentItem(Database.Object);
+                var newItem = room.QueueImplementation.CurrentItem;
 
                 // Room has new playlist item.
-                Assert.NotEqual(secondItemId, newItem.id);
-                Assert.Equal(newItem.id, room.Settings.PlaylistItemId);
+                Assert.NotEqual(secondItemId, newItem.ID);
+                Assert.Equal(newItem.ID, room.Settings.PlaylistItemId);
 
                 // Previous item is expired.
                 Assert.True((await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, secondItemId))!.expired);
 
                 // Players received callbacks.
-                Receiver.Verify(r => r.PlaylistItemAdded(It.Is<APIPlaylistItem>(i => i.ID == newItem.id)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemAdded(It.Is<APIPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
                 Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == secondItemId && i.Expired)), Times.Once);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
             }
@@ -160,11 +160,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 var firstItem = (await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, firstItemId))!;
-                var currentItem = await room.QueueImplementation.GetCurrentItem(Database.Object);
+                var currentItem = room.QueueImplementation.CurrentItem;
 
                 // Current item changed.
-                Assert.Equal(newItem.BeatmapID, currentItem.beatmap_id);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == currentItem.id && i.BeatmapID == newItem.BeatmapID)), Times.Once);
+                Assert.Equal(newItem.BeatmapID, currentItem.BeatmapID);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == currentItem.ID && i.BeatmapID == newItem.BeatmapID)), Times.Once);
 
                 // Previous item unchanged.
                 Assert.Equal(1234, firstItem.beatmap_id);

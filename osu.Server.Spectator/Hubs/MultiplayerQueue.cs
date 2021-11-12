@@ -5,9 +5,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Queueing;
@@ -26,6 +26,8 @@ namespace osu.Server.Spectator.Hubs
         private readonly IDatabaseFactory dbFactory;
         private readonly IMultiplayerServerMatchCallbacks hub;
 
+        public APIPlaylistItem CurrentItem { get; private set; } = null!;
+
         private QueueModes mode;
 
         public MultiplayerQueue(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hub)
@@ -37,32 +39,20 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task Initialise()
         {
-            using (var db = dbFactory.GetInstance())
-                room.Settings.PlaylistItemId = (await GetCurrentItem(db)).id;
+            await refreshCurrentItem(false);
         }
 
-        public async Task<multiplayer_playlist_item> GetCurrentItem(IDatabaseAccess db)
-        {
-            var allItems = await db.GetAllPlaylistItems(room.RoomID);
-
-            switch (mode)
-            {
-                default:
-                    // Pick the first available non-expired playlist item, or default to the last item for when all items are expired.
-                    return allItems.FirstOrDefault(i => !i.expired) ?? allItems.Last();
-
-                case QueueModes.FairRotate:
-                    // Todo: Group playlist items by (user_id -> count_expired), and select the first available playlist item from a user that has available beatmaps where count_expired is the lowest.
-                    throw new NotImplementedException();
-            }
-        }
-
-        public async Task ChangeMode(QueueModes newMode, IDatabaseAccess db)
+        public async Task ChangeMode(QueueModes newMode)
         {
             if (mode == newMode)
                 return;
 
-            if (newMode == QueueModes.HostOnly)
+            mode = newMode;
+
+            if (newMode != QueueModes.HostOnly)
+                return;
+
+            using (var db = dbFactory.GetInstance())
             {
                 // Remove all but the current and expired items. The current item will be used for the host-only queue.
                 foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
@@ -70,65 +60,66 @@ namespace osu.Server.Spectator.Hubs
                     if (item.expired || item.id == room.Settings.PlaylistItemId)
                         continue;
 
-                    await removeItem(item.id, db);
+                    await db.RemovePlaylistItemAsync(room.RoomID, item.id);
+                    await hub.OnPlaylistItemRemoved(room, item.id);
                 }
             }
-
-            mode = newMode;
         }
 
-        public async Task FinishCurrentItem(IDatabaseAccess db)
+        public async Task FinishCurrentItem()
         {
-            // Expire the current playlist item.
-            var item = await GetCurrentItem(db);
-            await db.ExpirePlaylistItemAsync(item.id);
+            using (var db = dbFactory.GetInstance())
+            {
+                // Expire the current playlist item.
+                await db.ExpirePlaylistItemAsync(CurrentItem.ID);
+                await hub.OnPlaylistItemChanged(room, CurrentItem);
 
-            // Re-retrieve the updated item to notify clients with.
-            item = (await db.GetPlaylistItemFromRoomAsync(room.RoomID, item.id))!;
-            await hub.OnPlaylistItemChanged(room, await item.ToAPIPlaylistItem(db));
+                if (mode != QueueModes.HostOnly)
+                    return;
 
-            if (mode != QueueModes.HostOnly)
-                return;
+                // In host-only mode, duplicate the playlist item for the next round.
+                CurrentItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, CurrentItem));
+                await hub.OnPlaylistItemAdded(room, CurrentItem);
+            }
 
-            // In host-only mode, duplicate the playlist item for the next round.
-            item.id = await db.AddPlaylistItemAsync(item);
-
-            // Re-retrieve the updated item to notify clients with.
-            item = (await db.GetPlaylistItemFromRoomAsync(room.RoomID, item.id))!;
-            await hub.OnPlaylistItemAdded(room, await item.ToAPIPlaylistItem(db));
+            await refreshCurrentItem();
         }
 
-        public async Task AddItem(APIPlaylistItem item, MultiplayerRoomUser user, IDatabaseAccess db)
+        public async Task AddItem(APIPlaylistItem item, MultiplayerRoomUser user)
         {
             if (mode == QueueModes.HostOnly && (room.Host == null || !user.Equals(room.Host)))
                 throw new NotHostException();
 
-            string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.BeatmapID);
-            if (beatmapChecksum == null)
-                throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
-            if (item.BeatmapChecksum != beatmapChecksum)
-                throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
-
-            if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
-                throw new InvalidStateException("Attempted to select an unsupported ruleset.");
-
-            ensureModsValid(item);
-
-            bool hasItems = await db.HasPlaylistItems(room.RoomID);
-
-            switch (mode)
+            using (var db = dbFactory.GetInstance())
             {
-                case QueueModes.HostOnly when hasItems: // In host-only mode, re-use the current item if able to.
-                    item.ID = (await GetCurrentItem(db)).id;
-                    await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
-                    await hub.OnPlaylistItemChanged(room, item);
-                    break;
+                string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.BeatmapID);
+                if (beatmapChecksum == null)
+                    throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
+                if (item.BeatmapChecksum != beatmapChecksum)
+                    throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
 
-                default:
-                    item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
-                    await hub.OnPlaylistItemAdded(room, item);
-                    break;
+                if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                    throw new InvalidStateException("Attempted to select an unsupported ruleset.");
+
+                ensureModsValid(item);
+
+                switch (mode)
+                {
+                    case QueueModes.HostOnly: // In host-only mode, re-use the current item if able to.
+                        item.ID = CurrentItem.ID;
+                        await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                        await hub.OnPlaylistItemChanged(room, item);
+                        break;
+
+                    default:
+                        item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                        await hub.OnPlaylistItemAdded(room, item);
+                        break;
+                }
             }
+
+            // Current item can change when one is added, as a result of all previous items having been expired prior to the add.
+            await refreshCurrentItem();
         }
 
         public Task RemoveItem(long playlistItemId, MultiplayerRoomUser user, IDatabaseAccess db)
@@ -136,24 +127,15 @@ namespace osu.Server.Spectator.Hubs
             throw new InvalidStateException("Items cannot yet be removed from the playlist.");
         }
 
-        private async Task removeItem(long playlistItemId, IDatabaseAccess db)
+        public bool ValidateMods(IEnumerable<APIMod> proposedMods, [NotNullWhen(false)] out IEnumerable<APIMod>? validMods)
         {
-            await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
-            await hub.OnPlaylistItemRemoved(room, playlistItemId);
-        }
-
-        public async Task<(bool isValid, IEnumerable<APIMod> validMods)> ValidateMods(IDatabaseAccess db, IEnumerable<APIMod> proposedMods)
-        {
-            multiplayer_playlist_item currentItem = await GetCurrentItem(db);
-            APIMod[] allowedMods = JsonConvert.DeserializeObject<APIMod[]>(currentItem.allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>();
-
             bool proposedWereValid = true;
-            proposedWereValid &= populateValidModsForRuleset(currentItem.ruleset_id, proposedMods, out var valid);
+            proposedWereValid &= populateValidModsForRuleset(CurrentItem.RulesetID, proposedMods, out var valid);
 
             // check allowed by room
             foreach (var mod in valid.ToList())
             {
-                if (allowedMods.All(m => m.Acronym != mod.Acronym))
+                if (CurrentItem.AllowedMods.All(m => m.Acronym != mod.Acronym))
                 {
                     valid.Remove(mod);
                     proposedWereValid = false;
@@ -168,7 +150,9 @@ namespace osu.Server.Spectator.Hubs
                     valid.Remove(mod);
             }
 
-            return (proposedWereValid, valid.Select(m => new APIMod(m)).ToArray());
+            validMods = valid.Select(m => new APIMod(m));
+
+            return proposedWereValid;
         }
 
         private static void ensureModsValid(APIPlaylistItem item)
@@ -225,6 +209,32 @@ namespace osu.Server.Spectator.Hubs
             }
 
             return proposedWereValid;
+        }
+
+        private async Task refreshCurrentItem(bool notifyHub = true)
+        {
+            using (var db = dbFactory.GetInstance())
+            {
+                var allItems = await db.GetAllPlaylistItems(room.RoomID);
+
+                switch (mode)
+                {
+                    default:
+                        // Pick the first available non-expired playlist item, or default to the last item for when all items are expired.
+                        CurrentItem = await (allItems.FirstOrDefault(i => !i.expired) ?? allItems.Last()).ToAPIPlaylistItem(db);
+                        break;
+
+                    case QueueModes.FairRotate:
+                        // Todo: Group playlist items by (user_id -> count_expired), and select the first available playlist item from a user that has available beatmaps where count_expired is the lowest.
+                        throw new NotImplementedException();
+                }
+            }
+
+            long lastItem = room.Settings.PlaylistItemId;
+            room.Settings.PlaylistItemId = CurrentItem.ID;
+
+            if (notifyHub && CurrentItem.ID != lastItem)
+                await hub.OnMatchSettingsChanged(room);
         }
     }
 }

@@ -243,14 +243,6 @@ namespace osu.Server.Spectator.Database
             return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
         }
 
-        public async Task<bool> HasPlaylistItems(long roomId)
-        {
-            return await connection.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM multiplayer_playlist_items WHERE room_id = @RoomId", new
-            {
-                RoomId = roomId
-            }) > 0;
-        }
-
         public void Dispose()
         {
             connection.Dispose();

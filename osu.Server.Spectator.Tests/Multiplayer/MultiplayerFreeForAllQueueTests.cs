@@ -59,15 +59,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                var currentItem = await room.QueueImplementation.GetCurrentItem(Database.Object);
+                var currentItem = room.QueueImplementation.CurrentItem;
 
                 // Room maintains playlist item.
-                Assert.Equal(currentItem.id, room.Settings.PlaylistItemId);
-                Assert.True(currentItem.expired);
+                Assert.Equal(currentItem.ID, room.Settings.PlaylistItemId);
+                Assert.True(currentItem.Expired);
 
                 // Players received callbacks.
                 Receiver.Verify(r => r.PlaylistItemAdded(It.IsAny<APIPlaylistItem>()), Times.Never);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == currentItem.id && i.Expired)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == currentItem.ID && i.Expired)), Times.Once);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
             }
         }
@@ -116,11 +116,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                var currentItem = await room.QueueImplementation.GetCurrentItem(Database.Object);
+                var currentItem = room.QueueImplementation.CurrentItem;
 
                 // New playlist item selected.
-                Assert.Equal(newItem.BeatmapID, currentItem.beatmap_id);
-                Assert.Equal(currentItem.id, room.Settings.PlaylistItemId);
+                Assert.Equal(newItem.BeatmapID, currentItem.BeatmapID);
+                Assert.Equal(currentItem.ID, room.Settings.PlaylistItemId);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
             }
         }

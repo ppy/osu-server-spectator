@@ -404,12 +404,8 @@ namespace osu.Server.Spectator.Hubs
                 if (room.State != MultiplayerRoomState.Open)
                     throw new InvalidStateException("Can't start match when already in a running state.");
 
-                using (var db = databaseFactory.GetInstance())
-                {
-                    var currentItem = await room.QueueImplementation.GetCurrentItem(db);
-                    if (currentItem.expired)
-                        throw new InvalidStateException("Cannot start an expired playlist item.");
-                }
+                if (room.QueueImplementation.CurrentItem.Expired)
+                    throw new InvalidStateException("Cannot start an expired playlist item.");
 
                 var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
 
@@ -441,8 +437,7 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                using (var db = databaseFactory.GetInstance())
-                    await room.QueueImplementation.AddItem(item, user, db);
+                await room.QueueImplementation.AddItem(item, user);
             }
         }
 
@@ -511,8 +506,7 @@ namespace osu.Server.Spectator.Hubs
 
                 if (previousSettings.QueueMode != settings.QueueMode)
                 {
-                    using (var db = databaseFactory.GetInstance())
-                        await room.QueueImplementation.ChangeMode(settings.QueueMode, db);
+                    await room.QueueImplementation.ChangeMode(settings.QueueMode);
                     Log($"Switching queue mode to {room.QueueImplementation}");
                 }
 
@@ -537,12 +531,8 @@ namespace osu.Server.Spectator.Hubs
         {
             var newModList = newMods.ToList();
 
-            using (var db = databaseFactory.GetInstance())
-            {
-                var (isValid, validMods) = await room.QueueImplementation.ValidateMods(db, newModList);
-                if (!isValid)
-                    throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
-            }
+            if (!room.QueueImplementation.ValidateMods(newModList, out var validMods))
+                throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
 
             if (user.Mods.SequenceEqual(newModList))
                 return;
@@ -554,14 +544,10 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task ensureAllUsersValidMods(ServerMultiplayerRoom room)
         {
-            using (var db = databaseFactory.GetInstance())
+            foreach (var user in room.Users)
             {
-                foreach (var user in room.Users)
-                {
-                    var (isValid, validMods) = await room.QueueImplementation.ValidateMods(db, user.Mods);
-                    if (!isValid)
-                        await changeUserMods(validMods, room, user);
-                }
+                if (!room.QueueImplementation.ValidateMods(user.Mods, out var validMods))
+                    await changeUserMods(validMods, room, user);
             }
         }
 
@@ -658,10 +644,7 @@ namespace osu.Server.Spectator.Hubs
                         await changeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
 
-                        using (var db = databaseFactory.GetInstance())
-                            await room.QueueImplementation.FinishCurrentItem(db);
-
-                        await updateCurrentPlaylistItem(room);
+                        await room.QueueImplementation.FinishCurrentItem();
                     }
 
                     break;
@@ -838,35 +821,22 @@ namespace osu.Server.Spectator.Hubs
         public async Task OnPlaylistItemAdded(ServerMultiplayerRoom room, APIPlaylistItem item)
         {
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemAdded(item);
-            await updateCurrentPlaylistItem(room);
-            await ensureAllUsersValidMods(room);
         }
 
         public async Task OnPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId)
         {
-            await updateCurrentPlaylistItem(room);
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemRemoved(playlistItemId);
-            await ensureAllUsersValidMods(room);
         }
 
         public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, APIPlaylistItem item)
         {
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemChanged(item);
-            await ensureAllUsersValidMods(room);
         }
 
-        private async Task updateCurrentPlaylistItem(ServerMultiplayerRoom room)
+        public async Task OnMatchSettingsChanged(ServerMultiplayerRoom room)
         {
-            multiplayer_playlist_item currentItem;
-
-            using (var db = databaseFactory.GetInstance())
-                currentItem = await room.QueueImplementation.GetCurrentItem(db);
-
-            if (currentItem.id != room.Settings.PlaylistItemId)
-            {
-                room.Settings.PlaylistItemId = currentItem.id;
-                await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
-            }
+            await ensureAllUsersValidMods(room);
+            await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
         }
     }
 }
