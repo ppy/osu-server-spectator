@@ -147,6 +147,7 @@ namespace osu.Server.Spectator.Hubs
                     case QueueModes.HostOnly:
                         // In host-only mode, the current item is re-used.
                         item.ID = CurrentItem.ID;
+                        item.UserID = CurrentItem.UserID;
 
                         // Although the playlist item ID doesn't change, its contents may.
                         // We need to update the stored current item for the OnPlaylistItemChanged() callback to correctly validate user mods.
@@ -157,6 +158,7 @@ namespace osu.Server.Spectator.Hubs
                         break;
 
                     default:
+                        item.UserID = user.UserID;
                         item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         await hub.OnPlaylistItemAdded(room, item);
 
@@ -275,6 +277,7 @@ namespace osu.Server.Spectator.Hubs
         {
             var newItem = new APIPlaylistItem
             {
+                UserID = CurrentItem.UserID,
                 BeatmapID = CurrentItem.BeatmapID,
                 BeatmapChecksum = CurrentItem.BeatmapChecksum,
                 RulesetID = CurrentItem.RulesetID,
