@@ -107,6 +107,7 @@ namespace osu.Server.Spectator.Hubs
                 {
                     case QueueModes.HostOnly: // In host-only mode, re-use the current item if able to.
                         item.ID = CurrentItem.ID;
+                        CurrentItem = item;
                         await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         await hub.OnPlaylistItemChanged(room, item);
                         break;
@@ -114,12 +115,10 @@ namespace osu.Server.Spectator.Hubs
                     default:
                         item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         await hub.OnPlaylistItemAdded(room, item);
+                        await refreshCurrentItem();
                         break;
                 }
             }
-
-            // Current item can change when one is added, as a result of all previous items having been expired prior to the add.
-            await refreshCurrentItem();
         }
 
         public Task RemoveItem(long playlistItemId, MultiplayerRoomUser user, IDatabaseAccess db)

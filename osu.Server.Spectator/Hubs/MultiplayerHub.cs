@@ -830,6 +830,7 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, APIPlaylistItem item)
         {
+            await ensureAllUsersValidMods(room);
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemChanged(item);
         }
 
