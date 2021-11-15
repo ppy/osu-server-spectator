@@ -23,13 +23,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FairRotate });
 
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
             });
 
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 4444,
                 BeatmapChecksum = "4444"
@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 5555,
                 BeatmapChecksum = "5555"
@@ -97,7 +97,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // The room is free-for-all initially.
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
@@ -106,7 +106,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
 
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 4444,
                 BeatmapChecksum = "4444"

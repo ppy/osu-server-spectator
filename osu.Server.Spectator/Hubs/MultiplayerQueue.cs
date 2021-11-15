@@ -319,7 +319,7 @@ namespace osu.Server.Spectator.Hubs
                                              .FirstOrDefault(i => i != null)
                                              // Default to the last item for when all items are expired.
                                              ?? allItems.Last())
-                            .ToAPIPlaylistItem(db);
+                            .ToMultiplayerPlaylistItem(db);
                         break;
                 }
             }
