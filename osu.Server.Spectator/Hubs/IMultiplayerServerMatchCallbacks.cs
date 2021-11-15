@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="item">The added item.</param>
-        Task OnPlaylistItemAdded(ServerMultiplayerRoom room, APIPlaylistItem item);
+        Task OnPlaylistItemAdded(ServerMultiplayerRoom room, MultiplayerPlaylistItem item);
 
         /// <summary>
         /// Let the hub know that a playlist item has been removed.
@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="item">The changed item.</param>
-        Task OnPlaylistItemChanged(ServerMultiplayerRoom room, APIPlaylistItem item);
+        Task OnPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item);
 
         Task OnMatchSettingsChanged(ServerMultiplayerRoom room);
     }

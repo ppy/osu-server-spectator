@@ -32,11 +32,11 @@ namespace osu.Server.Spectator.Database.Models
         }
 
         /// <summary>
-        /// Creates a playlist item model from an <see cref="APIPlaylistItem"/> for the given room ID.
+        /// Creates a playlist item model from an <see cref="MultiplayerPlaylistItem"/> for the given room ID.
         /// </summary>
         /// <param name="roomId">The room ID to create the playlist item model for.</param>
-        /// <param name="item">The <see cref="APIPlaylistItem"/> to retrieve data from.</param>
-        public multiplayer_playlist_item(long roomId, APIPlaylistItem item)
+        /// <param name="item">The <see cref="MultiplayerPlaylistItem"/> to retrieve data from.</param>
+        public multiplayer_playlist_item(long roomId, MultiplayerPlaylistItem item)
         {
             id = item.ID;
             user_id = item.UserID;
@@ -49,7 +49,7 @@ namespace osu.Server.Spectator.Database.Models
             expired = item.Expired;
         }
 
-        public async Task<APIPlaylistItem> ToAPIPlaylistItem(IDatabaseAccess db) => new APIPlaylistItem
+        public async Task<MultiplayerPlaylistItem> ToMultiplayerPlaylistItem(IDatabaseAccess db) => new MultiplayerPlaylistItem
         {
             ID = id,
             UserID = user_id,

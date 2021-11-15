@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync((string?)null);
 
             await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new APIPlaylistItem
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "checksum"
@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(9999)).ReturnsAsync("correct checksum");
 
             await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new APIPlaylistItem
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 9999,
                 BeatmapChecksum = "incorrect checksum",
@@ -47,7 +47,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task AddCustomRulesetThrows(int rulesetID)
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new APIPlaylistItem
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 1234,
                 BeatmapChecksum = "checksum",
@@ -85,7 +85,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
@@ -107,7 +107,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             InitialiseRoom(ROOM_ID);
 
-            await Database.Object.AddPlaylistItemAsync(new multiplayer_playlist_item(ROOM_ID, new APIPlaylistItem
+            await Database.Object.AddPlaylistItemAsync(new multiplayer_playlist_item(ROOM_ID, new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
@@ -115,8 +115,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
 
-            Caller.Verify(c => c.PlaylistItemAdded(It.Is<APIPlaylistItem>(p => p.ID == 1)), Times.Once);
-            Caller.Verify(c => c.PlaylistItemAdded(It.Is<APIPlaylistItem>(p => p.ID == 2)), Times.Once);
+            Caller.Verify(c => c.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(p => p.ID == 1)), Times.Once);
+            Caller.Verify(c => c.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(p => p.ID == 2)), Times.Once);
         }
     }
 }

@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             long playlistItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
 
-            var newItem = new APIPlaylistItem
+            var newItem = new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
@@ -66,8 +66,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.True(currentItem.Expired);
 
                 // Players received callbacks.
-                Receiver.Verify(r => r.PlaylistItemAdded(It.IsAny<APIPlaylistItem>()), Times.Never);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == currentItem.ID && i.Expired)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemAdded(It.IsAny<MultiplayerPlaylistItem>()), Times.Never);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == currentItem.ID && i.Expired)), Times.Once);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
             }
         }
@@ -103,7 +103,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Results);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
-            var newItem = new APIPlaylistItem
+            var newItem = new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
@@ -134,13 +134,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
 
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
             });
 
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 4444,
                 BeatmapChecksum = "4444"

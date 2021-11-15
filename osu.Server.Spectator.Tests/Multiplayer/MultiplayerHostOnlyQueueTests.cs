@@ -23,7 +23,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<NotHostException>(() => Hub.AddPlaylistItem(new APIPlaylistItem
+            await Assert.ThrowsAsync<NotHostException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
@@ -36,7 +36,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             long playlistItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
 
-            var newItem = new APIPlaylistItem
+            var newItem = new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
@@ -101,8 +101,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.True((await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, firstItemId))!.expired);
 
                 // Players received callbacks.
-                Receiver.Verify(r => r.PlaylistItemAdded(It.Is<APIPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == firstItemId && i.Expired)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == firstItemId && i.Expired)), Times.Once);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
             }
 
@@ -128,8 +128,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.True((await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, secondItemId))!.expired);
 
                 // Players received callbacks.
-                Receiver.Verify(r => r.PlaylistItemAdded(It.Is<APIPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == secondItemId && i.Expired)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == secondItemId && i.Expired)), Times.Once);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
             }
         }
@@ -146,7 +146,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-            var newItem = new APIPlaylistItem
+            var newItem = new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
@@ -164,11 +164,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 // Current item changed.
                 Assert.Equal(newItem.BeatmapID, currentItem.BeatmapID);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == currentItem.ID && i.BeatmapID == newItem.BeatmapID)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == currentItem.ID && i.BeatmapID == newItem.BeatmapID)), Times.Once);
 
                 // Previous item unchanged.
                 Assert.Equal(1234, firstItem.beatmap_id);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<APIPlaylistItem>(i => i.ID == firstItem.id && i.BeatmapID != 1234)), Times.Never);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == firstItem.id && i.BeatmapID != 1234)), Times.Never);
             }
         }
 
@@ -179,7 +179,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
 
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.AddPlaylistItem(new APIPlaylistItem
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
