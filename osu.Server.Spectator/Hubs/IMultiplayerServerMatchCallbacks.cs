@@ -54,6 +54,10 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="item">The changed item.</param>
         Task OnPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item);
 
+        /// <summary>
+        /// Let the hub know that the room settings have been changed.
+        /// </summary>
+        /// <param name="room">The room to send the event to.</param>
         Task OnMatchSettingsChanged(ServerMultiplayerRoom room);
     }
 }

@@ -6,8 +6,8 @@ using osu.Game.Online.Multiplayer.Queueing;
 
 namespace osu.Server.Spectator.Database.Models
 {
-    [Serializable]
     // ReSharper disable once InconsistentNaming
+    [Serializable]
     public enum database_queue_mode
     {
         host_only,
