@@ -438,12 +438,12 @@ namespace osu.Server.Spectator.Hubs
                 using (var db = databaseFactory.GetInstance())
                 {
                     foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
-                        await Clients.Caller.PlaylistItemAdded(await item.ToAPIPlaylistItem(db));
+                        await Clients.Caller.PlaylistItemAdded(await item.ToMultiplayerPlaylistItem(db));
                 }
             }
         }
 
-        public async Task AddPlaylistItem(APIPlaylistItem item)
+        public async Task AddPlaylistItem(MultiplayerPlaylistItem item)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
@@ -834,7 +834,7 @@ namespace osu.Server.Spectator.Hubs
             return Clients.Group(GetGroupId(room.RoomID)).MatchUserStateChanged(user.UserID, user.MatchState);
         }
 
-        public async Task OnPlaylistItemAdded(ServerMultiplayerRoom room, APIPlaylistItem item)
+        public async Task OnPlaylistItemAdded(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
         {
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemAdded(item);
         }
@@ -844,7 +844,7 @@ namespace osu.Server.Spectator.Hubs
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemRemoved(playlistItemId);
         }
 
-        public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, APIPlaylistItem item)
+        public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
         {
             await ensureAllUsersValidMods(room);
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemChanged(item);

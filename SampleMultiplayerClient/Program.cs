@@ -89,7 +89,7 @@ namespace SampleMultiplayerClient
                             break;
 
                         case "additem":
-                            await targetClient.AddPlaylistItem(new APIPlaylistItem { BeatmapID = RNG.Next(0, 65536) });
+                            await targetClient.AddPlaylistItem(new MultiplayerPlaylistItem { BeatmapID = RNG.Next(0, 65536) });
                             break;
 
                         case "changestate":

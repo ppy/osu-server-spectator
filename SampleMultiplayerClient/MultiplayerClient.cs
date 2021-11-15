@@ -97,7 +97,7 @@ namespace SampleMultiplayerClient
         public Task RequestAllPlaylistItems() =>
             connection.InvokeAsync(nameof(IMultiplayerServer.RequestAllPlaylistItems));
 
-        public Task AddPlaylistItem(APIPlaylistItem item) =>
+        public Task AddPlaylistItem(MultiplayerPlaylistItem item) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.AddPlaylistItem), item);
 
         public Task RemovePlaylistItem(long playlistItemId) =>
@@ -211,7 +211,7 @@ namespace SampleMultiplayerClient
             return Task.CompletedTask;
         }
 
-        public Task PlaylistItemAdded(APIPlaylistItem item)
+        public Task PlaylistItemAdded(MultiplayerPlaylistItem item)
         {
             Console.WriteLine($"Playlist item added (beatmap: {item.BeatmapID}, ruleset: {item.RulesetID})");
             return Task.CompletedTask;
@@ -223,7 +223,7 @@ namespace SampleMultiplayerClient
             return Task.CompletedTask;
         }
 
-        public Task PlaylistItemChanged(APIPlaylistItem item)
+        public Task PlaylistItemChanged(MultiplayerPlaylistItem item)
         {
             Console.WriteLine($"Playlist item changed (id: {item.ID} beatmap: {item.BeatmapID}, ruleset: {item.RulesetID})");
             return Task.CompletedTask;

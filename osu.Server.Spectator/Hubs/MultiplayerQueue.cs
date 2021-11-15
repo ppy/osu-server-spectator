@@ -26,7 +26,7 @@ namespace osu.Server.Spectator.Hubs
         private readonly IDatabaseFactory dbFactory;
         private readonly IMultiplayerServerMatchCallbacks hub;
 
-        private APIPlaylistItem? currentItem;
+        private MultiplayerPlaylistItem? currentItem;
         private QueueModes mode;
 
         public MultiplayerQueue(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hub)
@@ -37,9 +37,9 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// The current <see cref="APIPlaylistItem"/>
+        /// The current <see cref="MultiplayerPlaylistItem"/>
         /// </summary>
-        public APIPlaylistItem CurrentItem
+        public MultiplayerPlaylistItem CurrentItem
         {
             get
             {
@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="user">The user adding the item.</param>
         /// <exception cref="NotHostException">If the adding user is not the host in host-only mode.</exception>
         /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
-        public async Task AddItem(APIPlaylistItem item, MultiplayerRoomUser user)
+        public async Task AddItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
             if (mode == QueueModes.HostOnly && (room.Host == null || !user.Equals(room.Host)))
                 throw new NotHostException();
@@ -208,11 +208,11 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Ensures that a <see cref="APIPlaylistItem"/>'s required and allowed mods are compatible with each other and the room's ruleset.
+        /// Ensures that a <see cref="MultiplayerPlaylistItem"/>'s required and allowed mods are compatible with each other and the room's ruleset.
         /// </summary>
-        /// <param name="item">The <see cref="APIPlaylistItem"/> to validate.</param>
+        /// <param name="item">The <see cref="MultiplayerPlaylistItem"/> to validate.</param>
         /// <exception cref="InvalidStateException">If the mods are invalid.</exception>
-        private static void ensureModsValid(APIPlaylistItem item)
+        private static void ensureModsValid(MultiplayerPlaylistItem item)
         {
             // check against ruleset
             if (!populateValidModsForRuleset(item.RulesetID, item.RequiredMods, out var requiredMods))
@@ -274,7 +274,7 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="db">The database connection.</param>
         private async Task duplicateCurrentItem(IDatabaseAccess db)
         {
-            var newItem = new APIPlaylistItem
+            var newItem = new MultiplayerPlaylistItem
             {
                 BeatmapID = CurrentItem.BeatmapID,
                 BeatmapChecksum = CurrentItem.BeatmapChecksum,
@@ -301,7 +301,7 @@ namespace osu.Server.Spectator.Hubs
                 {
                     default:
                         // Pick the first available non-expired playlist item, or default to the last item for when all items are expired.
-                        CurrentItem = await (allItems.FirstOrDefault(i => !i.expired) ?? allItems.Last()).ToAPIPlaylistItem(db);
+                        CurrentItem = await (allItems.FirstOrDefault(i => !i.expired) ?? allItems.Last()).ToMultiplayerPlaylistItem(db);
                         break;
 
                     case QueueModes.FairRotate:
