@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Hubs
         /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
         public async Task AddItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
-            if (mode == QueueMode.HostOnly && (room.Host == null || !user.Equals(room.Host)))
+            if (mode == QueueMode.HostOnly && !user.Equals(room.Host))
                 throw new NotHostException();
 
             using (var db = dbFactory.GetInstance())
