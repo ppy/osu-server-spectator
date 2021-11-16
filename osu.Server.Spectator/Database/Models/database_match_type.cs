@@ -24,12 +24,14 @@ namespace osu.Server.Spectator.Database.Models
                 case database_match_type.playlists:
                     return MatchType.Playlists;
 
-                default:
                 case database_match_type.head_to_head:
                     return MatchType.HeadToHead;
 
                 case database_match_type.team_versus:
                     return MatchType.TeamVersus;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type));
             }
         }
 
@@ -40,12 +42,14 @@ namespace osu.Server.Spectator.Database.Models
                 case MatchType.Playlists:
                     return database_match_type.playlists;
 
-                default:
                 case MatchType.HeadToHead:
                     return database_match_type.head_to_head;
 
                 case MatchType.TeamVersus:
                     return database_match_type.team_versus;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type));
             }
         }
     }

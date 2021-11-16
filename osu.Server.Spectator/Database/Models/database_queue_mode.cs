@@ -21,7 +21,6 @@ namespace osu.Server.Spectator.Database.Models
         {
             switch (mode)
             {
-                default:
                 case database_queue_mode.host_only:
                     return QueueMode.HostOnly;
 
@@ -30,6 +29,9 @@ namespace osu.Server.Spectator.Database.Models
 
                 case database_queue_mode.fair_rotate:
                     return QueueMode.FairRotate;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mode));
             }
         }
 
@@ -37,7 +39,6 @@ namespace osu.Server.Spectator.Database.Models
         {
             switch (mode)
             {
-                default:
                 case QueueMode.HostOnly:
                     return database_queue_mode.host_only;
 
@@ -46,6 +47,9 @@ namespace osu.Server.Spectator.Database.Models
 
                 case QueueMode.FairRotate:
                     return database_queue_mode.fair_rotate;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mode));
             }
         }
     }
