@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Hubs
 
             using (var db = dbFactory.GetInstance())
             {
-                foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
+                foreach (var item in await db.GetAllPlaylistItemsAsync(room.RoomID))
                     room.Playlist.Add(await item.ToMultiplayerPlaylistItem(db));
             }
 

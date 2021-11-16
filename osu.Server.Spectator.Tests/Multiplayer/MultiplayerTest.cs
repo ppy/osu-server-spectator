@@ -179,7 +179,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         playlistItems[index] = copy;
                     });
 
-            Database.Setup(db => db.GetAllPlaylistItems(It.IsAny<long>()))
+            Database.Setup(db => db.GetAllPlaylistItemsAsync(It.IsAny<long>()))
                     .Returns<long>(roomId => Task.FromResult(playlistItems.Where(i => i.room_id == roomId).Select(i => i.Clone()).ToArray()));
 
             Database.Setup(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()))

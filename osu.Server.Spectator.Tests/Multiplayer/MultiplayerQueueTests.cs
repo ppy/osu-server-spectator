@@ -96,7 +96,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(2, (await Database.Object.GetAllPlaylistItems(ROOM_ID)).Length);
+                Assert.Equal(2, (await Database.Object.GetAllPlaylistItemsAsync(ROOM_ID)).Length);
             }
         }
 
