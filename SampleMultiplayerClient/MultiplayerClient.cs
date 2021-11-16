@@ -100,9 +100,6 @@ namespace SampleMultiplayerClient
         public Task AddPlaylistItem(MultiplayerPlaylistItem item) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.AddPlaylistItem), item);
 
-        public Task RemovePlaylistItem(long playlistItemId) =>
-            connection.InvokeAsync(nameof(IMultiplayerServer.RemovePlaylistItem), playlistItemId);
-
         Task IMultiplayerClient.RoomStateChanged(MultiplayerRoomState state)
         {
             Debug.Assert(Room != null);

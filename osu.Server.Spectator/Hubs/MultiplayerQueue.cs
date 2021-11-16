@@ -168,11 +168,6 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public Task RemoveItem(long playlistItemId, MultiplayerRoomUser user, IDatabaseAccess db)
-        {
-            throw new InvalidStateException("Items cannot yet be removed from the playlist.");
-        }
-
         /// <summary>
         /// Checks whether the given mods are compatible with the current playlist item's mods and ruleset.
         /// </summary>
