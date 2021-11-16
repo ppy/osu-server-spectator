@@ -146,7 +146,7 @@ namespace osu.Server.Spectator.Hubs
                     case QueueModes.HostOnly:
                         // In host-only mode, the current item is re-used.
                         item.ID = CurrentItem.ID;
-                        item.UserID = CurrentItem.UserID;
+                        item.OwnerID = CurrentItem.OwnerID;
 
                         await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         room.Playlist[currentIndex] = item;
@@ -155,7 +155,7 @@ namespace osu.Server.Spectator.Hubs
                         break;
 
                     default:
-                        item.UserID = user.UserID;
+                        item.OwnerID = user.UserID;
                         item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         room.Playlist.Add(item);
 
@@ -271,7 +271,7 @@ namespace osu.Server.Spectator.Hubs
         {
             var newItem = new MultiplayerPlaylistItem
             {
-                UserID = CurrentItem.UserID,
+                OwnerID = CurrentItem.OwnerID,
                 BeatmapID = CurrentItem.BeatmapID,
                 BeatmapChecksum = CurrentItem.BeatmapChecksum,
                 RulesetID = CurrentItem.RulesetID,
@@ -303,11 +303,11 @@ namespace osu.Server.Spectator.Hubs
                 case QueueModes.FairRotate:
                     newItem =
                         room.Playlist
-                            // Group items by user_id.
-                            .GroupBy(i => i.UserID)
-                            // Order users by descending number of expired (already played) items.
+                            // Group items by their owner.
+                            .GroupBy(i => i.OwnerID)
+                            // Order by descending number of expired (already played) items for each owner.
                             .OrderBy(g => g.Count(i => i.Expired))
-                            // Get the first unexpired item from each group.
+                            // Get the first unexpired item from each owner.
                             .Select(g => g.FirstOrDefault(i => !i.Expired))
                             // Select the first unexpired item in order.
                             .FirstOrDefault(i => i != null)

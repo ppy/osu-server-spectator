@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Database.Models
     public class multiplayer_playlist_item
     {
         public long id { get; set; }
-        public int user_id { get; set; }
+        public int owner_id { get; set; }
         public long room_id { get; set; }
         public int beatmap_id { get; set; }
         public short ruleset_id { get; set; }
@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Database.Models
         public multiplayer_playlist_item(long roomId, MultiplayerPlaylistItem item)
         {
             id = item.ID;
-            user_id = item.UserID;
+            owner_id = item.OwnerID;
             room_id = roomId;
             beatmap_id = item.BeatmapID;
             ruleset_id = (short)item.RulesetID;
@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Database.Models
         public async Task<MultiplayerPlaylistItem> ToMultiplayerPlaylistItem(IDatabaseAccess db) => new MultiplayerPlaylistItem
         {
             ID = id,
-            UserID = user_id,
+            OwnerID = owner_id,
             BeatmapID = beatmap_id,
             BeatmapChecksum = (await db.GetBeatmapChecksumAsync(beatmap_id)) ?? string.Empty,
             RulesetID = ruleset_id,
