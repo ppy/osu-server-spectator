@@ -3,7 +3,6 @@
 
 #nullable enable
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -26,7 +25,7 @@ namespace osu.Server.Spectator.Hubs
         private readonly IDatabaseFactory dbFactory;
         private readonly IMultiplayerServerMatchCallbacks hub;
 
-        private MultiplayerPlaylistItem? currentItem;
+        private int currentIndex;
         private QueueModes mode;
 
         public MultiplayerQueue(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hub)
@@ -36,20 +35,7 @@ namespace osu.Server.Spectator.Hubs
             this.hub = hub;
         }
 
-        /// <summary>
-        /// The current <see cref="MultiplayerPlaylistItem"/>
-        /// </summary>
-        public MultiplayerPlaylistItem CurrentItem
-        {
-            get
-            {
-                if (currentItem == null)
-                    throw new InvalidOperationException("Room not initialised.");
-
-                return currentItem;
-            }
-            private set => currentItem = value;
-        }
+        public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentIndex];
 
         /// <summary>
         /// Initialises the queue from the database.
@@ -57,6 +43,13 @@ namespace osu.Server.Spectator.Hubs
         public async Task Initialise()
         {
             mode = room.Settings.QueueMode;
+
+            using (var db = dbFactory.GetInstance())
+            {
+                foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
+                    room.Playlist.Add(await item.ToMultiplayerPlaylistItem(db));
+            }
+
             await updateCurrentItem(false);
         }
 
@@ -75,13 +68,17 @@ namespace osu.Server.Spectator.Hubs
                 using (var db = dbFactory.GetInstance())
                 {
                     // Remove all but the current and expired items. The current item may be re-used for host-only mode if it's non-expired.
-                    foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
+                    for (int i = 0; i < room.Playlist.Count; i++)
                     {
-                        if (item.expired || item.id == room.Settings.PlaylistItemId)
+                        var item = room.Playlist[i];
+
+                        if (item.Expired || item.ID == room.Settings.PlaylistItemId)
                             continue;
 
-                        await db.RemovePlaylistItemAsync(room.RoomID, item.id);
-                        await hub.OnPlaylistItemRemoved(room, item.id);
+                        await db.RemovePlaylistItemAsync(room.RoomID, item.ID);
+                        room.Playlist.RemoveAt(i--);
+
+                        await hub.OnPlaylistItemRemoved(room, item.ID);
                     }
 
                     // Always ensure that at least one non-expired item exists by duplicating the current item if required.
@@ -106,6 +103,7 @@ namespace osu.Server.Spectator.Hubs
                 // Expire and let clients know that the current item has finished.
                 await db.ExpirePlaylistItemAsync(CurrentItem.ID);
                 CurrentItem.Expired = true;
+
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
 
                 // In host-only mode, duplicate the playlist item for the next round.
@@ -150,17 +148,17 @@ namespace osu.Server.Spectator.Hubs
                         item.ID = CurrentItem.ID;
                         item.UserID = CurrentItem.UserID;
 
-                        // Although the playlist item ID doesn't change, its contents may.
-                        // We need to update the stored current item for the OnPlaylistItemChanged() callback to correctly validate user mods.
-                        CurrentItem = item;
-
                         await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                        room.Playlist[currentIndex] = item;
+
                         await hub.OnPlaylistItemChanged(room, item);
                         break;
 
                     default:
                         item.UserID = user.UserID;
                         item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                        room.Playlist.Add(item);
+
                         await hub.OnPlaylistItemAdded(room, item);
 
                         // The current item can change as a result of an item being added. For example, if all items earlier in the queue were expired.
@@ -282,6 +280,8 @@ namespace osu.Server.Spectator.Hubs
             };
 
             newItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, newItem));
+            room.Playlist.Add(newItem);
+
             await hub.OnPlaylistItemAdded(room, newItem);
         }
 
@@ -291,38 +291,37 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="notifyHub">Whether to notify the <see cref="MultiplayerHub"/> of the change.</param>
         private async Task updateCurrentItem(bool notifyHub = true)
         {
-            using (var db = dbFactory.GetInstance())
+            MultiplayerPlaylistItem newItem;
+
+            switch (mode)
             {
-                var allItems = await db.GetAllPlaylistItems(room.RoomID);
+                default:
+                    // Pick the first available non-expired playlist item, or default to the last item for when all items are expired.
+                    newItem = room.Playlist.FirstOrDefault(i => !i.Expired) ?? room.Playlist.Last();
+                    break;
 
-                switch (mode)
-                {
-                    default:
-                        // Pick the first available non-expired playlist item, or default to the last item for when all items are expired.
-                        CurrentItem = await (allItems.FirstOrDefault(i => !i.expired) ?? allItems.Last()).ToMultiplayerPlaylistItem(db);
-                        break;
-
-                    case QueueModes.FairRotate:
-                        CurrentItem = await (allItems
-                                             // Group items by user_id.
-                                             .GroupBy(i => i.user_id)
-                                             // Order users by descending number of expired (already played) items.
-                                             .OrderBy(g => g.Count(i => i.expired))
-                                             // Get the first unexpired item from each group.
-                                             .Select(g => g.FirstOrDefault(i => !i.expired))
-                                             // Select the first unexpired item in order.
-                                             .FirstOrDefault(i => i != null)
-                                             // Default to the last item for when all items are expired.
-                                             ?? allItems.Last())
-                            .ToMultiplayerPlaylistItem(db);
-                        break;
-                }
+                case QueueModes.FairRotate:
+                    newItem =
+                        room.Playlist
+                            // Group items by user_id.
+                            .GroupBy(i => i.UserID)
+                            // Order users by descending number of expired (already played) items.
+                            .OrderBy(g => g.Count(i => i.Expired))
+                            // Get the first unexpired item from each group.
+                            .Select(g => g.FirstOrDefault(i => !i.Expired))
+                            // Select the first unexpired item in order.
+                            .FirstOrDefault(i => i != null)
+                        // Default to the last item for when all items are expired.
+                        ?? room.Playlist.Last();
+                    break;
             }
 
-            long lastItem = room.Settings.PlaylistItemId;
-            room.Settings.PlaylistItemId = CurrentItem.ID;
+            currentIndex = room.Playlist.IndexOf(newItem);
 
-            if (notifyHub && CurrentItem.ID != lastItem)
+            long lastItemID = room.Settings.PlaylistItemId;
+            room.Settings.PlaylistItemId = newItem.ID;
+
+            if (notifyHub && newItem.ID != lastItemID)
                 await hub.OnMatchSettingsChanged(room);
         }
     }

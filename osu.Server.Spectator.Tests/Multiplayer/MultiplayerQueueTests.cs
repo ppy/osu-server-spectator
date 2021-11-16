@@ -101,7 +101,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task JoiningRoomInvokesPlaylistItemAddedCallbackForEveryItem()
+        public async Task JoinedRoomContainsAllPlaylistItems()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
@@ -115,8 +115,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
 
-            Caller.Verify(c => c.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(p => p.ID == 1)), Times.Once);
-            Caller.Verify(c => c.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(p => p.ID == 2)), Times.Once);
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(2, room.Playlist.Count);
+                Assert.Equal(1234, room.Playlist[0].BeatmapID);
+                Assert.Equal(3333, room.Playlist[1].BeatmapID);
+            }
         }
     }
 }

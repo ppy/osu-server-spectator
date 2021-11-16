@@ -424,25 +424,6 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task RequestAllPlaylistItems()
-        {
-            using (var userUsage = await GetOrCreateLocalUserState())
-            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
-            {
-                var room = roomUsage.Item;
-
-                if (room == null)
-                    throw new InvalidOperationException("Attempted to operate on a null room");
-
-                // Ensure the client's playlist is up to date.
-                using (var db = databaseFactory.GetInstance())
-                {
-                    foreach (var item in await db.GetAllPlaylistItems(room.RoomID))
-                        await Clients.Caller.PlaylistItemAdded(await item.ToMultiplayerPlaylistItem(db));
-                }
-            }
-        }
-
         public async Task AddPlaylistItem(MultiplayerPlaylistItem item)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
