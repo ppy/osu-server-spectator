@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Hubs
                     room.Playlist.Add(await item.ToMultiplayerPlaylistItem(db));
             }
 
-            await updateCurrentItem(false);
+            await updateCurrentItem();
         }
 
         /// <summary>
@@ -288,8 +288,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Updates <see cref="CurrentItem"/> and the playlist item ID stored in the room's settings.
         /// </summary>
-        /// <param name="notifyHub">Whether to notify the <see cref="MultiplayerHub"/> of the change.</param>
-        private async Task updateCurrentItem(bool notifyHub = true)
+        private async Task updateCurrentItem()
         {
             MultiplayerPlaylistItem newItem;
 
@@ -321,7 +320,7 @@ namespace osu.Server.Spectator.Hubs
             long lastItemID = room.Settings.PlaylistItemId;
             room.Settings.PlaylistItemId = newItem.ID;
 
-            if (notifyHub && newItem.ID != lastItemID)
+            if (newItem.ID != lastItemID)
                 await hub.OnMatchSettingsChanged(room);
         }
     }
