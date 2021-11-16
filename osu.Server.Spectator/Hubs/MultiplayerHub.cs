@@ -460,24 +460,6 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task RemovePlaylistItem(long playlistItemId)
-        {
-            using (var userUsage = await GetOrCreateLocalUserState())
-            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
-            {
-                var room = roomUsage.Item;
-                if (room == null)
-                    throw new InvalidOperationException("Attempted to operate on a null room");
-
-                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
-                if (user == null)
-                    throw new InvalidOperationException("Local user was not found in the expected room");
-
-                using (var db = databaseFactory.GetInstance())
-                    await room.QueueImplementation.RemoveItem(playlistItemId, user, db);
-            }
-        }
-
         public async Task ChangeSettings(MultiplayerRoomSettings settings)
         {
             using (var userUsage = await GetOrCreateLocalUserState())

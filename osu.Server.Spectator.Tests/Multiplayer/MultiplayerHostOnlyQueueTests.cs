@@ -31,21 +31,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task ItemsCannotBeRemoved()
-        {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapID = 3333,
-                BeatmapChecksum = "3333"
-            });
-
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(0));
-        }
-
-        [Fact]
         public async Task AddingItemUpdatesExisting()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
