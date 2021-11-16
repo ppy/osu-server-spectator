@@ -88,7 +88,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 // Players received callbacks.
                 Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
                 Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == firstItemId && i.Expired)), Times.Once);
-                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
+                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
             }
 
             // And a second time...
@@ -115,7 +115,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 // Players received callbacks.
                 Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
                 Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == secondItemId && i.Expired)), Times.Once);
-                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
+                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(3));
             }
         }
 

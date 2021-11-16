@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Database.Verify(db => db.UpdatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()), Times.Never);
                 Database.Verify(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()), Times.Once);
                 Receiver.Verify(r => r.PlaylistItemAdded(newItem), Times.Once);
-                Receiver.Verify(r => r.SettingsChanged(It.IsAny<MultiplayerRoomSettings>()), Times.Once);
+                Receiver.Verify(r => r.SettingsChanged(It.IsAny<MultiplayerRoomSettings>()), Times.Exactly(2));
             }
         }
 
