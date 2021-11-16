@@ -26,7 +26,7 @@ namespace osu.Server.Spectator.Hubs
         private readonly IMultiplayerServerMatchCallbacks hub;
 
         private int currentIndex;
-        private QueueModes mode;
+        private QueueMode mode;
 
         public MultiplayerQueue(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hub)
         {
@@ -57,12 +57,12 @@ namespace osu.Server.Spectator.Hubs
         /// Changes the queueing mode.
         /// </summary>
         /// <param name="newMode">The new mode.</param>
-        public async Task ChangeMode(QueueModes newMode)
+        public async Task ChangeMode(QueueMode newMode)
         {
             if (mode == newMode)
                 return;
 
-            if (newMode == QueueModes.HostOnly)
+            if (newMode == QueueMode.HostOnly)
             {
                 // When changing to host-only mode, ensure that exactly one non-expired playlist item exists.
                 using (var db = dbFactory.GetInstance())
@@ -107,7 +107,7 @@ namespace osu.Server.Spectator.Hubs
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
 
                 // In host-only mode, duplicate the playlist item for the next round.
-                if (mode == QueueModes.HostOnly)
+                if (mode == QueueMode.HostOnly)
                     await duplicateCurrentItem(db);
             }
 
@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Hubs
         /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
         public async Task AddItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
-            if (mode == QueueModes.HostOnly && (room.Host == null || !user.Equals(room.Host)))
+            if (mode == QueueMode.HostOnly && (room.Host == null || !user.Equals(room.Host)))
                 throw new NotHostException();
 
             using (var db = dbFactory.GetInstance())
@@ -143,7 +143,7 @@ namespace osu.Server.Spectator.Hubs
 
                 switch (mode)
                 {
-                    case QueueModes.HostOnly:
+                    case QueueMode.HostOnly:
                         // In host-only mode, the current item is re-used.
                         item.ID = CurrentItem.ID;
                         item.OwnerID = CurrentItem.OwnerID;
@@ -300,7 +300,7 @@ namespace osu.Server.Spectator.Hubs
                     newItem = room.Playlist.FirstOrDefault(i => !i.Expired) ?? room.Playlist.Last();
                     break;
 
-                case QueueModes.FairRotate:
+                case QueueMode.FairRotate:
                     newItem =
                         room.Playlist
                             // Group items by their owner.

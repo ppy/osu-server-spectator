@@ -91,7 +91,7 @@ namespace osu.Server.Spectator.Database
                 Password = room.Settings.Password,
                 // needs ToString() to store as enums correctly, see https://github.com/DapperLib/Dapper/issues/813.
                 MatchType = room.Settings.MatchType.ToDatabaseMatchType().ToString(),
-                QueueMode = room.Settings.QueueMode.ToDatabaseQueueModes().ToString()
+                QueueMode = room.Settings.QueueMode.ToDatabaseQueueMode().ToString()
             });
         }
 

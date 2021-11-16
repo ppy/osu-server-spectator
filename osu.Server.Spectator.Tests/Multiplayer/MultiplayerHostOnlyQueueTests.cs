@@ -177,7 +177,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Results);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
             {

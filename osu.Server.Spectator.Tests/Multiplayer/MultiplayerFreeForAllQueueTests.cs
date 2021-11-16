@@ -20,7 +20,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
             long playlistItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
 
             var newItem = new MultiplayerPlaylistItem
             {
@@ -47,7 +47,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task CompletingItemExpiresAndDoesNotAddNewItems()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
@@ -76,7 +76,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task CanNotStartExpiredItem()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
@@ -94,7 +94,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
@@ -132,7 +132,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
 
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
@@ -153,7 +153,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Results);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.HostOnly });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
             {
@@ -184,7 +184,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task OneNonExpiredItemExistsWhenChangingToHostOnlyMode()
         {
             long firstItem = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
@@ -193,7 +193,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Results);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.HostOnly });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
             {

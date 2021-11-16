@@ -133,7 +133,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings
             {
-                QueueMode = QueueModes.FreeForAll
+                QueueMode = QueueMode.FreeForAll
             });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
@@ -141,7 +141,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
 
                 Debug.Assert(room != null);
-                Assert.Equal(QueueModes.FreeForAll, room.Settings.QueueMode);
+                Assert.Equal(QueueMode.FreeForAll, room.Settings.QueueMode);
             }
         }
     }

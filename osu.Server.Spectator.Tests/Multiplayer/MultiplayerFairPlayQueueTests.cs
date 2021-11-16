@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(5555)).ReturnsAsync("5555");
 
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FairRotate });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FairRotate });
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
@@ -96,7 +96,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // The room is free-for-all initially.
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(2, room.Settings.PlaylistItemId);
             }
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FairRotate });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FairRotate });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
             {
@@ -134,7 +134,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(3, room.Settings.PlaylistItemId);
             }
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueModes.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
             {

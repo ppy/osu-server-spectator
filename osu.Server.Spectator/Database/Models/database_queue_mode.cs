@@ -17,34 +17,34 @@ namespace osu.Server.Spectator.Database.Models
 
     public static class DatabaseQueueModeExtensions
     {
-        public static QueueModes ToQueueMode(this database_queue_mode mode)
+        public static QueueMode ToQueueMode(this database_queue_mode mode)
         {
             switch (mode)
             {
                 default:
                 case database_queue_mode.host_only:
-                    return QueueModes.HostOnly;
+                    return QueueMode.HostOnly;
 
                 case database_queue_mode.free_for_all:
-                    return QueueModes.FreeForAll;
+                    return QueueMode.FreeForAll;
 
                 case database_queue_mode.fair_rotate:
-                    return QueueModes.FairRotate;
+                    return QueueMode.FairRotate;
             }
         }
 
-        public static database_queue_mode ToDatabaseQueueModes(this QueueModes mode)
+        public static database_queue_mode ToDatabaseQueueMode(this QueueMode mode)
         {
             switch (mode)
             {
                 default:
-                case QueueModes.HostOnly:
+                case QueueMode.HostOnly:
                     return database_queue_mode.host_only;
 
-                case QueueModes.FreeForAll:
+                case QueueMode.FreeForAll:
                     return database_queue_mode.free_for_all;
 
-                case QueueModes.FairRotate:
+                case QueueMode.FairRotate:
                     return database_queue_mode.fair_rotate;
             }
         }
