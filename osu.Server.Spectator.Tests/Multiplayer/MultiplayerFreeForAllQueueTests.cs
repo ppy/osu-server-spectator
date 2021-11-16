@@ -8,6 +8,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Queueing;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -205,6 +206,44 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotEqual(firstItem, currentItem.ID);
                 Assert.False(currentItem.Expired);
             }
+        }
+
+        [Fact]
+        public async Task UserMayOnlyContainLimitedNumberOfItems()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
+
+            for (int i = 1; i < MultiplayerQueue.PER_USER_LIMIT; i++)
+                await addItem();
+
+            // First user is not allowed to add more items.
+            await Assert.ThrowsAsync<InvalidStateException>(addItem);
+
+            // Second user should be able to add items.
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await addItem();
+
+            // Play a single map from the first user.
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Results);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            // The first user should now be able to add another item.
+            await addItem();
+
+            async Task addItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
         }
     }
 }
