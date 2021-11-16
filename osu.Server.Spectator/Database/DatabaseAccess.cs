@@ -180,8 +180,8 @@ namespace osu.Server.Spectator.Database
         public async Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item)
         {
             await connection.ExecuteAsync(
-                @"INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, created_at, updated_at)
-                VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, NOW(), NOW())",
+                "INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, created_at, updated_at)"
+                + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, NOW(), NOW())",
                 item);
 
             return await connection.QuerySingleAsync<long>("SELECT max(id) FROM multiplayer_playlist_items WHERE room_id = @room_id", item);
@@ -190,13 +190,13 @@ namespace osu.Server.Spectator.Database
         public async Task UpdatePlaylistItemAsync(multiplayer_playlist_item item)
         {
             await connection.ExecuteAsync(
-                @"UPDATE multiplayer_playlist_items SET
-                beatmap_id = @beatmap_id,
-                ruleset_id = @ruleset_id,
-                required_mods = @required_mods,
-                allowed_mods = @allowed_mods,
-                updated_at = NOW()
-                WHERE id = @id", item);
+                "UPDATE multiplayer_playlist_items SET"
+                + " beatmap_id = @beatmap_id,"
+                + " ruleset_id = @ruleset_id,"
+                + " required_mods = @required_mods,"
+                + " allowed_mods = @allowed_mods,"
+                + " updated_at = NOW()"
+                + " WHERE id = @id", item);
         }
 
         public async Task RemovePlaylistItemAsync(long roomId, long playlistItemId)
@@ -220,9 +220,10 @@ namespace osu.Server.Spectator.Database
         {
             // Remove all non-expired items from the playlist as they have no scores.
             await connection.ExecuteAsync(
-                @"DELETE FROM multiplayer_playlist_items p
-                WHERE p.room_id = @RoomID AND p.expired = 0
-                AND (SELECT COUNT(*) FROM multiplayer_scores s WHERE s.playlist_item_id = p.id) = 0",
+                "DELETE FROM multiplayer_playlist_items p"
+                + " WHERE p.room_id = @RoomID"
+                + " AND p.expired = 0"
+                + " AND (SELECT COUNT(*) FROM multiplayer_scores s WHERE s.playlist_item_id = p.id) = 0",
                 new
                 {
                     RoomID = room.RoomID
