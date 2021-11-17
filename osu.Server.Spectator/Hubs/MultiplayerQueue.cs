@@ -4,6 +4,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
@@ -60,6 +61,8 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="newMode">The new mode.</param>
         public async Task ChangeMode(QueueMode newMode)
         {
+            Debug.Assert(newMode == room.Settings.QueueMode);
+
             if (mode == newMode)
                 return;
 
