@@ -12,7 +12,6 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Queueing;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
-using osu.Game.Rulesets.Mods;
 using osu.Game.Utils;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -182,7 +181,7 @@ namespace osu.Server.Spectator.Hubs
         public bool ValidateMods(IEnumerable<APIMod> proposedMods, [NotNullWhen(false)] out IEnumerable<APIMod>? validMods)
         {
             bool proposedWereValid = true;
-            proposedWereValid &= populateValidModsForRuleset(CurrentItem.RulesetID, proposedMods, out var valid);
+            proposedWereValid &= ModUtils.InstantiateValidModsForRuleset(LegacyHelper.GetRulesetFromLegacyID(CurrentItem.RulesetID), proposedMods, out var valid);
 
             // check allowed by room
             foreach (var mod in valid.ToList())
@@ -214,14 +213,16 @@ namespace osu.Server.Spectator.Hubs
         /// <exception cref="InvalidStateException">If the mods are invalid.</exception>
         private static void ensureModsValid(MultiplayerPlaylistItem item)
         {
+            var ruleset = LegacyHelper.GetRulesetFromLegacyID(item.RulesetID);
+
             // check against ruleset
-            if (!populateValidModsForRuleset(item.RulesetID, item.RequiredMods, out var requiredMods))
+            if (!ModUtils.InstantiateValidModsForRuleset(ruleset, item.RequiredMods, out var requiredMods))
             {
                 var invalidRequiredAcronyms = string.Join(',', item.RequiredMods.Where(m => requiredMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
                 throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidRequiredAcronyms}");
             }
 
-            if (!populateValidModsForRuleset(item.RulesetID, item.AllowedMods, out var allowedMods))
+            if (!ModUtils.InstantiateValidModsForRuleset(ruleset, item.AllowedMods, out var allowedMods))
             {
                 var invalidAllowedAcronyms = string.Join(',', item.AllowedMods.Where(m => allowedMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
                 throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidAllowedAcronyms}");
@@ -236,36 +237,6 @@ namespace osu.Server.Spectator.Hubs
                 if (!ModUtils.CheckCompatibleSet(requiredMods.Concat(new[] { allowedMod }), out invalid))
                     throw new InvalidStateException($"Invalid combination of required and allowed mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
             }
-        }
-
-        /// <summary>
-        /// Verifies all proposed mods are valid for the room's ruleset, returning instantiated <see cref="Mod"/>s for further processing.
-        /// </summary>
-        /// <param name="rulesetID">The legacy ruleset ID to check against.</param>
-        /// <param name="proposedMods">The proposed mods.</param>
-        /// <param name="valid">A list of valid deserialised mods.</param>
-        /// <returns>Whether all <see cref="proposedMods"/> were valid.</returns>
-        private static bool populateValidModsForRuleset(int rulesetID, IEnumerable<APIMod> proposedMods, out List<Mod> valid)
-        {
-            valid = new List<Mod>();
-            bool proposedWereValid = true;
-
-            var ruleset = LegacyHelper.GetRulesetFromLegacyID(rulesetID);
-
-            foreach (var apiMod in proposedMods)
-            {
-                try
-                {
-                    // will throw if invalid
-                    valid.Add(apiMod.ToMod(ruleset));
-                }
-                catch
-                {
-                    proposedWereValid = false;
-                }
-            }
-
-            return proposedWereValid;
         }
 
         /// <summary>
