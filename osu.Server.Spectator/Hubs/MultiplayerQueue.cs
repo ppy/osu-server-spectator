@@ -4,7 +4,6 @@
 #nullable enable
 
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
@@ -28,7 +27,6 @@ namespace osu.Server.Spectator.Hubs
         private readonly IMultiplayerServerMatchCallbacks hub;
 
         private int currentIndex;
-        private QueueMode mode;
 
         public MultiplayerQueue(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hub)
         {
@@ -44,8 +42,6 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public async Task Initialise()
         {
-            mode = room.Settings.QueueMode;
-
             using (var db = dbFactory.GetInstance())
             {
                 foreach (var item in await db.GetAllPlaylistItemsAsync(room.RoomID))
@@ -56,17 +52,11 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Changes the queueing mode.
+        /// Updates the queue as a result of a change in the queueing mode.
         /// </summary>
-        /// <param name="newMode">The new mode.</param>
-        public async Task ChangeMode(QueueMode newMode)
+        public async Task UpdateFromQueueModeChange()
         {
-            Debug.Assert(newMode == room.Settings.QueueMode);
-
-            if (mode == newMode)
-                return;
-
-            if (newMode == QueueMode.HostOnly)
+            if (room.Settings.QueueMode == QueueMode.HostOnly)
             {
                 // When changing to host-only mode, ensure that exactly one non-expired playlist item exists.
                 using (var db = dbFactory.GetInstance())
@@ -91,8 +81,6 @@ namespace osu.Server.Spectator.Hubs
                 }
             }
 
-            mode = newMode;
-
             // When changing modes, items could have been added (above) or the queueing order could have change.
             await updateCurrentItem();
         }
@@ -111,7 +99,7 @@ namespace osu.Server.Spectator.Hubs
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
 
                 // In host-only mode, duplicate the playlist item for the next round.
-                if (mode == QueueMode.HostOnly)
+                if (room.Settings.QueueMode == QueueMode.HostOnly)
                     await duplicateCurrentItem(db);
             }
 
@@ -127,7 +115,7 @@ namespace osu.Server.Spectator.Hubs
         /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
         public async Task AddItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
-            if (mode == QueueMode.HostOnly && !user.Equals(room.Host))
+            if (room.Settings.QueueMode == QueueMode.HostOnly && !user.Equals(room.Host))
                 throw new NotHostException();
 
             if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= PER_USER_LIMIT)
@@ -148,7 +136,7 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureModsValid(item);
 
-                switch (mode)
+                switch (room.Settings.QueueMode)
                 {
                     case QueueMode.HostOnly:
                         // In host-only mode, the current item is re-used.
@@ -271,7 +259,7 @@ namespace osu.Server.Spectator.Hubs
         {
             MultiplayerPlaylistItem newItem;
 
-            switch (mode)
+            switch (room.Settings.QueueMode)
             {
                 default:
                     // Pick the first available non-expired playlist item, or default to the last item for when all items are expired.
