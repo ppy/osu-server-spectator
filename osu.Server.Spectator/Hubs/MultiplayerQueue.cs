@@ -81,7 +81,7 @@ namespace osu.Server.Spectator.Hubs
                 }
             }
 
-            // When changing modes, items could have been added (above) or the queueing order could have change.
+            // When changing modes, items could have been added (above) or the queueing order could have changed.
             await updateCurrentItem();
         }
 
