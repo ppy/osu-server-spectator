@@ -80,9 +80,12 @@ namespace osu.Server.Spectator.Hubs
 
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
 
-                // In host-only mode, duplicate the playlist item for the next round.
+                // In host-only mode, duplicate the playlist item for the next round if no other non-expired items exist.
                 if (room.Settings.QueueMode == QueueMode.HostOnly)
-                    await duplicateCurrentItem(db);
+                {
+                    if (room.Playlist.All(item => item.Expired))
+                        await duplicateCurrentItem(db);
+                }
             }
 
             await updateCurrentItem();
