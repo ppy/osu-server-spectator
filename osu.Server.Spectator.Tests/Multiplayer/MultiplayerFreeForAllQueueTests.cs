@@ -60,15 +60,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                var currentItem = room.QueueImplementation.CurrentItem;
+                Assert.Single(room.Playlist);
+                Assert.Single(await Database.Object.GetAllPlaylistItemsAsync(ROOM_ID));
 
                 // Room maintains playlist item.
-                Assert.Equal(currentItem.ID, room.Settings.PlaylistItemId);
-                Assert.True(currentItem.Expired);
+                Assert.Equal(room.Playlist[0].ID, room.Settings.PlaylistItemId);
+                Assert.True(room.Playlist[0].Expired);
 
                 // Players received callbacks.
                 Receiver.Verify(r => r.PlaylistItemAdded(It.IsAny<MultiplayerPlaylistItem>()), Times.Never);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == currentItem.ID && i.Expired)), Times.Once);
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == room.Playlist[0].ID && i.Expired)), Times.Once);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
             }
         }
@@ -117,11 +118,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                var currentItem = room.QueueImplementation.CurrentItem;
+                var secondItem = room.Playlist[1];
 
                 // New playlist item selected.
-                Assert.Equal(newItem.BeatmapID, currentItem.BeatmapID);
-                Assert.Equal(currentItem.ID, room.Settings.PlaylistItemId);
+                Assert.Equal(secondItem.ID, room.Settings.PlaylistItemId);
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
             }
         }
@@ -170,7 +170,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task OneNonExpiredItemExistsWhenChangingToHostOnlyMode()
         {
-            long firstItem = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
+            await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
@@ -187,10 +187,19 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                // First item (played) still exists in the database.
-                var currentItem = room.QueueImplementation.CurrentItem;
-                Assert.NotEqual(firstItem, currentItem.ID);
-                Assert.False(currentItem.Expired);
+                Assert.Equal(2, room.Playlist.Count);
+                Assert.Equal(2, (await Database.Object.GetAllPlaylistItemsAsync(ROOM_ID)).Length);
+
+                var firstItem = room.Playlist[0];
+                var secondItem = room.Playlist[1];
+
+                // First item (played).
+                Assert.NotEqual(firstItem.ID, room.Settings.PlaylistItemId);
+                Assert.True(firstItem.Expired);
+
+                // Second item (new).
+                Assert.Equal(secondItem.ID, room.Settings.PlaylistItemId);
+                Assert.False(secondItem.Expired);
             }
         }
 

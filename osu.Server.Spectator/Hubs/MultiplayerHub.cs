@@ -535,15 +535,13 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
+            var playlistItem = room.Playlist.FirstOrDefault(item => item.ID == room.Settings.PlaylistItemId);
+
+            if (playlistItem == null)
+                throw new InvalidStateException("Attempted to select a playlist item not contained by the room.");
+
             using (var db = databaseFactory.GetInstance())
-            {
-                var dbItem = await db.GetPlaylistItemFromRoomAsync(room.RoomID, room.Settings.PlaylistItemId);
-
-                if (dbItem == null)
-                    throw new InvalidStateException("Attempted to select a playlist item not contained by the room.");
-
                 await db.UpdateRoomSettingsAsync(room);
-            }
         }
 
         private async Task updateDatabaseHost(MultiplayerRoom room)
