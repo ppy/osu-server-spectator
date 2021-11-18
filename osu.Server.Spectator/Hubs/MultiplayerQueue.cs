@@ -103,7 +103,7 @@ namespace osu.Server.Spectator.Hubs
             if (room.Settings.QueueMode == QueueMode.HostOnly && !user.Equals(room.Host))
                 throw new NotHostException();
 
-            if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= PER_USER_LIMIT)
+            if (room.Settings.QueueMode != QueueMode.HostOnly && room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= PER_USER_LIMIT)
                 throw new InvalidStateException($"Can't enqueue more than {PER_USER_LIMIT} items at once.");
 
             using (var db = dbFactory.GetInstance())

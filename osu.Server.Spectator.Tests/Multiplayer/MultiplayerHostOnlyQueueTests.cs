@@ -8,6 +8,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Queueing;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -262,6 +263,42 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(secondItem);
                 Assert.False(secondItem.Expired);
                 Assert.Equal(secondItem.ID, room.Settings.PlaylistItemId);
+            }
+        }
+
+        [Fact]
+        public async Task HostCanChangeItemsAfterReachingMaxItems()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
+
+            for (int i = 1; i < MultiplayerQueue.PER_USER_LIMIT; i++)
+            {
+                await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+                {
+                    BeatmapID = 3333,
+                    BeatmapChecksum = "3333"
+                });
+            }
+
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
+
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 4444,
+                BeatmapChecksum = "4444"
+            });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(MultiplayerQueue.PER_USER_LIMIT, room.Playlist.Count);
+                Assert.Equal(4444, room.Playlist[0].BeatmapID);
             }
         }
     }
