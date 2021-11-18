@@ -56,29 +56,11 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public async Task UpdateFromQueueModeChange()
         {
-            if (room.Settings.QueueMode == QueueMode.HostOnly)
+            if (room.Settings.QueueMode == QueueMode.HostOnly && room.Playlist.All(item => item.Expired))
             {
-                // When changing to host-only mode, ensure that exactly one non-expired playlist item exists.
+                // When changing to host-only mode, ensure that exactly one non-expired playlist item exists by duplicating the currrent item.
                 using (var db = dbFactory.GetInstance())
-                {
-                    // Remove all but the current and expired items. The current item may be re-used for host-only mode if it's non-expired.
-                    for (int i = 0; i < room.Playlist.Count; i++)
-                    {
-                        var item = room.Playlist[i];
-
-                        if (item.Expired || item.ID == room.Settings.PlaylistItemId)
-                            continue;
-
-                        await db.RemovePlaylistItemAsync(room.RoomID, item.ID);
-                        room.Playlist.RemoveAt(i--);
-
-                        await hub.OnPlaylistItemRemoved(room, item.ID);
-                    }
-
-                    // Always ensure that at least one non-expired item exists by duplicating the current item if required.
-                    if (CurrentItem.Expired)
-                        await duplicateCurrentItem(db);
-                }
+                    await duplicateCurrentItem(db);
             }
 
             // When changing modes, items could have been added (above) or the queueing order could have changed.

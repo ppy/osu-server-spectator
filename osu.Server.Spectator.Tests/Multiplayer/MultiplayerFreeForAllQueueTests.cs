@@ -127,7 +127,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task AllNonExpiredItemsExceptCurrentRemovedWhenChangingToHostOnlyMode()
+        public async Task ItemsNotClearedWhenChangingToHostOnlyMode()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
             Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
@@ -161,23 +161,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                // First item (played) still exists in the database.
-                var firstItem = await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, 1);
-                Assert.NotNull(firstItem);
-                Assert.True(firstItem!.expired);
-
-                // Second item (previously current) still exists and is the current item.
-                var secondItem = await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, 2);
-                Assert.NotNull(secondItem);
-                Assert.False(secondItem!.expired);
-                Assert.Equal(secondItem.id, room.Settings.PlaylistItemId);
-
-                // Third item (future item) removed.
-                var thirdItem = await Database.Object.GetPlaylistItemFromRoomAsync(ROOM_ID, 3);
-                Assert.Null(thirdItem);
-
-                // Players received callbacks.
-                Receiver.Verify(r => r.PlaylistItemRemoved(It.Is<long>(id => id == 3)), Times.Once);
+                // All items still present in the room.
+                Assert.Equal(3, room.Playlist.Count);
+                Assert.Equal(3, (await Database.Object.GetAllPlaylistItemsAsync(ROOM_ID)).Length);
             }
         }
 
