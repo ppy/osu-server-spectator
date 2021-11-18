@@ -489,7 +489,7 @@ namespace osu.Server.Spectator.Hubs
                 if (previousSettings.QueueMode != settings.QueueMode)
                 {
                     await room.QueueImplementation.UpdateFromQueueModeChange();
-                    Log($"Switching queue mode to {room.QueueImplementation}");
+                    Log($"Switching queue mode to {settings.QueueMode}");
                 }
 
                 await ensureAllUsersValidMods(room);
