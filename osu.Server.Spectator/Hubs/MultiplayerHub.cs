@@ -405,7 +405,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room.State != MultiplayerRoomState.Open)
                     throw new InvalidStateException("Can't start match when already in a running state.");
 
-                if (room.QueueImplementation.CurrentItem.Expired)
+                if (room.Queue.CurrentItem.Expired)
                     throw new InvalidStateException("Cannot start an expired playlist item.");
 
                 var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
@@ -438,7 +438,7 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                await room.QueueImplementation.AddItem(item, user);
+                await room.Queue.AddItem(item, user);
             }
         }
 
@@ -489,7 +489,7 @@ namespace osu.Server.Spectator.Hubs
 
                 if (previousSettings.QueueMode != settings.QueueMode)
                 {
-                    await room.QueueImplementation.UpdateFromQueueModeChange();
+                    await room.Queue.UpdateFromQueueModeChange();
                     Log($"Switching queue mode to {settings.QueueMode}");
                 }
 
@@ -514,7 +514,7 @@ namespace osu.Server.Spectator.Hubs
         {
             var newModList = newMods.ToList();
 
-            if (!room.QueueImplementation.CurrentItem.ValidateUserMods(newModList, out var validMods))
+            if (!room.Queue.CurrentItem.ValidateUserMods(newModList, out var validMods))
                 throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
 
             if (user.Mods.SequenceEqual(newModList))
@@ -529,7 +529,7 @@ namespace osu.Server.Spectator.Hubs
         {
             foreach (var user in room.Users)
             {
-                if (!room.QueueImplementation.CurrentItem.ValidateUserMods(user.Mods, out var validMods))
+                if (!room.Queue.CurrentItem.ValidateUserMods(user.Mods, out var validMods))
                     await changeUserMods(validMods, room, user);
             }
         }
@@ -622,7 +622,7 @@ namespace osu.Server.Spectator.Hubs
                         await changeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
 
-                        await room.QueueImplementation.FinishCurrentItem();
+                        await room.Queue.FinishCurrentItem();
                     }
 
                     break;

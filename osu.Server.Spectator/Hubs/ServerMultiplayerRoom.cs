@@ -29,7 +29,7 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public readonly MultiplayerQueue QueueImplementation;
+        public readonly MultiplayerQueue Queue;
 
         public ServerMultiplayerRoom(long roomId, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hubCallbacks)
             : base(roomId)
@@ -38,13 +38,13 @@ namespace osu.Server.Spectator.Hubs
 
             // just to ensure non-null.
             matchTypeImplementation = createTypeImplementation(MatchType.HeadToHead);
-            QueueImplementation = new MultiplayerQueue(this, dbFactory, hubCallbacks);
+            Queue = new MultiplayerQueue(this, dbFactory, hubCallbacks);
         }
 
         public async Task Initialise()
         {
             ChangeMatchType(Settings.MatchType);
-            await QueueImplementation.Initialise();
+            await Queue.Initialise();
         }
 
         public void ChangeMatchType(MatchType type) => MatchTypeImplementation = createTypeImplementation(type);
