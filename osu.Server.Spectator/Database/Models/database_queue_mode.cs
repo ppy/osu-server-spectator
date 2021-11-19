@@ -2,7 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using osu.Game.Online.Multiplayer.Queueing;
+using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Database.Models
 {

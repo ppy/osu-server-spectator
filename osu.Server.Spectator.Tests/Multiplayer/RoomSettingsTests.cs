@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.Queueing;
 using osu.Game.Online.Rooms;
 using Xunit;
 
