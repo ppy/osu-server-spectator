@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
@@ -23,7 +24,7 @@ namespace osu.Server.Spectator.Hubs
         private readonly ServerMultiplayerRoom room;
         private readonly IMultiplayerServerMatchCallbacks hub;
 
-        private IDatabaseFactory dbFactory = null!;
+        private IDatabaseFactory? dbFactory;
         private int currentIndex;
 
         public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
@@ -53,6 +54,8 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public async Task UpdateFromQueueModeChange()
         {
+            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
+
             if (room.Settings.QueueMode == QueueMode.HostOnly && room.Playlist.All(item => item.Expired))
             {
                 // When changing to host-only mode, ensure that exactly one non-expired playlist item exists by duplicating the currrent item.
@@ -69,6 +72,8 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public async Task FinishCurrentItem()
         {
+            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
+
             using (var db = dbFactory.GetInstance())
             {
                 // Expire and let clients know that the current item has finished.
@@ -97,6 +102,8 @@ namespace osu.Server.Spectator.Hubs
         /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
         public async Task AddItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
+            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
+
             if (room.Settings.QueueMode == QueueMode.HostOnly && !user.Equals(room.Host))
                 throw new NotHostException();
 
