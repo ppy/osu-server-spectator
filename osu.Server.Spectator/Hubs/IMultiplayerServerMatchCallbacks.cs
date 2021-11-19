@@ -18,20 +18,20 @@ namespace osu.Server.Spectator.Hubs
         /// </remarks>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="e">The event.</param>
-        Task SendMatchEvent(MultiplayerRoom room, MatchServerEvent e);
+        Task SendMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e);
 
         /// <summary>
         /// Let the hub know that the room's <see cref="MultiplayerRoom.MatchState"/> has been altered.
         /// </summary>
         /// <param name="room">The room whose state has changed.</param>
-        Task UpdateMatchRoomState(MultiplayerRoom room);
+        Task UpdateMatchRoomState(ServerMultiplayerRoom room);
 
         /// <summary>
         /// Let the hub know that the a user's <see cref="MultiplayerRoomUser.MatchState"/> has been altered.
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="user">The user whose state has changed.</param>
-        Task UpdateMatchUserState(MultiplayerRoom room, MultiplayerRoomUser user);
+        Task UpdateMatchUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user);
 
         /// <summary>
         /// Let the hub know that a playlist item has been added.

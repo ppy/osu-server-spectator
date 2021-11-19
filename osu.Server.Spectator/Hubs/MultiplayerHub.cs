@@ -780,17 +780,17 @@ namespace osu.Server.Spectator.Hubs
                 await clients.UserLeft(user);
         }
 
-        public Task SendMatchEvent(MultiplayerRoom room, MatchServerEvent e)
+        public Task SendMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
         {
             return Clients.Group(GetGroupId(room.RoomID)).MatchEvent(e);
         }
 
-        public Task UpdateMatchRoomState(MultiplayerRoom room)
+        public Task UpdateMatchRoomState(ServerMultiplayerRoom room)
         {
             return Clients.Group(GetGroupId(room.RoomID)).MatchRoomStateChanged(room.MatchState);
         }
 
-        public Task UpdateMatchUserState(MultiplayerRoom room, MultiplayerRoomUser user)
+        public Task UpdateMatchUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user)
         {
             return Clients.Group(GetGroupId(room.RoomID)).MatchUserStateChanged(user.UserID, user.MatchState);
         }
