@@ -11,8 +11,8 @@ namespace osu.Server.Spectator.Database.Models
     public enum database_queue_mode
     {
         host_only,
-        free_for_all,
-        fair_rotate
+        all_players,
+        all_players_rr
     }
 
     public static class DatabaseQueueModeExtensions
@@ -24,11 +24,11 @@ namespace osu.Server.Spectator.Database.Models
                 case database_queue_mode.host_only:
                     return QueueMode.HostOnly;
 
-                case database_queue_mode.free_for_all:
-                    return QueueMode.FreeForAll;
+                case database_queue_mode.all_players:
+                    return QueueMode.AllPlayers;
 
-                case database_queue_mode.fair_rotate:
-                    return QueueMode.FairRotate;
+                case database_queue_mode.all_players_rr:
+                    return QueueMode.AllPlayersRR;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode));
@@ -42,11 +42,11 @@ namespace osu.Server.Spectator.Database.Models
                 case QueueMode.HostOnly:
                     return database_queue_mode.host_only;
 
-                case QueueMode.FreeForAll:
-                    return database_queue_mode.free_for_all;
+                case QueueMode.AllPlayers:
+                    return database_queue_mode.all_players;
 
-                case QueueMode.FairRotate:
-                    return database_queue_mode.fair_rotate;
+                case QueueMode.AllPlayersRR:
+                    return database_queue_mode.all_players_rr;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode));

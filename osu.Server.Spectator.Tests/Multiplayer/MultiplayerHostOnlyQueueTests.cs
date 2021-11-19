@@ -128,7 +128,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // Add another item in free-for-all mode.
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
@@ -223,7 +223,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task ItemLastInQueueWhenChangingToFreeForAllMode()
+        public async Task ItemLastInQueueWhenChangingToAllPlayersMode()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
             Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
@@ -242,7 +242,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Results);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
             {
@@ -272,7 +272,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
 
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.FreeForAll });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
             for (int i = 1; i < MultiplayerQueue.PER_USER_LIMIT; i++)
             {

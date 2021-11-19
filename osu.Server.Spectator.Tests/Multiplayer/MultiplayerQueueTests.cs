@@ -80,7 +80,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         type = database_match_type.head_to_head,
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
                         user_id = USER_ID,
-                        queue_mode = database_queue_mode.free_for_all
+                        queue_mode = database_queue_mode.all_players
                     });
 
             await Hub.JoinRoom(ROOM_ID);
