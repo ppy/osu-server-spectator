@@ -13,6 +13,7 @@ using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -513,7 +514,7 @@ namespace osu.Server.Spectator.Hubs
         {
             var newModList = newMods.ToList();
 
-            if (!room.QueueImplementation.ValidateMods(newModList, out var validMods))
+            if (!room.QueueImplementation.CurrentItem.ValidateUserMods(newModList, out var validMods))
                 throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
 
             if (user.Mods.SequenceEqual(newModList))
@@ -528,7 +529,7 @@ namespace osu.Server.Spectator.Hubs
         {
             foreach (var user in room.Users)
             {
-                if (!room.QueueImplementation.ValidateMods(user.Mods, out var validMods))
+                if (!room.QueueImplementation.CurrentItem.ValidateUserMods(user.Mods, out var validMods))
                     await changeUserMods(validMods, room, user);
             }
         }

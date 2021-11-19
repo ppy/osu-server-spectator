@@ -3,18 +3,15 @@
 
 #nullable enable
 
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Queueing;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
-using osu.Game.Utils;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -119,7 +116,7 @@ namespace osu.Server.Spectator.Hubs
                 if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
                     throw new InvalidStateException("Attempted to select an unsupported ruleset.");
 
-                ensureModsValid(item);
+                item.EnsureModsValid();
 
                 switch (room.Settings.QueueMode)
                 {
@@ -145,73 +142,6 @@ namespace osu.Server.Spectator.Hubs
                         await updateCurrentItem();
                         break;
                 }
-            }
-        }
-
-        /// <summary>
-        /// Checks whether the given mods are compatible with the current playlist item's mods and ruleset.
-        /// </summary>
-        /// <param name="proposedMods">The mods to check against the current playlist item.</param>
-        /// <param name="validMods">The set of mods which _are_ valid.</param>
-        /// <returns>Whether all mods are valid for the current playlist item.</returns>
-        public bool ValidateMods(IEnumerable<APIMod> proposedMods, [NotNullWhen(false)] out IEnumerable<APIMod>? validMods)
-        {
-            bool proposedWereValid = true;
-            proposedWereValid &= ModUtils.InstantiateValidModsForRuleset(LegacyHelper.GetRulesetFromLegacyID(CurrentItem.RulesetID), proposedMods, out var valid);
-
-            // check allowed by room
-            foreach (var mod in valid.ToList())
-            {
-                if (CurrentItem.AllowedMods.All(m => m.Acronym != mod.Acronym))
-                {
-                    valid.Remove(mod);
-                    proposedWereValid = false;
-                }
-            }
-
-            // check valid as combination
-            if (!ModUtils.CheckCompatibleSet(valid, out var invalid))
-            {
-                proposedWereValid = false;
-                foreach (var mod in invalid)
-                    valid.Remove(mod);
-            }
-
-            validMods = valid.Select(m => new APIMod(m));
-
-            return proposedWereValid;
-        }
-
-        /// <summary>
-        /// Ensures that a <see cref="MultiplayerPlaylistItem"/>'s required and allowed mods are compatible with each other and the room's ruleset.
-        /// </summary>
-        /// <param name="item">The <see cref="MultiplayerPlaylistItem"/> to validate.</param>
-        /// <exception cref="InvalidStateException">If the mods are invalid.</exception>
-        private static void ensureModsValid(MultiplayerPlaylistItem item)
-        {
-            var ruleset = LegacyHelper.GetRulesetFromLegacyID(item.RulesetID);
-
-            // check against ruleset
-            if (!ModUtils.InstantiateValidModsForRuleset(ruleset, item.RequiredMods, out var requiredMods))
-            {
-                var invalidRequiredAcronyms = string.Join(',', item.RequiredMods.Where(m => requiredMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
-                throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidRequiredAcronyms}");
-            }
-
-            if (!ModUtils.InstantiateValidModsForRuleset(ruleset, item.AllowedMods, out var allowedMods))
-            {
-                var invalidAllowedAcronyms = string.Join(',', item.AllowedMods.Where(m => allowedMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
-                throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidAllowedAcronyms}");
-            }
-
-            if (!ModUtils.CheckCompatibleSet(requiredMods, out var invalid))
-                throw new InvalidStateException($"Invalid combination of required mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
-
-            // check aggregate combinations with each allowed mod individually.
-            foreach (var allowedMod in allowedMods)
-            {
-                if (!ModUtils.CheckCompatibleSet(requiredMods.Concat(new[] { allowedMod }), out invalid))
-                    throw new InvalidStateException($"Invalid combination of required and allowed mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
             }
         }
 
