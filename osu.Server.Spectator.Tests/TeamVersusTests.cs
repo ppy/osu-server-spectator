@@ -19,7 +19,9 @@ namespace osu.Server.Spectator.Tests
         public void UserRequestsValidTeamChange(int team)
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, new Mock<IDatabaseFactory>().Object, hubCallbacks.Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
+
             var teamVersus = new TeamVersus(room, hubCallbacks.Object);
 
             // change the match type
@@ -43,7 +45,8 @@ namespace osu.Server.Spectator.Tests
         public void UserRequestsInvalidTeamChange(int team)
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, new Mock<IDatabaseFactory>().Object, hubCallbacks.Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
             var teamVersus = new TeamVersus(room, hubCallbacks.Object);
 
             // change the match type
@@ -67,7 +70,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void NewUsersAssignedToTeamWithFewerUsers()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IDatabaseFactory>().Object, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
 
             // change the match type
             room.ChangeMatchType(MatchType.TeamVersus);
@@ -96,7 +100,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void InitialUsersAssignedToTeamsEqually()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IDatabaseFactory>().Object, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -115,7 +120,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public void StateMaintainedBetweenRulesetSwitch()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IDatabaseFactory>().Object, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
 
             room.ChangeMatchType(MatchType.TeamVersus);
 

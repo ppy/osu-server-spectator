@@ -175,7 +175,7 @@ namespace osu.Server.Spectator.Hubs
                 if (databaseRoom.user_id != CurrentContextUserId)
                     throw new InvalidStateException("Non-host is attempting to join match before host");
 
-                var room = new ServerMultiplayerRoom(roomId, databaseFactory, this)
+                var room = new ServerMultiplayerRoom(roomId, this)
                 {
                     Settings = new MultiplayerRoomSettings
                     {
@@ -186,7 +186,7 @@ namespace osu.Server.Spectator.Hubs
                     }
                 };
 
-                await room.Initialise();
+                await room.Initialise(databaseFactory);
 
                 return room;
             }

@@ -19,26 +19,27 @@ namespace osu.Server.Spectator.Hubs
     {
         public const int PER_USER_LIMIT = 3;
 
+        public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentIndex];
+
         private readonly ServerMultiplayerRoom room;
-        private readonly IDatabaseFactory dbFactory;
         private readonly IMultiplayerServerMatchCallbacks hub;
 
+        private IDatabaseFactory dbFactory = null!;
         private int currentIndex;
 
-        public MultiplayerQueue(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hub)
+        public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
         {
             this.room = room;
-            this.dbFactory = dbFactory;
             this.hub = hub;
         }
-
-        public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentIndex];
 
         /// <summary>
         /// Initialises the queue from the database.
         /// </summary>
-        public async Task Initialise()
+        public async Task Initialise(IDatabaseFactory dbFactory)
         {
+            this.dbFactory = dbFactory;
+
             using (var db = dbFactory.GetInstance())
             {
                 foreach (var item in await db.GetAllPlaylistItemsAsync(room.RoomID))

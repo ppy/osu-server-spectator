@@ -31,20 +31,20 @@ namespace osu.Server.Spectator.Hubs
 
         public readonly MultiplayerQueue Queue;
 
-        public ServerMultiplayerRoom(long roomId, IDatabaseFactory dbFactory, IMultiplayerServerMatchCallbacks hubCallbacks)
+        public ServerMultiplayerRoom(long roomId, IMultiplayerServerMatchCallbacks hubCallbacks)
             : base(roomId)
         {
             this.hubCallbacks = hubCallbacks;
 
             // just to ensure non-null.
             matchTypeImplementation = createTypeImplementation(MatchType.HeadToHead);
-            Queue = new MultiplayerQueue(this, dbFactory, hubCallbacks);
+            Queue = new MultiplayerQueue(this, hubCallbacks);
         }
 
-        public async Task Initialise()
+        public async Task Initialise(IDatabaseFactory dbFactory)
         {
             ChangeMatchType(Settings.MatchType);
-            await Queue.Initialise();
+            await Queue.Initialise(dbFactory);
         }
 
         public void ChangeMatchType(MatchType type) => MatchTypeImplementation = createTypeImplementation(type);

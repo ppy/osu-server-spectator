@@ -18,7 +18,8 @@ namespace osu.Server.Spectator.Tests
         public void NewUserJoinedTriggersRulesetHook()
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, new Mock<IDatabaseFactory>().Object, hubCallbacks.Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
 
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
@@ -32,7 +33,8 @@ namespace osu.Server.Spectator.Tests
         public void UserLeavesTriggersRulesetHook()
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, new Mock<IDatabaseFactory>().Object, hubCallbacks.Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
 
             var user = new MultiplayerRoomUser(1);
 
@@ -49,7 +51,8 @@ namespace osu.Server.Spectator.Tests
         public void TypeChangeTriggersInitialJoins()
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, new Mock<IDatabaseFactory>().Object, hubCallbacks.Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
