@@ -12,7 +12,7 @@ namespace osu.Server.Spectator.Database.Models
     {
         host_only,
         all_players,
-        all_players_rr
+        all_players_round_robin
     }
 
     public static class DatabaseQueueModeExtensions
@@ -27,8 +27,8 @@ namespace osu.Server.Spectator.Database.Models
                 case database_queue_mode.all_players:
                     return QueueMode.AllPlayers;
 
-                case database_queue_mode.all_players_rr:
-                    return QueueMode.AllPlayersRR;
+                case database_queue_mode.all_players_round_robin:
+                    return QueueMode.AllPlayersRoundRobin;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode));
@@ -45,8 +45,8 @@ namespace osu.Server.Spectator.Database.Models
                 case QueueMode.AllPlayers:
                     return database_queue_mode.all_players;
 
-                case QueueMode.AllPlayersRR:
-                    return database_queue_mode.all_players_rr;
+                case QueueMode.AllPlayersRoundRobin:
+                    return database_queue_mode.all_players_round_robin;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode));

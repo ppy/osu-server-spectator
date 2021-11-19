@@ -188,7 +188,7 @@ namespace osu.Server.Spectator.Hubs
                     newItem = room.Playlist.FirstOrDefault(i => !i.Expired) ?? room.Playlist.Last();
                     break;
 
-                case QueueMode.AllPlayersRR:
+                case QueueMode.AllPlayersRoundRobin:
                     newItem =
                         room.Playlist
                             // Group items by their owner.

@@ -20,7 +20,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(d => d.GetBeatmapChecksumAsync(5555)).ReturnsAsync("5555");
 
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRR });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRoundRobin });
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
@@ -122,7 +122,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(2, room.Settings.PlaylistItemId);
             }
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRR });
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRoundRobin });
 
             using (var usage = Hub.GetRoom(ROOM_ID))
             {
