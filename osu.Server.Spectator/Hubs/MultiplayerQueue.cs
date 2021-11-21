@@ -56,9 +56,9 @@ namespace osu.Server.Spectator.Hubs
         {
             if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
 
+            // When changing to host-only mode, ensure that at least one non-expired playlist item exists by duplicating the current item.
             if (room.Settings.QueueMode == QueueMode.HostOnly && room.Playlist.All(item => item.Expired))
             {
-                // When changing to host-only mode, ensure that exactly one non-expired playlist item exists by duplicating the currrent item.
                 using (var db = dbFactory.GetInstance())
                     await duplicateCurrentItem(db);
             }
