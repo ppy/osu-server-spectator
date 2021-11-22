@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using osu.Game.Rulesets;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -19,7 +18,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 Name = "bestest room ever",
-                BeatmapChecksum = "checksum",
                 MatchType = MatchType.HeadToHead
             };
 
@@ -41,7 +39,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
                 Name = "bestest room ever",
-                BeatmapChecksum = "checksum",
                 MatchType = MatchType.HeadToHead
             };
 
@@ -89,10 +86,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
             {
-                BeatmapID = 1234567,
-                BeatmapChecksum = "checksum",
+                Password = "password",
                 MatchType = MatchType.HeadToHead,
-                RulesetID = 2
             };
 
             await Hub.JoinRoom(ROOM_ID);
@@ -101,68 +96,52 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task ChangingSettingsToNonExistentBeatmapThrows()
-        {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync((string?)null);
-
-            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
-            {
-                BeatmapID = 3333,
-                MatchType = MatchType.Playlists,
-                BeatmapChecksum = "checksum",
-            };
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(testSettings));
-        }
-
-        [Fact]
-        public async Task ChangingSettingsToCustomizedBeatmapThrows()
-        {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(9999)).ReturnsAsync("correct checksum");
-
-            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
-            {
-                BeatmapID = 9999,
-                MatchType = MatchType.HeadToHead,
-                BeatmapChecksum = "incorrect checksum",
-            };
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(testSettings));
-        }
-
-        [Fact]
         public async Task ChangingSettingsToUnsupportedMatchTypeThrows()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(9999)).ReturnsAsync("correct checksum");
-
-            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
-            {
-                BeatmapID = 9999,
-                MatchType = MatchType.Playlists,
-                BeatmapChecksum = "incorrect checksum",
-            };
-
             await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(testSettings));
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                MatchType = MatchType.Playlists,
+            }));
         }
 
-        [Theory]
-        [InlineData(ILegacyRuleset.MAX_LEGACY_RULESET_ID + 1)]
-        [InlineData(-1)]
-        public async Task ChangingSettingsToCustomRulesetThrows(int rulesetID)
+        [Fact]
+        public async Task ServerDoesNotAcceptClientPlaylistItemId()
         {
-            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
-            {
-                BeatmapID = 1234,
-                BeatmapChecksum = "checksum",
-                MatchType = MatchType.Playlists,
-                RulesetID = rulesetID,
-            };
+            long playlistItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
 
+            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                Name = "bestest room ever",
+                PlaylistItemId = 1
+            });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(playlistItemId, room.Settings.PlaylistItemId);
+                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task ChangingQueueModeUpdatesModel()
+        {
             await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(testSettings));
+            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            {
+                QueueMode = QueueMode.AllPlayers
+            });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+
+                Debug.Assert(room != null);
+                Assert.Equal(QueueMode.AllPlayers, room.Settings.QueueMode);
+            }
         }
     }
 }

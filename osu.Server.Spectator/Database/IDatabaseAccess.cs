@@ -28,12 +28,6 @@ namespace osu.Server.Spectator.Database
         Task<multiplayer_room> GetRoomAsync(long roomId);
 
         /// <summary>
-        /// Returns the single current <see cref="multiplayer_playlist_item"/> of a multiplayer room with ID <paramref name="roomId"/>.
-        /// This method is not valid for use with playlists "rooms".
-        /// </summary>
-        Task<multiplayer_playlist_item> GetCurrentPlaylistItemAsync(long roomId);
-
-        /// <summary>
         /// Returns the checksum of the beatmap with the given <paramref name="beatmapId"/>.
         /// </summary>
         Task<string?> GetBeatmapChecksumAsync(int beatmapId);
@@ -64,16 +58,23 @@ namespace osu.Server.Spectator.Database
         Task RemoveRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user);
 
         /// <summary>
-        /// Retrieves a playlist item from the given room's playlist.
-        /// </summary>
-        /// <returns>The item if it's in the room's playlist, otherwise null.</returns>
-        Task<multiplayer_playlist_item?> GetPlaylistItemFromRoomAsync(long roomId, long playlistItemId);
-
-        /// <summary>
         /// Creates a new playlist item.
         /// </summary>
         /// <returns>The playlist item ID.</returns>
         Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item);
+
+        /// <summary>
+        /// Updates an existing playlist item.
+        /// </summary>
+        /// <param name="item">The new playlist item settings.</param>
+        Task UpdatePlaylistItemAsync(multiplayer_playlist_item item);
+
+        /// <summary>
+        /// Removes a playlist item.
+        /// </summary>
+        /// <param name="roomId">The room.</param>
+        /// <param name="playlistItemId">The playlist item ID to remove.</param>
+        Task RemovePlaylistItemAsync(long roomId, long playlistItemId);
 
         /// <summary>
         /// Marks a playlist item as expired.
@@ -84,5 +85,11 @@ namespace osu.Server.Spectator.Database
         /// Marks the given <paramref name="room"/> as ended and no longer accepting new players or scores.
         /// </summary>
         Task EndMatchAsync(MultiplayerRoom room);
+
+        /// <summary>
+        /// Retrieves all playlist items.
+        /// </summary>
+        /// <param name="roomId">The room to retrieve playlist items from.</param>
+        Task<multiplayer_playlist_item[]> GetAllPlaylistItemsAsync(long roomId);
     }
 }

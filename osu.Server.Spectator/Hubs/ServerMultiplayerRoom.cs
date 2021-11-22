@@ -1,8 +1,10 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Database;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -27,6 +29,8 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        public readonly MultiplayerQueue Queue;
+
         public ServerMultiplayerRoom(long roomId, IMultiplayerServerMatchCallbacks hubCallbacks)
             : base(roomId)
         {
@@ -34,6 +38,13 @@ namespace osu.Server.Spectator.Hubs
 
             // just to ensure non-null.
             matchTypeImplementation = createTypeImplementation(MatchType.HeadToHead);
+            Queue = new MultiplayerQueue(this, hubCallbacks);
+        }
+
+        public async Task Initialise(IDatabaseFactory dbFactory)
+        {
+            ChangeMatchType(Settings.MatchType);
+            await Queue.Initialise(dbFactory);
         }
 
         public void ChangeMatchType(MatchType type) => MatchTypeImplementation = createTypeImplementation(type);

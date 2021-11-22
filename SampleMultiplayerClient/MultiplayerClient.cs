@@ -94,6 +94,9 @@ namespace SampleMultiplayerClient
         public Task StartMatch() =>
             connection.InvokeAsync(nameof(IMultiplayerServer.StartMatch));
 
+        public Task AddPlaylistItem(MultiplayerPlaylistItem item) =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.AddPlaylistItem), item);
+
         Task IMultiplayerClient.RoomStateChanged(MultiplayerRoomState state)
         {
             Debug.Assert(Room != null);
@@ -199,6 +202,24 @@ namespace SampleMultiplayerClient
         Task IMultiplayerClient.ResultsReady()
         {
             Console.WriteLine($"User {UserID} was informed the results are ready");
+            return Task.CompletedTask;
+        }
+
+        public Task PlaylistItemAdded(MultiplayerPlaylistItem item)
+        {
+            Console.WriteLine($"Playlist item added (beatmap: {item.BeatmapID}, ruleset: {item.RulesetID})");
+            return Task.CompletedTask;
+        }
+
+        public Task PlaylistItemRemoved(long playlistItemId)
+        {
+            Console.WriteLine($"Playlist item removed (id: {playlistItemId})");
+            return Task.CompletedTask;
+        }
+
+        public Task PlaylistItemChanged(MultiplayerPlaylistItem item)
+        {
+            Console.WriteLine($"Playlist item changed (id: {item.ID} beatmap: {item.BeatmapID}, ruleset: {item.RulesetID})");
             return Task.CompletedTask;
         }
     }

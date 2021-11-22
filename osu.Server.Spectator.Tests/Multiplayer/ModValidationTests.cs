@@ -18,14 +18,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     public class ModValidationTests : MultiplayerTest
     {
         [Fact]
-        public async Task HostCanSetIncompatibleAllowedModsCombination()
+        public async Task CanAddIncompatibleAllowedModsCombination()
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 RulesetID = 0,
                 AllowedMods = new[]
                 {
@@ -38,14 +37,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task HostSetsInvalidAllowedModsForRulesetThrows()
+        public async Task AddInvalidAllowedModsForRulesetThrows()
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 RulesetID = 3,
                 AllowedMods = new[]
                 {
@@ -55,14 +53,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task HostSetsInvalidRequiredModsCombinationThrows()
+        public async Task AddInvalidRequiredModsCombinationThrows()
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 RulesetID = 0,
                 RequiredMods = new[]
                 {
@@ -73,14 +70,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task HostSetsInvalidRequiredModsForRulesetThrows()
+        public async Task AddInvalidRequiredModsForRulesetThrows()
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 RulesetID = 3,
                 RequiredMods = new[]
                 {
@@ -90,14 +86,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task HostSetsInvalidRequiredAllowedModsCombinationThrows()
+        public async Task AddInvalidRequiredAllowedModsCombinationThrows()
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 RulesetID = 0,
                 RequiredMods = new[]
                 {
@@ -112,14 +107,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact(Skip = "needs dedupe check logic somewhere")]
-        public async Task HostSetsOverlappingRequiredAllowedMods()
+        public async Task AddOverlappingRequiredAllowedModsFails()
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 RequiredMods = new[]
                 {
                     new APIMod(new OsuModFlashlight()),
@@ -137,10 +131,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModFlashlight()),
@@ -174,10 +167,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModHidden()),
@@ -214,11 +206,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new CatchModHidden()),
@@ -246,11 +237,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new CatchModHidden()),
@@ -290,10 +280,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             SetUserContext(ContextUser);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModApproachDifferent()),
@@ -310,10 +299,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             assertUserMods(USER_ID_2, "HR", "AD");
 
             SetUserContext(ContextUser);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModFlashlight()),
@@ -346,17 +334,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            var roomSettings = new MultiplayerRoomSettings
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
                 AllowedMods = new[]
                 {
                     new APIMod(new OsuModApproachDifferent())
                 },
-            };
-
-            await Hub.ChangeSettings(roomSettings);
+            });
 
             await Hub.ChangeUserMods(new[] { new APIMod(new OsuModApproachDifferent()) });
 
@@ -367,11 +352,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotEmpty(room.Users.First().Mods);
             }
 
-            await Hub.ChangeSettings(new MultiplayerRoomSettings
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
-                MatchType = MatchType.HeadToHead,
             });
 
             using (var usage = Hub.GetRoom(ROOM_ID))

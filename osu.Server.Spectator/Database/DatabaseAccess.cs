@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
@@ -83,25 +84,15 @@ namespace osu.Server.Spectator.Database
 
         public async Task UpdateRoomSettingsAsync(MultiplayerRoom room)
         {
-            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name, password = @Password, type = @MatchType WHERE id = @RoomID", new
+            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name, password = @Password, type = @MatchType, queue_mode = @QueueMode WHERE id = @RoomID", new
             {
                 RoomID = room.RoomID,
                 Name = room.Settings.Name,
                 Password = room.Settings.Password,
                 // needs ToString() to store as enums correctly, see https://github.com/DapperLib/Dapper/issues/813.
                 MatchType = room.Settings.MatchType.ToDatabaseMatchType().ToString(),
+                QueueMode = room.Settings.QueueMode.ToDatabaseQueueMode().ToString()
             });
-
-            var currentItem = await GetCurrentPlaylistItemAsync(room.RoomID);
-            var newItem = new multiplayer_playlist_item(room) { id = currentItem.id };
-
-            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET "
-                                          + " beatmap_id = @beatmap_id,"
-                                          + " ruleset_id = @ruleset_id,"
-                                          + " required_mods = @required_mods,"
-                                          + " allowed_mods = @allowed_mods,"
-                                          + " updated_at = NOW()"
-                                          + " WHERE id = @id", newItem);
         }
 
         public async Task UpdateRoomHostAsync(MultiplayerRoom room)
@@ -189,11 +180,32 @@ namespace osu.Server.Spectator.Database
         public async Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item)
         {
             await connection.ExecuteAsync(
-                "INSERT INTO multiplayer_playlist_items (room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, created_at, updated_at)"
-                + " VALUES (@room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, NOW(), NOW())",
+                "INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, created_at, updated_at)"
+                + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, NOW(), NOW())",
                 item);
 
             return await connection.QuerySingleAsync<long>("SELECT max(id) FROM multiplayer_playlist_items WHERE room_id = @room_id", item);
+        }
+
+        public async Task UpdatePlaylistItemAsync(multiplayer_playlist_item item)
+        {
+            await connection.ExecuteAsync(
+                "UPDATE multiplayer_playlist_items SET"
+                + " beatmap_id = @beatmap_id,"
+                + " ruleset_id = @ruleset_id,"
+                + " required_mods = @required_mods,"
+                + " allowed_mods = @allowed_mods,"
+                + " updated_at = NOW()"
+                + " WHERE id = @id", item);
+        }
+
+        public async Task RemovePlaylistItemAsync(long roomId, long playlistItemId)
+        {
+            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items WHERE id = @Id AND room_id = @RoomId", new
+            {
+                Id = playlistItemId,
+                RoomId = roomId
+            });
         }
 
         public async Task ExpirePlaylistItemAsync(long playlistItemId)
@@ -207,7 +219,11 @@ namespace osu.Server.Spectator.Database
         public async Task EndMatchAsync(MultiplayerRoom room)
         {
             // Remove all non-expired items from the playlist as they have no scores.
-            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items p WHERE p.room_id = @RoomID AND p.expired = 0 AND (SELECT COUNT(*) FROM multiplayer_scores s WHERE s.playlist_item_id = p.id) = 0",
+            await connection.ExecuteAsync(
+                "DELETE FROM multiplayer_playlist_items p"
+                + " WHERE p.room_id = @RoomID"
+                + " AND p.expired = 0"
+                + " AND (SELECT COUNT(*) FROM multiplayer_scores s WHERE s.playlist_item_id = p.id) = 0",
                 new
                 {
                     RoomID = room.RoomID
@@ -221,6 +237,11 @@ namespace osu.Server.Spectator.Database
                 RoomID = room.RoomID,
                 Count = totalUsers,
             });
+        }
+
+        public async Task<multiplayer_playlist_item[]> GetAllPlaylistItemsAsync(long roomId)
+        {
+            return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
         }
 
         public void Dispose()

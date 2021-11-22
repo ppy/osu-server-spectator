@@ -3,6 +3,7 @@
 
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -18,6 +19,7 @@ namespace osu.Server.Spectator.Tests
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
             var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
 
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
@@ -32,6 +34,7 @@ namespace osu.Server.Spectator.Tests
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
             var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
 
             var user = new MultiplayerRoomUser(1);
 
@@ -49,6 +52,7 @@ namespace osu.Server.Spectator.Tests
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
             var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
+            room.Initialise(new Mock<IDatabaseFactory>().Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)

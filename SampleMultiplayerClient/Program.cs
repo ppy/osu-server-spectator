@@ -85,8 +85,11 @@ namespace SampleMultiplayerClient
 
                         case "changesettings":
                             settings ??= new MultiplayerRoomSettings();
-                            settings.BeatmapID = RNG.Next(0, 65536);
                             await targetClient.ChangeSettings(settings);
+                            break;
+
+                        case "additem":
+                            await targetClient.AddPlaylistItem(new MultiplayerPlaylistItem { BeatmapID = RNG.Next(0, 65536) });
                             break;
 
                         case "changestate":

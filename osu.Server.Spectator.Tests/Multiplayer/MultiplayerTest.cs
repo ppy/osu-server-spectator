@@ -2,6 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -46,8 +48,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected readonly Mock<IGroupManager> Groups;
         protected readonly Mock<IMultiplayerClient> Caller;
 
+        private readonly List<multiplayer_playlist_item> playlistItems;
+        private int currentItemId;
+
         protected MultiplayerTest()
         {
+            currentItemId = 0;
+            playlistItems = new List<multiplayer_playlist_item>();
+
             mockDatabaseFactory = new Mock<IDatabaseFactory>();
             Database = new Mock<IDatabaseAccess>();
             setUpMockDatabase();
@@ -120,14 +128,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         private void setUpMockDatabase()
         {
             mockDatabaseFactory.Setup(factory => factory.GetInstance()).Returns(Database.Object);
+
             Database.Setup(db => db.GetRoomAsync(ROOM_ID))
-                    .ReturnsAsync(new multiplayer_room
+                    .Callback<long>(InitialiseRoom)
+                    .ReturnsAsync(() => new multiplayer_room
                     {
                         type = database_match_type.head_to_head,
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
                         user_id = USER_ID,
                     });
+
             Database.Setup(db => db.GetRoomAsync(ROOM_ID_2))
+                    .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(new multiplayer_room
                     {
                         type = database_match_type.head_to_head,
@@ -135,20 +147,54 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         user_id = USER_ID_2
                     });
 
-            Database.Setup(db => db.GetCurrentPlaylistItemAsync(It.IsAny<long>()))
-                    .ReturnsAsync(new multiplayer_playlist_item
-                    {
-                        beatmap_id = 1234
-                    });
             Database.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
                     .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
 
-            Database.Setup(db => db.GetPlaylistItemFromRoomAsync(It.IsAny<long>(), It.IsAny<long>()))
-                    .Returns<long, long>((roomId, playlistItemId) => Task.FromResult<multiplayer_playlist_item?>(new multiplayer_playlist_item
+            Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
+                    .Callback<multiplayer_playlist_item>(item =>
                     {
-                        id = playlistItemId,
-                        room_id = roomId,
-                    }));
+                        var copy = item.Clone();
+                        copy.id = ++currentItemId;
+                        copy.expired = false;
+                        playlistItems.Add(copy);
+                    })
+                    .ReturnsAsync(() => currentItemId);
+
+            Database.Setup(db => db.UpdatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
+                    .Callback<multiplayer_playlist_item>(item =>
+                    {
+                        int index = playlistItems.FindIndex(i => i.id == item.id);
+                        playlistItems[index] = item.Clone();
+                    });
+
+            Database.Setup(db => db.ExpirePlaylistItemAsync(It.IsAny<long>()))
+                    .Callback<long>(playlistItemId =>
+                    {
+                        int index = playlistItems.FindIndex(i => i.id == playlistItemId);
+                        var copy = playlistItems[index].Clone();
+                        copy.expired = true;
+                        playlistItems[index] = copy;
+                    });
+
+            Database.Setup(db => db.GetAllPlaylistItemsAsync(It.IsAny<long>()))
+                    .Returns<long>(roomId => Task.FromResult(playlistItems.Where(i => i.room_id == roomId).Select(i => i.Clone()).ToArray()));
+
+            Database.Setup(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()))
+                    .Callback<long, long>((roomId, playlistItemId) => playlistItems.RemoveAll(i => i.room_id == roomId && i.id == playlistItemId));
+        }
+
+        protected void InitialiseRoom(long roomId)
+        {
+            if (playlistItems.All(i => i.room_id != roomId))
+            {
+                playlistItems.Add(new multiplayer_playlist_item
+                {
+                    id = ++currentItemId,
+                    room_id = roomId,
+                    beatmap_id = 1234,
+                    owner_id = int.Parse(Hub.Context.UserIdentifier!)
+                });
+            }
         }
     }
 }
