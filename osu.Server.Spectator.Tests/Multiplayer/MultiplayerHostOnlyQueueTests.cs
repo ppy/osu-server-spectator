@@ -300,5 +300,42 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(4444, room.Playlist[0].BeatmapID);
             }
         }
+
+        [Fact]
+        public async Task OwnerChangesOnBeatmapChange()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(USER_ID, room.Playlist[0].OwnerID);
+            }
+
+            await Hub.TransferHost(USER_ID_2);
+            SetUserContext(ContextUser2);
+
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 4444,
+                BeatmapChecksum = "4444"
+            });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(USER_ID_2, room.Playlist[0].OwnerID);
+            }
+        }
     }
 }

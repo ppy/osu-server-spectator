@@ -124,13 +124,13 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidStateException("Attempted to select an unsupported ruleset.");
 
                 item.EnsureModsValid();
+                item.OwnerID = user.UserID;
 
                 switch (room.Settings.QueueMode)
                 {
                     case QueueMode.HostOnly:
                         // In host-only mode, the current item is re-used.
                         item.ID = CurrentItem.ID;
-                        item.OwnerID = CurrentItem.OwnerID;
 
                         await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         room.Playlist[currentIndex] = item;
@@ -139,7 +139,6 @@ namespace osu.Server.Spectator.Hubs
                         break;
 
                     default:
-                        item.OwnerID = user.UserID;
                         item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         room.Playlist.Add(item);
 
