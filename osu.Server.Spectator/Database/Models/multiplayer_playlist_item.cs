@@ -25,6 +25,7 @@ namespace osu.Server.Spectator.Database.Models
         public DateTimeOffset? created_at { get; set; }
         public DateTimeOffset? updated_at { get; set; }
         public bool expired { get; set; }
+        public int gameplay_order { get; set; }
 
         // for deserialization
         public multiplayer_playlist_item()
@@ -47,6 +48,7 @@ namespace osu.Server.Spectator.Database.Models
             allowed_mods = JsonConvert.SerializeObject(item.AllowedMods);
             updated_at = DateTimeOffset.Now;
             expired = item.Expired;
+            gameplay_order = item.GameplayOrder;
         }
 
         public async Task<MultiplayerPlaylistItem> ToMultiplayerPlaylistItem(IDatabaseAccess db) => new MultiplayerPlaylistItem
@@ -58,7 +60,8 @@ namespace osu.Server.Spectator.Database.Models
             RulesetID = ruleset_id,
             RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(required_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
             AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
-            Expired = expired
+            Expired = expired,
+            GameplayOrder = gameplay_order
         };
 
         public multiplayer_playlist_item Clone() => (multiplayer_playlist_item)MemberwiseClone();
