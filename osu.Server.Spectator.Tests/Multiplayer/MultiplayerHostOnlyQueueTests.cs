@@ -86,8 +86,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 // Players received callbacks.
                 Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == oldItem.ID && i.Expired)), Times.Once);
-                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == oldItem.ID && i.Expired)));
+                Receiver.Verify(r => r.SettingsChanged(room.Settings));
             }
 
             // And a second time...
@@ -116,8 +116,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 // Players received callbacks.
                 Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == oldItem.ID && i.Expired)), Times.Once);
-                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(3));
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == oldItem.ID && i.Expired)));
+                Receiver.Verify(r => r.SettingsChanged(room.Settings));
             }
         }
 
@@ -153,9 +153,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(room.Playlist[1].ID, room.Settings.PlaylistItemId);
                 Assert.True(room.Playlist[0].Expired);
 
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == room.Playlist[0].ID && i.Expired)), Times.Once);
                 Receiver.Verify(r => r.PlaylistItemAdded(It.IsAny<MultiplayerPlaylistItem>()), Times.Once);
-                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(2));
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == room.Playlist[0].ID && i.Expired)));
+                Receiver.Verify(r => r.SettingsChanged(room.Settings));
             }
 
             // Play the second item in host-only mode.
@@ -178,8 +178,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 // Players received callbacks.
                 Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == room.Playlist[2].ID)), Times.Once);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == room.Playlist[1].ID && i.Expired)), Times.Once);
-                Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Exactly(3));
+                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == room.Playlist[1].ID && i.Expired)));
+                Receiver.Verify(r => r.SettingsChanged(room.Settings));
             }
         }
 
