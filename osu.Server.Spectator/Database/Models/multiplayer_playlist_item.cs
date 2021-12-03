@@ -24,12 +24,12 @@ namespace osu.Server.Spectator.Database.Models
         public string? required_mods { get; set; }
 
         /// <summary>
-        /// Read-only.
+        /// Changes to this property will not be persisted to the database.
         /// </summary>
         public DateTimeOffset? created_at { get; set; } = DateTimeOffset.Now;
 
         /// <summary>
-        /// Read-only.
+        /// Changes to this property will not be persisted to the database.
         /// </summary>
         public DateTimeOffset? updated_at { get; set; } = DateTimeOffset.Now;
 
