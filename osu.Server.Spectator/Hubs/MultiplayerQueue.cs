@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using osu.Game.Extensions;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
@@ -183,8 +182,12 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         private async Task updateCurrentItem()
         {
-            // The playlist is already in correct gameplay order, so pick the next non-expired item or default to the last item.
-            MultiplayerPlaylistItem nextItem = room.Playlist.FirstOrDefault(i => !i.Expired) ?? room.Playlist.Last();
+            MultiplayerPlaylistItem nextItem = room.Playlist
+                                                   .Where(i => !i.Expired)
+                                                   .OrderBy(i => i.PlaylistOrder)
+                                                   .FirstOrDefault()
+                                               ?? room.Playlist.Last();
+
             currentIndex = room.Playlist.IndexOf(nextItem);
 
             long lastItemID = room.Settings.PlaylistItemId;
@@ -237,8 +240,6 @@ namespace osu.Server.Spectator.Hubs
                     break;
             }
 
-            List<MultiplayerPlaylistItem> orderedExpiredItems = room.Playlist.Where(item => item.Expired).OrderBy(item => item.PlayedAt).ToList();
-
             for (int i = 0; i < orderedActiveItems.Count; i++)
             {
                 var item = orderedActiveItems[i];
@@ -255,10 +256,6 @@ namespace osu.Server.Spectator.Hubs
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                 await hub.OnPlaylistItemChanged(room, item);
             }
-
-            room.Playlist.Clear();
-            room.Playlist.AddRange(orderedExpiredItems);
-            room.Playlist.AddRange(orderedActiveItems);
         }
     }
 }
