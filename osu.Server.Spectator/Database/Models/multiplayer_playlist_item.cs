@@ -22,8 +22,17 @@ namespace osu.Server.Spectator.Database.Models
         public short? playlist_order { get; set; }
         public string? allowed_mods { get; set; }
         public string? required_mods { get; set; }
-        public DateTimeOffset? created_at { get; set; }
-        public DateTimeOffset? updated_at { get; set; }
+
+        /// <summary>
+        /// Read-only.
+        /// </summary>
+        public DateTimeOffset? created_at { get; set; } = DateTimeOffset.Now;
+
+        /// <summary>
+        /// Read-only.
+        /// </summary>
+        public DateTimeOffset? updated_at { get; set; } = DateTimeOffset.Now;
+
         public bool expired { get; set; }
         public int gameplay_order { get; set; }
 
@@ -61,7 +70,8 @@ namespace osu.Server.Spectator.Database.Models
             RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(required_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
             AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
             Expired = expired,
-            GameplayOrder = gameplay_order
+            GameplayOrder = gameplay_order,
+            UpdatedAt = updated_at ?? DateTimeOffset.UtcNow
         };
 
         public multiplayer_playlist_item Clone() => (multiplayer_playlist_item)MemberwiseClone();

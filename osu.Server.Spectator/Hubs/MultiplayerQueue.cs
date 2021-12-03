@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using NuGet.Packaging;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
@@ -83,15 +84,14 @@ namespace osu.Server.Spectator.Hubs
                 // Expire and let clients know that the current item has finished.
                 await db.ExpirePlaylistItemAsync(CurrentItem.ID);
                 CurrentItem.Expired = true;
+                CurrentItem.UpdatedAt = DateTimeOffset.UtcNow;
 
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
+                await updatePlaylistOrder(db);
 
                 // In host-only mode, duplicate the playlist item for the next round if no other non-expired items exist.
-                if (room.Settings.QueueMode == QueueMode.HostOnly)
-                {
-                    if (room.Playlist.All(item => item.Expired))
-                        await duplicateCurrentItem(db);
-                }
+                if (room.Settings.QueueMode == QueueMode.HostOnly && room.Playlist.All(item => item.Expired))
+                    await duplicateCurrentItem(db);
             }
 
             await updateCurrentItem();
@@ -199,15 +199,17 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         private async Task updatePlaylistOrder(IDatabaseAccess db)
         {
-            List<MultiplayerPlaylistItem> orderedItems;
+            List<MultiplayerPlaylistItem> orderedActiveItems;
 
             switch (room.Settings.QueueMode)
             {
                 default:
-                    orderedItems = room.Playlist.OrderBy(item => item.ID == 0 ? int.MaxValue : item.ID).ToList();
+                    orderedActiveItems = room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID == 0 ? int.MaxValue : item.ID).ToList();
                     break;
 
                 case QueueMode.AllPlayersRoundRobin:
+                    orderedActiveItems = new List<MultiplayerPlaylistItem>();
+
                     // Todo: This could probably be more efficient, likely at the cost of increased complexity.
                     // Number of "expired" or "used" items per player.
                     Dictionary<int, int> perUserCounts = room.Playlist
@@ -215,7 +217,6 @@ namespace osu.Server.Spectator.Hubs
                                                              .ToDictionary(group => group.Key, group => group.Count(item => item.Expired));
 
                     // We'll run a simulation over all items which are not expired ("unprocessed"). Expired items will not have their ordering updated.
-                    List<MultiplayerPlaylistItem> processedItems = room.Playlist.Where(item => item.Expired).ToList();
                     List<MultiplayerPlaylistItem> unprocessedItems = room.Playlist.Where(item => !item.Expired).ToList();
 
                     // In every iteration of the simulation, pick the first available item from the user with the lowest number of items in the queue to add to the result set.
@@ -228,32 +229,41 @@ namespace osu.Server.Spectator.Hubs
                                                                 .First();
 
                         unprocessedItems.Remove(candidateItem);
-                        processedItems.Add(candidateItem);
+                        orderedActiveItems.Add(candidateItem);
 
                         perUserCounts[candidateItem.OwnerID]++;
                     }
 
-                    orderedItems = processedItems;
                     break;
             }
 
-            for (int i = 0; i < orderedItems.Count; i++)
-            {
-                // Items which are already ordered correct don't need to be updated.
-                if (orderedItems[i].GameplayOrder == i)
-                    continue;
+            // For expired items, it's important that they're ordered in ascending order such that the last updated item is the last in the list.
+            // This is so that the updated_at database column doesn't get refreshed as a result of change in ordering.
+            List<MultiplayerPlaylistItem> orderedExpiredItems = room.Playlist.Where(item => item.Expired).OrderBy(item => item.UpdatedAt).ToList();
+            for (int i = 0; i < orderedExpiredItems.Count; i++)
+                await setOrder(orderedExpiredItems[i], i);
 
-                orderedItems[i].GameplayOrder = i;
+            for (int i = 0; i < orderedActiveItems.Count; i++)
+                await setOrder(orderedActiveItems[i], i);
+
+            room.Playlist.Clear();
+            room.Playlist.AddRange(orderedExpiredItems);
+            room.Playlist.AddRange(orderedActiveItems);
+
+            async Task setOrder(MultiplayerPlaylistItem item, int order)
+            {
+                if (item.GameplayOrder == order)
+                    return;
+
+                item.GameplayOrder = order;
 
                 // Items which have an ID of 0 are not in the database, so avoid propagating database/hub events for them.
-                if (orderedItems[i].ID <= 0)
-                    continue;
+                if (item.ID <= 0)
+                    return;
 
-                await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, orderedItems[i]));
-                await hub.OnPlaylistItemChanged(room, orderedItems[i]);
+                await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                await hub.OnPlaylistItemChanged(room, item);
             }
-
-            room.Playlist = orderedItems;
         }
     }
 }
