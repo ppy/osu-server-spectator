@@ -167,12 +167,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         playlistItems[index] = item.Clone();
                     });
 
-            Database.Setup(db => db.ExpirePlaylistItemAsync(It.IsAny<long>()))
+            Database.Setup(db => db.MarkPlaylistItemAsPlayedAsync(It.IsAny<long>()))
                     .Callback<long>(playlistItemId =>
                     {
                         int index = playlistItems.FindIndex(i => i.id == playlistItemId);
                         var copy = playlistItems[index].Clone();
                         copy.expired = true;
+                        copy.played_at = DateTimeOffset.Now;
                         playlistItems[index] = copy;
                     });
 

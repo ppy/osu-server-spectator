@@ -77,9 +77,9 @@ namespace osu.Server.Spectator.Database
         Task RemovePlaylistItemAsync(long roomId, long playlistItemId);
 
         /// <summary>
-        /// Marks a playlist item as expired.
+        /// Marks a playlist item as having been played.
         /// </summary>
-        Task ExpirePlaylistItemAsync(long playlistItemId);
+        Task MarkPlaylistItemAsPlayedAsync(long playlistItemId);
 
         /// <summary>
         /// Marks the given <paramref name="room"/> as ended and no longer accepting new players or scores.

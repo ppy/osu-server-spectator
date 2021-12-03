@@ -82,9 +82,9 @@ namespace osu.Server.Spectator.Hubs
             using (var db = dbFactory.GetInstance())
             {
                 // Expire and let clients know that the current item has finished.
-                await db.ExpirePlaylistItemAsync(CurrentItem.ID);
+                await db.MarkPlaylistItemAsPlayedAsync(CurrentItem.ID);
                 CurrentItem.Expired = true;
-                CurrentItem.UpdatedAt = DateTimeOffset.UtcNow;
+                CurrentItem.PlayedAt = DateTimeOffset.Now;
 
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
                 await updatePlaylistOrder(db);
@@ -237,33 +237,28 @@ namespace osu.Server.Spectator.Hubs
                     break;
             }
 
-            // For expired items, it's important that they're ordered in ascending order such that the last updated item is the last in the list.
-            // This is so that the updated_at database column doesn't get refreshed as a result of change in ordering.
-            List<MultiplayerPlaylistItem> orderedExpiredItems = room.Playlist.Where(item => item.Expired).OrderBy(item => item.UpdatedAt).ToList();
-            for (int i = 0; i < orderedExpiredItems.Count; i++)
-                await setOrder(orderedExpiredItems[i], (ushort)i);
+            List<MultiplayerPlaylistItem> orderedExpiredItems = room.Playlist.Where(item => item.Expired).OrderBy(item => item.PlayedAt).ToList();
 
             for (int i = 0; i < orderedActiveItems.Count; i++)
-                await setOrder(orderedActiveItems[i], (ushort)i);
-
-            room.Playlist.Clear();
-            room.Playlist.AddRange(orderedExpiredItems);
-            room.Playlist.AddRange(orderedActiveItems);
-
-            async Task setOrder(MultiplayerPlaylistItem item, ushort order)
             {
-                if (item.PlaylistOrder == order)
-                    return;
+                var item = orderedActiveItems[i];
 
-                item.PlaylistOrder = order;
+                if (item.PlaylistOrder == i)
+                    continue;
+
+                item.PlaylistOrder = (ushort)i;
 
                 // Items which have an ID of 0 are not in the database, so avoid propagating database/hub events for them.
                 if (item.ID <= 0)
-                    return;
+                    continue;
 
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                 await hub.OnPlaylistItemChanged(room, item);
             }
+
+            room.Playlist.Clear();
+            room.Playlist.AddRange(orderedExpiredItems);
+            room.Playlist.AddRange(orderedActiveItems);
         }
     }
 }

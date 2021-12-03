@@ -26,14 +26,19 @@ namespace osu.Server.Spectator.Database.Models
         /// <summary>
         /// Changes to this property will not be persisted to the database.
         /// </summary>
-        public DateTimeOffset? created_at { get; set; } = DateTimeOffset.Now;
+        public DateTimeOffset? created_at { get; set; }
 
         /// <summary>
         /// Changes to this property will not be persisted to the database.
         /// </summary>
-        public DateTimeOffset? updated_at { get; set; } = DateTimeOffset.Now;
+        public DateTimeOffset? updated_at { get; set; }
 
         public bool expired { get; set; }
+
+        /// <summary>
+        /// Changes to this property will not be persisted to the database.
+        /// </summary>
+        public DateTimeOffset? played_at { get; set; }
 
         // for deserialization
         public multiplayer_playlist_item()
@@ -57,6 +62,7 @@ namespace osu.Server.Spectator.Database.Models
             updated_at = DateTimeOffset.Now;
             expired = item.Expired;
             playlist_order = item.PlaylistOrder;
+            played_at = item.PlayedAt;
         }
 
         public async Task<MultiplayerPlaylistItem> ToMultiplayerPlaylistItem(IDatabaseAccess db) => new MultiplayerPlaylistItem
@@ -70,7 +76,7 @@ namespace osu.Server.Spectator.Database.Models
             AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
             Expired = expired,
             PlaylistOrder = playlist_order ?? 0,
-            UpdatedAt = updated_at ?? DateTimeOffset.UtcNow
+            PlayedAt = played_at,
         };
 
         public multiplayer_playlist_item Clone() => (multiplayer_playlist_item)MemberwiseClone();

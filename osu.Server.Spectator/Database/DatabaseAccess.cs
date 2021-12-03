@@ -209,9 +209,9 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task ExpirePlaylistItemAsync(long playlistItemId)
+        public async Task MarkPlaylistItemAsPlayedAsync(long playlistItemId)
         {
-            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, updated_at = NOW() WHERE id = @PlaylistItemId", new
+            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, played_at = NOW(), updated_at = NOW() WHERE id = @PlaylistItemId", new
             {
                 PlaylistItemId = playlistItemId
             });
