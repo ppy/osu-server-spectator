@@ -135,7 +135,7 @@ namespace osu.Server.Spectator.Hubs
                     case QueueMode.HostOnly:
                         // In host-only mode, the current item is re-used.
                         item.ID = CurrentItem.ID;
-                        item.GameplayOrder = CurrentItem.GameplayOrder;
+                        item.PlaylistOrder = CurrentItem.PlaylistOrder;
 
                         await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                         room.Playlist[currentIndex] = item;
@@ -241,21 +241,21 @@ namespace osu.Server.Spectator.Hubs
             // This is so that the updated_at database column doesn't get refreshed as a result of change in ordering.
             List<MultiplayerPlaylistItem> orderedExpiredItems = room.Playlist.Where(item => item.Expired).OrderBy(item => item.UpdatedAt).ToList();
             for (int i = 0; i < orderedExpiredItems.Count; i++)
-                await setOrder(orderedExpiredItems[i], i);
+                await setOrder(orderedExpiredItems[i], (ushort)i);
 
             for (int i = 0; i < orderedActiveItems.Count; i++)
-                await setOrder(orderedActiveItems[i], i);
+                await setOrder(orderedActiveItems[i], (ushort)i);
 
             room.Playlist.Clear();
             room.Playlist.AddRange(orderedExpiredItems);
             room.Playlist.AddRange(orderedActiveItems);
 
-            async Task setOrder(MultiplayerPlaylistItem item, int order)
+            async Task setOrder(MultiplayerPlaylistItem item, ushort order)
             {
-                if (item.GameplayOrder == order)
+                if (item.PlaylistOrder == order)
                     return;
 
-                item.GameplayOrder = order;
+                item.PlaylistOrder = order;
 
                 // Items which have an ID of 0 are not in the database, so avoid propagating database/hub events for them.
                 if (item.ID <= 0)

@@ -180,8 +180,8 @@ namespace osu.Server.Spectator.Database
         public async Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item)
         {
             await connection.ExecuteAsync(
-                "INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, gameplay_order, created_at, updated_at)"
-                + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, @gameplay_order, NOW(), NOW())",
+                "INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, playlist_order, created_at, updated_at)"
+                + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, @playlist_order, NOW(), NOW())",
                 item);
 
             return await connection.QuerySingleAsync<long>("SELECT max(id) FROM multiplayer_playlist_items WHERE room_id = @room_id", item);
@@ -195,7 +195,7 @@ namespace osu.Server.Spectator.Database
                 + " ruleset_id = @ruleset_id,"
                 + " required_mods = @required_mods,"
                 + " allowed_mods = @allowed_mods,"
-                + " gameplay_order = @gameplay_order,"
+                + " playlist_order = @playlist_order,"
                 + " updated_at = NOW()"
                 + " WHERE id = @id", item);
         }

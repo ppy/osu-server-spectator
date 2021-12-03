@@ -19,7 +19,7 @@ namespace osu.Server.Spectator.Database.Models
         public long room_id { get; set; }
         public int beatmap_id { get; set; }
         public short ruleset_id { get; set; }
-        public short? playlist_order { get; set; }
+        public ushort? playlist_order { get; set; }
         public string? allowed_mods { get; set; }
         public string? required_mods { get; set; }
 
@@ -34,7 +34,6 @@ namespace osu.Server.Spectator.Database.Models
         public DateTimeOffset? updated_at { get; set; } = DateTimeOffset.Now;
 
         public bool expired { get; set; }
-        public int gameplay_order { get; set; }
 
         // for deserialization
         public multiplayer_playlist_item()
@@ -57,7 +56,7 @@ namespace osu.Server.Spectator.Database.Models
             allowed_mods = JsonConvert.SerializeObject(item.AllowedMods);
             updated_at = DateTimeOffset.Now;
             expired = item.Expired;
-            gameplay_order = item.GameplayOrder;
+            playlist_order = item.PlaylistOrder;
         }
 
         public async Task<MultiplayerPlaylistItem> ToMultiplayerPlaylistItem(IDatabaseAccess db) => new MultiplayerPlaylistItem
@@ -70,7 +69,7 @@ namespace osu.Server.Spectator.Database.Models
             RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(required_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
             AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
             Expired = expired,
-            GameplayOrder = gameplay_order,
+            PlaylistOrder = playlist_order ?? 0,
             UpdatedAt = updated_at ?? DateTimeOffset.UtcNow
         };
 
