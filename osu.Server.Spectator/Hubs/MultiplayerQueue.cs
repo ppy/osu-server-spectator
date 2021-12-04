@@ -167,7 +167,9 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task addItem(IDatabaseAccess db, MultiplayerPlaylistItem item)
         {
-            // Add the item to the list first in order to compute gameplay order before adding to the database.
+            // Add the item to the list with an initial "infinite" ID, in order to notify updatePlaylistItem()
+            // that the item should be de-prioritised and events should not be propagated for it.
+            item.ID = long.MaxValue;
             room.Playlist.Add(item);
             await updatePlaylistOrder(db);
 
@@ -204,7 +206,7 @@ namespace osu.Server.Spectator.Hubs
             switch (room.Settings.QueueMode)
             {
                 default:
-                    orderedActiveItems = room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID == 0 ? int.MaxValue : item.ID).ToList();
+                    orderedActiveItems = room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).ToList();
                     break;
 
                 case QueueMode.AllPlayersRoundRobin:
@@ -225,7 +227,7 @@ namespace osu.Server.Spectator.Hubs
                     {
                         MultiplayerPlaylistItem candidateItem = unprocessedItems
                                                                 .OrderBy(item => perUserCounts[item.OwnerID])
-                                                                .ThenBy(item => item.ID == 0 ? int.MaxValue : item.ID)
+                                                                .ThenBy(item => item.ID)
                                                                 .First();
 
                         unprocessedItems.Remove(candidateItem);
@@ -246,8 +248,9 @@ namespace osu.Server.Spectator.Hubs
 
                 item.PlaylistOrder = (ushort)i;
 
-                // Items which have an ID of 0 are not in the database, so avoid propagating database/hub events for them.
-                if (item.ID <= 0)
+                // Items which have an "infinite" ID are not yet in the database, so avoid propagating database/hub events for them.
+                // See addItem() for when this occurs.
+                if (item.ID == long.MaxValue)
                     continue;
 
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
