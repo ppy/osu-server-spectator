@@ -58,6 +58,12 @@ namespace osu.Server.Spectator.Database
         Task RemoveRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user);
 
         /// <summary>
+        /// Retrieves a playlist item.
+        /// </summary>
+        /// <param name="playlistItemId">The playlist item.</param>
+        Task<multiplayer_playlist_item> GetPlaylistItemAsync(long playlistItemId);
+
+        /// <summary>
         /// Creates a new playlist item.
         /// </summary>
         /// <returns>The playlist item ID.</returns>

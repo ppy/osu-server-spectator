@@ -150,6 +150,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
                     .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
 
+            Database.Setup(db => db.GetPlaylistItemAsync(It.IsAny<long>()))
+                    .Returns<long>(playlistItemId => Task.FromResult(playlistItems.Single(i => i.id == playlistItemId).Clone()));
+
             Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
                     .Callback<multiplayer_playlist_item>(item =>
                     {
