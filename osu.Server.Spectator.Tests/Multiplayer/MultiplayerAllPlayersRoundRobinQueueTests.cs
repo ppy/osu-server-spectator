@@ -165,7 +165,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                // After changing back to free-for-all mode, we expect the second item (by player 1) to be selected.
                 Assert.Equal(expectedItemId, room.Settings.PlaylistItemId);
             }
         }

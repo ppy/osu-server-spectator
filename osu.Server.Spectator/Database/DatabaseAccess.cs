@@ -168,11 +168,12 @@ namespace osu.Server.Spectator.Database
             }
         }
 
-        public async Task<multiplayer_playlist_item> GetPlaylistItemAsync(long playlistItemId)
+        public async Task<multiplayer_playlist_item> GetPlaylistItemAsync(long roomId, long playlistItemId)
         {
-            return await connection.QueryFirstOrDefaultAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE id = @Id", new
+            return await connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE id = @Id AND room_id = @RoomId", new
             {
                 Id = playlistItemId,
+                RoomId = roomId
             });
         }
 
@@ -208,11 +209,12 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task MarkPlaylistItemAsPlayedAsync(long playlistItemId)
+        public async Task MarkPlaylistItemAsPlayedAsync(long roomId, long playlistItemId)
         {
-            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, played_at = NOW(), updated_at = NOW() WHERE id = @PlaylistItemId", new
+            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, played_at = NOW(), updated_at = NOW() WHERE id = @PlaylistItemId AND room_id = @RoomId", new
             {
-                PlaylistItemId = playlistItemId
+                PlaylistItemId = playlistItemId,
+                RoomId = roomId
             });
         }
 

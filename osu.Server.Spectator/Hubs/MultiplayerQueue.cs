@@ -81,8 +81,8 @@ namespace osu.Server.Spectator.Hubs
             using (var db = dbFactory.GetInstance())
             {
                 // Expire and let clients know that the current item has finished.
-                await db.MarkPlaylistItemAsPlayedAsync(CurrentItem.ID);
-                room.Playlist[currentIndex] = await (await db.GetPlaylistItemAsync(CurrentItem.ID)).ToMultiplayerPlaylistItem(db);
+                await db.MarkPlaylistItemAsPlayedAsync(room.RoomID, CurrentItem.ID);
+                room.Playlist[currentIndex] = await (await db.GetPlaylistItemAsync(room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem(db);
 
                 await hub.OnPlaylistItemChanged(room, CurrentItem);
                 await updatePlaylistOrder(db);
