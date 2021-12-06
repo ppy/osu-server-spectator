@@ -44,47 +44,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "5555"
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                // Item 1 selected (user 1)
-                Assert.Equal(1, room.Settings.PlaylistItemId);
-            }
+            checkCurrentItem(1);
 
             await runGameplay();
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                // Item 4 selected (user 2)
-                Assert.Equal(4, room.Settings.PlaylistItemId);
-            }
+            checkCurrentItem(4);
 
             await runGameplay();
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                // Item 2 selected (user 1)
-                Assert.Equal(2, room.Settings.PlaylistItemId);
-            }
+            checkCurrentItem(2);
 
             await runGameplay();
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                // Item 3 selected (user 1). User 2 has no more items available.
-                Assert.Equal(3, room.Settings.PlaylistItemId);
-            }
+            checkCurrentItem(3);
         }
 
         [Fact]
@@ -112,37 +81,57 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             });
 
             await runGameplay();
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                // After playing the first item, the second item (by player 1) is selected.
-                Assert.Equal(2, room.Settings.PlaylistItemId);
-            }
+            checkCurrentItem(2);
 
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRoundRobin });
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                // After changing to fair-play mode, we expect the third item (by player 2) to be selected.
-                Assert.Equal(3, room.Settings.PlaylistItemId);
-            }
+            checkCurrentItem(3);
 
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+            checkCurrentItem(2);
+        }
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+        [Fact]
+        public async Task CurrentItemOrderedByPlayedAt()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRoundRobin });
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser);
+
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
-                var room = usage.Item;
-                Debug.Assert(room != null);
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
 
-                // After changing back to free-for-all mode, we expect the second item (by player 1) to be selected.
-                Assert.Equal(2, room.Settings.PlaylistItemId);
-            }
+            await runGameplay();
+            await runGameplay();
+
+            // Item 3: Now the only non-expired item in the room.
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            SetUserContext(ContextUser2);
+
+            // Item 4: Because this user hasn't had any items played, this item will be moved to the start.
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            await runGameplay();
+            await runGameplay();
+
+            // Item 3 should be the "current" item, as it is in order of play rather than order of addition.
+            checkCurrentItem(3);
         }
 
         private async Task runGameplay()
@@ -167,6 +156,17 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             SetUserContext(ContextUser);
+        }
+
+        private void checkCurrentItem(long expectedItemId)
+        {
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(expectedItemId, room.Settings.PlaylistItemId);
+            }
         }
     }
 }

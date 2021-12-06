@@ -168,9 +168,9 @@ namespace osu.Server.Spectator.Database
             }
         }
 
-        public async Task<multiplayer_playlist_item?> GetPlaylistItemFromRoomAsync(long roomId, long playlistItemId)
+        public async Task<multiplayer_playlist_item> GetPlaylistItemAsync(long roomId, long playlistItemId)
         {
-            return await connection.QueryFirstOrDefaultAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE id = @Id AND room_id = @RoomId", new
+            return await connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE id = @Id AND room_id = @RoomId", new
             {
                 Id = playlistItemId,
                 RoomId = roomId
@@ -180,8 +180,8 @@ namespace osu.Server.Spectator.Database
         public async Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item)
         {
             await connection.ExecuteAsync(
-                "INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, created_at, updated_at)"
-                + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, NOW(), NOW())",
+                "INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, playlist_order, created_at, updated_at)"
+                + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, @playlist_order, NOW(), NOW())",
                 item);
 
             return await connection.QuerySingleAsync<long>("SELECT max(id) FROM multiplayer_playlist_items WHERE room_id = @room_id", item);
@@ -195,6 +195,7 @@ namespace osu.Server.Spectator.Database
                 + " ruleset_id = @ruleset_id,"
                 + " required_mods = @required_mods,"
                 + " allowed_mods = @allowed_mods,"
+                + " playlist_order = @playlist_order,"
                 + " updated_at = NOW()"
                 + " WHERE id = @id", item);
         }
@@ -208,11 +209,12 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task ExpirePlaylistItemAsync(long playlistItemId)
+        public async Task MarkPlaylistItemAsPlayedAsync(long roomId, long playlistItemId)
         {
-            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, updated_at = NOW() WHERE id = @PlaylistItemId", new
+            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, played_at = NOW(), updated_at = NOW() WHERE id = @PlaylistItemId AND room_id = @RoomId", new
             {
-                PlaylistItemId = playlistItemId
+                PlaylistItemId = playlistItemId,
+                RoomId = roomId
             });
         }
 

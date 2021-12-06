@@ -150,6 +150,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
                     .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
 
+            Database.Setup(db => db.GetPlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()))
+                    .Returns<long, long>((roomId, playlistItemId) => Task.FromResult(playlistItems.Single(i => i.id == playlistItemId && i.room_id == roomId).Clone()));
+
             Database.Setup(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()))
                     .Callback<multiplayer_playlist_item>(item =>
                     {
@@ -167,12 +170,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         playlistItems[index] = item.Clone();
                     });
 
-            Database.Setup(db => db.ExpirePlaylistItemAsync(It.IsAny<long>()))
-                    .Callback<long>(playlistItemId =>
+            Database.Setup(db => db.MarkPlaylistItemAsPlayedAsync(It.IsAny<long>(), It.IsAny<long>()))
+                    .Callback<long, long>((roomId, playlistItemId) =>
                     {
-                        int index = playlistItems.FindIndex(i => i.id == playlistItemId);
+                        int index = playlistItems.FindIndex(i => i.id == playlistItemId && i.room_id == roomId);
                         var copy = playlistItems[index].Clone();
                         copy.expired = true;
+                        copy.played_at = DateTimeOffset.Now;
                         playlistItems[index] = copy;
                     });
 

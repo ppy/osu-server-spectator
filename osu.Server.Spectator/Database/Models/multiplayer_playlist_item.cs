@@ -19,12 +19,26 @@ namespace osu.Server.Spectator.Database.Models
         public long room_id { get; set; }
         public int beatmap_id { get; set; }
         public short ruleset_id { get; set; }
-        public short? playlist_order { get; set; }
+        public ushort? playlist_order { get; set; }
         public string? allowed_mods { get; set; }
         public string? required_mods { get; set; }
+
+        /// <summary>
+        /// Changes to this property will not be persisted to the database.
+        /// </summary>
         public DateTimeOffset? created_at { get; set; }
+
+        /// <summary>
+        /// Changes to this property will not be persisted to the database.
+        /// </summary>
         public DateTimeOffset? updated_at { get; set; }
+
         public bool expired { get; set; }
+
+        /// <summary>
+        /// Changes to this property will not be persisted to the database.
+        /// </summary>
+        public DateTimeOffset? played_at { get; set; }
 
         // for deserialization
         public multiplayer_playlist_item()
@@ -47,6 +61,8 @@ namespace osu.Server.Spectator.Database.Models
             allowed_mods = JsonConvert.SerializeObject(item.AllowedMods);
             updated_at = DateTimeOffset.Now;
             expired = item.Expired;
+            playlist_order = item.PlaylistOrder;
+            played_at = item.PlayedAt;
         }
 
         public async Task<MultiplayerPlaylistItem> ToMultiplayerPlaylistItem(IDatabaseAccess db) => new MultiplayerPlaylistItem
@@ -58,7 +74,9 @@ namespace osu.Server.Spectator.Database.Models
             RulesetID = ruleset_id,
             RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(required_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
             AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
-            Expired = expired
+            Expired = expired,
+            PlaylistOrder = playlist_order ?? 0,
+            PlayedAt = played_at,
         };
 
         public multiplayer_playlist_item Clone() => (multiplayer_playlist_item)MemberwiseClone();
