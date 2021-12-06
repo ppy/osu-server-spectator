@@ -167,15 +167,12 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task addItem(IDatabaseAccess db, MultiplayerPlaylistItem item)
         {
-            // Add the item to the list with an initial "infinite" ID, in order to notify updatePlaylistItem()
-            // that the item should be de-prioritised and events should not be propagated for it.
-            item.ID = long.MaxValue;
-            room.Playlist.Add(item);
-            await updatePlaylistOrder(db);
-
-            // Actually add the item to the database and invoke callback on the hub.
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+
+            room.Playlist.Add(item);
             await hub.OnPlaylistItemAdded(room, item);
+
+            await updatePlaylistOrder(db);
         }
 
         /// <summary>
@@ -247,11 +244,6 @@ namespace osu.Server.Spectator.Hubs
                     continue;
 
                 item.PlaylistOrder = (ushort)i;
-
-                // Items which have an "infinite" ID are not yet in the database, so avoid propagating database/hub events for them.
-                // See addItem() for when this occurs.
-                if (item.ID == long.MaxValue)
-                    continue;
 
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                 await hub.OnPlaylistItemChanged(room, item);
