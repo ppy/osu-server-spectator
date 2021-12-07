@@ -3,12 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
+using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 
@@ -22,9 +22,12 @@ namespace osu.Server.Spectator.Hubs
     {
         protected readonly EntityStore<TUserState> UserStates;
 
+        private readonly Logger logger;
+
         protected StatefulUserHub(IDistributedCache cache, EntityStore<TUserState> userStates)
         {
-            this.UserStates = userStates;
+            logger = Logger.GetLogger(GetType().Name.Replace("Hub", string.Empty));
+            UserStates = userStates;
         }
 
         protected KeyValuePair<long, TUserState>[] GetAllStates() => UserStates.GetAllEntities();
@@ -138,6 +141,6 @@ namespace osu.Server.Spectator.Hubs
 
         protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) => UserStates.GetForUse(userId);
 
-        protected void Log(string message) => Console.WriteLine($@"{DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)} [{CurrentContextUserId}]: {message.Trim()}");
+        protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[{CurrentContextUserId}]: {message.Trim()}", logLevel);
     }
 }
