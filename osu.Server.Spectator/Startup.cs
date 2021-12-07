@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,7 @@ namespace osu.Server.Spectator
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSignalR()
+            services.AddSignalR(options => options.AddFilter<LoggingHubFilter>())
                     .AddMessagePackProtocol(options =>
                     {
                         // This is required for match type states/events, which are regularly sent as derived implementations where that type is not conveyed in the invocation signature itself.
