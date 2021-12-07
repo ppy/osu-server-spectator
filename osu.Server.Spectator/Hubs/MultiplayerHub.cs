@@ -234,6 +234,8 @@ namespace osu.Server.Spectator.Hubs
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
+                Log(room, $"Transferring host from {room.Host?.UserID} to {userId}");
+
                 ensureIsHost(room);
 
                 var newHost = room.Users.FirstOrDefault(u => u.UserID == userId);
@@ -254,6 +256,8 @@ namespace osu.Server.Spectator.Hubs
 
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
+
+                Log(room, $"Kicking user {userId}");
 
                 if (userId == userUsage.Item?.UserId)
                     throw new InvalidStateException("Can't kick self");
@@ -300,6 +304,7 @@ namespace osu.Server.Spectator.Hubs
                 if (user.State == newState)
                     return;
 
+                Log(room, $"User changing state from {user.State} to {newState}");
                 ensureValidStateSwitch(room, user.State, newState);
                 user.State = newState;
 
@@ -439,7 +444,9 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
+                Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
                 await room.Queue.AddItem(item, user);
+                Log(room, $"Item ID {item.ID} added at slot {room.Queue.UpcomingItems.TakeWhile(i => i != item).Count() + 1} (of {room.Playlist.Count})");
             }
         }
 
@@ -457,6 +464,8 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidStateException("Attempted to change settings while game is active");
 
                 ensureIsHost(room);
+
+                Log(room, "Settings updating");
 
                 // Server is authoritative over the playlist item ID.
                 // Todo: This needs to change for tournament mode.
@@ -630,8 +639,9 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        private Task changeAndBroadcastUserState(MultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
+        private Task changeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
         {
+            Log(room, $"User state changed from {user.State} to {state}");
             user.State = state;
             return Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(user.UserID, user.State);
         }
@@ -639,8 +649,9 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Changes the provided room's state and notifies all users.
         /// </summary>
-        private async Task changeRoomState(MultiplayerRoom room, MultiplayerRoomState newState)
+        private async Task changeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
         {
+            Log(room, $"Room state changing from {room.State} to {newState}");
             room.State = newState;
             await Clients.Group(GetGroupId(room.RoomID)).RoomStateChanged(newState);
         }
