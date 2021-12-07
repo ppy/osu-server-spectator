@@ -175,14 +175,15 @@ namespace osu.Server.Spectator.Hubs
             await updatePlaylistOrder(db);
         }
 
+        public IEnumerable<MultiplayerPlaylistItem> UpcomingItems => room.Playlist.Where(i => !i.Expired).OrderBy(i => i.PlaylistOrder);
+
         /// <summary>
         /// Updates <see cref="CurrentItem"/> and the playlist item ID stored in the room's settings.
         /// </summary>
         private async Task updateCurrentItem()
         {
             // Pick the next non-expired playlist item by playlist order, or default to the most-recently-expired item.
-            MultiplayerPlaylistItem nextItem = room.Playlist.Where(i => !i.Expired).OrderBy(i => i.PlaylistOrder).FirstOrDefault()
-                                               ?? room.Playlist.OrderByDescending(i => i.PlayedAt).First();
+            MultiplayerPlaylistItem nextItem = UpcomingItems.FirstOrDefault() ?? room.Playlist.OrderByDescending(i => i.PlayedAt).First();
 
             currentIndex = room.Playlist.IndexOf(nextItem);
 

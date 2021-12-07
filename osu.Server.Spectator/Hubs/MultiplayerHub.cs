@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
+using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -34,7 +35,7 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string password)
         {
-            Log($"Joining room {roomId}");
+            Log($"Attempting to join room {roomId}");
 
             bool isRestricted;
             using (var db = databaseFactory.GetInstance())
@@ -106,7 +107,7 @@ namespace osu.Server.Spectator.Hubs
 
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
-                        Log($"Joined room {room.RoomID}");
+                        Log(room, "User joined");
                     }
                     catch
                     {
@@ -195,9 +196,9 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Marks a room active at the database, implying the host has joined and this server is now in control of the room's lifetime.
         /// </summary>
-        private async Task markRoomActive(MultiplayerRoom room)
+        private async Task markRoomActive(ServerMultiplayerRoom room)
         {
-            Log($"Host marking room active {room.RoomID}");
+            Log(room, "Host marking room active");
 
             using (var db = databaseFactory.GetInstance())
                 await db.MarkRoomActiveAsync(room);
@@ -233,6 +234,8 @@ namespace osu.Server.Spectator.Hubs
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
+                Log(room, $"Transferring host from {room.Host?.UserID} to {userId}");
+
                 ensureIsHost(room);
 
                 var newHost = room.Users.FirstOrDefault(u => u.UserID == userId);
@@ -253,6 +256,8 @@ namespace osu.Server.Spectator.Hubs
 
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
+
+                Log(room, $"Kicking user {userId}");
 
                 if (userId == userUsage.Item?.UserId)
                     throw new InvalidStateException("Can't kick self");
@@ -299,6 +304,7 @@ namespace osu.Server.Spectator.Hubs
                 if (user.State == newState)
                     return;
 
+                Log(room, $"User changing state from {user.State} to {newState}");
                 ensureValidStateSwitch(room, user.State, newState);
                 user.State = newState;
 
@@ -438,7 +444,9 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
+                Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
                 await room.Queue.AddItem(item, user);
+                Log(room, $"Item ID {item.ID} added at slot {room.Queue.UpcomingItems.TakeWhile(i => i != item).Count() + 1} (of {room.Playlist.Count})");
             }
         }
 
@@ -456,6 +464,8 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidStateException("Attempted to change settings while game is active");
 
                 ensureIsHost(room);
+
+                Log(room, "Settings updating");
 
                 // Server is authoritative over the playlist item ID.
                 // Todo: This needs to change for tournament mode.
@@ -484,13 +494,13 @@ namespace osu.Server.Spectator.Hubs
                 if (previousSettings.MatchType != settings.MatchType)
                 {
                     room.ChangeMatchType(settings.MatchType);
-                    Log($"Switching room ruleset to {room.MatchTypeImplementation}");
+                    Log(room, $"Switching room ruleset to {room.MatchTypeImplementation}");
                 }
 
                 if (previousSettings.QueueMode != settings.QueueMode)
                 {
                     await room.Queue.UpdateFromQueueModeChange();
-                    Log($"Switching queue mode to {settings.QueueMode}");
+                    Log(room, $"Switching queue mode to {settings.QueueMode}");
                 }
 
                 await ensureAllUsersValidMods(room);
@@ -629,8 +639,9 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        private Task changeAndBroadcastUserState(MultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
+        private Task changeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
         {
+            Log(room, $"User state changed from {user.State} to {state}");
             user.State = state;
             return Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(user.UserID, user.State);
         }
@@ -638,8 +649,9 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Changes the provided room's state and notifies all users.
         /// </summary>
-        private async Task changeRoomState(MultiplayerRoom room, MultiplayerRoomState newState)
+        private async Task changeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
         {
+            Log(room, $"Room state changing from {room.State} to {newState}");
             room.State = newState;
             await Clients.Group(GetGroupId(room.RoomID)).RoomStateChanged(newState);
         }
@@ -734,7 +746,7 @@ namespace osu.Server.Spectator.Hubs
             if (room == null)
                 throw new InvalidOperationException("Attempted to operate on a null room");
 
-            Log(wasKick ? $"User kicked from room {room.RoomID}" : $"Leaving room {room.RoomID}");
+            Log(room, wasKick ? "User kicked" : "User left");
 
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
@@ -753,7 +765,7 @@ namespace osu.Server.Spectator.Hubs
                 await endDatabaseMatch(room);
 
                 // only destroy the usage after the database operation succeeds.
-                Log($"Stopping tracking of room {room.RoomID} (all users left).");
+                Log(room, "Stopping tracking of room (all users left).");
                 roomUsage.Destroy();
                 return;
             }
@@ -817,5 +829,7 @@ namespace osu.Server.Spectator.Hubs
             await ensureAllUsersValidMods(room);
             await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
         }
+
+        protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Verbose) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
     }
 }
