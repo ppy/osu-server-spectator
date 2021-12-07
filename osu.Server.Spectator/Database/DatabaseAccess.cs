@@ -57,15 +57,6 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public Task<multiplayer_playlist_item> GetCurrentPlaylistItemAsync(long roomId)
-        {
-            // Todo: Add ordering.
-            return connection.QueryFirstAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId AND expired = 0", new
-            {
-                RoomID = roomId
-            });
-        }
-
         public Task<string?> GetBeatmapChecksumAsync(int beatmapId)
         {
             return connection.QuerySingleOrDefaultAsync<string?>("SELECT checksum from osu_beatmaps where beatmap_id = @BeatmapID", new
