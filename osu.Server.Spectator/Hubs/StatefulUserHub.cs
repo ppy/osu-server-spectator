@@ -16,7 +16,7 @@ namespace osu.Server.Spectator.Hubs
 {
     [UsedImplicitly]
     [Authorize]
-    public abstract class StatefulUserHub<TClient, TUserState> : Hub<TClient>
+    public abstract class StatefulUserHub<TClient, TUserState> : Hub<TClient>, ILoggableHub
         where TUserState : ClientState
         where TClient : class
     {
@@ -143,6 +143,10 @@ namespace osu.Server.Spectator.Hubs
 
         protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[user:{CurrentContextUserId}] {message.Trim()}", logLevel);
 
+        void ILoggableHub.Log(string message, LogLevel logLevel) => Log(message, logLevel);
+
         protected void Error(string message, Exception exception) => logger.Add($"[user:{CurrentContextUserId}] {message.Trim()}", LogLevel.Error, exception);
+
+        void ILoggableHub.Error(string message, Exception exception) => Error(message, exception);
     }
 }
