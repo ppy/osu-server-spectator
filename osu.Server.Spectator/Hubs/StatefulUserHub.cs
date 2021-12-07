@@ -70,7 +70,7 @@ namespace osu.Server.Spectator.Hubs
 
         public sealed override async Task OnDisconnectedAsync(Exception? exception)
         {
-            Log("Disconnected");
+            Log("User disconnected");
 
             await cleanUpState(true);
         }
@@ -141,6 +141,6 @@ namespace osu.Server.Spectator.Hubs
 
         protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) => UserStates.GetForUse(userId);
 
-        protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[{CurrentContextUserId}]: {message.Trim()}", logLevel);
+        protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[user:{CurrentContextUserId}] {message.Trim()}", logLevel);
     }
 }
