@@ -6,7 +6,7 @@ using osu.Framework.Logging;
 
 namespace osu.Server.Spectator.Hubs
 {
-    internal interface ILoggingHub
+    internal interface ILogTarget
     {
         void Log(string message, LogLevel logLevel = LogLevel.Verbose);
 

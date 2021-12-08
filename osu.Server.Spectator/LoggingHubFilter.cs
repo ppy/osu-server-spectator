@@ -11,13 +11,13 @@ using osu.Server.Spectator.Hubs;
 namespace osu.Server.Spectator
 {
     /// <summary>
-    /// An <see cref="IHubFilter"/> logging method invoke and error to the <see cref="ILoggingHub"/>.
+    /// An <see cref="IHubFilter"/> logging method invoke and error to the <see cref="ILogTarget"/>.
     /// </summary>
     public class LoggingHubFilter : IHubFilter
     {
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            if (!(invocationContext.Hub is ILoggingHub loggingHub))
+            if (!(invocationContext.Hub is ILogTarget loggingHub))
                 return await next(invocationContext);
 
             var methodCall = $"{invocationContext.HubMethodName}({string.Join(", ", invocationContext.HubMethodArguments.Select(getReadableString))})";
