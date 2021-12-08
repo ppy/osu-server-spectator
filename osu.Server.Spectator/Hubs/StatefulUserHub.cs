@@ -143,10 +143,13 @@ namespace osu.Server.Spectator.Hubs
 
         protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[user:{CurrentContextUserId}] {message.Trim()}", logLevel);
 
-        void ILogTarget.Log(string message, LogLevel logLevel) => Log(message, logLevel);
-
         protected void Error(string message, Exception exception) => logger.Add($"[user:{CurrentContextUserId}] {message.Trim()}", LogLevel.Error, exception);
 
+        #region Implementation of ILogTarget
+
         void ILogTarget.Error(string message, Exception exception) => Error(message, exception);
+        void ILogTarget.Log(string message, LogLevel logLevel) => Log(message, logLevel);
+
+        #endregion
     }
 }
