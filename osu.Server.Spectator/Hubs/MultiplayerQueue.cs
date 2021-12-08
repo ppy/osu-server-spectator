@@ -152,6 +152,41 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
+        /// Removes a playlist item from the room's queue.
+        /// </summary>
+        /// <param name="playlistItemId">The item to remove.</param>
+        /// <param name="user">The user removing the item.</param>
+        public async Task RemoveItem(long playlistItemId, MultiplayerRoomUser user)
+        {
+            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
+
+            if (room.Settings.QueueMode == QueueMode.HostOnly)
+                throw new InvalidStateException("Items cannot be removed in host-only mode.");
+
+            if (room.Playlist.Count == 1)
+                throw new InvalidStateException("The singular item in the room cannot be removed.");
+
+            var item = room.Playlist.FirstOrDefault(item => item.ID == playlistItemId);
+
+            if (item == null)
+                throw new InvalidStateException("Item does not exist in the room.");
+
+            if (item == CurrentItem)
+                throw new InvalidStateException("The room's current item cannot be removed.");
+
+            if (item.OwnerID != user.UserID)
+                throw new InvalidStateException("Attempted to remove an item which is not owned by the user.");
+
+            using (var db = dbFactory.GetInstance())
+                await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
+
+            room.Playlist.Remove(item);
+            await hub.OnPlaylistItemRemoved(room, playlistItemId);
+
+            await updateCurrentItem();
+        }
+
+        /// <summary>
         /// Duplicates <see cref="CurrentItem"/> into the database.
         /// </summary>
         /// <param name="db">The database connection.</param>
