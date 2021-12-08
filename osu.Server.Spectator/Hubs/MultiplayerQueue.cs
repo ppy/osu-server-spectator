@@ -177,6 +177,9 @@ namespace osu.Server.Spectator.Hubs
             if (item.OwnerID != user.UserID)
                 throw new InvalidStateException("Attempted to remove an item which is not owned by the user.");
 
+            if (item.Expired)
+                throw new InvalidStateException("Attempted to remove an item which has already been played.");
+
             using (var db = dbFactory.GetInstance())
                 await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
 
