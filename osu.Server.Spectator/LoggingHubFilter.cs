@@ -11,16 +11,16 @@ using osu.Server.Spectator.Hubs;
 namespace osu.Server.Spectator
 {
     /// <summary>
-    /// An <see cref="IHubFilter"/> logging method invoke and error to the <see cref="ILoggableHub"/>.
+    /// An <see cref="IHubFilter"/> logging method invoke and error to the <see cref="ILoggingHub"/>.
     /// </summary>
     public class LoggingHubFilter : IHubFilter
     {
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            var loggableHub = invocationContext.Hub as ILoggableHub;
+            var loggingHub = invocationContext.Hub as ILoggingHub;
             var methodCall = $"{invocationContext.HubMethodName}({string.Join(", ", invocationContext.HubMethodArguments.Select(getReadableString))})";
 
-            loggableHub?.Log($"Invoking hub method: {methodCall}");
+            loggingHub?.Log($"Invoking hub method: {methodCall}");
 
             try
             {
@@ -28,7 +28,7 @@ namespace osu.Server.Spectator
             }
             catch (Exception e)
             {
-                loggableHub?.Error($"Failed to invoke hub method: {methodCall}", e);
+                loggingHub?.Error($"Failed to invoke hub method: {methodCall}", e);
                 throw;
             }
         }
