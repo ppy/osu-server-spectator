@@ -163,9 +163,6 @@ namespace osu.Server.Spectator.Hubs
             if (room.Settings.QueueMode == QueueMode.HostOnly)
                 throw new InvalidStateException("Items cannot be removed in host-only mode.");
 
-            if (room.Playlist.Count == 1)
-                throw new InvalidStateException("The singular item in the room cannot be removed.");
-
             var item = room.Playlist.FirstOrDefault(item => item.ID == playlistItemId);
 
             if (item == null)
