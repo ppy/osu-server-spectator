@@ -17,7 +17,9 @@ namespace osu.Server.Spectator
     {
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            var loggingHub = invocationContext.Hub as ILoggingHub;
+            if (!(invocationContext.Hub is ILoggingHub loggingHub))
+                return await next(invocationContext);
+
             var methodCall = $"{invocationContext.HubMethodName}({string.Join(", ", invocationContext.HubMethodArguments.Select(getReadableString))})";
 
             loggingHub?.Log($"Invoking hub method: {methodCall}");
