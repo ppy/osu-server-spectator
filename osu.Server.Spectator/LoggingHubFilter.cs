@@ -19,25 +19,27 @@ namespace osu.Server.Spectator
     {
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            if (!(invocationContext.Hub is ILogTarget loggingHub))
-                return await next(invocationContext);
-
-            if (DebugUtils.IsDebugBuild)
-            {
-                var methodCall = $"{invocationContext.HubMethodName}({string.Join(", ", invocationContext.HubMethodArguments.Select(getReadableString))})";
-
-                loggingHub?.Log($"Invoking hub method: {methodCall}", LogLevel.Debug);
-            }
+            if (!(invocationContext.Hub is ILogTarget logTarget))
+                throw new InvalidOperationException($"Hub implementation {invocationContext.Hub.GetType().Name} doesn't implement {nameof(ILogTarget)}.");
 
             try
             {
+                if (DebugUtils.IsDebugBuild)
+                    logTarget.Log($"Invoking hub method: {getMethodCallDisplayString(invocationContext)}", LogLevel.Debug);
+
                 return await next(invocationContext);
             }
             catch (Exception e)
             {
-                loggingHub?.Error($"Failed to invoke hub method: {methodCall}", e);
+                logTarget.Error($"Failed to invoke hub method: {getMethodCallDisplayString(invocationContext)}", e);
                 throw;
             }
+        }
+
+        private static string getMethodCallDisplayString(HubInvocationContext invocationContext)
+        {
+            var methodCall = $"{invocationContext.HubMethodName}({string.Join(", ", invocationContext.HubMethodArguments.Select(getReadableString))})";
+            return methodCall;
         }
 
         private static string? getReadableString(object? value)
