@@ -6,6 +6,8 @@ using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using osu.Framework.Development;
+using osu.Framework.Logging;
 using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator
@@ -20,9 +22,12 @@ namespace osu.Server.Spectator
             if (!(invocationContext.Hub is ILogTarget loggingHub))
                 return await next(invocationContext);
 
-            var methodCall = $"{invocationContext.HubMethodName}({string.Join(", ", invocationContext.HubMethodArguments.Select(getReadableString))})";
+            if (DebugUtils.IsDebugBuild)
+            {
+                var methodCall = $"{invocationContext.HubMethodName}({string.Join(", ", invocationContext.HubMethodArguments.Select(getReadableString))})";
 
-            loggingHub?.Log($"Invoking hub method: {methodCall}");
+                loggingHub?.Log($"Invoking hub method: {methodCall}", LogLevel.Debug);
+            }
 
             try
             {
