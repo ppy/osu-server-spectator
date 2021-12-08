@@ -217,6 +217,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(1));
+            Database.Verify(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
+            Receiver.Verify(client => client.PlaylistItemRemoved(It.IsAny<long>()), Times.Never);
         }
 
         [Fact]
