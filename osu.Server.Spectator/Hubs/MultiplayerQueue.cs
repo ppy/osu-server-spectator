@@ -106,10 +106,12 @@ namespace osu.Server.Spectator.Hubs
         {
             if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
 
+            bool isNewAddition = item.ID == 0;
+
             if (room.Settings.QueueMode == QueueMode.HostOnly && !user.Equals(room.Host))
                 throw new NotHostException();
 
-            if (room.Settings.QueueMode != QueueMode.HostOnly && room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= PER_USER_LIMIT)
+            if (isNewAddition && room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= PER_USER_LIMIT)
                 throw new InvalidStateException($"Can't enqueue more than {PER_USER_LIMIT} items at once.");
 
             using (var db = dbFactory.GetInstance())
@@ -128,25 +130,31 @@ namespace osu.Server.Spectator.Hubs
                 item.EnsureModsValid();
                 item.OwnerID = user.UserID;
 
-                switch (room.Settings.QueueMode)
+                if (isNewAddition)
                 {
-                    case QueueMode.HostOnly:
-                        // In host-only mode, the current item is re-used.
-                        item.ID = CurrentItem.ID;
-                        item.PlaylistOrder = CurrentItem.PlaylistOrder;
+                    await addItem(db, item);
+                    await updateCurrentItem();
+                }
+                else
+                {
+                    var existingItem = room.Playlist.SingleOrDefault(i => i.ID == item.ID);
 
-                        await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
-                        room.Playlist[currentIndex] = item;
+                    if (existingItem == null)
+                        throw new InvalidStateException("Attempted to change an item that doesn't exist.");
 
-                        await hub.OnPlaylistItemChanged(room, item);
-                        break;
+                    if (existingItem.OwnerID != user.UserID && !user.Equals(room.Host))
+                        throw new InvalidStateException("Attempted to change an item which is not owned by the user.");
 
-                    default:
-                        await addItem(db, item);
+                    if (existingItem.Expired)
+                        throw new InvalidStateException("Attempted to change an item which has already been played.");
 
-                        // The current item can change as a result of an item being added. For example, if all items earlier in the queue were expired.
-                        await updateCurrentItem();
-                        break;
+                    // Ensure the playlist order doesn't change.
+                    item.PlaylistOrder = existingItem.PlaylistOrder;
+
+                    await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                    room.Playlist[room.Playlist.IndexOf(existingItem)] = item;
+
+                    await hub.OnPlaylistItemChanged(room, item);
                 }
             }
         }

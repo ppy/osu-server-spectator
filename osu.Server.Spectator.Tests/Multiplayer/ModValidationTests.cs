@@ -24,6 +24,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 0,
                 AllowedMods = new[]
@@ -43,6 +44,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 3,
                 AllowedMods = new[]
@@ -59,6 +61,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 0,
                 RequiredMods = new[]
@@ -76,6 +79,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 3,
                 RequiredMods = new[]
@@ -92,6 +96,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 0,
                 RequiredMods = new[]
@@ -113,6 +118,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RequiredMods = new[]
                 {
@@ -133,6 +139,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -169,6 +176,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -208,6 +216,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
@@ -239,6 +248,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
@@ -282,6 +292,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -301,6 +312,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -336,6 +348,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -354,6 +367,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
             });
