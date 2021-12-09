@@ -40,6 +40,9 @@ namespace SampleMultiplayerClient
             connection.On<MatchRoomState>(nameof(IMultiplayerClient.MatchRoomStateChanged), ((IMultiplayerClient)this).MatchRoomStateChanged);
             connection.On<int, MatchUserState>(nameof(IMultiplayerClient.MatchUserStateChanged), ((IMultiplayerClient)this).MatchUserStateChanged);
             connection.On<MatchServerEvent>(nameof(IMultiplayerClient.MatchEvent), ((IMultiplayerClient)this).MatchEvent);
+            connection.On<MultiplayerPlaylistItem>(nameof(IMultiplayerClient.PlaylistItemAdded), ((IMultiplayerClient)this).PlaylistItemAdded);
+            connection.On<MultiplayerPlaylistItem>(nameof(IMultiplayerClient.PlaylistItemChanged), ((IMultiplayerClient)this).PlaylistItemChanged);
+            connection.On<long>(nameof(IMultiplayerClient.PlaylistItemRemoved), ((IMultiplayerClient)this).PlaylistItemRemoved);
         }
 
         public MultiplayerUserState State { get; private set; }
@@ -96,6 +99,9 @@ namespace SampleMultiplayerClient
 
         public Task AddPlaylistItem(MultiplayerPlaylistItem item) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.AddPlaylistItem), item);
+
+        public Task RemovePlaylistItem(long playlistItemId) =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.RemovePlaylistItem), playlistItemId);
 
         Task IMultiplayerClient.RoomStateChanged(MultiplayerRoomState state)
         {
