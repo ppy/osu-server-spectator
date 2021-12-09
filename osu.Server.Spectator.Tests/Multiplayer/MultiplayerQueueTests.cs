@@ -133,6 +133,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
@@ -174,22 +177,33 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task ItemsCanNotBeRemovedInHostOnlyMode()
+        public async Task HostCanRemoveOtherUsersItems()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
             });
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(2));
-            Database.Verify(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
-            Receiver.Verify(client => client.PlaylistItemRemoved(It.IsAny<long>()), Times.Never);
+            SetUserContext(ContextUser);
+            await Hub.RemovePlaylistItem(2);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(1, room.Playlist.Count);
+                Database.Verify(db => db.RemovePlaylistItemAsync(ROOM_ID, 2), Times.Once);
+                Receiver.Verify(client => client.PlaylistItemRemoved(2), Times.Once);
+            }
         }
 
         [Fact]
@@ -206,17 +220,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             });
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(3));
-            Database.Verify(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
-            Receiver.Verify(client => client.PlaylistItemRemoved(It.IsAny<long>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task SingularPlaylistItemCanNotBeRemoved()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
-
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(1));
             Database.Verify(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
             Receiver.Verify(client => client.PlaylistItemRemoved(It.IsAny<long>()), Times.Never);
         }

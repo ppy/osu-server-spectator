@@ -160,9 +160,6 @@ namespace osu.Server.Spectator.Hubs
         {
             if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
 
-            if (room.Settings.QueueMode == QueueMode.HostOnly)
-                throw new InvalidStateException("Items cannot be removed in host-only mode.");
-
             var item = room.Playlist.FirstOrDefault(item => item.ID == playlistItemId);
 
             if (item == null)
@@ -171,7 +168,7 @@ namespace osu.Server.Spectator.Hubs
             if (item == CurrentItem)
                 throw new InvalidStateException("The room's current item cannot be removed.");
 
-            if (item.OwnerID != user.UserID)
+            if (item.OwnerID != user.UserID && !user.Equals(room.Host))
                 throw new InvalidStateException("Attempted to remove an item which is not owned by the user.");
 
             if (item.Expired)
