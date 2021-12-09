@@ -125,5 +125,150 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(3333, room.Playlist[1].BeatmapID);
             }
         }
+
+        [Fact]
+        public async Task UsersCanRemoveTheirOwnItems()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            await Hub.RemovePlaylistItem(2);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(1, room.Playlist.Count);
+                Database.Verify(db => db.RemovePlaylistItemAsync(ROOM_ID, 2), Times.Once);
+                Receiver.Verify(client => client.PlaylistItemRemoved(2), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task UsersCanNotRemoveOtherUsersItems()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            SetUserContext(ContextUser2);
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(2));
+            Database.Verify(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
+            Receiver.Verify(client => client.PlaylistItemRemoved(It.IsAny<long>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task HostCanRemoveOtherUsersItems()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            SetUserContext(ContextUser);
+            await Hub.RemovePlaylistItem(2);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(1, room.Playlist.Count);
+                Database.Verify(db => db.RemovePlaylistItemAsync(ROOM_ID, 2), Times.Once);
+                Receiver.Verify(client => client.PlaylistItemRemoved(2), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task ExternalItemsCanNotBeRemoved()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(3));
+            Database.Verify(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
+            Receiver.Verify(client => client.PlaylistItemRemoved(It.IsAny<long>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CurrentItemCanNotBeRemoved()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(1));
+        }
+
+        [Fact]
+        public async Task ExpiredItemsCanNotBeRemoved()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(1));
+            Database.Verify(db => db.RemovePlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
+            Receiver.Verify(client => client.PlaylistItemRemoved(It.IsAny<long>()), Times.Never);
+        }
     }
 }
