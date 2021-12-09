@@ -6,8 +6,6 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using osu.Server.Spectator.Database.Models;
-using osu.Server.Spectator.Hubs;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -28,33 +26,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
             }));
-        }
-
-        [Fact]
-        public async Task AddingItemUpdatesExisting()
-        {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-
-            long playlistItemId = (await Hub.JoinRoom(ROOM_ID)).Settings.PlaylistItemId;
-
-            var newItem = new MultiplayerPlaylistItem
-            {
-                BeatmapID = 3333,
-                BeatmapChecksum = "3333"
-            };
-
-            await Hub.AddPlaylistItem(newItem);
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.Equal(playlistItemId, room.Settings.PlaylistItemId);
-                Database.Verify(db => db.UpdatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()), Times.Once);
-                Database.Verify(db => db.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()), Times.Never);
-                Receiver.Verify(r => r.PlaylistItemChanged(newItem), Times.Once);
-            }
         }
 
         [Fact]
@@ -184,45 +155,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task AddingItemDoesNotAffectPastItems()
-        {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-
-            var newItem = new MultiplayerPlaylistItem
-            {
-                BeatmapID = 3333,
-                BeatmapChecksum = "3333"
-            };
-
-            await Hub.AddPlaylistItem(newItem);
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                var firstItem = room.Playlist[0];
-                var secondItem = room.Playlist[1];
-
-                Assert.Equal(secondItem.ID, room.Settings.PlaylistItemId);
-
-                // Previous item unchanged.
-                Assert.Equal(1234, firstItem.BeatmapID);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == firstItem.ID && i.BeatmapID != 1234)), Times.Never);
-
-                // Current item changed.
-                Assert.Equal(newItem.BeatmapID, secondItem.BeatmapID);
-                Receiver.Verify(r => r.PlaylistItemChanged(It.Is<MultiplayerPlaylistItem>(i => i.ID == secondItem.ID && i.BeatmapID == newItem.BeatmapID)), Times.Once);
-            }
-        }
-
-        [Fact]
         public async Task ItemLastInQueueWhenChangingToAllPlayersMode()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
@@ -262,79 +194,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(secondItem);
                 Assert.False(secondItem.Expired);
                 Assert.Equal(secondItem.ID, room.Settings.PlaylistItemId);
-            }
-        }
-
-        [Fact]
-        public async Task HostCanChangeItemsAfterReachingMaxItems()
-        {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
-
-            for (int i = 1; i < MultiplayerQueue.PER_USER_LIMIT; i++)
-            {
-                await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-                {
-                    BeatmapID = 3333,
-                    BeatmapChecksum = "3333"
-                });
-            }
-
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
-
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapID = 4444,
-                BeatmapChecksum = "4444"
-            });
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.Equal(MultiplayerQueue.PER_USER_LIMIT, room.Playlist.Count);
-                Assert.Equal(4444, room.Playlist[0].BeatmapID);
-            }
-        }
-
-        [Fact]
-        public async Task OwnerChangesOnBeatmapChange()
-        {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
-
-            await Hub.JoinRoom(ROOM_ID);
-            SetUserContext(ContextUser2);
-            await Hub.JoinRoom(ROOM_ID);
-            SetUserContext(ContextUser);
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.Equal(USER_ID, room.Playlist[0].OwnerID);
-            }
-
-            await Hub.TransferHost(USER_ID_2);
-            SetUserContext(ContextUser2);
-
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapID = 4444,
-                BeatmapChecksum = "4444"
-            });
-
-            using (var usage = Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.Equal(USER_ID_2, room.Playlist[0].OwnerID);
             }
         }
     }
