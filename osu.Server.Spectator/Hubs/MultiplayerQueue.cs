@@ -106,12 +106,10 @@ namespace osu.Server.Spectator.Hubs
         {
             if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
 
-            bool isNewAddition = item.ID == 0;
-
             if (room.Settings.QueueMode == QueueMode.HostOnly && !user.Equals(room.Host))
                 throw new NotHostException();
 
-            if (isNewAddition && room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= PER_USER_LIMIT)
+            if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= PER_USER_LIMIT)
                 throw new InvalidStateException($"Can't enqueue more than {PER_USER_LIMIT} items at once.");
 
             using (var db = dbFactory.GetInstance())
@@ -130,32 +128,49 @@ namespace osu.Server.Spectator.Hubs
                 item.EnsureModsValid();
                 item.OwnerID = user.UserID;
 
-                if (isNewAddition)
-                {
-                    await addItem(db, item);
-                    await updateCurrentItem();
-                }
-                else
-                {
-                    var existingItem = room.Playlist.SingleOrDefault(i => i.ID == item.ID);
+                await addItem(db, item);
+                await updateCurrentItem();
+            }
+        }
 
-                    if (existingItem == null)
-                        throw new InvalidStateException("Attempted to change an item that doesn't exist.");
+        public async Task EditItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
+        {
+            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
 
-                    if (existingItem.OwnerID != user.UserID && !user.Equals(room.Host))
-                        throw new InvalidStateException("Attempted to change an item which is not owned by the user.");
+            using (var db = dbFactory.GetInstance())
+            {
+                string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.BeatmapID);
 
-                    if (existingItem.Expired)
-                        throw new InvalidStateException("Attempted to change an item which has already been played.");
+                if (beatmapChecksum == null)
+                    throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
 
-                    // Ensure the playlist order doesn't change.
-                    item.PlaylistOrder = existingItem.PlaylistOrder;
+                if (item.BeatmapChecksum != beatmapChecksum)
+                    throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
 
-                    await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
-                    room.Playlist[room.Playlist.IndexOf(existingItem)] = item;
+                if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                    throw new InvalidStateException("Attempted to select an unsupported ruleset.");
 
-                    await hub.OnPlaylistItemChanged(room, item);
-                }
+                item.EnsureModsValid();
+                item.OwnerID = user.UserID;
+
+                var existingItem = room.Playlist.SingleOrDefault(i => i.ID == item.ID);
+
+                if (existingItem == null)
+                    throw new InvalidStateException("Attempted to change an item that doesn't exist.");
+
+                if (existingItem.OwnerID != user.UserID && !user.Equals(room.Host))
+                    throw new InvalidStateException("Attempted to change an item which is not owned by the user.");
+
+                if (existingItem.Expired)
+                    throw new InvalidStateException("Attempted to change an item which has already been played.");
+
+                // Ensure the playlist order doesn't change.
+                item.PlaylistOrder = existingItem.PlaylistOrder;
+
+                await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                room.Playlist[room.Playlist.IndexOf(existingItem)] = item;
+
+                await hub.OnPlaylistItemChanged(room, item);
             }
         }
 

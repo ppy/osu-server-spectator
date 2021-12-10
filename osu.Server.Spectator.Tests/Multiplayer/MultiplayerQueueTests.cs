@@ -289,7 +289,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "3333"
             });
 
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
                 ID = 2,
                 BeatmapID = 4444,
@@ -329,7 +329,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             });
 
             SetUserContext(ContextUser);
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
                 ID = 2,
                 BeatmapID = 4444,
@@ -370,7 +370,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
 
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
                 ID = 1,
                 BeatmapID = 4444,
@@ -401,7 +401,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
                 ID = 1,
                 BeatmapID = 3333,
@@ -431,7 +431,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.TransferHost(USER_ID_2);
             SetUserContext(ContextUser2);
 
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
                 ID = 1,
                 BeatmapID = 4444,

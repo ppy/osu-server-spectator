@@ -100,6 +100,9 @@ namespace SampleMultiplayerClient
         public Task AddPlaylistItem(MultiplayerPlaylistItem item) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.AddPlaylistItem), item);
 
+        public Task EditPlaylistItem(MultiplayerPlaylistItem item) =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.EditPlaylistItem), item);
+
         public Task RemovePlaylistItem(long playlistItemId) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.RemovePlaylistItem), playlistItemId);
 
