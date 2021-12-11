@@ -450,6 +450,11 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        public Task EditPlaylistItem(MultiplayerPlaylistItem item)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task RemovePlaylistItem(long playlistItemId)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
