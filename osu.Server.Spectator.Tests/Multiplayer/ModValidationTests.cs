@@ -22,8 +22,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 0,
                 AllowedMods = new[]
@@ -41,8 +42,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 3,
                 AllowedMods = new[]
@@ -57,8 +59,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 0,
                 RequiredMods = new[]
@@ -74,8 +77,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 3,
                 RequiredMods = new[]
@@ -90,8 +94,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RulesetID = 0,
                 RequiredMods = new[]
@@ -111,8 +116,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 RequiredMods = new[]
                 {
@@ -131,8 +137,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -167,8 +174,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -206,8 +214,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
@@ -237,8 +246,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
@@ -280,8 +290,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             SetUserContext(ContextUser);
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -299,8 +310,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             assertUserMods(USER_ID_2, "HR", "AD");
 
             SetUserContext(ContextUser);
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -334,8 +346,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 BeatmapChecksum = "checksum",
                 AllowedMods = new[]
                 {
@@ -352,8 +365,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotEmpty(room.Users.First().Mods);
             }
 
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
+                ID = 1,
                 RulesetID = 2,
                 BeatmapChecksum = "checksum",
             });
