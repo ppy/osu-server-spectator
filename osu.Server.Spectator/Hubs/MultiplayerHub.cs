@@ -692,7 +692,7 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="room">The room.</param>
         /// <param name="oldState">The old state.</param>
         /// <param name="newState">The new state.</param>
-        private void ensureValidStateSwitch(MultiplayerRoom room, MultiplayerUserState oldState, MultiplayerUserState newState)
+        private void ensureValidStateSwitch(ServerMultiplayerRoom room, MultiplayerUserState oldState, MultiplayerUserState newState)
         {
             switch (newState)
             {
@@ -703,6 +703,9 @@ namespace osu.Server.Spectator.Hubs
                 case MultiplayerUserState.Ready:
                     if (oldState != MultiplayerUserState.Idle)
                         throw new InvalidStateChangeException(oldState, newState);
+
+                    if (room.Queue.CurrentItem.Expired)
+                        throw new InvalidStateException("Cannot ready up while all items have been played.");
 
                     break;
 

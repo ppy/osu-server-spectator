@@ -447,6 +447,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
+        [Fact]
+        public async Task PlayersCanNotReadyWithAllItemsExpired()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeState(MultiplayerUserState.Ready));
+        }
 
         [Fact]
         public async Task PlayersUnReadiedWhenCurrentItemIsEdited()
@@ -472,7 +486,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(MultiplayerUserState.Ready, room.Users[1].State);
+                Assert.Equal(MultiplayerUserState.Idle, room.Users[1].State);
             }
         }
     }
