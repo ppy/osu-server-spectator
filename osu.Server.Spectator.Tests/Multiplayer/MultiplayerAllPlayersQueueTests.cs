@@ -73,22 +73,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task CanNotStartExpiredItem()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
-
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-            await Hub.ChangeState(MultiplayerUserState.Results);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.StartMatch());
-        }
-
-        [Fact]
         public async Task NewItemImmediatelySelectedWhenAllItemsExpired()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");

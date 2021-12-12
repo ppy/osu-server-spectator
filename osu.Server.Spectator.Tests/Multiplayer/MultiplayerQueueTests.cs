@@ -446,5 +446,48 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(USER_ID_2, room.Playlist[0].OwnerID);
             }
         }
+
+        [Fact]
+        public async Task PlayersCanNotReadyWithAllItemsExpired()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeState(MultiplayerUserState.Ready));
+        }
+
+        [Fact]
+        public async Task PlayersUnReadiedWhenCurrentItemIsEdited()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+
+            SetUserContext(ContextUser);
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(MultiplayerUserState.Idle, room.Users[1].State);
+            }
+        }
     }
 }

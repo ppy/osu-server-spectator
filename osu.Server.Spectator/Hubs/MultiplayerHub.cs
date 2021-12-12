@@ -539,13 +539,7 @@ namespace osu.Server.Spectator.Hubs
                     Log(room, $"Switching queue mode to {settings.QueueMode}");
                 }
 
-                await ensureAllUsersValidMods(room);
-
-                // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
-                foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
-                    await changeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
-
-                await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(settings);
+                await OnMatchSettingsChanged(room);
             }
         }
 
@@ -698,7 +692,7 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="room">The room.</param>
         /// <param name="oldState">The old state.</param>
         /// <param name="newState">The new state.</param>
-        private void ensureValidStateSwitch(MultiplayerRoom room, MultiplayerUserState oldState, MultiplayerUserState newState)
+        private void ensureValidStateSwitch(ServerMultiplayerRoom room, MultiplayerUserState oldState, MultiplayerUserState newState)
         {
             switch (newState)
             {
@@ -709,6 +703,9 @@ namespace osu.Server.Spectator.Hubs
                 case MultiplayerUserState.Ready:
                     if (oldState != MultiplayerUserState.Idle)
                         throw new InvalidStateChangeException(oldState, newState);
+
+                    if (room.Queue.CurrentItem.Expired)
+                        throw new InvalidStateException("Cannot ready up while all items have been played.");
 
                     break;
 
@@ -857,13 +854,27 @@ namespace osu.Server.Spectator.Hubs
         public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
         {
             await ensureAllUsersValidMods(room);
+
+            if (item.ID == room.Settings.PlaylistItemId)
+                await unreadyAllUsers(room);
+
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemChanged(item);
         }
 
         public async Task OnMatchSettingsChanged(ServerMultiplayerRoom room)
         {
             await ensureAllUsersValidMods(room);
+
+            // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
+            await unreadyAllUsers(room);
+
             await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
+        }
+
+        private async Task unreadyAllUsers(ServerMultiplayerRoom room)
+        {
+            foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
+                await changeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
         }
 
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Verbose) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
