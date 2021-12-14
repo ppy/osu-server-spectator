@@ -217,7 +217,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async void NotReadyUsersDontGetLoadRequest()
+        public async Task NotReadyUsersDontGetLoadRequest()
         {
             await Hub.JoinRoom(ROOM_ID);
 
