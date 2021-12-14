@@ -434,7 +434,7 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task AbortLoad()
+        public async Task AbortGameplay()
         {
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
@@ -718,9 +718,9 @@ namespace osu.Server.Spectator.Hubs
             switch (newState)
             {
                 case MultiplayerUserState.Idle:
-                    if (oldState == MultiplayerUserState.WaitingForLoad)
+                    if (oldState == MultiplayerUserState.WaitingForLoad || oldState == MultiplayerUserState.Loaded || oldState == MultiplayerUserState.Playing)
                     {
-                        // while waiting for load, users can only transition to idle using AbortLoad().
+                        // while playing, users can only transition to idle using AbortGameplay().
                         return false;
                     }
 

@@ -97,8 +97,8 @@ namespace SampleMultiplayerClient
         public Task StartMatch() =>
             connection.InvokeAsync(nameof(IMultiplayerServer.StartMatch));
 
-        public Task AbortLoad() =>
-            connection.InvokeAsync(nameof(IMultiplayerServer.AbortLoad));
+        public Task AbortGameplay() =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.AbortGameplay));
 
         public Task AddPlaylistItem(MultiplayerPlaylistItem item) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.AddPlaylistItem), item);

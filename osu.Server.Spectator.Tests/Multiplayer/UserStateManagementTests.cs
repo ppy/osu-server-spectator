@@ -85,9 +85,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
 
-            await Hub.AbortLoad();
+            await Hub.AbortGameplay();
             SetUserContext(ContextUser2);
-            await Hub.AbortLoad();
+            await Hub.AbortGameplay();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
@@ -154,7 +154,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // first user exits gameplay
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.AbortGameplay();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
@@ -254,28 +254,52 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task UserCanNotSwitchToIdleWhenWaitingForLoad()
+        public async Task UserCanNotSwitchToIdleDuringGameplay()
         {
             await Hub.JoinRoom(ROOM_ID);
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
 
+            // Test during WaitingForLoad state.
             await Hub.ChangeState(MultiplayerUserState.Idle);
-
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerUserState.WaitingForLoad, room.Item?.Users[0].State);
+
+            // Test during Playing state.
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                Assert.Equal(MultiplayerUserState.Playing, room.Item?.Users[0].State);
+
+            // Test during FinishedPlay state (allows switching to idle).
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                Assert.Equal(MultiplayerUserState.Idle, room.Item?.Users[0].State);
         }
 
         [Fact]
-        public async Task UserSwitchedToIdleWhenLoadAborted()
+        public async Task UserSwitchedToIdleWhenAbortingGameplay()
         {
             await Hub.JoinRoom(ROOM_ID);
 
+            // Test during WaitingForLoad state.
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
+            await Hub.AbortGameplay();
 
-            await Hub.AbortLoad();
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.Equal(MultiplayerUserState.Idle, room.Item?.Users[0].State);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+            }
+
+            // Test during Playing state.
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.AbortGameplay();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
