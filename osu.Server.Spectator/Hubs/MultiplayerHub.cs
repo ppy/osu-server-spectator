@@ -305,7 +305,10 @@ namespace osu.Server.Spectator.Hubs
                     return;
 
                 Log(room, $"User changing state from {user.State} to {newState}");
-                ensureValidStateSwitch(room, user.State, newState);
+
+                if (!ensureValidStateSwitch(room, user.State, newState))
+                    return;
+
                 user.State = newState;
 
                 // handle whether this user should be receiving gameplay messages or not.
@@ -428,6 +431,24 @@ namespace osu.Server.Spectator.Hubs
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
+            }
+        }
+
+        public async Task AbortLoad()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                await changeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+                await updateRoomStateIfRequired(room);
             }
         }
 
@@ -692,12 +713,18 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="room">The room.</param>
         /// <param name="oldState">The old state.</param>
         /// <param name="newState">The new state.</param>
-        private void ensureValidStateSwitch(ServerMultiplayerRoom room, MultiplayerUserState oldState, MultiplayerUserState newState)
+        private bool ensureValidStateSwitch(ServerMultiplayerRoom room, MultiplayerUserState oldState, MultiplayerUserState newState)
         {
             switch (newState)
             {
                 case MultiplayerUserState.Idle:
-                    // any state can return to idle.
+                    if (oldState == MultiplayerUserState.WaitingForLoad)
+                    {
+                        // while waiting for load, users can only transition to idle using AbortLoad().
+                        return false;
+                    }
+
+                    // any other state can return to idle.
                     break;
 
                 case MultiplayerUserState.Ready:
@@ -742,6 +769,8 @@ namespace osu.Server.Spectator.Hubs
                 default:
                     throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
             }
+
+            return true;
         }
 
         /// <summary>

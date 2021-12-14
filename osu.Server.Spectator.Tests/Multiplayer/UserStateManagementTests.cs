@@ -85,9 +85,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
 
-            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.AbortLoad();
             SetUserContext(ContextUser2);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.AbortLoad();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
@@ -250,6 +250,37 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad));
                 Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.Idle));
+            }
+        }
+
+        [Fact]
+        public async Task UserCanNotSwitchToIdleWhenWaitingForLoad()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                Assert.Equal(MultiplayerUserState.WaitingForLoad, room.Item?.Users[0].State);
+        }
+
+        [Fact]
+        public async Task UserSwitchedToIdleWhenLoadAborted()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+
+            await Hub.AbortLoad();
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.Equal(MultiplayerUserState.Idle, room.Item?.Users[0].State);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
             }
         }
     }
