@@ -452,7 +452,7 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 if (!isGameplayState(user.State))
-                    throw new InvalidStateException("Cannot abort gameplay in a non-gameplay state.");
+                    throw new InvalidStateException("Cannot transition out of a gameplay state without aborting");
 
                 await changeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
                 await updateRoomStateIfRequired(room);
