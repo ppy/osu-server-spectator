@@ -306,7 +306,7 @@ namespace osu.Server.Spectator.Hubs
 
                 Log(room, $"User changing state from {user.State} to {newState}");
 
-                if (!ensureValidStateSwitch(room, user.State, newState))
+                if (!ensureValidStateSwitch(room, user.State, newState, false))
                     return;
 
                 user.State = newState;
@@ -446,6 +446,9 @@ namespace osu.Server.Spectator.Hubs
                 var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
+
+                if (!ensureValidStateSwitch(room, user.State, MultiplayerUserState.Idle, true))
+                    return;
 
                 await changeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
                 await updateRoomStateIfRequired(room);
@@ -713,14 +716,25 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="room">The room.</param>
         /// <param name="oldState">The old state.</param>
         /// <param name="newState">The new state.</param>
-        private bool ensureValidStateSwitch(ServerMultiplayerRoom room, MultiplayerUserState oldState, MultiplayerUserState newState)
+        private bool ensureValidStateSwitch(ServerMultiplayerRoom room, MultiplayerUserState oldState, MultiplayerUserState newState, bool isAbortingGameplay)
         {
             switch (newState)
             {
                 case MultiplayerUserState.Idle:
-                    if (oldState == MultiplayerUserState.WaitingForLoad || oldState == MultiplayerUserState.Loaded || oldState == MultiplayerUserState.Playing)
+                    bool oldStateIsGameplay = oldState == MultiplayerUserState.WaitingForLoad || oldState == MultiplayerUserState.Loaded || oldState == MultiplayerUserState.Playing;
+
+                    if (isAbortingGameplay)
+                    {
+                        if (oldStateIsGameplay)
+                            break;
+
+                        // AbortGameplay() should not be used to transition into the idle state from non-gameplay states.
+                        throw new InvalidStateException("Cannot abort gameplay in a non-gameplay state.");
+                    }
+                    else if (oldStateIsGameplay)
                     {
                         // while playing, users can only transition to idle using AbortGameplay().
+                        // silently ignore an attempt to transition into the idle state via other means.
                         return false;
                     }
 

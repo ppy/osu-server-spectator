@@ -307,5 +307,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
             }
         }
+
+        [Fact]
+        public async Task CanNotAbortGameplayInNonGameplayStates()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AbortGameplay());
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AbortGameplay());
+        }
     }
 }
