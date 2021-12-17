@@ -304,8 +304,15 @@ namespace osu.Server.Spectator.Hubs
                 if (user.State == newState)
                     return;
 
+                // A current failure case is a client triggering `Idle` (ie. un-readying) before they received the `WaitingForLoad` message.
+                // There's potential that a client attempts to change state but rather than informing the client we choose to silently block these changes.
+                if (isGameplayState(user.State) && newState == MultiplayerUserState.Idle)
+                    return;
+
                 Log(room, $"User changing state from {user.State} to {newState}");
+
                 ensureValidStateSwitch(room, user.State, newState);
+
                 user.State = newState;
 
                 // handle whether this user should be receiving gameplay messages or not.
@@ -428,6 +435,27 @@ namespace osu.Server.Spectator.Hubs
                 await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
                 await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
+            }
+        }
+
+        public async Task AbortGameplay()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                if (!isGameplayState(user.State))
+                    throw new InvalidStateException("Cannot transition out of a gameplay state without aborting");
+
+                await changeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+                await updateRoomStateIfRequired(room);
             }
         }
 
@@ -697,7 +725,10 @@ namespace osu.Server.Spectator.Hubs
             switch (newState)
             {
                 case MultiplayerUserState.Idle:
-                    // any state can return to idle.
+                    if (isGameplayState(oldState))
+                        throw new InvalidStateException("Cannot abort gameplay in a non-gameplay state.");
+
+                    // any non-gameplay state can return to idle.
                     break;
 
                 case MultiplayerUserState.Ready:
@@ -741,6 +772,20 @@ namespace osu.Server.Spectator.Hubs
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
+            }
+        }
+
+        private static bool isGameplayState(MultiplayerUserState state)
+        {
+            switch (state)
+            {
+                default:
+                    return false;
+
+                case MultiplayerUserState.WaitingForLoad:
+                case MultiplayerUserState.Loaded:
+                case MultiplayerUserState.Playing:
+                    return true;
             }
         }
 

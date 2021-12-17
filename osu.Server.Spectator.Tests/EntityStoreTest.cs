@@ -43,7 +43,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async void TestGetTwiceRetainsItem()
+        public async Task TestGetTwiceRetainsItem()
         {
             using (var firstGet = await store.GetForUse(1, true))
             {
@@ -58,7 +58,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async void TestGetWithoutLockFails()
+        public async Task TestGetWithoutLockFails()
         {
             ItemUsage<TestItem>? retrieval;
 
@@ -69,7 +69,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async void TestSetWithoutLockFails()
+        public async Task TestSetWithoutLockFails()
         {
             ItemUsage<TestItem>? retrieval;
 
@@ -81,7 +81,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async void TestDestroyingTrackedEntity()
+        public async Task TestDestroyingTrackedEntity()
         {
             using (var firstGet = await store.GetForUse(1, true))
             {
@@ -103,7 +103,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async void TestDestroyingFromInsideUsage()
+        public async Task TestDestroyingFromInsideUsage()
         {
             using (var firstGet = await store.GetForUse(1, true))
             {
@@ -124,7 +124,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async void TestDestroyingWithoutLockFails()
+        public async Task TestDestroyingWithoutLockFails()
         {
             using (var firstGet = await store.GetForUse(1, true))
                 firstGet.Item = new TestItem("test data");
@@ -138,7 +138,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async void TestGetTwiceWithDelayedReturn()
+        public async Task TestGetTwiceWithDelayedReturn()
         {
             var firstLockAchieved = new ManualResetEventSlim();
             var firstLockDelayComplete = new ManualResetEventSlim();
@@ -173,7 +173,7 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async void TestNestedGetForUseFailsWithTimeout()
+        public async Task TestNestedGetForUseFailsWithTimeout()
         {
             // pretty sure this will fail and be pretty tough to work around.
             using (var firstGet = await store.GetForUse(1, true))
