@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
+using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -23,6 +25,9 @@ namespace osu.Server.Spectator.Hubs
         protected readonly EntityStore<TUserState> UserStates;
 
         private readonly Logger logger;
+
+        // ReSharper disable once StaticMemberInGenericType
+        private static int totalConnected;
 
         protected StatefulUserHub(IDistributedCache cache, EntityStore<TUserState> userStates)
         {
@@ -49,6 +54,7 @@ namespace osu.Server.Spectator.Hubs
         public override async Task OnConnectedAsync()
         {
             Log("Connected");
+            DogStatsd.Gauge($"{logger.Name}.connected", Interlocked.Increment(ref totalConnected));
 
             try
             {
@@ -71,6 +77,7 @@ namespace osu.Server.Spectator.Hubs
         public sealed override async Task OnDisconnectedAsync(Exception? exception)
         {
             Log("User disconnected");
+            DogStatsd.Gauge($"{logger.Name}.connected", Interlocked.Decrement(ref totalConnected));
 
             await cleanUpState(true);
         }
