@@ -141,9 +141,9 @@ namespace osu.Server.Spectator.Hubs
 
         protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) => UserStates.GetForUse(userId);
 
-        protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[user:{CurrentContextUserId}] {message.Trim()}", logLevel);
+        protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[user:{Context.UserIdentifier ?? "???"}] {message.Trim()}", logLevel);
 
-        protected void Error(string message, Exception exception) => logger.Add($"[user:{CurrentContextUserId}] {message.Trim()}", LogLevel.Error, exception);
+        protected void Error(string message, Exception exception) => logger.Add($"[user:{Context.UserIdentifier ?? "???"}] {message.Trim()}", LogLevel.Error, exception);
 
         #region Implementation of ILogTarget
 
