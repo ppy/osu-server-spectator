@@ -13,5 +13,13 @@ jobs:
     runs-on: windows-latest
     name: Unit testing
     steps:
-      - uses: actions/checkout@v1
-      - run: dotnet test
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install .NET 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "6.0.x"
+
+      - name: Test
+        run: dotnet test
