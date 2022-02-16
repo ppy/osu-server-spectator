@@ -76,7 +76,7 @@ namespace osu.Server.Spectator
                         config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                         config.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                     })
-                    .AddJwtBearer(null); // options will be injected through DI, via the singleton registration above.
+                    .AddJwtBearer(); // options will be injected through DI, via the singleton registration above.
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
