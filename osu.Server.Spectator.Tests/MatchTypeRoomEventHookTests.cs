@@ -1,10 +1,12 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
-using osu.Server.Spectator.Database;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Tests.Multiplayer;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests
@@ -12,14 +14,25 @@ namespace osu.Server.Spectator.Tests
     /// <summary>
     /// Tests covering propagation of events through <see cref="ServerMultiplayerRoom"/> to the <see cref="MultiplayerHub"/> via callbacks.
     /// </summary>
-    public class MatchTypeRoomEventHookTests
+    public class MatchTypeRoomEventHookTests : MultiplayerTest
     {
         [Fact]
-        public void NewUserJoinedTriggersRulesetHook()
+        public async Task NewUserJoinedTriggersRulesetHook()
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
-            room.Initialise(new Mock<IDatabaseFactory>().Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            {
+                Playlist =
+                {
+                    new MultiplayerPlaylistItem
+                    {
+                        BeatmapID = 3333,
+                        BeatmapChecksum = "3333"
+                    },
+                }
+            };
+
+            await room.Initialise(DatabaseFactory.Object);
 
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
@@ -30,11 +43,22 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public void UserLeavesTriggersRulesetHook()
+        public async Task UserLeavesTriggersRulesetHook()
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
-            room.Initialise(new Mock<IDatabaseFactory>().Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            {
+                Playlist =
+                {
+                    new MultiplayerPlaylistItem
+                    {
+                        BeatmapID = 3333,
+                        BeatmapChecksum = "3333"
+                    },
+                }
+            };
+
+            await room.Initialise(DatabaseFactory.Object);
 
             var user = new MultiplayerRoomUser(1);
 
@@ -48,11 +72,22 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public void TypeChangeTriggersInitialJoins()
+        public async Task TypeChangeTriggersInitialJoins()
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
-            room.Initialise(new Mock<IDatabaseFactory>().Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            {
+                Playlist =
+                {
+                    new MultiplayerPlaylistItem
+                    {
+                        BeatmapID = 3333,
+                        BeatmapChecksum = "3333"
+                    },
+                }
+            };
+
+            await room.Initialise(DatabaseFactory.Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
