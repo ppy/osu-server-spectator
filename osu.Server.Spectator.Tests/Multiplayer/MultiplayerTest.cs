@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected EntityStore<ServerMultiplayerRoom> Rooms { get; }
         protected EntityStore<MultiplayerClientState> UserStates { get; }
 
-        private readonly Mock<IDatabaseFactory> mockDatabaseFactory;
+        protected readonly Mock<IDatabaseFactory> DatabaseFactory;
 
         protected readonly Mock<IDatabaseAccess> Database;
 
@@ -56,7 +56,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             currentItemId = 0;
             playlistItems = new List<multiplayer_playlist_item>();
 
-            mockDatabaseFactory = new Mock<IDatabaseFactory>();
+            DatabaseFactory = new Mock<IDatabaseFactory>();
             Database = new Mock<IDatabaseAccess>();
             setUpMockDatabase();
 
@@ -64,7 +64,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             Rooms = new EntityStore<ServerMultiplayerRoom>();
             UserStates = new EntityStore<MultiplayerClientState>();
-            Hub = new TestMultiplayerHub(cache, Rooms, UserStates, mockDatabaseFactory.Object);
+            Hub = new TestMultiplayerHub(cache, Rooms, UserStates, DatabaseFactory.Object);
 
             Clients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             Groups = new Mock<IGroupManager>();
@@ -127,7 +127,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
         private void setUpMockDatabase()
         {
-            mockDatabaseFactory.Setup(factory => factory.GetInstance()).Returns(Database.Object);
+            DatabaseFactory.Setup(factory => factory.GetInstance()).Returns(Database.Object);
 
             Database.Setup(db => db.GetRoomAsync(ROOM_ID))
                     .Callback<long>(InitialiseRoom)

@@ -1,26 +1,38 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Tests.Multiplayer;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests
 {
-    public class TeamVersusTests
+    public class TeamVersusTests : MultiplayerTest
     {
         [Theory]
         [InlineData(0)]
         [InlineData(1)]
-        public void UserRequestsValidTeamChange(int team)
+        public async Task UserRequestsValidTeamChange(int team)
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
-            room.Initialise(new Mock<IDatabaseFactory>().Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            {
+                Playlist =
+                {
+                    new MultiplayerPlaylistItem
+                    {
+                        BeatmapID = 3333,
+                        BeatmapChecksum = "3333"
+                    },
+                }
+            };
+            await room.Initialise(DatabaseFactory.Object);
 
             var teamVersus = new TeamVersus(room, hubCallbacks.Object);
 
@@ -42,11 +54,21 @@ namespace osu.Server.Spectator.Tests
         [InlineData(-1)]
         [InlineData(2)]
         [InlineData(3)]
-        public void UserRequestsInvalidTeamChange(int team)
+        public async Task UserRequestsInvalidTeamChange(int team)
         {
             var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object);
-            room.Initialise(new Mock<IDatabaseFactory>().Object);
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            {
+                Playlist =
+                {
+                    new MultiplayerPlaylistItem
+                    {
+                        BeatmapID = 3333,
+                        BeatmapChecksum = "3333"
+                    },
+                }
+            };
+            await room.Initialise(DatabaseFactory.Object);
             var teamVersus = new TeamVersus(room, hubCallbacks.Object);
 
             // change the match type
@@ -68,10 +90,21 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public void NewUsersAssignedToTeamWithFewerUsers()
+        public async Task NewUsersAssignedToTeamWithFewerUsers()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
-            room.Initialise(new Mock<IDatabaseFactory>().Object);
+            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            {
+                Playlist =
+                {
+                    new MultiplayerPlaylistItem
+                    {
+                        BeatmapID = 3333,
+                        BeatmapChecksum = "3333"
+                    },
+                }
+            };
+            await room.Initialise(DatabaseFactory.Object);
 
             // change the match type
             room.ChangeMatchType(MatchType.TeamVersus);
@@ -98,10 +131,21 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public void InitialUsersAssignedToTeamsEqually()
+        public async Task InitialUsersAssignedToTeamsEqually()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
-            room.Initialise(new Mock<IDatabaseFactory>().Object);
+            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            {
+                Playlist =
+                {
+                    new MultiplayerPlaylistItem
+                    {
+                        BeatmapID = 3333,
+                        BeatmapChecksum = "3333"
+                    },
+                }
+            };
+            await room.Initialise(DatabaseFactory.Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -118,10 +162,21 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public void StateMaintainedBetweenRulesetSwitch()
+        public async Task StateMaintainedBetweenRulesetSwitch()
         {
-            var room = new ServerMultiplayerRoom(1, new Mock<IMultiplayerServerMatchCallbacks>().Object);
-            room.Initialise(new Mock<IDatabaseFactory>().Object);
+            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
+            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            {
+                Playlist =
+                {
+                    new MultiplayerPlaylistItem
+                    {
+                        BeatmapID = 3333,
+                        BeatmapChecksum = "3333"
+                    },
+                }
+            };
+            await room.Initialise(DatabaseFactory.Object);
 
             room.ChangeMatchType(MatchType.TeamVersus);
 
