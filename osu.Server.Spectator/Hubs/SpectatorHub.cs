@@ -19,6 +19,8 @@ namespace osu.Server.Spectator.Hubs
 {
     public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {
+        public const string REPLAYS_PATH = "replays";
+
         private readonly IDatabaseFactory databaseFactory;
 
         public SpectatorHub(IDistributedCache cache, EntityStore<SpectatorClientState> users, IDatabaseFactory databaseFactory)
@@ -105,7 +107,7 @@ namespace osu.Server.Spectator.Hubs
 
                 var now = DateTimeOffset.UtcNow;
 
-                string path = Path.Combine("replays", now.Year.ToString(), now.Month.ToString(), now.Day.ToString());
+                string path = Path.Combine(REPLAYS_PATH, now.Year.ToString(), now.Month.ToString(), now.Day.ToString());
 
                 Directory.CreateDirectory(path);
 
