@@ -102,10 +102,10 @@ namespace osu.Server.Spectator.Hubs
                 var userScore = usage.Item?.Score;
                 Debug.Assert(userScore != null);
 
-                userScore.ScoreInfo.Date = DateTimeOffset.Now;
-                var legacyEncoder = new LegacyScoreEncoder(userScore, null);
-
                 var now = DateTimeOffset.UtcNow;
+
+                userScore.ScoreInfo.Date = now;
+                var legacyEncoder = new LegacyScoreEncoder(userScore, null);
 
                 string path = Path.Combine(REPLAYS_PATH, now.Year.ToString(), now.Month.ToString(), now.Day.ToString());
 
