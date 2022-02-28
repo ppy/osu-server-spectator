@@ -11,6 +11,7 @@ using Moq;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Scoring;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 using Xunit;
@@ -22,9 +23,14 @@ namespace osu.Server.Spectator.Tests
         private readonly SpectatorHub hub;
 
         private const int streamer_id = 1234;
+        private const int beatmap_id = 88;
         private const int watcher_id = 8000;
 
-        private static readonly SpectatorState state = new SpectatorState { BeatmapID = 88 };
+        private static readonly SpectatorState state = new SpectatorState
+        {
+            BeatmapID = beatmap_id,
+            RulesetID = 0,
+        };
 
         public SpectatorHubTest()
         {
@@ -32,7 +38,14 @@ namespace osu.Server.Spectator.Tests
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
             var clientStates = new EntityStore<SpectatorClientState>();
-            hub = new SpectatorHub(cache, clientStates);
+
+            var databaseFactory = new Mock<IDatabaseFactory>();
+            var database = new Mock<IDatabaseAccess>();
+            databaseFactory.Setup(factory => factory.GetInstance()).Returns(database.Object);
+            database.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => "user");
+            database.Setup(db => db.GetBeatmapChecksumAsync(beatmap_id)).ReturnsAsync(() => "d2a97fb2fa4529a5e857fe0466dc1daf");
+
+            hub = new SpectatorHub(cache, clientStates, databaseFactory.Object);
         }
 
         [Fact]
@@ -49,7 +62,11 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            await hub.BeginPlaySession(new SpectatorState { BeatmapID = 88 });
+            await hub.BeginPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+            });
 
             // check all other users were informed that streaming began
             mockClients.Verify(clients => clients.All, Times.Once);
