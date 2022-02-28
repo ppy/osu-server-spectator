@@ -23,6 +23,11 @@ namespace osu.Server.Spectator.Database
         Task<bool> IsUserRestrictedAsync(int userId);
 
         /// <summary>
+        /// Returns a username from a <paramref name="userId"/>.
+        /// </summary>
+        Task<string?> GetUsernameAsync(int userId);
+
+        /// <summary>
         /// Returns the <see cref="multiplayer_room"/> with the given <paramref name="roomId"/>.
         /// </summary>
         Task<multiplayer_room> GetRoomAsync(long roomId);
