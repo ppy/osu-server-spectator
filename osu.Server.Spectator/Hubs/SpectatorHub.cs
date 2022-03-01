@@ -89,6 +89,8 @@ namespace osu.Server.Spectator.Hubs
                 score.ScoreInfo.Statistics = data.Header.Statistics;
                 score.ScoreInfo.MaxCombo = data.Header.MaxCombo;
                 score.ScoreInfo.Combo = data.Header.Combo;
+                // TODO: TotalScore should probably be populated as well, but needs beatmap max combo.
+
                 score.Replay.Frames.AddRange(data.Frames);
 
                 await Clients.Group(GetGroupId(CurrentContextUserId)).UserSentFrames(CurrentContextUserId, data);
