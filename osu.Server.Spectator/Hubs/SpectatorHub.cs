@@ -84,7 +84,11 @@ namespace osu.Server.Spectator.Hubs
             using (var usage = await GetOrCreateLocalUserState())
             {
                 var score = usage.Item?.Score;
-                Debug.Assert(score != null);
+
+                // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
+                // For now it's save to drop these frames.
+                if (score == null)
+                    return;
 
                 score.ScoreInfo.Statistics = data.Header.Statistics;
                 score.ScoreInfo.MaxCombo = data.Header.MaxCombo;
