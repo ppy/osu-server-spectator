@@ -117,7 +117,7 @@ namespace osu.Server.Spectator.Hubs
 
                 Directory.CreateDirectory(path);
 
-                string filename = $"{now.ToUnixTimeSeconds()}-{CurrentContextUserId}-{userScore.ScoreInfo.BeatmapInfo.OnlineID}.osr";
+                string filename = $"{now.ToUnixTimeSeconds()}-{CurrentContextUserId}-{userScore.ScoreInfo.Ruleset.OnlineID}-{userScore.ScoreInfo.BeatmapInfo.OnlineID}.osr";
 
                 Log($"Writing replay for user {CurrentContextUserId} to {filename}");
                 using (var outStream = File.Create(Path.Combine(path, filename)))
