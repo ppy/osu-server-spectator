@@ -105,19 +105,23 @@ namespace osu.Server.Spectator.Hubs
         {
             using (var usage = await GetOrCreateLocalUserState())
             {
-                var userScore = usage.Item?.Score;
-                Debug.Assert(userScore != null);
+                var score = usage.Item?.Score;
+
+                // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
+                // For now it's save to drop these frames.
+                if (score == null)
+                    return;
 
                 var now = DateTimeOffset.UtcNow;
 
-                userScore.ScoreInfo.Date = now;
-                var legacyEncoder = new LegacyScoreEncoder(userScore, null);
+                score.ScoreInfo.Date = now;
+                var legacyEncoder = new LegacyScoreEncoder(score, null);
 
                 string path = Path.Combine(REPLAYS_PATH, now.Year.ToString(), now.Month.ToString(), now.Day.ToString());
 
                 Directory.CreateDirectory(path);
 
-                string filename = $"{now.ToUnixTimeSeconds()}-{CurrentContextUserId}-{userScore.ScoreInfo.Ruleset.OnlineID}-{userScore.ScoreInfo.BeatmapInfo.OnlineID}.osr";
+                string filename = $"{now.ToUnixTimeSeconds()}-{CurrentContextUserId}-{score.ScoreInfo.Ruleset.OnlineID}-{score.ScoreInfo.BeatmapInfo.OnlineID}.osr";
 
                 Log($"Writing replay for user {CurrentContextUserId} to {filename}");
                 using (var outStream = File.Create(Path.Combine(path, filename)))
