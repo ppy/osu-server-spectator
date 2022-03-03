@@ -86,7 +86,7 @@ namespace osu.Server.Spectator.Hubs
                 var score = usage.Item?.Score;
 
                 // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
-                // For now it's save to drop these frames.
+                // For now it's safe to drop these frames.
                 if (score == null)
                     return;
 
@@ -108,7 +108,7 @@ namespace osu.Server.Spectator.Hubs
                 var score = usage.Item?.Score;
 
                 // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
-                // For now it's save to drop these frames.
+                // For now it's safe to drop these frames.
                 if (score == null)
                     return;
 
