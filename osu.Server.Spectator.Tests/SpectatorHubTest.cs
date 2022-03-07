@@ -109,7 +109,7 @@ namespace osu.Server.Spectator.Tests
 
             var files = Directory.GetFiles(SpectatorHub.REPLAYS_PATH, "*", SearchOption.AllDirectories);
             Assert.Single(files);
-            Assert.EndsWith($"-{streamer_id}-{beatmap_id}.osr", files.Single());
+            Assert.EndsWith($"-{streamer_id}-0-{beatmap_id}.osr", files.Single());
         }
 
         [Theory]
