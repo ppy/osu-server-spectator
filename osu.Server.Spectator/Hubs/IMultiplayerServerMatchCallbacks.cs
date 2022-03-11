@@ -4,6 +4,7 @@
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -59,5 +60,11 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
         Task OnMatchSettingsChanged(ServerMultiplayerRoom room);
+
+        /// <summary>
+        /// Retrieves a <see cref="ServerMultiplayerRoom"/> usage.
+        /// </summary>
+        /// <param name="roomId">The ID of the room to retrieve.</param>
+        Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId);
     }
 }

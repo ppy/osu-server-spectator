@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -102,7 +103,6 @@ namespace osu.Server.Spectator.Hubs
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
                         room.AddUser(roomUser);
-
                         await addDatabaseUser(room, roomUser);
 
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
@@ -331,6 +331,7 @@ namespace osu.Server.Spectator.Hubs
 
                 await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(CurrentContextUserId, newState);
 
+                // Signal newly-spectating users to load gameplay if currently in the middle of play.
                 if (newState == MultiplayerUserState.Spectating
                     && (room.State == MultiplayerRoomState.WaitingForLoad || room.State == MultiplayerRoomState.Playing))
                 {
@@ -399,7 +400,27 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                room.MatchTypeImplementation.HandleUserRequest(user, request);
+                switch (request)
+                {
+                    case MatchStartCountdownRequest countdown:
+                        ensureIsHost(room);
+
+                        if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
+                            throw new InvalidStateException("Can't start countdown when the host is not ready.");
+
+                        room.CountdownImplementation.Start(new MatchStartCountdown { EndTime = DateTimeOffset.Now + countdown.Delay }, async r => await InternalStartMatch(r));
+
+                        break;
+
+                    case StopCountdownRequest _:
+                        ensureIsHost(room);
+                        room.CountdownImplementation.Stop();
+                        break;
+
+                    default:
+                        room.MatchTypeImplementation.HandleUserRequest(user, request);
+                        break;
+                }
             }
         }
 
@@ -415,26 +436,7 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureIsHost(room);
 
-                if (room.State != MultiplayerRoomState.Open)
-                    throw new InvalidStateException("Can't start match when already in a running state.");
-
-                if (room.Queue.CurrentItem.Expired)
-                    throw new InvalidStateException("Cannot start an expired playlist item.");
-
-                var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
-
-                if (readyUsers.Length == 0)
-                    throw new InvalidStateException("Can't start match when no users are ready.");
-
-                if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
-                    throw new InvalidStateException("Can't start match when the host is not ready.");
-
-                foreach (var u in readyUsers)
-                    await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
-
-                await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
-
-                await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
+                await InternalStartMatch(room);
             }
         }
 
@@ -659,6 +661,14 @@ namespace osu.Server.Spectator.Hubs
             //check whether a room state change is required.
             switch (room.State)
             {
+                case MultiplayerRoomState.Open:
+                    // If there are no remaining ready users, finish any existing countdown.
+                    // Todo: When we have an "automatic start" mode, this should also start a new countdown if any users _are_ ready.
+                    // Todo: This doesn't yet support non-match-start countdowns.
+                    if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
+                        room.CountdownImplementation.Stop();
+                    break;
+
                 case MultiplayerRoomState.WaitingForLoad:
                     if (room.Users.All(u => u.State != MultiplayerUserState.WaitingForLoad))
                     {
@@ -914,6 +924,32 @@ namespace osu.Server.Spectator.Hubs
             await unreadyAllUsers(room);
 
             await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
+        }
+
+        public async Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => await Rooms.GetForUse(roomId);
+
+        public async Task InternalStartMatch(ServerMultiplayerRoom room)
+        {
+            if (room.State != MultiplayerRoomState.Open)
+                throw new InvalidStateException("Can't start match when already in a running state.");
+
+            if (room.Queue.CurrentItem.Expired)
+                throw new InvalidStateException("Cannot start an expired playlist item.");
+
+            var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
+
+            if (readyUsers.Length == 0)
+                throw new InvalidStateException("Can't start match when no users are ready.");
+
+            if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
+                throw new InvalidStateException("Can't start match when the host is not ready.");
+
+            foreach (var u in readyUsers)
+                await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
+
+            await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
+
+            await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
         }
 
         private async Task unreadyAllUsers(ServerMultiplayerRoom room)
