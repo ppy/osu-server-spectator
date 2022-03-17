@@ -27,7 +27,7 @@ namespace osu.Server.Spectator.Extensions
             var ruleset = LegacyHelper.GetRulesetFromLegacyID(item.RulesetID);
 
             bool proposedWereValid = true;
-            proposedWereValid &= ModUtils.InstantiateValidModsForRuleset(ruleset, proposedMods, out var valid);
+            ModUtils.InstantiateModsForRuleset(ruleset, proposedMods, out var valid);
 
             // check allowed by room
             foreach (var mod in valid.ToList())
@@ -60,18 +60,8 @@ namespace osu.Server.Spectator.Extensions
         {
             var ruleset = LegacyHelper.GetRulesetFromLegacyID(item.RulesetID);
 
-            // check against ruleset
-            if (!ModUtils.InstantiateValidModsForRuleset(ruleset, item.RequiredMods, out var requiredMods))
-            {
-                var invalidRequiredAcronyms = string.Join(',', item.RequiredMods.Where(m => requiredMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
-                throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidRequiredAcronyms}");
-            }
-
-            if (!ModUtils.InstantiateValidModsForRuleset(ruleset, item.AllowedMods, out var allowedMods))
-            {
-                var invalidAllowedAcronyms = string.Join(',', item.AllowedMods.Where(m => allowedMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
-                throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidAllowedAcronyms}");
-            }
+            ModUtils.InstantiateModsForRuleset(ruleset, item.RequiredMods, out var requiredMods);
+            ModUtils.InstantiateModsForRuleset(ruleset, item.AllowedMods, out var allowedMods);
 
             if (!ModUtils.CheckCompatibleSet(requiredMods, out var invalid))
                 throw new InvalidStateException($"Invalid combination of required mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
