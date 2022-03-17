@@ -22,7 +22,6 @@ namespace osu.Server.Spectator.Hubs
     public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer, IMultiplayerServerMatchCallbacks
     {
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
-
         private readonly IDatabaseFactory databaseFactory;
 
         public MultiplayerHub(IDistributedCache cache, EntityStore<ServerMultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
@@ -860,8 +859,6 @@ namespace osu.Server.Spectator.Hubs
 
             await updateRoomStateIfRequired(room);
 
-            var clients = Clients.Group(GetGroupId(room.RoomID));
-
             // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
             if (room.Host?.Equals(user) == true)
             {
@@ -875,10 +872,10 @@ namespace osu.Server.Spectator.Hubs
             {
                 // the target user has already been removed from the group, so send the message to them separately.
                 await Clients.Client(state.ConnectionId).UserKicked(user);
-                await clients.UserKicked(user);
+                await Clients.Group(GetGroupId(room.RoomID)).UserKicked(user);
             }
             else
-                await clients.UserLeft(user);
+                await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
         }
 
         public Task SendMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
@@ -959,5 +956,22 @@ namespace osu.Server.Spectator.Hubs
         }
 
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Verbose) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
+
+        protected override void Dispose(bool disposing)
+        {
+            // Todo: This cannot exist.
+            //
+            // SignalR hubs are transient objects, so it is invalid to store states in them. For this reason, the Hub is disposed after the request is handled and, of particular importance,
+            // accessing the Clients list will throw an exception after the hub is disposed.
+            //
+            // Countdown timers run in background threads, and although states aren't being stored in the hub, the Clients list _is_ used to notify users or to start the match.
+            // This usage does not cause problems for us, and seemingly, neither for SignalR.
+            //
+            // Todo: Further refactoring is needed around IMultiplayerServerMatchCallbacks to ensure that the hub is never stored.
+            // See: https://docs.microsoft.com/en-us/aspnet/core/signalr/hubcontext?view=aspnetcore-6.0 for more information on the proper way of doings things.
+            Clients = Clients;
+
+            base.Dispose(disposing);
+        }
     }
 }
