@@ -51,8 +51,9 @@ namespace osu.Server.Spectator.Hubs
                 {
                     await lastCountdownTask;
                 }
-                catch (OperationCanceledException)
+                catch
                 {
+                    // Any failures in the last countdown should not prevent future countdowns from running.
                 }
 
                 // 2. Notify users that a new countdown has started.
