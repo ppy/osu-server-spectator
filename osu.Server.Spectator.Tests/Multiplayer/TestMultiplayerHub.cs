@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
         }
 
-        public ItemUsage<ServerMultiplayerRoom> GetRoom(long roomId) => Rooms.GetForUse(roomId).Result;
+        public new ItemUsage<ServerMultiplayerRoom> GetRoom(long roomId) => Rooms.GetForUse(roomId).Result;
 
         public bool CheckRoomExists(long roomId)
         {
