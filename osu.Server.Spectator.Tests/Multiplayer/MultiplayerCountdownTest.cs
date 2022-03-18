@@ -211,6 +211,44 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
+        [Fact]
+        public async Task CountdownStopsWhenHostUnreadies()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.SendMatchRequest(new MatchStartCountdownRequest { Delay = TimeSpan.FromMinutes(1) });
+            waitForCountingDown();
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            int attempts = 200;
+
+            while (attempts-- > 0)
+            {
+                using (var usage = Hub.GetRoom(ROOM_ID))
+                {
+                    var room = usage.Item;
+                    Debug.Assert(room != null);
+
+                    if (!room.CountdownImplementation.IsRunning)
+                        break;
+                }
+            }
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.False(room.CountdownImplementation.IsRunning);
+            }
+        }
+
         private void finishCountdown()
         {
             ServerMultiplayerRoom? room;
