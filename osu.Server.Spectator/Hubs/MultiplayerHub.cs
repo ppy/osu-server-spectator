@@ -182,7 +182,8 @@ namespace osu.Server.Spectator.Hubs
                         Name = databaseRoom.name,
                         Password = databaseRoom.password,
                         MatchType = databaseRoom.type.ToMatchType(),
-                        QueueMode = databaseRoom.queue_mode.ToQueueMode()
+                        QueueMode = databaseRoom.queue_mode.ToQueueMode(),
+                        AutoStartDuration = TimeSpan.FromSeconds(databaseRoom.auto_start_duration)
                     }
                 };
 
@@ -413,7 +414,9 @@ namespace osu.Server.Spectator.Hubs
 
                     case StopCountdownRequest _:
                         ensureIsHost(room);
-                        room.CountdownImplementation.Stop();
+
+                        if (room.Settings.AutoStartDuration == TimeSpan.Zero)
+                            room.CountdownImplementation.Stop();
                         break;
 
                     default:
@@ -476,6 +479,8 @@ namespace osu.Server.Spectator.Hubs
                 Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
                 await room.Queue.AddItem(item, user);
                 Log(room, $"Item ID {item.ID} added at slot {room.Queue.UpcomingItems.TakeWhile(i => i != item).Count() + 1} (of {room.Playlist.Count})");
+
+                await updateRoomStateIfRequired(room);
             }
         }
 
@@ -512,6 +517,8 @@ namespace osu.Server.Spectator.Hubs
 
                 Log(room, $"Removing playlist item {playlistItemId}");
                 await room.Queue.RemoveItem(playlistItemId, user);
+
+                await updateRoomStateIfRequired(room);
             }
         }
 
@@ -569,6 +576,8 @@ namespace osu.Server.Spectator.Hubs
                 }
 
                 await OnMatchSettingsChanged(room);
+
+                await updateRoomStateIfRequired(room);
             }
         }
 
@@ -662,13 +671,28 @@ namespace osu.Server.Spectator.Hubs
             {
                 case MultiplayerRoomState.Open:
                     // If there are no remaining ready users or the host is not ready, stop any existing countdown.
-                    // Todo: When we have an "automatic start" mode, this should also start a new countdown if any users _are_ ready.
                     // Todo: This doesn't yet support non-match-start countdowns.
-                    bool shouldStopCountdown = room.Users.All(u => u.State != MultiplayerUserState.Ready);
-                    shouldStopCountdown |= room.Host?.State != MultiplayerUserState.Ready && room.Host?.State != MultiplayerUserState.Spectating;
+                    if (room.Settings.AutoStartDuration != TimeSpan.Zero)
+                    {
+                        bool shouldHaveCountdown = !room.Queue.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
-                    if (shouldStopCountdown)
-                        room.CountdownImplementation.Stop();
+                        if (shouldHaveCountdown)
+                        {
+                            if (room.Countdown == null)
+                                room.CountdownImplementation.Start(new MatchStartCountdown { EndTime = DateTimeOffset.Now + room.Settings.AutoStartDuration }, InternalStartMatch);
+                        }
+                        else
+                            room.CountdownImplementation.Stop();
+                    }
+                    else
+                    {
+                        bool shouldStopCountdown = room.Users.All(u => u.State != MultiplayerUserState.Ready);
+                        shouldStopCountdown |= room.Host?.State != MultiplayerUserState.Ready && room.Host?.State != MultiplayerUserState.Spectating;
+
+                        if (shouldStopCountdown)
+                            room.CountdownImplementation.Stop();
+                    }
+
                     break;
 
                 case MultiplayerRoomState.WaitingForLoad:

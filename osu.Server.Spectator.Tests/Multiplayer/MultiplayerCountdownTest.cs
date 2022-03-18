@@ -249,6 +249,133 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
+        [Fact]
+        public async Task AutoStartCountdownDoesNotStartWithZeroDuration()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.False(room.CountdownImplementation.IsRunning);
+            }
+        }
+
+        [Fact]
+        public async Task AutoStartCountdownStartsAndStopsWithUserReadyStates()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
+
+            // First user readies up.
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.True(room.CountdownImplementation.IsRunning);
+            }
+
+            // Second user joins (not ready).
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.True(room.CountdownImplementation.IsRunning);
+            }
+
+            // Second user readies up.
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.True(room.CountdownImplementation.IsRunning);
+            }
+
+            // First user unreadies.
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.True(room.CountdownImplementation.IsRunning);
+            }
+
+            // Second user unreadies.
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            int attempts = 200;
+
+            while (attempts-- > 0)
+            {
+                using (var usage = Hub.GetRoom(ROOM_ID))
+                {
+                    var room = usage.Item;
+                    Debug.Assert(room != null);
+
+                    if (!room.CountdownImplementation.IsRunning)
+                        break;
+                }
+            }
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.False(room.CountdownImplementation.IsRunning);
+            }
+        }
+
+        [Fact]
+        public async Task AutoStartCountdownCanNotBeCancelled()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            waitForCountingDown();
+
+            await Hub.SendMatchRequest(new StopCountdownRequest());
+
+            int attempts = 200;
+
+            while (attempts-- > 0)
+            {
+                using (var usage = Hub.GetRoom(ROOM_ID))
+                {
+                    var room = usage.Item;
+                    Debug.Assert(room != null);
+
+                    if (!room.CountdownImplementation.IsRunning)
+                        break;
+                }
+            }
+
+            using (var usage = Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.True(room.CountdownImplementation.IsRunning);
+            }
+        }
+
         private void finishCountdown()
         {
             ServerMultiplayerRoom? room;
