@@ -401,7 +401,7 @@ namespace osu.Server.Spectator.Hubs
 
                 switch (request)
                 {
-                    case MatchStartCountdownRequest countdown:
+                    case StartMatchCountdownRequest countdown:
                         ensureIsHost(room);
 
                         if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
