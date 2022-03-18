@@ -153,5 +153,36 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
             }
         }
+
+        [Fact]
+        public async Task SecondUserDoesNotReceiveLoadRequestWhenMatchRestartedAndNotReady()
+        {
+            // Start the match initially with both users entering gameplay.
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+
+            // Finish gameplay for both users.
+            SetUserContext(ContextUser2);
+            await Hub.AbortGameplay();
+            SetUserContext(ContextUser);
+            await Hub.AbortGameplay();
+
+            // Restart gameplay for the host user _only_.
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+
+            // Host receives load requested twice total, second user only receives it once.
+            UserReceiver.Verify(r => r.LoadRequested(), Times.Exactly(2));
+            User2Receiver.Verify(r => r.LoadRequested(), Times.Once);
+        }
     }
 }
