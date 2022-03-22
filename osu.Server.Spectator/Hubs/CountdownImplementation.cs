@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Hubs
             // Some sections in the following code require single-threaded execution mode. This is achieved by re-retrieving the room from the hub, forcing an exclusive lock on it.
             async Task start()
             {
-                // 1. Wait for the last countdown.
+                // Wait for the last countdown to finalise before starting a new one.
                 try
                 {
                     await lastCountdownTask;
@@ -56,7 +56,7 @@ namespace osu.Server.Spectator.Hubs
                     // Any failures in the last countdown should not prevent future countdowns from running.
                 }
 
-                // 2. Notify users that a new countdown has started.
+                // Notify users that a new countdown has started.
                 using (var roomUsage = await hub.GetRoom(roomId))
                 {
                     if (roomUsage.Item == null)
@@ -70,16 +70,17 @@ namespace osu.Server.Spectator.Hubs
                     await hub.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = countdown });
                 }
 
-                // 3. Run the countdown.
+                // Run the countdown.
                 try
                 {
                     await Task.Delay(countdown.EndTime - DateTimeOffset.Now, cancellationSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
+                    // Clients need to be notified of cancellations in the following code.
                 }
 
-                // 4. Notify users that the countdown has finished and run the continuation.
+                // Notify users that the countdown has finished (or cancelled) and run the continuation.
                 using (var roomUsage = await hub.GetRoom(roomId))
                 {
                     if (roomUsage.Item == null)
