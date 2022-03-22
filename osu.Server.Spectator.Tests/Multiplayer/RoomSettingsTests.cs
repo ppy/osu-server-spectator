@@ -24,7 +24,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(testSettings);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
 
@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             MultiplayerRoom? room;
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 // unsafe, but just for tests.
                 room = usage.Item;
@@ -116,7 +116,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 PlaylistItemId = 1
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -135,7 +135,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 QueueMode = QueueMode.AllPlayers
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
 
