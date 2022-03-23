@@ -38,6 +38,41 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeState(MultiplayerUserState.Ready);
 
+            await Hub.SendMatchRequest(new StartMatchCountdownRequest { Delay = TimeSpan.FromSeconds(3) });
+            await waitForCountingDown();
+
+            int attempts = 1000;
+
+            while (attempts-- > 0)
+            {
+                using (var usage = await Hub.GetRoom(ROOM_ID))
+                {
+                    var room = usage.Item;
+                    Debug.Assert(room != null);
+
+                    if (!room.CountdownImplementation.IsRunning)
+                        break;
+
+                    Thread.Sleep(10);
+                }
+            }
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Null(room.Countdown);
+                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            }
+        }
+
+        [Fact]
+        public async Task GameplayStartsWhenCountdownFinished()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Delay = TimeSpan.FromMinutes(1) });
             await waitForCountingDown();
 
