@@ -407,7 +407,7 @@ namespace osu.Server.Spectator.Hubs
                         if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
                             throw new InvalidStateException("Can't start countdown when the host is not ready.");
 
-                        room.CountdownImplementation.Start(new MatchStartCountdown { EndTime = DateTimeOffset.Now + countdown.Delay }, async r => await InternalStartMatch(r));
+                        room.CountdownImplementation.Start(new MatchStartCountdown { EndTime = DateTimeOffset.Now + countdown.Delay }, InternalStartMatch);
 
                         break;
 
@@ -926,9 +926,10 @@ namespace osu.Server.Spectator.Hubs
             await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
         }
 
-        public async Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => await Rooms.GetForUse(roomId);
+        internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
+        Task<ItemUsage<ServerMultiplayerRoom>> IMultiplayerServerMatchCallbacks.GetRoom(long roomId) => GetRoom(roomId);
 
-        public async Task InternalStartMatch(ServerMultiplayerRoom room)
+        internal async Task InternalStartMatch(ServerMultiplayerRoom room)
         {
             if (room.State != MultiplayerRoomState.Open)
                 throw new InvalidStateException("Can't start match when already in a running state.");
