@@ -176,7 +176,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Ready);
 
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Delay = TimeSpan.FromMinutes(1) });
-            waitForCountingDown();
+            await waitForCountingDown();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
@@ -217,7 +217,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Delay = TimeSpan.FromMinutes(1) });
-            waitForCountingDown();
+            await waitForCountingDown();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
