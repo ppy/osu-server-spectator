@@ -21,6 +21,9 @@ namespace osu.Server.Spectator.Hubs
         private CancellationTokenSource? countdownFinishSource;
         private Task countdownTask = Task.CompletedTask;
 
+        private TimeSpan countdownDuration;
+        private DateTimeOffset countdownStartTime;
+
         public CountdownImplementation(long roomId, IMultiplayerServerMatchCallbacks hub)
         {
             this.roomId = roomId;
@@ -66,14 +69,18 @@ namespace osu.Server.Spectator.Hubs
                     if (stopSource.IsCancellationRequested)
                         return;
 
+                    countdownStartTime = DateTimeOffset.Now;
+                    countdownDuration = countdown.TimeRemaining;
+
                     roomUsage.Item.Countdown = countdown;
+
                     await hub.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = countdown });
                 }
 
                 // Run the countdown.
                 try
                 {
-                    await Task.Delay(countdown.EndTime - DateTimeOffset.Now, cancellationSource.Token).ConfigureAwait(false);
+                    await Task.Delay(countdownDuration, cancellationSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -87,6 +94,7 @@ namespace osu.Server.Spectator.Hubs
                         return;
 
                     roomUsage.Item.Countdown = null;
+
                     await hub.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
 
                     using (cancellationSource)
@@ -99,6 +107,20 @@ namespace osu.Server.Spectator.Hubs
                     // Furthermore, providing a room-id instead of the room becomes cumbersome for usages, so this also provides a nicer API.
                     await onComplete(roomUsage.Item);
                 }
+            }
+        }
+
+        public async Task UpdateTimeRemaining()
+        {
+            using (var roomUsage = await hub.GetRoom(roomId))
+            {
+                if (roomUsage.Item?.Countdown == null)
+                    return;
+
+                DateTimeOffset countdownEnd = countdownStartTime + countdownDuration;
+                TimeSpan timeRemaining = countdownEnd - DateTimeOffset.Now;
+
+                roomUsage.Item.Countdown.TimeRemaining = timeRemaining.TotalSeconds > 0 ? timeRemaining : TimeSpan.Zero;
             }
         }
 

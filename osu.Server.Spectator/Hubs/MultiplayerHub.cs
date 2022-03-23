@@ -140,6 +140,8 @@ namespace osu.Server.Spectator.Hubs
                     }
                 }
 
+                await room.CountdownImplementation.UpdateTimeRemaining();
+
                 var settings = new JsonSerializerSettings
                 {
                     // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
@@ -407,7 +409,7 @@ namespace osu.Server.Spectator.Hubs
                         if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
                             throw new InvalidStateException("Can't start countdown when the host is not ready.");
 
-                        room.CountdownImplementation.Start(new MatchStartCountdown { EndTime = DateTimeOffset.Now + countdown.Delay }, InternalStartMatch);
+                        room.CountdownImplementation.Start(new MatchStartCountdown { TimeRemaining = countdown.Delay }, InternalStartMatch);
 
                         break;
 

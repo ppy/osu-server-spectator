@@ -82,7 +82,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 Assert.NotNull(room.Countdown);
-                Assert.InRange((room.Countdown!.EndTime - DateTimeOffset.Now).Seconds, 30, 60);
+                Assert.InRange(room.Countdown!.TimeRemaining.TotalSeconds, 30, 60);
                 GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
             }
 
@@ -282,6 +282,30 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Assert.False(room.CountdownImplementation.IsRunning);
             }
+        }
+
+        [Fact]
+        public async Task TimeRemainingUpdatedOnJoin()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
+            await waitForCountingDown();
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.True(room.Countdown?.TimeRemaining.TotalSeconds == 60);
+            }
+
+            Thread.Sleep(2000);
+
+            SetUserContext(ContextUser2);
+            var secondRoom = await Hub.JoinRoom(ROOM_ID);
+
+            Assert.True(secondRoom.Countdown?.TimeRemaining.TotalSeconds < 60);
         }
 
         private async Task finishCountdown()
