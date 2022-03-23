@@ -90,6 +90,8 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        #region Countdowns
+
         private CancellationTokenSource? countdownStopSource;
         private CancellationTokenSource? countdownFinishSource;
         private Task countdownTask = Task.CompletedTask;
@@ -192,5 +194,7 @@ namespace osu.Server.Spectator.Hubs
         /// Whether a countdown is currently running.
         /// </summary>
         public bool IsCountdownRunning => !countdownTask.IsCompleted;
+
+        #endregion
     }
 }
