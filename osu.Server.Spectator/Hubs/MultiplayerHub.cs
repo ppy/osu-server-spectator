@@ -102,8 +102,9 @@ namespace osu.Server.Spectator.Hubs
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
                         room.AddUser(roomUser);
-                        await addDatabaseUser(room, roomUser);
+                        room.UpdateForRetrieval();
 
+                        await addDatabaseUser(room, roomUser);
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
                         Log(room, "User joined");
@@ -139,8 +140,6 @@ namespace osu.Server.Spectator.Hubs
                         throw;
                     }
                 }
-
-                await room.CountdownImplementation.UpdateTimeRemaining();
 
                 var settings = new JsonSerializerSettings
                 {
@@ -409,13 +408,13 @@ namespace osu.Server.Spectator.Hubs
                         if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
                             throw new InvalidStateException("Can't start countdown when the host is not ready.");
 
-                        room.CountdownImplementation.Start(new MatchStartCountdown { TimeRemaining = countdown.Duration }, InternalStartMatch);
+                        room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, InternalStartMatch);
 
                         break;
 
                     case StopCountdownRequest _:
                         ensureIsHost(room);
-                        room.CountdownImplementation.Stop();
+                        room.StopCountdown();
                         break;
 
                     default:
@@ -670,7 +669,7 @@ namespace osu.Server.Spectator.Hubs
                     shouldStopCountdown |= room.Host?.State != MultiplayerUserState.Ready && room.Host?.State != MultiplayerUserState.Spectating;
 
                     if (shouldStopCountdown)
-                        room.CountdownImplementation.Stop();
+                        room.StopCountdown();
                     break;
 
                 case MultiplayerRoomState.WaitingForLoad:

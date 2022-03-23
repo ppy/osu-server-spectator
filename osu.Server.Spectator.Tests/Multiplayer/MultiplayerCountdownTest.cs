@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     var room = usage.Item;
                     Debug.Assert(room != null);
 
-                    if (!room.CountdownImplementation.IsRunning)
+                    if (!room.IsCountdownRunning)
                         break;
 
                     Thread.Sleep(10);
@@ -229,7 +229,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     var room = usage.Item;
                     Debug.Assert(room != null);
 
-                    if (!room.CountdownImplementation.IsRunning)
+                    if (!room.IsCountdownRunning)
                         break;
                 }
             }
@@ -239,7 +239,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.False(room.CountdownImplementation.IsRunning);
+                Assert.False(room.IsCountdownRunning);
                 Assert.Null(room.Countdown);
                 Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownChangedEvent>()), Times.Exactly(2));
                 GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
@@ -270,7 +270,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     var room = usage.Item;
                     Debug.Assert(room != null);
 
-                    if (!room.CountdownImplementation.IsRunning)
+                    if (!room.IsCountdownRunning)
                         break;
                 }
             }
@@ -280,7 +280,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.False(room.CountdownImplementation.IsRunning);
+                Assert.False(room.IsCountdownRunning);
             }
         }
 
@@ -315,13 +315,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 room = usage.Item;
-                room?.CountdownImplementation.Finish();
+                room?.FinishCountdown();
             }
 
             Debug.Assert(room != null);
 
             int attempts = 200;
-            while (attempts-- > 0 && room.CountdownImplementation.IsRunning)
+            while (attempts-- > 0 && room.IsCountdownRunning)
                 Thread.Sleep(10);
         }
 
