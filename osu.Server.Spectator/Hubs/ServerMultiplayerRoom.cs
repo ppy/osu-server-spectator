@@ -108,8 +108,8 @@ namespace osu.Server.Spectator.Hubs
             StopCountdown();
 
             var stopSource = countdownStopSource = new CancellationTokenSource();
-            var finishSource = countdownSkipSource = new CancellationTokenSource();
-            var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(stopSource.Token, finishSource.Token);
+            var skipSource = countdownSkipSource = new CancellationTokenSource();
+            var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(stopSource.Token, skipSource.Token);
 
             Task lastCountdownTask = countdownTask;
             countdownTask = start();
