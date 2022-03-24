@@ -102,8 +102,9 @@ namespace osu.Server.Spectator.Hubs
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
                         room.AddUser(roomUser);
-                        await addDatabaseUser(room, roomUser);
+                        room.UpdateForRetrieval();
 
+                        await addDatabaseUser(room, roomUser);
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
                         Log(room, "User joined");
@@ -408,7 +409,7 @@ namespace osu.Server.Spectator.Hubs
                         if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
                             throw new InvalidStateException("Can't start countdown when the host is not ready.");
 
-                        room.CountdownImplementation.Start(new MatchStartCountdown { EndTime = DateTimeOffset.Now + countdown.Delay }, async r => await InternalStartMatch(r));
+                        room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, InternalStartMatch);
 
                         break;
 
@@ -416,7 +417,7 @@ namespace osu.Server.Spectator.Hubs
                         ensureIsHost(room);
 
                         if (room.Settings.AutoStartDuration == TimeSpan.Zero)
-                            room.CountdownImplementation.Stop();
+                            room.StopCountdown();
                         break;
 
                     default:
@@ -679,10 +680,10 @@ namespace osu.Server.Spectator.Hubs
                         if (shouldHaveCountdown)
                         {
                             if (room.Countdown == null)
-                                room.CountdownImplementation.Start(new MatchStartCountdown { EndTime = DateTimeOffset.Now + room.Settings.AutoStartDuration }, InternalStartMatch);
+                                room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, InternalStartMatch);
                         }
                         else
-                            room.CountdownImplementation.Stop();
+                            room.StopCountdown();
                     }
                     else
                     {
@@ -690,7 +691,7 @@ namespace osu.Server.Spectator.Hubs
                         shouldStopCountdown |= room.Host?.State != MultiplayerUserState.Ready && room.Host?.State != MultiplayerUserState.Spectating;
 
                         if (shouldStopCountdown)
-                            room.CountdownImplementation.Stop();
+                            room.StopCountdown();
                     }
 
                     break;
@@ -950,9 +951,10 @@ namespace osu.Server.Spectator.Hubs
             await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
         }
 
-        public async Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => await Rooms.GetForUse(roomId);
+        internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
+        Task<ItemUsage<ServerMultiplayerRoom>> IMultiplayerServerMatchCallbacks.GetRoom(long roomId) => GetRoom(roomId);
 
-        public async Task InternalStartMatch(ServerMultiplayerRoom room)
+        internal async Task InternalStartMatch(ServerMultiplayerRoom room)
         {
             if (room.State != MultiplayerRoomState.Open)
                 throw new InvalidStateException("Can't start match when already in a running state.");

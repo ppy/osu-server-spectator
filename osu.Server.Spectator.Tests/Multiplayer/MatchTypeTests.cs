@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -42,7 +42,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -60,7 +60,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var roomUsage = Hub.GetRoom(ROOM_ID))
+            using (var roomUsage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
@@ -84,7 +84,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var roomUsage = Hub.GetRoom(ROOM_ID))
+            using (var roomUsage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
@@ -97,7 +97,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.SendMatchRequest(mockRequest.Object);
 
-            using (var roomUsage = Hub.GetRoom(ROOM_ID))
+            using (var roomUsage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
@@ -110,7 +110,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -121,7 +121,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeSettings(new MultiplayerRoomSettings { MatchType = MatchType.TeamVersus });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -149,7 +149,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
