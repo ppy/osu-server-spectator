@@ -160,19 +160,34 @@ namespace osu.Server.Spectator.Hubs
                 // Note: The room must be re-retrieved rather than using our own instance to enforce single-thread access.
                 using (var roomUsage = await hubCallbacks.GetRoom(RoomID))
                 {
-                    if (roomUsage.Item == null)
-                        return;
+                    try
+                    {
+                        if (roomUsage.Item == null)
+                            return;
 
-                    roomUsage.Item.Countdown = null;
+                        roomUsage.Item.Countdown = null;
 
-                    await hubCallbacks.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
+                        await hubCallbacks.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
 
-                    if (stopSource.IsCancellationRequested)
-                        return;
+                        if (stopSource.IsCancellationRequested)
+                            return;
 
-                    // The continuation could be run outside of the room lock, however it seems saner to run it within the same lock as the cancellation token usage.
-                    // Furthermore, providing a room-id instead of the room becomes cumbersome for usages, so this also provides a nicer API.
-                    await onComplete(roomUsage.Item);
+                        // The continuation could be run outside of the room lock, however it seems saner to run it within the same lock as the cancellation token usage.
+                        // Furthermore, providing a room-id instead of the room becomes cumbersome for usages, so this also provides a nicer API.
+                        await onComplete(roomUsage.Item);
+                    }
+                    finally
+                    {
+                        stopSource.Dispose();
+                        skipSource.Dispose();
+
+                        // Although we are in a single-threaded context with regards to the construction/setters of the class-level fields,
+                        // subsequent calls to StartCountdown() create new objects/override the class-level fields _before_ waiting on the previous countdown task to complete.
+                        if (countdownStopSource == stopSource)
+                            countdownStopSource = null;
+                        if (countdownSkipSource == skipSource)
+                            countdownSkipSource = null;
+                    }
                 }
             }
         }
