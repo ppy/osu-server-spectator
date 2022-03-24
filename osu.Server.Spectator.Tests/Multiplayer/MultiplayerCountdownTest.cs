@@ -315,7 +315,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 room = usage.Item;
-                room?.FinishCountdown();
+                room?.SkipToEndOfCountdown();
             }
 
             Debug.Assert(room != null);

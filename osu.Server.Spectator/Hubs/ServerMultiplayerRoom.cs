@@ -93,7 +93,7 @@ namespace osu.Server.Spectator.Hubs
         #region Countdowns
 
         private CancellationTokenSource? countdownStopSource;
-        private CancellationTokenSource? countdownFinishSource;
+        private CancellationTokenSource? countdownSkipSource;
         private Task countdownTask = Task.CompletedTask;
         private TimeSpan countdownDuration;
         private DateTimeOffset countdownStartTime;
@@ -108,7 +108,7 @@ namespace osu.Server.Spectator.Hubs
             StopCountdown();
 
             var stopSource = countdownStopSource = new CancellationTokenSource();
-            var finishSource = countdownFinishSource = new CancellationTokenSource();
+            var finishSource = countdownSkipSource = new CancellationTokenSource();
             var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(stopSource.Token, finishSource.Token);
 
             Task lastCountdownTask = countdownTask;
@@ -181,14 +181,15 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Stops the current countdown. Its continuation will not run.
+        /// Stops the current countdown, preventing its callback from running.
         /// </summary>
         public void StopCountdown() => countdownStopSource?.Cancel();
 
         /// <summary>
-        /// Forces the current countdown to finish and run its continuation as soon as possible.
+        /// Skips to the end of the currently-running countdown, if one is running,
+        /// and runs the callback (e.g. to start the match) as soon as possible unless the countdown has been cancelled.
         /// </summary>
-        public void FinishCountdown() => countdownFinishSource?.Cancel();
+        public void SkipToEndOfCountdown() => countdownSkipSource?.Cancel();
 
         /// <summary>
         /// Whether a countdown is currently running.
