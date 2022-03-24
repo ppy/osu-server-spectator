@@ -109,7 +109,6 @@ namespace osu.Server.Spectator.Hubs
 
             var stopSource = countdownStopSource = new CancellationTokenSource();
             var skipSource = countdownSkipSource = new CancellationTokenSource();
-            var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(stopSource.Token, skipSource.Token);
 
             Task lastCountdownTask = countdownTask;
             countdownTask = start();
@@ -149,7 +148,8 @@ namespace osu.Server.Spectator.Hubs
                 // Run the countdown.
                 try
                 {
-                    await Task.Delay(countdownDuration, cancellationSource.Token).ConfigureAwait(false);
+                    using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(stopSource.Token, skipSource.Token))
+                        await Task.Delay(countdownDuration, cancellationSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -167,11 +167,8 @@ namespace osu.Server.Spectator.Hubs
 
                     await hubCallbacks.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
 
-                    using (cancellationSource)
-                    {
-                        if (stopSource.Token.IsCancellationRequested)
-                            return;
-                    }
+                    if (stopSource.IsCancellationRequested)
+                        return;
 
                     // The continuation could be run outside of the room lock, however it seems saner to run it within the same lock as the cancellation token usage.
                     // Furthermore, providing a room-id instead of the room becomes cumbersome for usages, so this also provides a nicer API.
