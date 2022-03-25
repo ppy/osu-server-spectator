@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Moq;
@@ -205,86 +206,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task CountdownStopsWhenAllUsersUnready()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-
-            await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
-            await waitForCountingDown();
-
-            SetUserContext(ContextUser2);
-            await Hub.JoinRoom(ROOM_ID);
-
-            // Simulate a host transfer where no users remain ready.
-            SetUserContext(ContextUser);
-            await Hub.LeaveRoom();
-
-            int attempts = 200;
-
-            while (attempts-- > 0)
-            {
-                using (var usage = await Hub.GetRoom(ROOM_ID))
-                {
-                    var room = usage.Item;
-                    Debug.Assert(room != null);
-
-                    if (!room.IsCountdownRunning)
-                        break;
-                }
-            }
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.False(room.IsCountdownRunning);
-                Assert.Null(room.Countdown);
-                Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownChangedEvent>()), Times.Exactly(2));
-                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
-            }
-        }
-
-        [Fact]
-        public async Task CountdownStopsWhenHostUnreadies()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
-            await waitForCountingDown();
-
-            SetUserContext(ContextUser2);
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-
-            SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-
-            int attempts = 200;
-
-            while (attempts-- > 0)
-            {
-                using (var usage = await Hub.GetRoom(ROOM_ID))
-                {
-                    var room = usage.Item;
-                    Debug.Assert(room != null);
-
-                    if (!room.IsCountdownRunning)
-                        break;
-                }
-            }
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.False(room.IsCountdownRunning);
-            }
-        }
-
-        [Fact]
         public async Task TimeRemainingUpdatedOnJoin()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -324,81 +245,66 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task AutoStartCountdownStartsAndStopsWithUserReadyStates()
+        public async Task AutoStartCountdownStartsWhenHostReadies()
         {
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
 
-            // First user readies up.
             await Hub.ChangeState(MultiplayerUserState.Ready);
+            await waitForCountingDown();
 
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
+            await finishCountdown();
+            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+        }
 
-                Assert.True(room.IsCountdownRunning);
-            }
+        [Fact]
+        public async Task AutoStartCountdownStartsWhenGuestReadies()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
 
-            // Second user joins (not ready).
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.True(room.IsCountdownRunning);
-            }
-
-            // Second user readies up.
             await Hub.ChangeState(MultiplayerUserState.Ready);
+            await waitForCountingDown();
 
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
+            await finishCountdown();
+            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+        }
 
-                Assert.True(room.IsCountdownRunning);
-            }
+        [Fact]
+        public async Task AutoStartCountdownContinuesWhileAllUsersNotReady()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
 
-            // First user unreadies.
-            SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.True(room.IsCountdownRunning);
-            }
-
-            // Second user unreadies.
             SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await waitForCountingDown();
+
+            // The countdown should continue after the guest user unreadies (the only ready user).
             await Hub.ChangeState(MultiplayerUserState.Idle);
-
-            int attempts = 200;
-
-            while (attempts-- > 0)
-            {
-                using (var usage = await Hub.GetRoom(ROOM_ID))
-                {
-                    var room = usage.Item;
-                    Debug.Assert(room != null);
-
-                    if (!room.IsCountdownRunning)
-                        break;
-                }
-            }
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.False(room.IsCountdownRunning);
+                Assert.False(room.CountdownCancellationRequested);
+                Assert.True(room.IsCountdownRunning);
+            }
+
+            await finishCountdown();
+
+            // When the countdown ends, it should not trigger LoadRequested(), but the current item in the queue should be skipped.
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Single(room.Playlist.Where(p => p.Expired));
+                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
             }
         }
 
@@ -412,25 +318,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.SendMatchRequest(new StopCountdownRequest());
 
-            int attempts = 200;
-
-            while (attempts-- > 0)
-            {
-                using (var usage = await Hub.GetRoom(ROOM_ID))
-                {
-                    var room = usage.Item;
-                    Debug.Assert(room != null);
-
-                    if (!room.IsCountdownRunning)
-                        break;
-                }
-            }
-
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
+                Assert.False(room.CountdownCancellationRequested);
                 Assert.True(room.IsCountdownRunning);
             }
         }
