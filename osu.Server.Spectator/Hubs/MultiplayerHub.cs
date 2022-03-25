@@ -314,23 +314,7 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureValidStateSwitch(room, user.State, newState);
 
-                user.State = newState;
-
-                // handle whether this user should be receiving gameplay messages or not.
-                switch (newState)
-                {
-                    case MultiplayerUserState.FinishedPlay:
-                    case MultiplayerUserState.Idle:
-                        await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
-                        break;
-
-                    case MultiplayerUserState.Ready:
-                    case MultiplayerUserState.Spectating:
-                        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
-                        break;
-                }
-
-                await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(CurrentContextUserId, newState);
+                await changeAndBroadcastUserState(room, user, newState);
 
                 // Signal newly-spectating users to load gameplay if currently in the middle of play.
                 if (newState == MultiplayerUserState.Spectating
@@ -731,11 +715,27 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        private Task changeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
+        private async Task changeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
         {
             Log(room, $"User state changed from {user.State} to {state}");
+
             user.State = state;
-            return Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(user.UserID, user.State);
+
+            // handle whether this user should be receiving gameplay messages or not.
+            switch (state)
+            {
+                case MultiplayerUserState.FinishedPlay:
+                case MultiplayerUserState.Idle:
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
+                    break;
+
+                case MultiplayerUserState.Ready:
+                case MultiplayerUserState.Spectating:
+                    await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
+                    break;
+            }
+
+            await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(user.UserID, user.State);
         }
 
         /// <summary>
