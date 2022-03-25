@@ -671,27 +671,12 @@ namespace osu.Server.Spectator.Hubs
             switch (room.State)
             {
                 case MultiplayerRoomState.Open:
-                    // If there are no remaining ready users or the host is not ready, stop any existing countdown.
-                    // Todo: This doesn't yet support non-match-start countdowns.
                     if (room.Settings.AutoStartDuration != TimeSpan.Zero)
                     {
                         bool shouldHaveCountdown = !room.Queue.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
-                        if (shouldHaveCountdown)
-                        {
-                            if (room.Countdown == null)
-                                room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, InternalStartMatch);
-                        }
-                        else
-                            room.StopCountdown();
-                    }
-                    else
-                    {
-                        bool shouldStopCountdown = room.Users.All(u => u.State != MultiplayerUserState.Ready);
-                        shouldStopCountdown |= room.Host?.State != MultiplayerUserState.Ready && room.Host?.State != MultiplayerUserState.Spectating;
-
-                        if (shouldStopCountdown)
-                            room.StopCountdown();
+                        if (shouldHaveCountdown && room.Countdown == null)
+                            room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, InternalStartMatch);
                     }
 
                     break;
