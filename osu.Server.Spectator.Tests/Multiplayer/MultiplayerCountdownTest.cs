@@ -229,6 +229,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
+        public async Task CanNotStartCountdownIfAutoStartEnabled()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
+
+            await Assert.ThrowsAsync<InvalidStateException>(async () => await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) }));
+        }
+
+        [Fact]
         public async Task AutoStartCountdownDoesNotStartWithZeroDuration()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -315,7 +324,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await waitForCountingDown();
 
-            await Hub.SendMatchRequest(new StopCountdownRequest());
+            await Assert.ThrowsAsync<InvalidStateException>(async () => await Hub.SendMatchRequest(new StopCountdownRequest()));
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {

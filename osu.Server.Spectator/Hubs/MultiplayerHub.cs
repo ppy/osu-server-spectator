@@ -405,6 +405,13 @@ namespace osu.Server.Spectator.Hubs
                 {
                     case StartMatchCountdownRequest countdown:
                         ensureIsHost(room);
+
+                        if (room.State != MultiplayerRoomState.Open)
+                            throw new InvalidStateException("Cannot start a countdown during ongoing play.");
+
+                        if (room.Settings.AutoStartEnabled)
+                            throw new InvalidStateException("Cannot start manual countdown if auto-start is enabled.");
+
                         room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, InternalStartMatch);
 
                         break;
@@ -412,8 +419,10 @@ namespace osu.Server.Spectator.Hubs
                     case StopCountdownRequest _:
                         ensureIsHost(room);
 
-                        if (room.Settings.AutoStartDuration == TimeSpan.Zero)
-                            room.StopCountdown();
+                        if (room.Settings.AutoStartEnabled)
+                            throw new InvalidStateException("Cannot cancel auto-start countdown.");
+
+                        room.StopCountdown();
                         break;
 
                     default:
@@ -674,7 +683,7 @@ namespace osu.Server.Spectator.Hubs
             switch (room.State)
             {
                 case MultiplayerRoomState.Open:
-                    if (room.Settings.AutoStartDuration != TimeSpan.Zero)
+                    if (room.Settings.AutoStartEnabled)
                     {
                         bool shouldHaveCountdown = !room.Queue.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
