@@ -17,19 +17,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     public class MultiplayerCountdownTest : MultiplayerTest
     {
         [Fact]
-        public async Task CannotStartCountdownIfNotReady()
+        public async Task CanStartCountdownIfNotReady()
         {
             await Hub.JoinRoom(ROOM_ID);
-
-            await Assert.ThrowsAsync<InvalidStateException>(async () => await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) }));
+            await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Null(room.Countdown);
-                Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownChangedEvent>()), Times.Never);
+                Assert.NotNull(room.Countdown);
+                Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownChangedEvent>()), Times.Once);
             }
         }
 

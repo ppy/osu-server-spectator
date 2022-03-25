@@ -405,10 +405,6 @@ namespace osu.Server.Spectator.Hubs
                 {
                     case StartMatchCountdownRequest countdown:
                         ensureIsHost(room);
-
-                        if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
-                            throw new InvalidStateException("Can't start countdown when the host is not ready.");
-
                         room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, InternalStartMatch);
 
                         break;
