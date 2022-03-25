@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -21,7 +22,6 @@ namespace osu.Server.Spectator.Hubs
     public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer, IMultiplayerServerMatchCallbacks
     {
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
-
         private readonly IDatabaseFactory databaseFactory;
 
         public MultiplayerHub(IDistributedCache cache, EntityStore<ServerMultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory)
@@ -102,9 +102,9 @@ namespace osu.Server.Spectator.Hubs
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
                         room.AddUser(roomUser);
+                        room.UpdateForRetrieval();
 
                         await addDatabaseUser(room, roomUser);
-
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
                         Log(room, "User joined");
@@ -315,6 +315,7 @@ namespace osu.Server.Spectator.Hubs
 
                 await changeAndBroadcastUserState(room, user, newState);
 
+                // Signal newly-spectating users to load gameplay if currently in the middle of play.
                 if (newState == MultiplayerUserState.Spectating
                     && (room.State == MultiplayerRoomState.WaitingForLoad || room.State == MultiplayerRoomState.Playing))
                 {
@@ -383,7 +384,27 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                room.MatchTypeImplementation.HandleUserRequest(user, request);
+                switch (request)
+                {
+                    case StartMatchCountdownRequest countdown:
+                        ensureIsHost(room);
+
+                        if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
+                            throw new InvalidStateException("Can't start countdown when the host is not ready.");
+
+                        room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, InternalStartMatch);
+
+                        break;
+
+                    case StopCountdownRequest _:
+                        ensureIsHost(room);
+                        room.StopCountdown();
+                        break;
+
+                    default:
+                        room.MatchTypeImplementation.HandleUserRequest(user, request);
+                        break;
+                }
             }
         }
 
@@ -399,26 +420,7 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureIsHost(room);
 
-                if (room.State != MultiplayerRoomState.Open)
-                    throw new InvalidStateException("Can't start match when already in a running state.");
-
-                if (room.Queue.CurrentItem.Expired)
-                    throw new InvalidStateException("Cannot start an expired playlist item.");
-
-                var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
-
-                if (readyUsers.Length == 0)
-                    throw new InvalidStateException("Can't start match when no users are ready.");
-
-                if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
-                    throw new InvalidStateException("Can't start match when the host is not ready.");
-
-                foreach (var u in readyUsers)
-                    await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
-
-                await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
-
-                await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
+                await InternalStartMatch(room);
             }
         }
 
@@ -643,6 +645,17 @@ namespace osu.Server.Spectator.Hubs
             //check whether a room state change is required.
             switch (room.State)
             {
+                case MultiplayerRoomState.Open:
+                    // If there are no remaining ready users or the host is not ready, stop any existing countdown.
+                    // Todo: When we have an "automatic start" mode, this should also start a new countdown if any users _are_ ready.
+                    // Todo: This doesn't yet support non-match-start countdowns.
+                    bool shouldStopCountdown = room.Users.All(u => u.State != MultiplayerUserState.Ready);
+                    shouldStopCountdown |= room.Host?.State != MultiplayerUserState.Ready && room.Host?.State != MultiplayerUserState.Spectating;
+
+                    if (shouldStopCountdown)
+                        room.StopCountdown();
+                    break;
+
                 case MultiplayerRoomState.WaitingForLoad:
                     if (room.Users.All(u => u.State != MultiplayerUserState.WaitingForLoad))
                     {
@@ -850,8 +863,6 @@ namespace osu.Server.Spectator.Hubs
 
             await updateRoomStateIfRequired(room);
 
-            var clients = Clients.Group(GetGroupId(room.RoomID));
-
             // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
             if (room.Host?.Equals(user) == true)
             {
@@ -865,10 +876,10 @@ namespace osu.Server.Spectator.Hubs
             {
                 // the target user has already been removed from the group, so send the message to them separately.
                 await Clients.Client(state.ConnectionId).UserKicked(user);
-                await clients.UserKicked(user);
+                await Clients.Group(GetGroupId(room.RoomID)).UserKicked(user);
             }
             else
-                await clients.UserLeft(user);
+                await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
         }
 
         public Task SendMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
@@ -916,6 +927,33 @@ namespace osu.Server.Spectator.Hubs
             await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
         }
 
+        internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
+        Task<ItemUsage<ServerMultiplayerRoom>> IMultiplayerServerMatchCallbacks.GetRoom(long roomId) => GetRoom(roomId);
+
+        internal async Task InternalStartMatch(ServerMultiplayerRoom room)
+        {
+            if (room.State != MultiplayerRoomState.Open)
+                throw new InvalidStateException("Can't start match when already in a running state.");
+
+            if (room.Queue.CurrentItem.Expired)
+                throw new InvalidStateException("Cannot start an expired playlist item.");
+
+            var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
+
+            if (readyUsers.Length == 0)
+                throw new InvalidStateException("Can't start match when no users are ready.");
+
+            if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
+                throw new InvalidStateException("Can't start match when the host is not ready.");
+
+            foreach (var u in readyUsers)
+                await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
+
+            await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
+
+            await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
+        }
+
         private async Task unreadyAllUsers(ServerMultiplayerRoom room)
         {
             foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
@@ -923,5 +961,22 @@ namespace osu.Server.Spectator.Hubs
         }
 
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Verbose) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
+
+        protected override void Dispose(bool disposing)
+        {
+            // Todo: This cannot exist.
+            //
+            // SignalR hubs are transient objects, so it is invalid to store states in them. For this reason, the Hub is disposed after the request is handled and, of particular importance,
+            // accessing the Clients list will throw an exception after the hub is disposed.
+            //
+            // Countdown timers run in background threads, and although states aren't being stored in the hub, the Clients list _is_ used to notify users or to start the match.
+            // This usage does not cause problems for us, and seemingly, neither for SignalR.
+            //
+            // Todo: Further refactoring is needed around IMultiplayerServerMatchCallbacks to ensure that the hub is never stored.
+            // See: https://docs.microsoft.com/en-us/aspnet/core/signalr/hubcontext?view=aspnetcore-6.0 for more information on the proper way of doings things.
+            Clients = Clients;
+
+            base.Dispose(disposing);
+        }
     }
 }
