@@ -183,7 +183,8 @@ namespace osu.Server.Spectator.Hubs
                         Name = databaseRoom.name,
                         Password = databaseRoom.password,
                         MatchType = databaseRoom.type.ToMatchType(),
-                        QueueMode = databaseRoom.queue_mode.ToQueueMode()
+                        QueueMode = databaseRoom.queue_mode.ToQueueMode(),
+                        AutoStartDuration = TimeSpan.FromSeconds(databaseRoom.auto_start_duration)
                     }
                 };
 
@@ -389,8 +390,11 @@ namespace osu.Server.Spectator.Hubs
                     case StartMatchCountdownRequest countdown:
                         ensureIsHost(room);
 
-                        if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
-                            throw new InvalidStateException("Can't start countdown when the host is not ready.");
+                        if (room.State != MultiplayerRoomState.Open)
+                            throw new InvalidStateException("Cannot start a countdown during ongoing play.");
+
+                        if (room.Settings.AutoStartEnabled)
+                            throw new InvalidStateException("Cannot start manual countdown if auto-start is enabled.");
 
                         room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, InternalStartMatch);
 
@@ -398,6 +402,10 @@ namespace osu.Server.Spectator.Hubs
 
                     case StopCountdownRequest _:
                         ensureIsHost(room);
+
+                        if (room.Settings.AutoStartEnabled)
+                            throw new InvalidStateException("Cannot cancel auto-start countdown.");
+
                         room.StopCountdown();
                         break;
 
@@ -419,6 +427,13 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
                 ensureIsHost(room);
+
+                if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
+                    throw new InvalidStateException("Can't start match when the host is not ready.");
+
+                var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
+                if (readyUsers.Length == 0)
+                    throw new InvalidStateException("Can't start match when no users are ready.");
 
                 await InternalStartMatch(room);
             }
@@ -461,6 +476,8 @@ namespace osu.Server.Spectator.Hubs
                 Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
                 await room.Queue.AddItem(item, user);
                 Log(room, $"Item ID {item.ID} added at slot {room.Queue.UpcomingItems.TakeWhile(i => i != item).Count() + 1} (of {room.Playlist.Count})");
+
+                await updateRoomStateIfRequired(room);
             }
         }
 
@@ -497,6 +514,8 @@ namespace osu.Server.Spectator.Hubs
 
                 Log(room, $"Removing playlist item {playlistItemId}");
                 await room.Queue.RemoveItem(playlistItemId, user);
+
+                await updateRoomStateIfRequired(room);
             }
         }
 
@@ -554,6 +573,8 @@ namespace osu.Server.Spectator.Hubs
                 }
 
                 await OnMatchSettingsChanged(room);
+
+                await updateRoomStateIfRequired(room);
             }
         }
 
@@ -646,14 +667,14 @@ namespace osu.Server.Spectator.Hubs
             switch (room.State)
             {
                 case MultiplayerRoomState.Open:
-                    // If there are no remaining ready users or the host is not ready, stop any existing countdown.
-                    // Todo: When we have an "automatic start" mode, this should also start a new countdown if any users _are_ ready.
-                    // Todo: This doesn't yet support non-match-start countdowns.
-                    bool shouldStopCountdown = room.Users.All(u => u.State != MultiplayerUserState.Ready);
-                    shouldStopCountdown |= room.Host?.State != MultiplayerUserState.Ready && room.Host?.State != MultiplayerUserState.Spectating;
+                    if (room.Settings.AutoStartEnabled)
+                    {
+                        bool shouldHaveCountdown = !room.Queue.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
-                    if (shouldStopCountdown)
-                        room.StopCountdown();
+                        if (shouldHaveCountdown && room.Countdown == null)
+                            room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, InternalStartMatch);
+                    }
+
                     break;
 
                 case MultiplayerRoomState.WaitingForLoad:
@@ -940,11 +961,12 @@ namespace osu.Server.Spectator.Hubs
 
             var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
 
+            // If no users are ready, skip the current item in the queue.
             if (readyUsers.Length == 0)
-                throw new InvalidStateException("Can't start match when no users are ready.");
-
-            if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
-                throw new InvalidStateException("Can't start match when the host is not ready.");
+            {
+                await room.Queue.FinishCurrentItem();
+                return;
+            }
 
             foreach (var u in readyUsers)
                 await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);

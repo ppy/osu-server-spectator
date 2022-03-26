@@ -204,6 +204,11 @@ namespace osu.Server.Spectator.Hubs
         public void SkipToEndOfCountdown() => countdownSkipSource?.Cancel();
 
         /// <summary>
+        /// Whether the current countdown has been requested to stop.
+        /// </summary>
+        public bool CountdownCancellationRequested => countdownStopSource?.IsCancellationRequested == true;
+
+        /// <summary>
         /// Whether a countdown is currently running.
         /// </summary>
         public bool IsCountdownRunning => !countdownTask.IsCompleted;
