@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -314,7 +315,8 @@ namespace osu.Server.Spectator.Hubs
 
                 ensureValidStateSwitch(room, user.State, newState);
 
-                await changeAndBroadcastUserState(room, user, newState);
+                Debug.Assert(userUsage.Item != null);
+                await changeAndBroadcastUserState(room, user, userUsage.Item, newState);
 
                 // Signal newly-spectating users to load gameplay if currently in the middle of play.
                 if (newState == MultiplayerUserState.Spectating
@@ -323,7 +325,8 @@ namespace osu.Server.Spectator.Hubs
                     await Clients.Caller.LoadRequested();
                 }
 
-                await updateRoomStateIfRequired(room);
+                Debug.Assert(userUsage.Item != null);
+                await updateRoomStateIfRequired(room, userUsage.Item);
             }
         }
 
@@ -396,7 +399,7 @@ namespace osu.Server.Spectator.Hubs
                         if (room.Settings.AutoStartEnabled)
                             throw new InvalidStateException("Cannot start manual countdown if auto-start is enabled.");
 
-                        room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, InternalStartMatch);
+                        room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, r => InternalStartMatch(r, null));
 
                         break;
 
@@ -435,7 +438,8 @@ namespace osu.Server.Spectator.Hubs
                 if (readyUsers.Length == 0)
                     throw new InvalidStateException("Can't start match when no users are ready.");
 
-                await InternalStartMatch(room);
+                Debug.Assert(userUsage.Item != null);
+                await InternalStartMatch(room, userUsage.Item);
             }
         }
 
@@ -455,8 +459,9 @@ namespace osu.Server.Spectator.Hubs
                 if (!isGameplayState(user.State))
                     throw new InvalidStateException("Cannot abort gameplay while not in a gameplay state");
 
-                await changeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
-                await updateRoomStateIfRequired(room);
+                Debug.Assert(userUsage.Item != null);
+                await changeAndBroadcastUserState(room, user, userUsage.Item, MultiplayerUserState.Idle);
+                await updateRoomStateIfRequired(room, userUsage.Item);
             }
         }
 
@@ -474,10 +479,14 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
-                await room.Queue.AddItem(item, user);
+
+                Debug.Assert(userUsage.Item != null);
+                await room.Queue.AddItem(item, user, userUsage.Item);
+
                 Log(room, $"Item ID {item.ID} added at slot {room.Queue.UpcomingItems.TakeWhile(i => i != item).Count() + 1} (of {room.Playlist.Count})");
 
-                await updateRoomStateIfRequired(room);
+                Debug.Assert(userUsage.Item != null);
+                await updateRoomStateIfRequired(room, userUsage.Item);
             }
         }
 
@@ -495,7 +504,9 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Editing playlist item {item.ID} for beatmap {item.BeatmapID}");
-                await room.Queue.EditItem(item, user);
+
+                Debug.Assert(userUsage.Item != null);
+                await room.Queue.EditItem(item, user, userUsage.Item);
             }
         }
 
@@ -513,9 +524,12 @@ namespace osu.Server.Spectator.Hubs
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Removing playlist item {playlistItemId}");
-                await room.Queue.RemoveItem(playlistItemId, user);
 
-                await updateRoomStateIfRequired(room);
+                Debug.Assert(userUsage.Item != null);
+                await room.Queue.RemoveItem(playlistItemId, user, userUsage.Item);
+
+                Debug.Assert(userUsage.Item != null);
+                await updateRoomStateIfRequired(room, userUsage.Item);
             }
         }
 
@@ -568,13 +582,15 @@ namespace osu.Server.Spectator.Hubs
 
                 if (previousSettings.QueueMode != settings.QueueMode)
                 {
-                    await room.Queue.UpdateFromQueueModeChange();
+                    Debug.Assert(userUsage.Item != null);
+                    await room.Queue.UpdateFromQueueModeChange(userUsage.Item);
                     Log(room, $"Switching queue mode to {settings.QueueMode}");
                 }
 
-                await OnMatchSettingsChanged(room);
+                Debug.Assert(userUsage.Item != null);
 
-                await updateRoomStateIfRequired(room);
+                await OnMatchSettingsChanged(room, userUsage.Item);
+                await updateRoomStateIfRequired(room, userUsage.Item);
             }
         }
 
@@ -661,7 +677,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.
         /// </summary>
-        private async Task updateRoomStateIfRequired(ServerMultiplayerRoom room)
+        private async Task updateRoomStateIfRequired(ServerMultiplayerRoom room, MultiplayerClientState client)
         {
             //check whether a room state change is required.
             switch (room.State)
@@ -672,7 +688,7 @@ namespace osu.Server.Spectator.Hubs
                         bool shouldHaveCountdown = !room.Queue.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
                         if (shouldHaveCountdown && room.Countdown == null)
-                            room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, InternalStartMatch);
+                            room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, r => InternalStartMatch(r, null));
                     }
 
                     break;
@@ -689,8 +705,7 @@ namespace osu.Server.Spectator.Hubs
                             return;
                         }
 
-                        foreach (var u in loadedUsers)
-                            await changeAndBroadcastUserState(room, u, MultiplayerUserState.Playing);
+                        await changeAndBroadcastAllUserStates(room, loadedUsers, MultiplayerUserState.Playing, client);
 
                         await Clients.Group(GetGroupId(room.RoomID)).MatchStarted();
 
@@ -702,36 +717,73 @@ namespace osu.Server.Spectator.Hubs
                 case MultiplayerRoomState.Playing:
                     if (room.Users.All(u => u.State != MultiplayerUserState.Playing))
                     {
-                        foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.FinishedPlay))
-                            await changeAndBroadcastUserState(room, u, MultiplayerUserState.Results);
+                        var playingUsers = room.Users.Where(u => u.State == MultiplayerUserState.FinishedPlay).ToArray();
+
+                        await changeAndBroadcastAllUserStates(room, playingUsers, MultiplayerUserState.Results, client);
 
                         await changeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
 
-                        await room.Queue.FinishCurrentItem();
+                        await room.Queue.FinishCurrentItem(client);
                     }
 
                     break;
             }
         }
 
-        private async Task changeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
+        /// <summary>
+        /// Changes the states of all users in the given array.
+        /// </summary>
+        /// <param name="room">The room.</param>
+        /// <param name="users">The users whose states are to be changed.</param>
+        /// <param name="state">The new user state.</param>
+        /// <param name="existingClient">Any existing <see cref="MultiplayerClientState"/> usage.
+        /// Must not be <c>null</c> if a user has been retrieved via <see cref="StatefulUserHub{TClient,TUserState}.UserStates"/> or
+        /// <see cref="StatefulUserHub{TClient,TUserState}.GetOrCreateLocalUserState"/> prior to this call.</param>
+        private async Task changeAndBroadcastAllUserStates(ServerMultiplayerRoom room, MultiplayerRoomUser[] users, MultiplayerUserState state, MultiplayerClientState? existingClient)
         {
+            foreach (var u in users)
+            {
+                if (u.UserID == existingClient?.UserId)
+                    await changeAndBroadcastUserState(room, u, existingClient, state);
+                else
+                {
+                    using (var userUsage = await UserStates.GetForUse(u.UserID))
+                    {
+                        if (userUsage.Item != null)
+                            await changeAndBroadcastUserState(room, u, userUsage.Item, state);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Changes a user's state.
+        /// </summary>
+        /// <param name="room">The room.</param>
+        /// <param name="user">The user whose state is to be changed.</param>
+        /// <param name="client">A <see cref="MultiplayerClientState"/> matching the user.</param>
+        /// <param name="state">The new user state.</param>
+        /// <exception cref="ArgumentException">If the provided <paramref name="client"/> does not match the provided <paramref name="user"/>.</exception>
+        private async Task changeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerClientState client, MultiplayerUserState state)
+        {
+            if (user.UserID != client.UserId)
+                throw new ArgumentException($"Given {nameof(MultiplayerClientState)} must match the given {nameof(MultiplayerRoomUser)}.");
+
             Log(room, $"User state changed from {user.State} to {state}");
 
             user.State = state;
 
-            // handle whether this user should be receiving gameplay messages or not.
             switch (state)
             {
                 case MultiplayerUserState.FinishedPlay:
                 case MultiplayerUserState.Idle:
-                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
+                    await Groups.RemoveFromGroupAsync(client.ConnectionId, GetGroupId(room.RoomID, true));
                     break;
 
                 case MultiplayerUserState.Ready:
                 case MultiplayerUserState.Spectating:
-                    await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
+                    await Groups.AddToGroupAsync(client.ConnectionId, GetGroupId(room.RoomID, true));
                     break;
             }
 
@@ -882,7 +934,7 @@ namespace osu.Server.Spectator.Hubs
                 return;
             }
 
-            await updateRoomStateIfRequired(room);
+            await updateRoomStateIfRequired(room, state);
 
             // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
             if (room.Host?.Equals(user) == true)
@@ -928,22 +980,22 @@ namespace osu.Server.Spectator.Hubs
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemRemoved(playlistItemId);
         }
 
-        public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
+        public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, MultiplayerClientState? client)
         {
             await ensureAllUsersValidMods(room);
 
             if (item.ID == room.Settings.PlaylistItemId)
-                await unreadyAllUsers(room);
+                await unreadyAllUsers(room, client);
 
             await Clients.Group(GetGroupId(room.RoomID)).PlaylistItemChanged(item);
         }
 
-        public async Task OnMatchSettingsChanged(ServerMultiplayerRoom room)
+        public async Task OnMatchSettingsChanged(ServerMultiplayerRoom room, MultiplayerClientState? client)
         {
             await ensureAllUsersValidMods(room);
 
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
-            await unreadyAllUsers(room);
+            await unreadyAllUsers(room, client);
 
             await Clients.Group(GetGroupId(room.RoomID)).SettingsChanged(room.Settings);
         }
@@ -951,7 +1003,7 @@ namespace osu.Server.Spectator.Hubs
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
         Task<ItemUsage<ServerMultiplayerRoom>> IMultiplayerServerMatchCallbacks.GetRoom(long roomId) => GetRoom(roomId);
 
-        internal async Task InternalStartMatch(ServerMultiplayerRoom room)
+        internal async Task InternalStartMatch(ServerMultiplayerRoom room, MultiplayerClientState? client)
         {
             if (room.State != MultiplayerRoomState.Open)
                 throw new InvalidStateException("Can't start match when already in a running state.");
@@ -964,22 +1016,20 @@ namespace osu.Server.Spectator.Hubs
             // If no users are ready, skip the current item in the queue.
             if (readyUsers.Length == 0)
             {
-                await room.Queue.FinishCurrentItem();
+                await room.Queue.FinishCurrentItem(client);
                 return;
             }
 
-            foreach (var u in readyUsers)
-                await changeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
+            await changeAndBroadcastAllUserStates(room, readyUsers, MultiplayerUserState.WaitingForLoad, client);
 
             await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
             await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
         }
 
-        private async Task unreadyAllUsers(ServerMultiplayerRoom room)
+        private async Task unreadyAllUsers(ServerMultiplayerRoom room, MultiplayerClientState? client)
         {
-            foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
-                await changeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
+            await changeAndBroadcastAllUserStates(room, room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray(), MultiplayerUserState.Idle, client);
         }
 
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Verbose) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
