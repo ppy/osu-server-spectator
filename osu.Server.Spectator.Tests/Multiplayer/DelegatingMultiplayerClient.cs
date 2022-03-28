@@ -2,7 +2,10 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -13,7 +16,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     /// Used in testing. Delegates calls to one or more <see cref="IMultiplayerClient"/>s.
     /// Note: All members must be virtual!!
     /// </summary>
-    public class DelegatingMultiplayerClient : IMultiplayerClient
+    public class DelegatingMultiplayerClient : IMultiplayerClient, IClientProxy
     {
         private readonly IEnumerable<IMultiplayerClient> clients;
 
@@ -128,6 +131,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             foreach (var c in clients)
                 await c.PlaylistItemChanged(item);
+        }
+
+        public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = new CancellationToken())
+        {
+            return (Task)GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public)!.Invoke(this, args)!;
         }
     }
 }
