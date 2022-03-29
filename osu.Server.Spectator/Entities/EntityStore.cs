@@ -25,6 +25,20 @@ namespace osu.Server.Spectator.Entities
         private string statsDPrefix => $"entities.{typeof(T).Name}";
 
         /// <summary>
+        /// Retrieves an entity.
+        /// </summary>
+        /// <remarks>
+        /// !!DANGER!! This does not lock on the usage, so it should be used with care assuming the returned value may be invalidated at any point in time.
+        /// </remarks>
+        /// <param name="id">The ID of the requested entity.</param>
+        /// <returns>The entity.</returns>
+        public T? GetEntityUnsafe(long id)
+        {
+            lock (entityMapping)
+                return !entityMapping.TryGetValue(id, out var entity) ? null : entity.GetItemUnsafe();
+        }
+
+        /// <summary>
         /// Retrieve an entity with a lock for use.
         /// </summary>
         /// <param name="id">The ID of the requested entity.</param>

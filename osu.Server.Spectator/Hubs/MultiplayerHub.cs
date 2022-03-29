@@ -12,6 +12,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
+using osu.Game.Resources.Localisation.Web;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -721,18 +722,22 @@ namespace osu.Server.Spectator.Hubs
 
             user.State = state;
 
-            // handle whether this user should be receiving gameplay messages or not.
-            switch (state)
-            {
-                case MultiplayerUserState.FinishedPlay:
-                case MultiplayerUserState.Idle:
-                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
-                    break;
+            string? connectionId = UserStates.GetConnectionIdForUser(user.UserID);
 
-                case MultiplayerUserState.Ready:
-                case MultiplayerUserState.Spectating:
-                    await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(room.RoomID, true));
-                    break;
+            if (connectionId != null)
+            {
+                switch (state)
+                {
+                    case MultiplayerUserState.FinishedPlay:
+                    case MultiplayerUserState.Idle:
+                        await Groups.RemoveFromGroupAsync(connectionId, GetGroupId(room.RoomID, true));
+                        break;
+
+                    case MultiplayerUserState.Ready:
+                    case MultiplayerUserState.Spectating:
+                        await Groups.AddToGroupAsync(connectionId, GetGroupId(room.RoomID, true));
+                        break;
+                }
             }
 
             await Clients.Group(GetGroupId(room.RoomID)).UserStateChanged(user.UserID, user.State);
