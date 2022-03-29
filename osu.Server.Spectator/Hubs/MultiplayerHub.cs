@@ -574,6 +574,8 @@ namespace osu.Server.Spectator.Hubs
 
                 if (previousSettings.AutoStartDuration != settings.AutoStartDuration)
                 {
+                    // If autostart is still enabled, the countdown will be restarted in the `updateRoomStateIfRequired` call below.
+                    // Stopping the countdown here is important to ensure the new duration is applied over any previous autostart (or manual) countdown.
                     room.StopCountdown();
                     Log(room, $"Switching auto-start duration to {settings.AutoStartDuration}");
                 }
