@@ -572,14 +572,6 @@ namespace osu.Server.Spectator.Hubs
                     Log(room, $"Switching queue mode to {settings.QueueMode}");
                 }
 
-                if (previousSettings.AutoStartDuration != settings.AutoStartDuration)
-                {
-                    // If autostart is still enabled, the countdown will be restarted in the `updateRoomStateIfRequired` call below.
-                    // Stopping the countdown here is important to ensure the new duration is applied over any previous autostart (or manual) countdown.
-                    room.StopCountdown();
-                    Log(room, $"Switching auto-start duration to {settings.AutoStartDuration}");
-                }
-
                 await OnMatchSettingsChanged(room);
 
                 await updateRoomStateIfRequired(room);
@@ -988,6 +980,10 @@ namespace osu.Server.Spectator.Hubs
         {
             foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
                 await changeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
+
+            // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop the countdown.
+            // For example, gameplay-specific changes to the match settings or the current playlist item.
+            room.StopCountdown();
         }
 
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Verbose) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
