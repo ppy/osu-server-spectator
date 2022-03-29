@@ -336,6 +336,37 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
+        [Fact]
+        public async Task CountdownStoppedWhenAutoStartDurationChanged()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
+            await waitForCountingDown();
+
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.True(room.CountdownCancellationRequested || !room.IsCountdownRunning);
+            }
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await waitForCountingDown();
+
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.Zero });
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.True(room.CountdownCancellationRequested || !room.IsCountdownRunning);
+            }
+        }
+
         private async Task finishCountdown()
         {
             ServerMultiplayerRoom? room;
