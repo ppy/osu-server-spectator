@@ -572,6 +572,12 @@ namespace osu.Server.Spectator.Hubs
                     Log(room, $"Switching queue mode to {settings.QueueMode}");
                 }
 
+                if (previousSettings.AutoStartDuration != settings.AutoStartDuration)
+                {
+                    room.StopCountdown();
+                    Log(room, $"Switching auto-start duration to {settings.AutoStartDuration}");
+                }
+
                 await OnMatchSettingsChanged(room);
 
                 await updateRoomStateIfRequired(room);
