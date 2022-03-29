@@ -43,23 +43,42 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             };
 
             await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
 
-            MultiplayerRoom? room;
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
 
-            using (var usage = await Hub.GetRoom(ROOM_ID))
+            using (var roomUsage = await Hub.GetRoom(ROOM_ID))
             {
-                // unsafe, but just for tests.
-                room = usage.Item;
+                var room = roomUsage.Item;
                 Debug.Assert(room != null);
+
+                Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.Ready), Times.Once);
+                Receiver.Verify(r => r.UserStateChanged(USER_ID_2, MultiplayerUserState.Ready), Times.Once);
+                Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
             }
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.Ready), Times.Once);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Ready, u.State));
-
+            SetUserContext(ContextUser);
             await Hub.ChangeSettings(testSettings);
-            Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.Idle), Times.Once);
-            Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+
+            using (var roomUsage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = roomUsage.Item;
+                Debug.Assert(room != null);
+
+                Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.Idle), Times.Once);
+                Receiver.Verify(r => r.UserStateChanged(USER_ID_2, MultiplayerUserState.Idle), Times.Once);
+                Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+            }
+
+            // Check that users have been removed from groups by attempting to start gameplay, and making sure the second user does not start while in an idle state.
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+
+            UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            User2Receiver.Verify(r => r.LoadRequested(), Times.Never);
         }
 
         [Fact]
