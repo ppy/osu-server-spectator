@@ -575,7 +575,7 @@ namespace osu.Server.Spectator.Hubs
                     Log(room, $"Switching queue mode to {settings.QueueMode}");
                 }
 
-                await HubContext.OnMatchSettingsChanged(room);
+                await HubContext.NotifySettingsChanged(room);
 
                 await updateRoomStateIfRequired(room);
             }

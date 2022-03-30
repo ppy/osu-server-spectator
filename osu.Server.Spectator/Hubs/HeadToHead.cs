@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Hubs
                 // we don't need a state, but keep things simple by completely nulling the state.
                 // this allows the client to see a user state change and handle match type specifics based on that alone.
                 user.MatchState = null;
-                Hub.UpdateMatchUserState(Room, user);
+                Hub.NotifyMatchUserStateChanged(Room, user);
             }
         }
     }

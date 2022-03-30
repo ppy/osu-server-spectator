@@ -13,6 +13,9 @@ using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs
 {
+    /// <summary>
+    /// Allows communication with multiplayer clients outside of a direct <see cref="MultiplayerHub"/> context.
+    /// </summary>
     public class MultiplayerHubContext
     {
         private readonly IHubContext<MultiplayerHub> context;
@@ -27,64 +30,67 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Send an immediate event to all clients in a room.
+        /// Notifies users in a room of an event.
         /// </summary>
         /// <remarks>
         /// This should be used for events which have no permanent effect on state.
-        /// For operations which are intended to persist (and be visible to new users which join a room) use <see cref="UpdateMatchRoomState"/> or <see cref="UpdateMatchUserState"/> instead.
+        /// For operations which are intended to persist (and be visible to new users which join a room) use <see cref="NotifyMatchRoomStateChanged"/> or <see cref="NotifyMatchUserStateChanged"/> instead.
         /// </remarks>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="e">The event.</param>
-        public Task SendMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
+        public Task NotifyNewMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchEvent), e);
         }
 
         /// <summary>
-        /// Let the hub know that the room's <see cref="MultiplayerRoom.MatchState"/> has been altered.
+        /// Notify users in a room that the room's <see cref="MultiplayerRoom.MatchState"/> has been altered.
         /// </summary>
         /// <param name="room">The room whose state has changed.</param>
-        public Task UpdateMatchRoomState(ServerMultiplayerRoom room)
+        public Task NotifyMatchRoomStateChanged(ServerMultiplayerRoom room)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchRoomStateChanged), room.MatchState);
         }
 
         /// <summary>
-        /// Let the hub know that the a user's <see cref="MultiplayerRoomUser.MatchState"/> has been altered.
+        /// Notifies users in a room that a user's <see cref="MultiplayerRoomUser.MatchState"/> has been altered.
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="user">The user whose state has changed.</param>
-        public Task UpdateMatchUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user)
+        public Task NotifyMatchUserStateChanged(ServerMultiplayerRoom room, MultiplayerRoomUser user)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchUserStateChanged), user.UserID, user.MatchState);
         }
 
         /// <summary>
-        /// Let the hub know that a playlist item has been added.
+        /// Notifies users in a room that a playlist item has been added.
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="item">The added item.</param>
-        public Task OnPlaylistItemAdded(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
+        public Task NotifyPlaylistItemAdded(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemAdded), item);
         }
 
         /// <summary>
-        /// Let the hub know that a playlist item has been removed.
+        /// Notifies users in a room that a playlist item has been removed.
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="playlistItemId">The removed item.</param>
-        public Task OnPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId)
+        public Task NotifyPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemRemoved), playlistItemId);
         }
 
         /// <summary>
-        /// Let the hub know that a playlist item has been changed.
+        /// Notifies users in a room that a playlist item has been changed.
         /// </summary>
+        /// <remarks>
+        /// Adjusts user mod selections to ensure mod validity, and unreadies all users and stops the current countdown if the currently-selected playlist item was changed.
+        /// </remarks>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="item">The changed item.</param>
-        public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
+        public async Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
         {
             await EnsureAllUsersValidMods(room);
 
@@ -95,10 +101,13 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Let the hub know that the room settings have been changed.
+        /// Notifies users in a room that the room's settings have changed.
         /// </summary>
+        /// <remarks>
+        /// Adjusts user mod selections to ensure mod validity, unreadies all users, and stops the current countdown.
+        /// </remarks>
         /// <param name="room">The room to send the event to.</param>
-        public async Task OnMatchSettingsChanged(ServerMultiplayerRoom room)
+        public async Task NotifySettingsChanged(ServerMultiplayerRoom room)
         {
             await EnsureAllUsersValidMods(room);
 
@@ -117,6 +126,13 @@ namespace osu.Server.Spectator.Hubs
             return rooms.GetForUse(roomId);
         }
 
+        /// <summary>
+        /// Unreadies all users in a room.
+        /// </summary>
+        /// <remarks>
+        /// Stops the current countdown.
+        /// </remarks>
+        /// <param name="room">The room to unready users in.</param>
         public async Task UnreadyAllUsers(ServerMultiplayerRoom room)
         {
             foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
@@ -127,6 +143,10 @@ namespace osu.Server.Spectator.Hubs
             room.StopCountdown();
         }
 
+        /// <summary>
+        /// Adjusts user mod selections to ensure they're valid for the current playlist item.
+        /// </summary>
+        /// <param name="room">The room to validate user mods in.</param>
         public async Task EnsureAllUsersValidMods(ServerMultiplayerRoom room)
         {
             foreach (var user in room.Users)
@@ -136,6 +156,13 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
+        /// <summary>
+        /// Changes a user's mods in a room.
+        /// </summary>
+        /// <param name="newMods">The new mod selection.</param>
+        /// <param name="room">The room containing the user.</param>
+        /// <param name="user">The user.</param>
+        /// <exception cref="InvalidStateException">If the new selection is not valid for current playlist item.</exception>
         public async Task ChangeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user)
         {
             var newModList = newMods.ToList();
@@ -151,6 +178,12 @@ namespace osu.Server.Spectator.Hubs
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserModsChanged), user.UserID, newModList);
         }
 
+        /// <summary>
+        /// Changes a user's state in a room.
+        /// </summary>
+        /// <param name="room">The room containing the user.</param>
+        /// <param name="user">The user.</param>
+        /// <param name="state">The new state.</param>
         public async Task ChangeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
         {
             // Todo: How?

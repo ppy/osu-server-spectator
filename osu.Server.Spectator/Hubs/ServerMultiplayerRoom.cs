@@ -142,7 +142,7 @@ namespace osu.Server.Spectator.Hubs
                     countdownStartTime = DateTimeOffset.Now;
                     countdownDuration = countdown.TimeRemaining;
 
-                    await hub.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = countdown });
+                    await hub.NotifyNewMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = countdown });
                 }
 
                 // Run the countdown.
@@ -167,7 +167,7 @@ namespace osu.Server.Spectator.Hubs
 
                         roomUsage.Item.Countdown = null;
 
-                        await hub.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
+                        await hub.NotifyNewMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
 
                         if (stopSource.IsCancellationRequested)
                             return;

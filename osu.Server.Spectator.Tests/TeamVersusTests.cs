@@ -41,12 +41,12 @@ namespace osu.Server.Spectator.Tests
             var user = new MultiplayerRoomUser(1);
 
             room.AddUser(user);
-            hub.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
+            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
 
             teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
 
             checkUserOnTeam(user, team);
-            hub.Verify(h => h.UpdateMatchUserState(room, user), Times.Exactly(2));
+            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Exactly(2));
         }
 
         [Theory]
@@ -77,7 +77,7 @@ namespace osu.Server.Spectator.Tests
 
             room.AddUser(user);
             // called once on the initial user join operation (to inform other clients in the room).
-            hub.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
+            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
 
             var previousTeam = ((TeamVersusUserState)user.MatchState!).TeamID;
 
@@ -85,7 +85,7 @@ namespace osu.Server.Spectator.Tests
 
             checkUserOnTeam(user, previousTeam);
             // was not called a second time from the invalid change.
-            hub.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
+            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
         }
 
         [Fact]
