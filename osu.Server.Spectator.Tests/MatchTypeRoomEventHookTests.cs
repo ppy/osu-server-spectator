@@ -19,8 +19,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task NewUserJoinedTriggersRulesetHook()
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            var hub = new Mock<MultiplayerHubContext>();
+            var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
                 {
@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Tests
 
             await room.Initialise(DatabaseFactory.Object);
 
-            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
+            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
 
             room.AddUser(new MultiplayerRoomUser(1));
@@ -45,8 +45,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task UserLeavesTriggersRulesetHook()
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            var hub = new Mock<MultiplayerHubContext>();
+            var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
                 {
@@ -64,7 +64,7 @@ namespace osu.Server.Spectator.Tests
 
             room.AddUser(user);
 
-            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
+            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
 
             room.RemoveUser(user);
@@ -74,8 +74,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task TypeChangeTriggersInitialJoins()
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            var hub = new Mock<MultiplayerHubContext>();
+            var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
                 {
@@ -94,7 +94,7 @@ namespace osu.Server.Spectator.Tests
                 room.AddUser(new MultiplayerRoomUser(i));
 
             // change the match type
-            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hubCallbacks.Object);
+            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
             room.MatchTypeImplementation = typeImplementation.Object;
 
             // ensure the match type received hook events for all already joined users.

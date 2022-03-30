@@ -13,7 +13,7 @@ namespace osu.Server.Spectator.Hubs
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
-        private readonly IMultiplayerServerMatchCallbacks hubCallbacks;
+        private readonly MultiplayerHubContext hub;
 
         private MatchTypeImplementation matchTypeImplementation;
 
@@ -34,14 +34,14 @@ namespace osu.Server.Spectator.Hubs
 
         public readonly MultiplayerQueue Queue;
 
-        public ServerMultiplayerRoom(long roomId, IMultiplayerServerMatchCallbacks hubCallbacks)
+        public ServerMultiplayerRoom(long roomId, MultiplayerHubContext hub)
             : base(roomId)
         {
-            this.hubCallbacks = hubCallbacks;
+            this.hub = hub;
 
             // just to ensure non-null.
             matchTypeImplementation = createTypeImplementation(MatchType.HeadToHead);
-            Queue = new MultiplayerQueue(this, hubCallbacks);
+            Queue = new MultiplayerQueue(this, hub);
         }
 
         public async Task Initialise(IDatabaseFactory dbFactory)
@@ -83,10 +83,10 @@ namespace osu.Server.Spectator.Hubs
             switch (type)
             {
                 case MatchType.TeamVersus:
-                    return new TeamVersus(this, hubCallbacks);
+                    return new TeamVersus(this, hub);
 
                 default:
-                    return new HeadToHead(this, hubCallbacks);
+                    return new HeadToHead(this, hub);
             }
         }
 
@@ -128,7 +128,7 @@ namespace osu.Server.Spectator.Hubs
 
                 // Notify users that a new countdown has started.
                 // Note: The room must be re-retrieved rather than using our own instance to enforce single-thread access.
-                using (var roomUsage = await hubCallbacks.GetRoom(RoomID))
+                using (var roomUsage = await hub.GetRoom(RoomID))
                 {
                     if (roomUsage.Item == null)
                         return;
@@ -142,7 +142,7 @@ namespace osu.Server.Spectator.Hubs
                     countdownStartTime = DateTimeOffset.Now;
                     countdownDuration = countdown.TimeRemaining;
 
-                    await hubCallbacks.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = countdown });
+                    await hub.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = countdown });
                 }
 
                 // Run the countdown.
@@ -158,7 +158,7 @@ namespace osu.Server.Spectator.Hubs
 
                 // Notify users that the countdown has finished (or cancelled) and run the continuation.
                 // Note: The room must be re-retrieved rather than using our own instance to enforce single-thread access.
-                using (var roomUsage = await hubCallbacks.GetRoom(RoomID))
+                using (var roomUsage = await hub.GetRoom(RoomID))
                 {
                     try
                     {
@@ -167,7 +167,7 @@ namespace osu.Server.Spectator.Hubs
 
                         roomUsage.Item.Countdown = null;
 
-                        await hubCallbacks.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
+                        await hub.SendMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
 
                         if (stopSource.IsCancellationRequested)
                             return;

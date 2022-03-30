@@ -11,7 +11,7 @@ namespace osu.Server.Spectator.Hubs
     {
         private readonly TeamVersusRoomState state;
 
-        public TeamVersus(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
+        public TeamVersus(ServerMultiplayerRoom room, MultiplayerHubContext hub)
             : base(room, hub)
         {
             room.MatchState = state = TeamVersusRoomState.CreateDefault();

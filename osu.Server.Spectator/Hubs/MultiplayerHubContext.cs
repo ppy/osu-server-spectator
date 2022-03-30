@@ -13,7 +13,7 @@ using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class MultiplayerHubContext : IMultiplayerServerMatchCallbacks
+    public class MultiplayerHubContext
     {
         private readonly IHubContext<MultiplayerHub> context;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
@@ -26,31 +26,64 @@ namespace osu.Server.Spectator.Hubs
             this.users = users;
         }
 
+        /// <summary>
+        /// Send an immediate event to all clients in a room.
+        /// </summary>
+        /// <remarks>
+        /// This should be used for events which have no permanent effect on state.
+        /// For operations which are intended to persist (and be visible to new users which join a room) use <see cref="UpdateMatchRoomState"/> or <see cref="UpdateMatchUserState"/> instead.
+        /// </remarks>
+        /// <param name="room">The room to send the event to.</param>
+        /// <param name="e">The event.</param>
         public Task SendMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchEvent), e);
         }
 
+        /// <summary>
+        /// Let the hub know that the room's <see cref="MultiplayerRoom.MatchState"/> has been altered.
+        /// </summary>
+        /// <param name="room">The room whose state has changed.</param>
         public Task UpdateMatchRoomState(ServerMultiplayerRoom room)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchRoomStateChanged), room.MatchState);
         }
 
+        /// <summary>
+        /// Let the hub know that the a user's <see cref="MultiplayerRoomUser.MatchState"/> has been altered.
+        /// </summary>
+        /// <param name="room">The room to send the event to.</param>
+        /// <param name="user">The user whose state has changed.</param>
         public Task UpdateMatchUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchUserStateChanged), user.UserID, user.MatchState);
         }
 
+        /// <summary>
+        /// Let the hub know that a playlist item has been added.
+        /// </summary>
+        /// <param name="room">The room to send the event to.</param>
+        /// <param name="item">The added item.</param>
         public Task OnPlaylistItemAdded(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemAdded), item);
         }
 
+        /// <summary>
+        /// Let the hub know that a playlist item has been removed.
+        /// </summary>
+        /// <param name="room">The room to send the event to.</param>
+        /// <param name="playlistItemId">The removed item.</param>
         public Task OnPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId)
         {
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemRemoved), playlistItemId);
         }
 
+        /// <summary>
+        /// Let the hub know that a playlist item has been changed.
+        /// </summary>
+        /// <param name="room">The room to send the event to.</param>
+        /// <param name="item">The changed item.</param>
         public async Task OnPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
         {
             await EnsureAllUsersValidMods(room);
@@ -61,6 +94,10 @@ namespace osu.Server.Spectator.Hubs
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemChanged), item);
         }
 
+        /// <summary>
+        /// Let the hub know that the room settings have been changed.
+        /// </summary>
+        /// <param name="room">The room to send the event to.</param>
         public async Task OnMatchSettingsChanged(ServerMultiplayerRoom room)
         {
             await EnsureAllUsersValidMods(room);
@@ -71,6 +108,10 @@ namespace osu.Server.Spectator.Hubs
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.SettingsChanged), room.Settings);
         }
 
+        /// <summary>
+        /// Retrieves a <see cref="ServerMultiplayerRoom"/> usage.
+        /// </summary>
+        /// <param name="roomId">The ID of the room to retrieve.</param>
         public Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId)
         {
             return rooms.GetForUse(roomId);
