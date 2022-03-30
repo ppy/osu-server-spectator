@@ -13,7 +13,7 @@ namespace osu.Server.Spectator.Hubs
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
-        private readonly MultiplayerHubContext hub;
+        private readonly IMultiplayerHubContext hub;
 
         private MatchTypeImplementation matchTypeImplementation;
 
@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Hubs
 
         public readonly MultiplayerQueue Queue;
 
-        public ServerMultiplayerRoom(long roomId, MultiplayerHubContext hub)
+        public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub)
             : base(roomId)
         {
             this.hub = hub;

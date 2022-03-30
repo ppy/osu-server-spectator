@@ -23,12 +23,12 @@ namespace osu.Server.Spectator.Hubs
         public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentIndex];
 
         private readonly ServerMultiplayerRoom room;
-        private readonly MultiplayerHubContext hub;
+        private readonly IMultiplayerHubContext hub;
 
         private IDatabaseFactory? dbFactory;
         private int currentIndex;
 
-        public MultiplayerQueue(ServerMultiplayerRoom room, MultiplayerHubContext hub)
+        public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
         {
             this.room = room;
             this.hub = hub;

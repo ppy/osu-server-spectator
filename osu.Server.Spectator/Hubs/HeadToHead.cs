@@ -7,7 +7,7 @@ namespace osu.Server.Spectator.Hubs
 {
     public class HeadToHead : MatchTypeImplementation
     {
-        public HeadToHead(ServerMultiplayerRoom room, MultiplayerHubContext hub)
+        public HeadToHead(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
             : base(room, hub)
         {
         }

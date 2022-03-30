@@ -19,7 +19,7 @@ namespace osu.Server.Spectator.Tests
         [InlineData(1)]
         public async Task UserRequestsValidTeamChange(int team)
         {
-            var hub = new Mock<MultiplayerHubContext>();
+            var hub = new Mock<IMultiplayerHubContext>();
             var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
@@ -55,7 +55,7 @@ namespace osu.Server.Spectator.Tests
         [InlineData(3)]
         public async Task UserRequestsInvalidTeamChange(int team)
         {
-            var hub = new Mock<MultiplayerHubContext>();
+            var hub = new Mock<IMultiplayerHubContext>();
             var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
@@ -91,7 +91,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task NewUsersAssignedToTeamWithFewerUsers()
         {
-            var hub = new Mock<MultiplayerHubContext>();
+            var hub = new Mock<IMultiplayerHubContext>();
             var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
@@ -132,7 +132,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task InitialUsersAssignedToTeamsEqually()
         {
-            var hub = new Mock<MultiplayerHubContext>();
+            var hub = new Mock<IMultiplayerHubContext>();
             var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
@@ -163,7 +163,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task StateMaintainedBetweenRulesetSwitch()
         {
-            var hub = new Mock<MultiplayerHubContext>();
+            var hub = new Mock<IMultiplayerHubContext>();
             var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
