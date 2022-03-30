@@ -16,7 +16,7 @@ using osu.Server.Spectator.Extensions;
 namespace osu.Server.Spectator.Hubs
 {
     /// <summary>
-    /// Allows communication with multiplayer clients outside of a direct <see cref="MultiplayerHub"/> context.
+    /// Allows communication with multiplayer clients from potentially outside of a direct <see cref="MultiplayerHub"/> context.
     /// </summary>
     public class MultiplayerHubContext
     {
