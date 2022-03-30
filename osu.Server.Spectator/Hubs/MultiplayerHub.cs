@@ -399,7 +399,7 @@ namespace osu.Server.Spectator.Hubs
                         if (room.Settings.AutoStartEnabled)
                             throw new InvalidStateException("Cannot start manual countdown if auto-start is enabled.");
 
-                        room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, InternalStartMatch);
+                        room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, HubContext.StartMatch);
 
                         break;
 
@@ -438,7 +438,7 @@ namespace osu.Server.Spectator.Hubs
                 if (readyUsers.Length == 0)
                     throw new InvalidStateException("Can't start match when no users are ready.");
 
-                await InternalStartMatch(room);
+                await HubContext.StartMatch(room);
             }
         }
 
@@ -651,7 +651,7 @@ namespace osu.Server.Spectator.Hubs
                         bool shouldHaveCountdown = !room.Queue.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
                         if (shouldHaveCountdown && room.Countdown == null)
-                            room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, InternalStartMatch);
+                            room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, HubContext.StartMatch);
                     }
 
                     break;
@@ -664,7 +664,7 @@ namespace osu.Server.Spectator.Hubs
                         if (loadedUsers.Length == 0)
                         {
                             // all users have bailed from the load sequence. cancel the game start.
-                            await changeRoomState(room, MultiplayerRoomState.Open);
+                            await HubContext.ChangeRoomState(room, MultiplayerRoomState.Open);
                             return;
                         }
 
@@ -673,7 +673,7 @@ namespace osu.Server.Spectator.Hubs
 
                         await Clients.Group(GetGroupId(room.RoomID)).MatchStarted();
 
-                        await changeRoomState(room, MultiplayerRoomState.Playing);
+                        await HubContext.ChangeRoomState(room, MultiplayerRoomState.Playing);
                     }
 
                     break;
@@ -684,7 +684,7 @@ namespace osu.Server.Spectator.Hubs
                         foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.FinishedPlay))
                             await HubContext.ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Results);
 
-                        await changeRoomState(room, MultiplayerRoomState.Open);
+                        await HubContext.ChangeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
 
                         await room.Queue.FinishCurrentItem();
@@ -692,16 +692,6 @@ namespace osu.Server.Spectator.Hubs
 
                     break;
             }
-        }
-
-        /// <summary>
-        /// Changes the provided room's state and notifies all users.
-        /// </summary>
-        private async Task changeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
-        {
-            Log(room, $"Room state changing from {room.State} to {newState}");
-            room.State = newState;
-            await Clients.Group(GetGroupId(room.RoomID)).RoomStateChanged(newState);
         }
 
         /// <summary>
@@ -861,48 +851,6 @@ namespace osu.Server.Spectator.Hubs
 
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
 
-        internal async Task InternalStartMatch(ServerMultiplayerRoom room)
-        {
-            if (room.State != MultiplayerRoomState.Open)
-                throw new InvalidStateException("Can't start match when already in a running state.");
-
-            if (room.Queue.CurrentItem.Expired)
-                throw new InvalidStateException("Cannot start an expired playlist item.");
-
-            var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
-
-            // If no users are ready, skip the current item in the queue.
-            if (readyUsers.Length == 0)
-            {
-                await room.Queue.FinishCurrentItem();
-                return;
-            }
-
-            foreach (var u in readyUsers)
-                await HubContext.ChangeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
-
-            await changeRoomState(room, MultiplayerRoomState.WaitingForLoad);
-
-            await Clients.Group(GetGroupId(room.RoomID, true)).LoadRequested();
-        }
-
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Verbose) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
-
-        protected override void Dispose(bool disposing)
-        {
-            // Todo: This cannot exist.
-            //
-            // SignalR hubs are transient objects, so it is invalid to store states in them. For this reason, the Hub is disposed after the request is handled and, of particular importance,
-            // accessing the Clients list will throw an exception after the hub is disposed.
-            //
-            // Countdown timers run in background threads, and although states aren't being stored in the hub, the Clients list _is_ used to notify users or to start the match.
-            // This usage does not cause problems for us, and seemingly, neither for SignalR.
-            //
-            // Todo: Further refactoring is needed around IMultiplayerServerMatchCallbacks to ensure that the hub is never stored.
-            // See: https://docs.microsoft.com/en-us/aspnet/core/signalr/hubcontext?view=aspnetcore-6.0 for more information on the proper way of doings things.
-            Clients = Clients;
-
-            base.Dispose(disposing);
-        }
     }
 }

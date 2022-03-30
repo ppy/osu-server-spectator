@@ -216,6 +216,48 @@ namespace osu.Server.Spectator.Hubs
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), user.UserID, user.State);
         }
 
+        /// <summary>
+        /// Changes a room's state.
+        /// </summary>
+        /// <param name="room">The room.</param>
+        /// <param name="newState">The new room state.</param>
+        public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
+        {
+            log(room, null, $"Room state changing from {room.State} to {newState}");
+            room.State = newState;
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
+        }
+
+        /// <summary>
+        /// Starts a match in a room.
+        /// </summary>
+        /// <param name="room">The room to start the match for.</param>
+        /// <exception cref="InvalidStateException">If the current playlist item is expired or the room is not in an <see cref="MultiplayerRoomState.Open"/> state.</exception>
+        public async Task StartMatch(ServerMultiplayerRoom room)
+        {
+            if (room.State != MultiplayerRoomState.Open)
+                throw new InvalidStateException("Can't start match when already in a running state.");
+
+            if (room.Queue.CurrentItem.Expired)
+                throw new InvalidStateException("Cannot start an expired playlist item.");
+
+            var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
+
+            // If no users are ready, skip the current item in the queue.
+            if (readyUsers.Length == 0)
+            {
+                await room.Queue.FinishCurrentItem();
+                return;
+            }
+
+            foreach (var u in readyUsers)
+                await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
+
+            await ChangeRoomState(room, MultiplayerRoomState.WaitingForLoad);
+
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID, true)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
+        }
+
         private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Verbose)
         {
             logger.Add($"[user:{getLoggableUserIdentifier(user)}] [room:{room.RoomID}] {message.Trim()}", logLevel);
