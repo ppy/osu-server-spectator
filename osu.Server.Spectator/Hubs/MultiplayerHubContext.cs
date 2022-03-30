@@ -1,10 +1,12 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -21,12 +23,15 @@ namespace osu.Server.Spectator.Hubs
         private readonly IHubContext<MultiplayerHub> context;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly EntityStore<MultiplayerClientState> users;
+        private readonly Logger logger;
 
         public MultiplayerHubContext(IHubContext<MultiplayerHub> context, EntityStore<ServerMultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users)
         {
             this.context = context;
             this.rooms = rooms;
             this.users = users;
+
+            logger = Logger.GetLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
         }
 
         /// <summary>
@@ -186,8 +191,7 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="state">The new state.</param>
         public async Task ChangeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
         {
-            // Todo: How?
-            // Log(room, $"User state changed from {user.State} to {state}");
+            log(room, user, $"User state changed from {user.State} to {state}");
 
             user.State = state;
 
@@ -210,6 +214,21 @@ namespace osu.Server.Spectator.Hubs
             }
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), user.UserID, user.State);
+        }
+
+        private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Verbose)
+        {
+            logger.Add($"[user:{getLoggableUserIdentifier(user)}] [room:{room.RoomID}] {message.Trim()}", logLevel);
+        }
+
+        private void error(MultiplayerRoomUser? user, string message, Exception exception)
+        {
+            logger.Add($"[user:{getLoggableUserIdentifier(user)}] {message.Trim()}", LogLevel.Error, exception);
+        }
+
+        private string getLoggableUserIdentifier(MultiplayerRoomUser? user)
+        {
+            return user?.UserID.ToString() ?? "???";
         }
     }
 }
