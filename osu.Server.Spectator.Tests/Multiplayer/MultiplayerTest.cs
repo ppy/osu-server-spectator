@@ -95,10 +95,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             Rooms = new EntityStore<ServerMultiplayerRoom>();
             UserStates = new EntityStore<MultiplayerClientState>();
-            Hub = new TestMultiplayerHub(cache, Rooms, UserStates, DatabaseFactory.Object);
+
+            var hubContext = new Mock<IHubContext<MultiplayerHub>>();
+            Hub = new TestMultiplayerHub(cache, Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
 
             Clients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             Groups = new Mock<IGroupManager>();
+
+            hubContext.Setup(ctx => ctx.Groups).Returns(Groups.Object);
+            hubContext.Setup(ctx => ctx.Clients.Group(It.IsAny<string>())).Returns<string>(groupName => (IClientProxy)Clients.Object.Group(groupName));
+            hubContext.Setup(ctx => ctx.Clients.All).Returns((IClientProxy)Clients.Object.All);
 
             Groups.Setup(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                   .Callback<string, string, CancellationToken>((connectionId, groupId, _) =>

@@ -23,12 +23,12 @@ namespace osu.Server.Spectator.Hubs
         public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentIndex];
 
         private readonly ServerMultiplayerRoom room;
-        private readonly IMultiplayerServerMatchCallbacks hub;
+        private readonly IMultiplayerHubContext hub;
 
         private IDatabaseFactory? dbFactory;
         private int currentIndex;
 
-        public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
+        public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
         {
             this.room = room;
             this.hub = hub;
@@ -84,7 +84,7 @@ namespace osu.Server.Spectator.Hubs
                 await db.MarkPlaylistItemAsPlayedAsync(room.RoomID, CurrentItem.ID);
                 room.Playlist[currentIndex] = await (await db.GetPlaylistItemAsync(room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem(db);
 
-                await hub.OnPlaylistItemChanged(room, CurrentItem);
+                await hub.NotifyPlaylistItemChanged(room, CurrentItem);
                 await updatePlaylistOrder(db);
 
                 // In host-only mode, duplicate the playlist item for the next round if no other non-expired items exist.
@@ -170,7 +170,7 @@ namespace osu.Server.Spectator.Hubs
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                 room.Playlist[room.Playlist.IndexOf(existingItem)] = item;
 
-                await hub.OnPlaylistItemChanged(room, item);
+                await hub.NotifyPlaylistItemChanged(room, item);
             }
         }
 
@@ -201,7 +201,7 @@ namespace osu.Server.Spectator.Hubs
                 await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
 
             room.Playlist.Remove(item);
-            await hub.OnPlaylistItemRemoved(room, playlistItemId);
+            await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
 
             await updateCurrentItem();
         }
@@ -225,7 +225,7 @@ namespace osu.Server.Spectator.Hubs
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
             room.Playlist.Add(item);
-            await hub.OnPlaylistItemAdded(room, item);
+            await hub.NotifyPlaylistItemAdded(room, item);
 
             await updatePlaylistOrder(db);
         }
@@ -246,7 +246,7 @@ namespace osu.Server.Spectator.Hubs
             room.Settings.PlaylistItemId = nextItem.ID;
 
             if (nextItem.ID != lastItemID)
-                await hub.OnMatchSettingsChanged(room);
+                await hub.NotifySettingsChanged(room);
         }
 
         /// <summary>
@@ -298,7 +298,7 @@ namespace osu.Server.Spectator.Hubs
                 item.PlaylistOrder = (ushort)i;
 
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
-                await hub.OnPlaylistItemChanged(room, item);
+                await hub.NotifyPlaylistItemChanged(room, item);
             }
         }
     }

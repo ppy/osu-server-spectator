@@ -8,9 +8,9 @@ namespace osu.Server.Spectator.Hubs
     public abstract class MatchTypeImplementation
     {
         protected readonly ServerMultiplayerRoom Room;
-        protected readonly IMultiplayerServerMatchCallbacks Hub;
+        protected readonly IMultiplayerHubContext Hub;
 
-        protected MatchTypeImplementation(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
+        protected MatchTypeImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
         {
             Room = room;
             Hub = hub;

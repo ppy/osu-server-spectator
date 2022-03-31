@@ -19,8 +19,8 @@ namespace osu.Server.Spectator.Tests
         [InlineData(1)]
         public async Task UserRequestsValidTeamChange(int team)
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            var hub = new Mock<IMultiplayerHubContext>();
+            var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
                 {
@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Tests
             };
             await room.Initialise(DatabaseFactory.Object);
 
-            var teamVersus = new TeamVersus(room, hubCallbacks.Object);
+            var teamVersus = new TeamVersus(room, hub.Object);
 
             // change the match type
             room.MatchTypeImplementation = teamVersus;
@@ -41,12 +41,12 @@ namespace osu.Server.Spectator.Tests
             var user = new MultiplayerRoomUser(1);
 
             room.AddUser(user);
-            hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
+            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
 
             teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
 
             checkUserOnTeam(user, team);
-            hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Exactly(2));
+            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Exactly(2));
         }
 
         [Theory]
@@ -55,8 +55,8 @@ namespace osu.Server.Spectator.Tests
         [InlineData(3)]
         public async Task UserRequestsInvalidTeamChange(int team)
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            var hub = new Mock<IMultiplayerHubContext>();
+            var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
                 {
@@ -68,7 +68,7 @@ namespace osu.Server.Spectator.Tests
                 }
             };
             await room.Initialise(DatabaseFactory.Object);
-            var teamVersus = new TeamVersus(room, hubCallbacks.Object);
+            var teamVersus = new TeamVersus(room, hub.Object);
 
             // change the match type
             room.MatchTypeImplementation = teamVersus;
@@ -77,7 +77,7 @@ namespace osu.Server.Spectator.Tests
 
             room.AddUser(user);
             // called once on the initial user join operation (to inform other clients in the room).
-            hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
+            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
 
             var previousTeam = ((TeamVersusUserState)user.MatchState!).TeamID;
 
@@ -85,14 +85,14 @@ namespace osu.Server.Spectator.Tests
 
             checkUserOnTeam(user, previousTeam);
             // was not called a second time from the invalid change.
-            hubCallbacks.Verify(h => h.UpdateMatchUserState(room, user), Times.Once());
+            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
         }
 
         [Fact]
         public async Task NewUsersAssignedToTeamWithFewerUsers()
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            var hub = new Mock<IMultiplayerHubContext>();
+            var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
                 {
@@ -132,8 +132,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task InitialUsersAssignedToTeamsEqually()
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            var hub = new Mock<IMultiplayerHubContext>();
+            var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
                 {
@@ -163,8 +163,8 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task StateMaintainedBetweenRulesetSwitch()
         {
-            var hubCallbacks = new Mock<IMultiplayerServerMatchCallbacks>();
-            var room = new ServerMultiplayerRoom(1, hubCallbacks.Object)
+            var hub = new Mock<IMultiplayerHubContext>();
+            var room = new ServerMultiplayerRoom(1, hub.Object)
             {
                 Playlist =
                 {
