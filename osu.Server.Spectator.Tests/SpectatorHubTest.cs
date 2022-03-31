@@ -2,6 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
@@ -11,6 +13,7 @@ using Moq;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Scoring;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 using Xunit;
@@ -22,17 +25,32 @@ namespace osu.Server.Spectator.Tests
         private readonly SpectatorHub hub;
 
         private const int streamer_id = 1234;
+        private const int beatmap_id = 88;
         private const int watcher_id = 8000;
 
-        private static readonly SpectatorState state = new SpectatorState { BeatmapID = 88 };
+        private static readonly SpectatorState state = new SpectatorState
+        {
+            BeatmapID = beatmap_id,
+            RulesetID = 0,
+        };
 
         public SpectatorHubTest()
         {
+            if (Directory.Exists(SpectatorHub.REPLAYS_PATH))
+                Directory.Delete(SpectatorHub.REPLAYS_PATH, true);
+
             // not used for now, but left here for potential future usage.
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
             var clientStates = new EntityStore<SpectatorClientState>();
-            hub = new SpectatorHub(cache, clientStates);
+
+            var databaseFactory = new Mock<IDatabaseFactory>();
+            var database = new Mock<IDatabaseAccess>();
+            databaseFactory.Setup(factory => factory.GetInstance()).Returns(database.Object);
+            database.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => "user");
+            database.Setup(db => db.GetBeatmapChecksumAsync(beatmap_id)).ReturnsAsync(() => "d2a97fb2fa4529a5e857fe0466dc1daf");
+
+            hub = new SpectatorHub(cache, clientStates, databaseFactory.Object);
         }
 
         [Fact]
@@ -49,7 +67,11 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            await hub.BeginPlaySession(new SpectatorState { BeatmapID = 88 });
+            await hub.BeginPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+            });
 
             // check all other users were informed that streaming began
             mockClients.Verify(clients => clients.All, Times.Once);
@@ -60,6 +82,34 @@ namespace osu.Server.Spectator.Tests
             // check streaming data is propagating to watchers
             await hub.SendFrameData(data);
             mockReceiver.Verify(clients => clients.UserSentFrames(streamer_id, data));
+        }
+
+        [Fact]
+        public async Task ReplayDataIsSaved()
+        {
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockReceiver.Object);
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            await hub.BeginPlaySession(state);
+            await hub.SendFrameData(new FrameDataBundle(new ScoreInfo(), new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+
+            Assert.False(Directory.Exists(SpectatorHub.REPLAYS_PATH));
+
+            await hub.EndPlaySession(state);
+
+            Assert.True(Directory.Exists(SpectatorHub.REPLAYS_PATH));
+
+            var files = Directory.GetFiles(SpectatorHub.REPLAYS_PATH, "*", SearchOption.AllDirectories);
+            Assert.Single(files);
+            Assert.EndsWith($"-{streamer_id}-0-{beatmap_id}.osr", files.Single());
         }
 
         [Theory]
