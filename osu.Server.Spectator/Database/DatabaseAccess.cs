@@ -25,9 +25,11 @@ namespace osu.Server.Spectator.Database
                 new { id = jwtToken.Id });
         }
 
-        public Task<string?> GetUsernameAsync(int userId)
+        public async Task<string?> GetUsernameAsync(int userId)
         {
-            return connection.QueryFirstOrDefaultAsync<string?>("SELECT username FROM phpbb_users WHERE user_id = @UserID", new
+            var connection = await getConnectionAsync();
+
+            return await connection.QueryFirstOrDefaultAsync<string?>("SELECT username FROM phpbb_users WHERE user_id = @UserID", new
             {
                 UserID = userId
             });
