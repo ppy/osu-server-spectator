@@ -846,7 +846,11 @@ namespace osu.Server.Spectator.Hubs
                 await Clients.Group(GetGroupId(room.RoomID)).UserKicked(user);
             }
             else
+            {
+                // the target user has already been removed from the group, so send the message to them separately.
+                await Clients.Client(state.ConnectionId).UserLeft(user);
                 await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
+            }
         }
 
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);

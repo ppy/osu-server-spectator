@@ -103,6 +103,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Groups = new Mock<IGroupManager>();
 
             hubContext.Setup(ctx => ctx.Groups).Returns(Groups.Object);
+            hubContext.Setup(ctx => ctx.Clients.Client(It.IsAny<string>())).Returns<string>(connectionId => (IClientProxy)Clients.Object.Client(connectionId));
             hubContext.Setup(ctx => ctx.Clients.Group(It.IsAny<string>())).Returns<string>(groupName => (IClientProxy)Clients.Object.Group(groupName));
             hubContext.Setup(ctx => ctx.Clients.All).Returns((IClientProxy)Clients.Object.All);
 
@@ -136,6 +137,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             GameplayReceiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, true)) { CallBase = true };
             Receiver2 = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID_2, false)) { CallBase = true };
 
+            Clients.Setup(clients => clients.Client(USER_ID.ToString())).Returns(UserReceiver.Object);
+            Clients.Setup(clients => clients.Client(USER_ID_2.ToString())).Returns(User2Receiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, false))).Returns(Receiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, true))).Returns(GameplayReceiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2, false))).Returns(Receiver2.Object);
