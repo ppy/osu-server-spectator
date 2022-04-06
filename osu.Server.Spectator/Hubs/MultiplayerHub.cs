@@ -219,7 +219,7 @@ namespace osu.Server.Spectator.Hubs
 
                 try
                 {
-                    await leaveRoom(userUsage.Item);
+                    await leaveRoom(userUsage.Item, false);
                 }
                 finally
                 {
@@ -625,7 +625,7 @@ namespace osu.Server.Spectator.Hubs
 
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
-            await leaveRoom(state);
+            await leaveRoom(state, true);
             await base.CleanUpState(state);
         }
 
@@ -791,10 +791,10 @@ namespace osu.Server.Spectator.Hubs
             return await Rooms.GetForUse(roomId);
         }
 
-        private async Task leaveRoom(MultiplayerClientState state)
+        private async Task leaveRoom(MultiplayerClientState state, bool wasKick)
         {
             using (var roomUsage = await getLocalUserRoom(state))
-                await leaveRoom(state, roomUsage, false);
+                await leaveRoom(state, roomUsage, wasKick);
         }
 
         private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage, bool wasKick)

@@ -317,5 +317,22 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AbortGameplay());
         }
+
+        [Fact]
+        public async Task KickUser()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser);
+            await Hub.KickUser(USER_ID_2);
+
+            UserReceiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Once);
+            User2Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Once);
+            UserReceiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Never);
+            User2Receiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Never);
+        }
     }
 }
