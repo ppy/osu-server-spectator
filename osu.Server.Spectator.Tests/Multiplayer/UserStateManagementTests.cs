@@ -347,7 +347,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.LeaveRoom();
 
             UserReceiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once);
-            User2Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Never);
+            UserReceiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Never);
         }
     }
 }
