@@ -59,7 +59,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleOrDefaultAsync<string?>("SELECT checksum from osu_beatmaps where beatmap_id = @BeatmapID", new
+            return await connection.QuerySingleOrDefaultAsync<string?>("SELECT checksum from osu_beatmaps WHERE beatmap_id = @BeatmapID AND deleted_at IS NULL", new
             {
                 BeatmapId = beatmapId
             });
