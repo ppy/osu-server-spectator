@@ -206,7 +206,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Whether the current countdown has been requested to stop.
         /// </summary>
-        public bool CountdownCancellationRequested => countdownStopSource?.IsCancellationRequested == true;
+        public bool IsCountdownStoppedOrCancelled => countdownStopSource?.IsCancellationRequested != false;
 
         /// <summary>
         /// Whether a countdown is currently running.

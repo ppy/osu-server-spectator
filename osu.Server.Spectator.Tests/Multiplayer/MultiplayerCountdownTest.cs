@@ -299,7 +299,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.False(room.CountdownCancellationRequested);
+                Assert.False(room.IsCountdownStoppedOrCancelled);
                 Assert.True(room.IsCountdownRunning);
             }
 
@@ -331,7 +331,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.False(room.CountdownCancellationRequested);
+                Assert.False(room.IsCountdownStoppedOrCancelled);
                 Assert.True(room.IsCountdownRunning);
             }
         }
@@ -350,7 +350,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.True(room.CountdownCancellationRequested || !room.IsCountdownRunning);
+                Assert.True(room.IsCountdownStoppedOrCancelled);
             }
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
@@ -363,7 +363,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.True(room.CountdownCancellationRequested || !room.IsCountdownRunning);
+                Assert.True(room.IsCountdownStoppedOrCancelled);
             }
         }
 
