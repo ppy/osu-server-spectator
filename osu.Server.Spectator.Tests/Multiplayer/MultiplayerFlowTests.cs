@@ -47,7 +47,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
 
             // server requests users start playing.
-            Receiver.Verify(r => r.MatchStarted(), Times.Once);
+            Receiver.Verify(r => r.GameplayStarted(), Times.Once);
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
 
@@ -110,7 +110,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // room is still waiting for second user to load.
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
-            Receiver.Verify(r => r.MatchStarted(), Times.Never);
+            Receiver.Verify(r => r.GameplayStarted(), Times.Never);
 
             // second user finishes loading, which triggers gameplay to start.
             SetUserContext(ContextUser2);
@@ -119,7 +119,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
-                Receiver.Verify(r => r.MatchStarted(), Times.Once);
+                Receiver.Verify(r => r.GameplayStarted(), Times.Once);
                 Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
                 Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.Playing), Times.Once);
                 Receiver.Verify(r => r.UserStateChanged(USER_ID_2, MultiplayerUserState.Playing), Times.Once);

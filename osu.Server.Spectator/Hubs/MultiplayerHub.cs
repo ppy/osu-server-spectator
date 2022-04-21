@@ -671,7 +671,7 @@ namespace osu.Server.Spectator.Hubs
                         foreach (var u in loadedUsers)
                             await HubContext.ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Playing);
 
-                        await Clients.Group(GetGroupId(room.RoomID)).MatchStarted();
+                        await Clients.Group(GetGroupId(room.RoomID)).GameplayStarted();
 
                         await HubContext.ChangeRoomState(room, MultiplayerRoomState.Playing);
                     }
