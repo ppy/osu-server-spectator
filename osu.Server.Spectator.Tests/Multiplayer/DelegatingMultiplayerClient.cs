@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +20,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     public class DelegatingMultiplayerClient : IMultiplayerClient, IClientProxy
     {
         private readonly IEnumerable<IMultiplayerClient> clients;
+
+        public DelegatingMultiplayerClient()
+            : this(Enumerable.Empty<IMultiplayerClient>())
+        {
+        }
 
         public DelegatingMultiplayerClient(IEnumerable<IMultiplayerClient> clients)
         {
