@@ -308,10 +308,23 @@ namespace osu.Server.Spectator.Hubs
                 if (user.State == newState)
                     return;
 
-                // A current failure case is a client triggering `Idle` (ie. un-readying) before they received the `WaitingForLoad` message.
-                // There's potential that a client attempts to change state but rather than informing the client we choose to silently block these changes.
-                if (isGameplayState(user.State) && newState == MultiplayerUserState.Idle)
-                    return;
+                // There's a potential that a client attempts to change state while a message from the server is in transit. Silently block these changes rather than informing the client.
+                switch (newState)
+                {
+                    // If a client triggered `Idle` (ie. un-readying) before they received the `WaitingForLoad` message from the match starting.
+                    case MultiplayerUserState.Idle:
+                        if (isGameplayState(user.State))
+                            return;
+
+                        break;
+
+                    // If a client triggered `Loaded` before they received the `Idle` message from their gameplay being aborted.
+                    case MultiplayerUserState.Loaded:
+                        if (!isGameplayState(user.State))
+                            return;
+
+                        break;
+                }
 
                 Log(room, $"User changing state from {user.State} to {newState}");
 
@@ -657,24 +670,12 @@ namespace osu.Server.Spectator.Hubs
                     break;
 
                 case MultiplayerRoomState.WaitingForLoad:
-                    if (room.Users.All(u => u.State != MultiplayerUserState.WaitingForLoad))
-                    {
-                        var loadedUsers = room.Users.Where(u => u.State == MultiplayerUserState.Loaded).ToArray();
+                    int countGameplayUsers = room.Users.Count(u => isGameplayState(u.State));
+                    int countReadyUsers = room.Users.Count(u => u.State == MultiplayerUserState.ReadyForGameplay);
 
-                        if (loadedUsers.Length == 0)
-                        {
-                            // all users have bailed from the load sequence. cancel the game start.
-                            await HubContext.ChangeRoomState(room, MultiplayerRoomState.Open);
-                            return;
-                        }
-
-                        foreach (var u in loadedUsers)
-                            await HubContext.ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Playing);
-
-                        await Clients.Group(GetGroupId(room.RoomID)).GameplayStarted();
-
-                        await HubContext.ChangeRoomState(room, MultiplayerRoomState.Playing);
-                    }
+                    // Attempt to start gameplay when no more users need to change states. If all users have aborted, this will abort the match.
+                    if (countReadyUsers == countGameplayUsers)
+                        await HubContext.StartOrStopGameplay(room);
 
                     break;
 
@@ -730,6 +731,12 @@ namespace osu.Server.Spectator.Hubs
 
                     break;
 
+                case MultiplayerUserState.ReadyForGameplay:
+                    if (oldState != MultiplayerUserState.Loaded)
+                        throw new InvalidStateChangeException(oldState, newState);
+
+                    break;
+
                 case MultiplayerUserState.Playing:
                     // state is managed by the server.
                     throw new InvalidStateChangeException(oldState, newState);
@@ -764,6 +771,7 @@ namespace osu.Server.Spectator.Hubs
 
                 case MultiplayerUserState.WaitingForLoad:
                 case MultiplayerUserState.Loaded:
+                case MultiplayerUserState.ReadyForGameplay:
                 case MultiplayerUserState.Playing:
                     return true;
             }

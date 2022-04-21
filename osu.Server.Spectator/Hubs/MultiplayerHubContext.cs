@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -20,6 +21,11 @@ namespace osu.Server.Spectator.Hubs
     /// </summary>
     public class MultiplayerHubContext : IMultiplayerHubContext
     {
+        /// <summary>
+        /// The amount of time allowed for players to finish loading gameplay before they're either forced into gameplay (if loaded) or booted to the menu (if still loading).
+        /// </summary>
+        private static readonly TimeSpan gameplay_load_timeout = TimeSpan.FromMinutes(1);
+
         private readonly IHubContext<MultiplayerHub> context;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly EntityStore<MultiplayerClientState> users;
@@ -175,6 +181,41 @@ namespace osu.Server.Spectator.Hubs
             await ChangeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID, true)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
+
+            room.StartCountdown(new GameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
+        }
+
+        public async Task StartOrStopGameplay(ServerMultiplayerRoom room)
+        {
+            Debug.Assert(room.State == MultiplayerRoomState.WaitingForLoad);
+
+            room.StopCountdown<GameplayStartCountdown>();
+
+            bool anyUserPlaying = false;
+
+            // Start gameplay for users that are able to, and abort the others which cannot.
+            foreach (var user in room.Users)
+            {
+                string? connectionId = users.GetConnectionIdForUser(user.UserID);
+
+                if (connectionId == null)
+                    continue;
+
+                if (user.CanStartGameplay())
+                {
+                    await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Playing);
+                    await context.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.GameplayStarted));
+                    anyUserPlaying = true;
+                }
+                else if (user.State == MultiplayerUserState.WaitingForLoad)
+                {
+                    await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+                    await context.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.LoadAborted));
+                    log(room, user, "Gameplay aborted because this user took too long to load.");
+                }
+            }
+
+            await ChangeRoomState(room, anyUserPlaying ? MultiplayerRoomState.Playing : MultiplayerRoomState.Open);
         }
 
         private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Verbose)
