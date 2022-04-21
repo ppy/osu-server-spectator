@@ -263,8 +263,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(1));
@@ -397,8 +396,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -455,8 +453,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeState(MultiplayerUserState.Ready));

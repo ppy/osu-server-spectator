@@ -204,6 +204,23 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         /// <param name="context">The user context.</param>
         protected void SetUserContext(Mock<HubCallerContext> context) => Hub.Context = context.Object;
 
+        protected async Task LoadAndFinishGameplay(params Mock<HubCallerContext>[] users)
+        {
+            foreach (var u in users)
+            {
+                SetUserContext(u);
+
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+            }
+
+            foreach (var u in users)
+            {
+                SetUserContext(u);
+                await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            }
+        }
+
         private void setUpMockDatabase()
         {
             DatabaseFactory.Setup(factory => factory.GetInstance()).Returns(Database.Object);

@@ -62,7 +62,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Null(room.Countdown);
+                Assert.False(room.Countdown is MatchStartCountdown);
                 GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
@@ -93,7 +93,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Null(room.Countdown);
+                Assert.False(room.Countdown is MatchStartCountdown);
                 GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
@@ -188,8 +188,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Null(room.Countdown);
-                Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownChangedEvent>()), Times.Exactly(4));
+                Assert.False(room.Countdown is MatchStartCountdown);
+                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownChangedEvent>(e => e.Countdown == null)), Times.Exactly(2));
                 GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
