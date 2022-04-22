@@ -318,8 +318,9 @@ namespace osu.Server.Spectator.Hubs
 
                         break;
 
-                    // If a client triggered `Loaded` before they received the `Idle` message from their gameplay being aborted.
+                    // If a client a triggered gameplay state before they received the `Idle` message from their gameplay being aborted.
                     case MultiplayerUserState.Loaded:
+                    case MultiplayerUserState.ReadyForGameplay:
                         if (!isGameplayState(user.State))
                             return;
 
