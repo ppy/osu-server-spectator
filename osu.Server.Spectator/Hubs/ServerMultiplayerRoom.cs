@@ -175,13 +175,13 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public async Task StopCountdown()
         {
-            countdownStopSource?.Cancel();
+            if (Countdown == null)
+                return;
 
-            if (Countdown != null)
-            {
-                Countdown = null;
-                await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = null });
-            }
+            countdownStopSource?.Cancel();
+            Countdown = null;
+
+            await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = null });
         }
 
         /// <summary>
