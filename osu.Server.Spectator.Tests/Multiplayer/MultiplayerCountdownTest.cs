@@ -130,16 +130,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.NotNull(usage.Item?.Countdown);
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
-
                 Assert.NotNull(room.Countdown);
-                Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownChangedEvent>()), Times.Once);
             }
+
+            Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownChangedEvent>()), Times.Once);
 
             // Start second countdown.
 
@@ -155,29 +152,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
 
-            // Wait for the second countdown to begin running.
-            int attempts = 200;
-
-            while (attempts-- > 0)
-            {
-                using (var usage = await Hub.GetRoom(ROOM_ID))
-                {
-                    var room = usage.Item;
-                    Debug.Assert(room != null);
-
-                    if (room.Countdown != null && room.Countdown != existingCountdown)
-                        break;
-                }
-
-                Thread.Sleep(10);
-            }
-
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.NotNull(room.Countdown);
+                Assert.True(room.Countdown != null && room.Countdown != existingCountdown);
+
                 Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownChangedEvent>()), Times.Exactly(3));
                 GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
             }
@@ -392,7 +373,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 task = room.SkipToEndOfCountdown();
             }
 
-            await task;
+            try
+            {
+                await task;
+            }
+            catch (TaskCanceledException)
+            {
+                // don't care if task was cancelled.
+            }
         }
     }
 }
