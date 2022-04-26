@@ -15,7 +15,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 {
     public class MultiplayerCountdownTest : MultiplayerTest
     {
-        [Fact(Timeout = 1000)]
+        private const int test_timeout = 60000;
+
+        [Fact(Timeout = test_timeout)]
         public async Task CanStartCountdownIfNotReady()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -31,7 +33,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact(Timeout = 4000)]
+        [Fact(Timeout = test_timeout)]
         public async Task GameplayStartsWhenCountdownEnds()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -62,7 +64,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task GameplayStartsWhenCountdownFinished()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -95,7 +97,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task GameplayDoesNotStartWhenCountdownCancelled()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -117,7 +119,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task NewCountdownOverridesExisting()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -174,7 +176,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task CanNotStartCountdownDuringMatch()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -184,7 +186,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAsync<InvalidStateException>(async () => await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) }));
         }
 
-        [Fact(Timeout = 4000)]
+        [Fact(Timeout = test_timeout)]
         public async Task TimeRemainingUpdatedOnJoin()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -210,7 +212,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Assert.True(secondRoom.Countdown?.TimeRemaining.TotalSeconds < 60);
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task CanNotStartCountdownIfAutoStartEnabled()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -219,7 +221,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAsync<InvalidStateException>(async () => await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) }));
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task AutoStartCountdownDoesNotStartWithZeroDuration()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -234,7 +236,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task AutoStartCountdownStartsWhenHostReadies()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -249,7 +251,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task AutoStartCountdownStartsWhenGuestReadies()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -266,7 +268,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task AutoStartCountdownContinuesWhileAllUsersNotReady()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -303,7 +305,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task AutoStartCountdownCanNotBeCancelled()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -324,7 +326,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact(Timeout = 1000)]
+        [Fact(Timeout = test_timeout)]
         public async Task CountdownStoppedWhenAutoStartDurationChanged()
         {
             await Hub.JoinRoom(ROOM_ID);
