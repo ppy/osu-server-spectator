@@ -201,17 +201,22 @@ namespace osu.Server.Spectator.Hubs
         /// Skips to the end of the currently-running countdown, if one is running,
         /// and runs the callback (e.g. to start the match) as soon as possible unless the countdown has been cancelled.
         /// </summary>
-        public void SkipToEndOfCountdown() => countdownSkipSource?.Cancel();
+        /// <returns>
+        /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
+        /// </returns>
+        public Task SkipToEndOfCountdown()
+        {
+            countdownSkipSource?.Cancel();
+            return countdownTask;
+        }
 
         /// <summary>
-        /// Whether the current countdown has been requested to stop.
+        /// Wait synchronously for the current countdown to complete.
         /// </summary>
-        public bool CountdownCancellationRequested => countdownStopSource?.IsCancellationRequested == true;
-
-        /// <summary>
-        /// Whether a countdown is currently running.
-        /// </summary>
-        public bool IsCountdownRunning => !countdownTask.IsCompleted;
+        /// <returns>
+        /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
+        /// </returns>
+        public Task WaitForCountdown() => countdownTask;
 
         #endregion
     }

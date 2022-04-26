@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
-using osu.Server.Spectator.Hubs;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -39,23 +38,21 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Ready);
 
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromSeconds(3) });
-            await waitForCountingDown();
 
-            int attempts = 1000;
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
 
-            while (attempts-- > 0)
+            Task task;
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
-                using (var usage = await Hub.GetRoom(ROOM_ID))
-                {
-                    var room = usage.Item;
-                    Debug.Assert(room != null);
+                var room = usage.Item;
+                Debug.Assert(room != null);
 
-                    if (!room.IsCountdownRunning)
-                        break;
-
-                    Thread.Sleep(10);
-                }
+                task = room.WaitForCountdown();
             }
+
+            await task;
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -74,7 +71,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Ready);
 
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
-            await waitForCountingDown();
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -86,7 +85,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
             }
 
-            await finishCountdown();
+            await skipToEndOfCountdown();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -107,7 +106,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
             await Hub.SendMatchRequest(new StopCountdownRequest());
 
-            await finishCountdown();
+            await skipToEndOfCountdown();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -129,7 +128,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // Start first countdown.
 
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
-            await waitForCountingDown();
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -181,7 +182,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
             }
 
-            await finishCountdown();
+            await skipToEndOfCountdown();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -210,7 +211,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
-            await waitForCountingDown();
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -248,7 +251,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.False(room.IsCountdownRunning);
+                Assert.Null(room.Countdown);
             }
         }
 
@@ -259,9 +262,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
-            await waitForCountingDown();
 
-            await finishCountdown();
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
+
+            await skipToEndOfCountdown();
             GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
@@ -274,9 +279,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeState(MultiplayerUserState.Ready);
-            await waitForCountingDown();
 
-            await finishCountdown();
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
+
+            await skipToEndOfCountdown();
             GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
@@ -289,7 +296,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeState(MultiplayerUserState.Ready);
-            await waitForCountingDown();
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
 
             // The countdown should continue after the guest user unreadies (the only ready user).
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -299,11 +308,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.False(room.CountdownCancellationRequested);
-                Assert.True(room.IsCountdownRunning);
+                Assert.NotNull(room.Countdown);
             }
 
-            await finishCountdown();
+            await skipToEndOfCountdown();
 
             // When the countdown ends, it should not trigger LoadRequested(), but the current item in the queue should be skipped.
             using (var usage = await Hub.GetRoom(ROOM_ID))
@@ -322,7 +330,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
             await Hub.ChangeState(MultiplayerUserState.Ready);
-            await waitForCountingDown();
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
 
             await Assert.ThrowsAsync<InvalidStateException>(async () => await Hub.SendMatchRequest(new StopCountdownRequest()));
 
@@ -331,8 +341,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.False(room.CountdownCancellationRequested);
-                Assert.True(room.IsCountdownRunning);
+                Assert.NotNull(room.Countdown);
             }
         }
 
@@ -341,7 +350,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
-            await waitForCountingDown();
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
 
             await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
 
@@ -350,11 +361,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.True(room.CountdownCancellationRequested || !room.IsCountdownRunning);
+                Assert.Null(room.Countdown);
             }
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
-            await waitForCountingDown();
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item?.Countdown);
 
             await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.Zero });
 
@@ -363,39 +376,23 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.True(room.CountdownCancellationRequested || !room.IsCountdownRunning);
+                Assert.Null(room.Countdown);
             }
         }
 
-        private async Task finishCountdown()
+        private async Task skipToEndOfCountdown()
         {
-            ServerMultiplayerRoom? room;
+            Task task;
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
-                room = usage.Item;
-                room?.SkipToEndOfCountdown();
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                task = room.SkipToEndOfCountdown();
             }
 
-            Debug.Assert(room != null);
-
-            int attempts = 200;
-            while (attempts-- > 0 && room.IsCountdownRunning)
-                Thread.Sleep(10);
-        }
-
-        private async Task waitForCountingDown()
-        {
-            ServerMultiplayerRoom? room;
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-                room = usage.Item;
-
-            Debug.Assert(room != null);
-
-            int attempts = 200;
-            while (attempts-- > 0 && room.Countdown == null)
-                Thread.Sleep(10);
+            await task;
         }
     }
 }
