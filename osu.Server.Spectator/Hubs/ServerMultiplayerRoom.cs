@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
@@ -103,48 +104,24 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="countdown">The countdown to start. The <see cref="MultiplayerRoom"/> will receive this object for the duration of the countdown.</param>
         /// <param name="onComplete">A callback to be invoked when the countdown completes.</param>
-        public void StartCountdown(MultiplayerCountdown countdown, Func<ServerMultiplayerRoom, Task> onComplete)
+        public async Task StartCountdown(MultiplayerCountdown countdown, Func<ServerMultiplayerRoom, Task> onComplete)
         {
-            StopCountdown();
+            await StopCountdown();
 
             var stopSource = countdownStopSource = new CancellationTokenSource();
             var skipSource = countdownSkipSource = new CancellationTokenSource();
 
-            Task lastCountdownTask = countdownTask;
+            countdownStartTime = DateTimeOffset.Now;
+            countdownDuration = countdown.TimeRemaining;
+
+            Countdown = countdown;
+
+            await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = countdown });
+
             countdownTask = start();
 
-            // Some sections in the following code require single-threaded execution mode. This is achieved by re-retrieving the room from the hub, forcing an exclusive lock on it.
             async Task start()
             {
-                // Wait for the last countdown to finalise before starting a new one.
-                try
-                {
-                    await lastCountdownTask;
-                }
-                catch
-                {
-                    // Any failures in the last countdown should not prevent future countdowns from running.
-                }
-
-                // Notify users that a new countdown has started.
-                // Note: The room must be re-retrieved rather than using our own instance to enforce single-thread access.
-                using (var roomUsage = await hub.GetRoom(RoomID))
-                {
-                    if (roomUsage.Item == null)
-                        return;
-
-                    // The countdown could have been cancelled in a separate request before this task was able to run.
-                    if (stopSource.IsCancellationRequested)
-                        return;
-
-                    roomUsage.Item.Countdown = countdown;
-
-                    countdownStartTime = DateTimeOffset.Now;
-                    countdownDuration = countdown.TimeRemaining;
-
-                    await hub.NotifyNewMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = countdown });
-                }
-
                 // Run the countdown.
                 try
                 {
@@ -165,12 +142,12 @@ namespace osu.Server.Spectator.Hubs
                         if (roomUsage.Item == null)
                             return;
 
-                        roomUsage.Item.Countdown = null;
-
-                        await hub.NotifyNewMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
-
                         if (stopSource.IsCancellationRequested)
                             return;
+
+                        Debug.Assert(Countdown == countdown);
+
+                        await StopCountdown();
 
                         // The continuation could be run outside of the room lock, however it seems saner to run it within the same lock as the cancellation token usage.
                         // Furthermore, providing a room-id instead of the room becomes cumbersome for usages, so this also provides a nicer API.
@@ -195,23 +172,34 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Stops the current countdown, preventing its callback from running.
         /// </summary>
-        public void StopCountdown() => countdownStopSource?.Cancel();
+        public async Task StopCountdown()
+        {
+            if (Countdown == null)
+                return;
+
+            countdownStopSource?.Cancel();
+            Countdown = null;
+
+            await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = null });
+        }
 
         /// <summary>
         /// Skips to the end of the currently-running countdown, if one is running,
         /// and runs the callback (e.g. to start the match) as soon as possible unless the countdown has been cancelled.
         /// </summary>
-        public void SkipToEndOfCountdown() => countdownSkipSource?.Cancel();
+        /// <returns>
+        /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
+        /// </returns>
+        public Task SkipToEndOfCountdown()
+        {
+            countdownSkipSource?.Cancel();
+            return countdownTask;
+        }
 
         /// <summary>
-        /// Whether the current countdown has been requested to stop.
+        /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
         /// </summary>
-        public bool CountdownCancellationRequested => countdownStopSource?.IsCancellationRequested == true;
-
-        /// <summary>
-        /// Whether a countdown is currently running.
-        /// </summary>
-        public bool IsCountdownRunning => !countdownTask.IsCompleted;
+        public Task GetCurrentCountdownTask() => countdownTask;
 
         #endregion
     }

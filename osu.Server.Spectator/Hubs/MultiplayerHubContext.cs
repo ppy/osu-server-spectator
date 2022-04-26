@@ -91,7 +91,7 @@ namespace osu.Server.Spectator.Hubs
 
             // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop the countdown.
             // For example, gameplay-specific changes to the match settings or the current playlist item.
-            room.StopCountdown();
+            await room.StopCountdown();
         }
 
         public async Task EnsureAllUsersValidMods(ServerMultiplayerRoom room)
