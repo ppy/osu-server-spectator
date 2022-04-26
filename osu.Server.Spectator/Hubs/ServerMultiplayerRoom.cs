@@ -103,9 +103,9 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="countdown">The countdown to start. The <see cref="MultiplayerRoom"/> will receive this object for the duration of the countdown.</param>
         /// <param name="onComplete">A callback to be invoked when the countdown completes.</param>
-        public void StartCountdown(MultiplayerCountdown countdown, Func<ServerMultiplayerRoom, Task> onComplete)
+        public async Task StartCountdown(MultiplayerCountdown countdown, Func<ServerMultiplayerRoom, Task> onComplete)
         {
-            StopCountdown();
+            await StopCountdown();
 
             var stopSource = countdownStopSource = new CancellationTokenSource();
             var skipSource = countdownSkipSource = new CancellationTokenSource();
@@ -113,7 +113,9 @@ namespace osu.Server.Spectator.Hubs
             Task lastCountdownTask = countdownTask;
             countdownTask = start();
 
-            // Some sections in the following code require single-threaded execution mode. This is achieved by re-retrieving the room from the hub, forcing an exclusive lock on it.
+            Countdown = countdown;
+            await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = countdown });
+
             async Task start()
             {
                 // Wait for the last countdown to finalise before starting a new one.
@@ -137,12 +139,8 @@ namespace osu.Server.Spectator.Hubs
                     if (stopSource.IsCancellationRequested)
                         return;
 
-                    roomUsage.Item.Countdown = countdown;
-
                     countdownStartTime = DateTimeOffset.Now;
                     countdownDuration = countdown.TimeRemaining;
-
-                    await hub.NotifyNewMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = countdown });
                 }
 
                 // Run the countdown.
@@ -165,12 +163,14 @@ namespace osu.Server.Spectator.Hubs
                         if (roomUsage.Item == null)
                             return;
 
-                        roomUsage.Item.Countdown = null;
-
-                        await hub.NotifyNewMatchEvent(roomUsage.Item, new CountdownChangedEvent { Countdown = null });
+                        // A new countdown may have since replaced the currently tracked countdown.
+                        if (roomUsage.Item.Countdown == countdown)
+                            roomUsage.Item.Countdown = null;
 
                         if (stopSource.IsCancellationRequested)
                             return;
+
+                        await StopCountdown();
 
                         // The continuation could be run outside of the room lock, however it seems saner to run it within the same lock as the cancellation token usage.
                         // Furthermore, providing a room-id instead of the room becomes cumbersome for usages, so this also provides a nicer API.
@@ -195,7 +195,16 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Stops the current countdown, preventing its callback from running.
         /// </summary>
-        public void StopCountdown() => countdownStopSource?.Cancel();
+        public async Task StopCountdown()
+        {
+            countdownStopSource?.Cancel();
+
+            if (Countdown != null)
+            {
+                Countdown = null;
+                await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = null });
+            }
+        }
 
         /// <summary>
         /// Skips to the end of the currently-running countdown, if one is running,
@@ -216,7 +225,7 @@ namespace osu.Server.Spectator.Hubs
         /// <returns>
         /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
         /// </returns>
-        public Task WaitForCountdown() => countdownTask;
+        public Task WaitForCountdownCompletion() => countdownTask;
 
         #endregion
     }
