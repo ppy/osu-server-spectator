@@ -39,9 +39,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromSeconds(3) });
 
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.NotNull(usage.Item?.Countdown);
-
             Task task;
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
@@ -49,7 +46,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                task = room.WaitForCountdown();
+                Assert.NotNull(room.Countdown);
+                task = room.WaitForCountdownCompletion();
             }
 
             await task;
