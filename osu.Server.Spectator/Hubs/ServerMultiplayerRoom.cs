@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
@@ -141,12 +142,10 @@ namespace osu.Server.Spectator.Hubs
                         if (roomUsage.Item == null)
                             return;
 
-                        // A new countdown may have since replaced the currently tracked countdown.
-                        if (roomUsage.Item.Countdown != countdown)
-                            return;
-
                         if (stopSource.IsCancellationRequested)
                             return;
+
+                        Debug.Assert(Countdown == countdown);
 
                         await StopCountdown();
 
