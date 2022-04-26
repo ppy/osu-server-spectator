@@ -115,9 +115,9 @@ namespace osu.Server.Spectator.Hubs
 
             Countdown = countdown;
 
-            countdownTask = start();
-
             await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = countdown });
+
+            countdownTask = start();
 
             async Task start()
             {
