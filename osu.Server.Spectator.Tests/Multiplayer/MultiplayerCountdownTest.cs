@@ -47,7 +47,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 Assert.NotNull(room.Countdown);
-                task = room.WaitForCountdownCompletion();
+                task = room.GetCurrentCountdownTask();
             }
 
             await task;

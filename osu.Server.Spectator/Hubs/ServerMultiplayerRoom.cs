@@ -198,12 +198,9 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Wait synchronously for the current countdown to complete.
-        /// </summary>
-        /// <returns>
         /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
-        /// </returns>
-        public Task WaitForCountdownCompletion() => countdownTask;
+        /// </summary>
+        public Task GetCurrentCountdownTask() => countdownTask;
 
         #endregion
     }
