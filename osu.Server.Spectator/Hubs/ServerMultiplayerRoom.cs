@@ -110,39 +110,17 @@ namespace osu.Server.Spectator.Hubs
             var stopSource = countdownStopSource = new CancellationTokenSource();
             var skipSource = countdownSkipSource = new CancellationTokenSource();
 
-            Task lastCountdownTask = countdownTask;
-            countdownTask = start();
+            countdownStartTime = DateTimeOffset.Now;
+            countdownDuration = countdown.TimeRemaining;
 
             Countdown = countdown;
+
+            countdownTask = start();
+
             await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = countdown });
 
             async Task start()
             {
-                // Wait for the last countdown to finalise before starting a new one.
-                try
-                {
-                    await lastCountdownTask;
-                }
-                catch
-                {
-                    // Any failures in the last countdown should not prevent future countdowns from running.
-                }
-
-                // Notify users that a new countdown has started.
-                // Note: The room must be re-retrieved rather than using our own instance to enforce single-thread access.
-                using (var roomUsage = await hub.GetRoom(RoomID))
-                {
-                    if (roomUsage.Item == null)
-                        return;
-
-                    // The countdown could have been cancelled in a separate request before this task was able to run.
-                    if (stopSource.IsCancellationRequested)
-                        return;
-
-                    countdownStartTime = DateTimeOffset.Now;
-                    countdownDuration = countdown.TimeRemaining;
-                }
-
                 // Run the countdown.
                 try
                 {
@@ -164,8 +142,8 @@ namespace osu.Server.Spectator.Hubs
                             return;
 
                         // A new countdown may have since replaced the currently tracked countdown.
-                        if (roomUsage.Item.Countdown == countdown)
-                            roomUsage.Item.Countdown = null;
+                        if (roomUsage.Item.Countdown != countdown)
+                            return;
 
                         if (stopSource.IsCancellationRequested)
                             return;
