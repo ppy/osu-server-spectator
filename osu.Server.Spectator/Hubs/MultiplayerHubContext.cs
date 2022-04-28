@@ -97,7 +97,7 @@ namespace osu.Server.Spectator.Hubs
 
             // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop the countdown.
             // For example, gameplay-specific changes to the match settings or the current playlist item.
-            room.StopCountdown();
+            await room.StopCountdown();
         }
 
         public async Task EnsureAllUsersValidMods(ServerMultiplayerRoom room)
@@ -182,14 +182,14 @@ namespace osu.Server.Spectator.Hubs
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID, true)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
 
-            room.StartCountdown(new GameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
+            await room.StartCountdown(new GameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
         }
 
         public async Task StartOrStopGameplay(ServerMultiplayerRoom room)
         {
             Debug.Assert(room.State == MultiplayerRoomState.WaitingForLoad);
 
-            room.StopCountdown<GameplayStartCountdown>();
+            await room.StopCountdown<GameplayStartCountdown>();
 
             bool anyUserPlaying = false;
 
