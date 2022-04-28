@@ -185,6 +185,10 @@ namespace osu.Server.Spectator.Hubs
             await room.StartCountdown(new GameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
         }
 
+        /// <summary>
+        /// Starts gameplay for all users in the <see cref="MultiplayerUserState.Loaded"/> or <see cref="MultiplayerUserState.ReadyForGameplay"/> states,
+        /// and aborts gameplay for any others in the <see cref="MultiplayerUserState.WaitingForLoad"/> state.
+        /// </summary>
         public async Task StartOrStopGameplay(ServerMultiplayerRoom room)
         {
             Debug.Assert(room.State == MultiplayerRoomState.WaitingForLoad);
