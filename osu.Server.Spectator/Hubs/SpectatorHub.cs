@@ -20,6 +20,8 @@ namespace osu.Server.Spectator.Hubs
     {
         public const string REPLAYS_PATH = "replays";
 
+        private bool shouldSaveReplays => Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
+
         private readonly IDatabaseFactory databaseFactory;
 
         public SpectatorHub(IDistributedCache cache, EntityStore<SpectatorClientState> users, IDatabaseFactory databaseFactory)
@@ -113,18 +115,21 @@ namespace osu.Server.Spectator.Hubs
 
                 var now = DateTimeOffset.UtcNow;
 
-                score.ScoreInfo.Date = now;
-                var legacyEncoder = new LegacyScoreEncoder(score, null);
+                if (shouldSaveReplays)
+                {
+                    score.ScoreInfo.Date = now;
+                    var legacyEncoder = new LegacyScoreEncoder(score, null);
 
-                string path = Path.Combine(REPLAYS_PATH, now.Year.ToString(), now.Month.ToString(), now.Day.ToString());
+                    string path = Path.Combine(REPLAYS_PATH, now.Year.ToString(), now.Month.ToString(), now.Day.ToString());
 
-                Directory.CreateDirectory(path);
+                    Directory.CreateDirectory(path);
 
-                string filename = $"{now.ToUnixTimeSeconds()}-{CurrentContextUserId}-{score.ScoreInfo.Ruleset.OnlineID}-{score.ScoreInfo.BeatmapInfo.OnlineID}.osr";
+                    string filename = $"{now.ToUnixTimeSeconds()}-{CurrentContextUserId}-{score.ScoreInfo.Ruleset.OnlineID}-{score.ScoreInfo.BeatmapInfo.OnlineID}.osr";
 
-                Log($"Writing replay for user {CurrentContextUserId} to {filename}");
-                using (var outStream = File.Create(Path.Combine(path, filename)))
-                    legacyEncoder.Encode(outStream);
+                    Log($"Writing replay for user {CurrentContextUserId} to {filename}");
+                    using (var outStream = File.Create(Path.Combine(path, filename)))
+                        legacyEncoder.Encode(outStream);
+                }
 
                 usage.Destroy();
             }
