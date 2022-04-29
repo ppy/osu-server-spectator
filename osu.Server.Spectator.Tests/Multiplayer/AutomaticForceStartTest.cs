@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.StartMatch();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.IsType<GameplayStartCountdown>(usage.Item?.Countdown);
+                Assert.IsType<ForceGameplayStartCountdown>(usage.Item?.Countdown);
         }
 
         [Fact]

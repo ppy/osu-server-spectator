@@ -182,7 +182,7 @@ namespace osu.Server.Spectator.Hubs
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID, true)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
 
-            await room.StartCountdown(new GameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
+            await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
         }
 
         /// <summary>
@@ -193,7 +193,7 @@ namespace osu.Server.Spectator.Hubs
         {
             Debug.Assert(room.State == MultiplayerRoomState.WaitingForLoad);
 
-            await room.StopCountdown<GameplayStartCountdown>();
+            await room.StopCountdown<ForceGameplayStartCountdown>();
 
             bool anyUserPlaying = false;
 
