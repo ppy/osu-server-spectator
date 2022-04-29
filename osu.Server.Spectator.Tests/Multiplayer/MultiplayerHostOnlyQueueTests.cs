@@ -35,8 +35,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -65,8 +64,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Idle);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -110,8 +108,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -133,8 +130,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Idle);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -169,9 +165,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-            await Hub.ChangeState(MultiplayerUserState.Results);
+            await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });

@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +20,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     public class DelegatingMultiplayerClient : IMultiplayerClient, IClientProxy
     {
         private readonly IEnumerable<IMultiplayerClient> clients;
+
+        public DelegatingMultiplayerClient()
+            : this(Enumerable.Empty<IMultiplayerClient>())
+        {
+        }
 
         public DelegatingMultiplayerClient(IEnumerable<IMultiplayerClient> clients)
         {
@@ -103,10 +109,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.LoadRequested();
         }
 
-        public virtual async Task MatchStarted()
+        public virtual async Task LoadAborted()
         {
             foreach (var c in clients)
-                await c.MatchStarted();
+                await c.LoadAborted();
+        }
+
+        public virtual async Task GameplayStarted()
+        {
+            foreach (var c in clients)
+                await c.GameplayStarted();
         }
 
         public virtual async Task ResultsReady()

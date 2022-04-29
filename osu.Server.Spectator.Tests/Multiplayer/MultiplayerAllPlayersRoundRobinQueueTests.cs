@@ -99,14 +99,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
 
-            SetUserContext(ContextUser2);
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser, ContextUser2);
 
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             SetUserContext(ContextUser2);

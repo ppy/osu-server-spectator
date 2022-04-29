@@ -170,7 +170,7 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Stops the current countdown, preventing its callback from running.
+        /// Stops any current countdown, preventing its callback from running.
         /// </summary>
         public async Task StopCountdown()
         {
@@ -181,6 +181,16 @@ namespace osu.Server.Spectator.Hubs
             Countdown = null;
 
             await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = null });
+        }
+
+        /// <summary>
+        /// Stops the current countdown if it's of the given type, preventing its callback from running.
+        /// </summary>
+        /// <typeparam name="T">The countdown type.</typeparam>
+        public async Task StopCountdown<T>()
+        {
+            if (Countdown is T)
+                await StopCountdown();
         }
 
         /// <summary>
@@ -196,9 +206,6 @@ namespace osu.Server.Spectator.Hubs
             return countdownTask;
         }
 
-        /// <summary>
-        /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
-        /// </summary>
         public Task GetCurrentCountdownTask() => countdownTask;
 
         #endregion

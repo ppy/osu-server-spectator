@@ -55,12 +55,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         /// <summary>
         /// A receiver specific to the user with ID <see cref="USER_ID"/>.
         /// </summary>
-        protected readonly Mock<IMultiplayerClient> UserReceiver;
+        protected readonly Mock<DelegatingMultiplayerClient> UserReceiver;
 
         /// <summary>
         /// A receiver specific to the user with ID <see cref="USER_ID_2"/>.
         /// </summary>
-        protected readonly Mock<IMultiplayerClient> User2Receiver;
+        protected readonly Mock<DelegatingMultiplayerClient> User2Receiver;
 
         /// <summary>
         /// The user with ID <see cref="USER_ID"/>.
@@ -130,8 +130,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             ContextUser2.Setup(context => context.UserIdentifier).Returns(USER_ID_2.ToString());
             ContextUser2.Setup(context => context.ConnectionId).Returns(USER_ID_2.ToString());
 
-            UserReceiver = new Mock<IMultiplayerClient>();
-            User2Receiver = new Mock<IMultiplayerClient>();
+            UserReceiver = new Mock<DelegatingMultiplayerClient>();
+            User2Receiver = new Mock<DelegatingMultiplayerClient>();
 
             Receiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, false)) { CallBase = true };
             GameplayReceiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, true)) { CallBase = true };
@@ -203,6 +203,23 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         /// </summary>
         /// <param name="context">The user context.</param>
         protected void SetUserContext(Mock<HubCallerContext> context) => Hub.Context = context.Object;
+
+        protected async Task LoadAndFinishGameplay(params Mock<HubCallerContext>[] users)
+        {
+            foreach (var u in users)
+            {
+                SetUserContext(u);
+
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+            }
+
+            foreach (var u in users)
+            {
+                SetUserContext(u);
+                await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            }
+        }
 
         private void setUpMockDatabase()
         {

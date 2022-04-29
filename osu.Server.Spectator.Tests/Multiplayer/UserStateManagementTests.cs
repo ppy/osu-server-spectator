@@ -114,6 +114,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
 
             await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
@@ -143,8 +144,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
             SetUserContext(ContextUser2);
             await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
@@ -179,9 +182,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
 
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
 
             VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
             VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID, false);
@@ -206,6 +207,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.StartMatch();
             await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
             VerifyAddedToGameplayGroup(ContextUser, ROOM_ID);
             VerifyAddedToGameplayGroup(ContextUser2, ROOM_ID, false);
@@ -268,6 +270,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // Test during Playing state.
             await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
             await Hub.ChangeState(MultiplayerUserState.Idle);
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerUserState.Playing, room.Item?.Users[0].State);
