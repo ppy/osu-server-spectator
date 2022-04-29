@@ -84,9 +84,13 @@ namespace osu.Server.Spectator.Tests
             mockReceiver.Verify(clients => clients.UserSentFrames(streamer_id, data));
         }
 
-        [Fact]
-        public async Task ReplayDataIsSaved()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task ReplayDataIsSaved(bool savingEnabled)
         {
+            Environment.SetEnvironmentVariable("SAVE_REPLAYS", savingEnabled ? "1" : "0");
+
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
             mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
@@ -105,11 +109,18 @@ namespace osu.Server.Spectator.Tests
 
             await hub.EndPlaySession(state);
 
-            Assert.True(Directory.Exists(SpectatorHub.REPLAYS_PATH));
+            if (savingEnabled)
+            {
+                Assert.True(Directory.Exists(SpectatorHub.REPLAYS_PATH));
 
-            var files = Directory.GetFiles(SpectatorHub.REPLAYS_PATH, "*", SearchOption.AllDirectories);
-            Assert.Single(files);
-            Assert.EndsWith($"-{streamer_id}-0-{beatmap_id}.osr", files.Single());
+                var files = Directory.GetFiles(SpectatorHub.REPLAYS_PATH, "*", SearchOption.AllDirectories);
+                Assert.Single(files);
+                Assert.EndsWith($"-{streamer_id}-0-{beatmap_id}.osr", files.Single());
+            }
+            else
+            {
+                Assert.False(Directory.Exists(SpectatorHub.REPLAYS_PATH));
+            }
         }
 
         [Theory]
