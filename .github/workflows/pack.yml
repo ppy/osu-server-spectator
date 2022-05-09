@@ -13,8 +13,19 @@ jobs:
         name: Checkout
         uses: actions/checkout@v2
       -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            pppy/osu-server-spectator
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=${{ github.ref_name }}
+          flavor: |
+            latest=false
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -32,4 +43,5 @@ jobs:
           file: ./osu.Server.Spectator/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: pppy/osu-server-spectator:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
