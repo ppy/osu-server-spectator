@@ -93,17 +93,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database = new Mock<IDatabaseAccess>();
             setUpMockDatabase();
 
-            MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-
             Rooms = new EntityStore<ServerMultiplayerRoom>();
             UserStates = new EntityStore<MultiplayerClientState>();
-
-            var hubContext = new Mock<IHubContext<MultiplayerHub>>();
-            Hub = new TestMultiplayerHub(cache, Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
-
             Clients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             Groups = new Mock<IGroupManager>();
+            Receiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, false)) { CallBase = true };
+            GameplayReceiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, true)) { CallBase = true };
+            Receiver2 = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID_2, false)) { CallBase = true };
+            Caller = new Mock<IMultiplayerClient>();
 
+            var hubContext = new Mock<IHubContext<MultiplayerHub>>();
             hubContext.Setup(ctx => ctx.Groups).Returns(Groups.Object);
             hubContext.Setup(ctx => ctx.Clients.Client(It.IsAny<string>())).Returns<string>(connectionId => (IClientProxy)Clients.Object.Client(connectionId));
             hubContext.Setup(ctx => ctx.Clients.Group(It.IsAny<string>())).Returns<string>(groupName => (IClientProxy)Clients.Object.Group(groupName));
@@ -124,17 +123,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                       connectionIds.Remove(connectionId);
                   });
 
-            Receiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, false)) { CallBase = true };
-            GameplayReceiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, true)) { CallBase = true };
-            Receiver2 = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID_2, false)) { CallBase = true };
-
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, false))).Returns(Receiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, true))).Returns(GameplayReceiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2, false))).Returns(Receiver2.Object);
-
-            Caller = new Mock<IMultiplayerClient>();
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
+            Hub = new TestMultiplayerHub(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 
