@@ -78,6 +78,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
         private readonly List<multiplayer_playlist_item> playlistItems;
         private readonly Dictionary<string, List<string>> groupMapping;
+        private readonly Dictionary<int, DelegatingMultiplayerClient> clientMapping;
 
         private int currentItemId;
 
@@ -86,6 +87,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             currentItemId = 0;
             playlistItems = new List<multiplayer_playlist_item>();
             groupMapping = new Dictionary<string, List<string>>();
+            clientMapping = new Dictionary<int, DelegatingMultiplayerClient>();
 
             DatabaseFactory = new Mock<IDatabaseFactory>();
             Database = new Mock<IDatabaseAccess>();
@@ -122,23 +124,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                       connectionIds.Remove(connectionId);
                   });
 
-            ContextUser = new Mock<HubCallerContext>();
-            ContextUser.Setup(context => context.UserIdentifier).Returns(USER_ID.ToString());
-            ContextUser.Setup(context => context.ConnectionId).Returns(USER_ID.ToString());
-
-            ContextUser2 = new Mock<HubCallerContext>();
-            ContextUser2.Setup(context => context.UserIdentifier).Returns(USER_ID_2.ToString());
-            ContextUser2.Setup(context => context.ConnectionId).Returns(USER_ID_2.ToString());
-
-            UserReceiver = new Mock<DelegatingMultiplayerClient>();
-            User2Receiver = new Mock<DelegatingMultiplayerClient>();
-
             Receiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, false)) { CallBase = true };
             GameplayReceiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, true)) { CallBase = true };
             Receiver2 = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID_2, false)) { CallBase = true };
 
-            Clients.Setup(clients => clients.Client(USER_ID.ToString())).Returns(UserReceiver.Object);
-            Clients.Setup(clients => clients.Client(USER_ID_2.ToString())).Returns(User2Receiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, false))).Returns(Receiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, true))).Returns(GameplayReceiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2, false))).Returns(Receiver2.Object);
@@ -149,6 +138,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 
+            CreateUser(USER_ID, out ContextUser, out UserReceiver);
+            CreateUser(USER_ID_2, out ContextUser2, out User2Receiver);
+
             SetUserContext(ContextUser);
 
             IEnumerable<IMultiplayerClient> getClientsForGroup(long roomId, bool gameplay)
@@ -157,21 +149,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     yield break;
 
                 foreach (var id in connectionIds)
-                {
-                    switch (int.Parse(id))
-                    {
-                        case USER_ID:
-                            yield return UserReceiver.Object;
-
-                            break;
-
-                        case USER_ID_2:
-                            yield return User2Receiver.Object;
-
-                            break;
-                    }
-                }
+                    yield return clientMapping[int.Parse(id)];
             }
+        }
+
+        protected void CreateUser(int userId, out Mock<HubCallerContext> context, out Mock<DelegatingMultiplayerClient> client)
+        {
+            context = new Mock<HubCallerContext>();
+            context.Setup(context => context.UserIdentifier).Returns(userId.ToString());
+            context.Setup(context => context.ConnectionId).Returns(userId.ToString());
+
+            client = new Mock<DelegatingMultiplayerClient>();
+            clientMapping[userId] = client.Object;
+
+            Clients.Setup(clients => clients.Client(userId.ToString())).Returns(client.Object);
         }
 
         /// <summary>
