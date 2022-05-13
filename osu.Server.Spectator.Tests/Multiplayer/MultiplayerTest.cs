@@ -78,6 +78,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
         private readonly List<multiplayer_playlist_item> playlistItems;
         private readonly Dictionary<string, List<string>> groupMapping;
+        private readonly Dictionary<int, DelegatingMultiplayerClient> clientMapping;
 
         private int currentItemId;
 
@@ -86,22 +87,22 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             currentItemId = 0;
             playlistItems = new List<multiplayer_playlist_item>();
             groupMapping = new Dictionary<string, List<string>>();
+            clientMapping = new Dictionary<int, DelegatingMultiplayerClient>();
 
             DatabaseFactory = new Mock<IDatabaseFactory>();
             Database = new Mock<IDatabaseAccess>();
             setUpMockDatabase();
 
-            MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-
             Rooms = new EntityStore<ServerMultiplayerRoom>();
             UserStates = new EntityStore<MultiplayerClientState>();
-
-            var hubContext = new Mock<IHubContext<MultiplayerHub>>();
-            Hub = new TestMultiplayerHub(cache, Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
-
             Clients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             Groups = new Mock<IGroupManager>();
+            Receiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, false)) { CallBase = true };
+            GameplayReceiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, true)) { CallBase = true };
+            Receiver2 = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID_2, false)) { CallBase = true };
+            Caller = new Mock<IMultiplayerClient>();
 
+            var hubContext = new Mock<IHubContext<MultiplayerHub>>();
             hubContext.Setup(ctx => ctx.Groups).Returns(Groups.Object);
             hubContext.Setup(ctx => ctx.Clients.Client(It.IsAny<string>())).Returns<string>(connectionId => (IClientProxy)Clients.Object.Client(connectionId));
             hubContext.Setup(ctx => ctx.Clients.Group(It.IsAny<string>())).Returns<string>(groupName => (IClientProxy)Clients.Object.Group(groupName));
@@ -122,32 +123,17 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                       connectionIds.Remove(connectionId);
                   });
 
-            ContextUser = new Mock<HubCallerContext>();
-            ContextUser.Setup(context => context.UserIdentifier).Returns(USER_ID.ToString());
-            ContextUser.Setup(context => context.ConnectionId).Returns(USER_ID.ToString());
-
-            ContextUser2 = new Mock<HubCallerContext>();
-            ContextUser2.Setup(context => context.UserIdentifier).Returns(USER_ID_2.ToString());
-            ContextUser2.Setup(context => context.ConnectionId).Returns(USER_ID_2.ToString());
-
-            UserReceiver = new Mock<DelegatingMultiplayerClient>();
-            User2Receiver = new Mock<DelegatingMultiplayerClient>();
-
-            Receiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, false)) { CallBase = true };
-            GameplayReceiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, true)) { CallBase = true };
-            Receiver2 = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID_2, false)) { CallBase = true };
-
-            Clients.Setup(clients => clients.Client(USER_ID.ToString())).Returns(UserReceiver.Object);
-            Clients.Setup(clients => clients.Client(USER_ID_2.ToString())).Returns(User2Receiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, false))).Returns(Receiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, true))).Returns(GameplayReceiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2, false))).Returns(Receiver2.Object);
-
-            Caller = new Mock<IMultiplayerClient>();
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
+            Hub = new TestMultiplayerHub(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
+
+            CreateUser(USER_ID, out ContextUser, out UserReceiver);
+            CreateUser(USER_ID_2, out ContextUser2, out User2Receiver);
 
             SetUserContext(ContextUser);
 
@@ -157,21 +143,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     yield break;
 
                 foreach (var id in connectionIds)
-                {
-                    switch (int.Parse(id))
-                    {
-                        case USER_ID:
-                            yield return UserReceiver.Object;
-
-                            break;
-
-                        case USER_ID_2:
-                            yield return User2Receiver.Object;
-
-                            break;
-                    }
-                }
+                    yield return clientMapping[int.Parse(id)];
             }
+        }
+
+        protected void CreateUser(int userId, out Mock<HubCallerContext> context, out Mock<DelegatingMultiplayerClient> client)
+        {
+            context = new Mock<HubCallerContext>();
+            context.Setup(context => context.UserIdentifier).Returns(userId.ToString());
+            context.Setup(context => context.ConnectionId).Returns(userId.ToString());
+
+            client = new Mock<DelegatingMultiplayerClient>();
+            clientMapping[userId] = client.Object;
+
+            Clients.Setup(clients => clients.Client(userId.ToString())).Returns(client.Object);
         }
 
         /// <summary>
@@ -231,16 +216,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     {
                         type = database_match_type.head_to_head,
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
-                        user_id = USER_ID,
+                        user_id = int.Parse(Hub.Context.UserIdentifier!),
                     });
 
             Database.Setup(db => db.GetRoomAsync(ROOM_ID_2))
                     .Callback<long>(InitialiseRoom)
-                    .ReturnsAsync(new multiplayer_room
+                    .ReturnsAsync(() => new multiplayer_room
                     {
                         type = database_match_type.head_to_head,
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
-                        user_id = USER_ID_2
+                        user_id = int.Parse(Hub.Context.UserIdentifier!)
                     });
 
             Database.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
