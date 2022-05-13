@@ -232,6 +232,34 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await checkOrder(1, 4, 5, 9, 2, 7, 6, 10, 3, 8, 11);
         }
 
+        [Fact]
+        public async Task OrderUpdatedOnRemoval()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRoundRobin });
+            await addItem();
+            await addItem();
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await addItem();
+            await addItem();
+            await addItem();
+
+            // Items should be initially interleaved.
+            await checkOrder(1, 4, 2, 5, 3, 6);
+
+            // Remove item with id 4.
+            await Hub.RemovePlaylistItem(4);
+            await checkOrder(1, 5, 2, 6, 3);
+
+            // Remove item with id 5.
+            await Hub.RemovePlaylistItem(5);
+            await checkOrder(1, 6, 2, 3);
+        }
+
         private async Task runGameplay()
         {
             SetUserContext(ContextUser2);

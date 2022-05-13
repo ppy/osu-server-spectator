@@ -198,10 +198,14 @@ namespace osu.Server.Spectator.Hubs
                 throw new InvalidStateException("Attempted to remove an item which has already been played.");
 
             using (var db = dbFactory.GetInstance())
+            {
                 await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
 
-            room.Playlist.Remove(item);
-            await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
+                room.Playlist.Remove(item);
+                await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
+
+                await updatePlaylistOrder(db);
+            }
 
             await updateCurrentItem();
         }
