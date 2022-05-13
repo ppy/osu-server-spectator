@@ -222,6 +222,8 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task addItem(IDatabaseAccess db, MultiplayerPlaylistItem item)
         {
+            // Add the item to the end of the list initially.
+            item.PlaylistOrder = ushort.MaxValue;
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
             room.Playlist.Add(item);
@@ -263,27 +265,33 @@ namespace osu.Server.Spectator.Hubs
                     break;
 
                 case QueueMode.AllPlayersRoundRobin:
-                    var itemsByPriority = new List<(MultiplayerPlaylistItem item, int priority)>();
+                    orderedActiveItems = new List<MultiplayerPlaylistItem>();
 
-                    // Assign a priority for items from each user, starting from 0 and increasing in order which the user added the items.
-                    foreach (var group in room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).GroupBy(item => item.OwnerID))
+                    bool isFirstSet = true;
+                    var firstSetOrderByUserId = new Dictionary<int, int>();
+
+                    // Group each user's items in order of addition.
+                    var userItemGroups = room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).GroupBy(item => item.OwnerID);
+
+                    foreach (IEnumerable<MultiplayerPlaylistItem> set in interleaveMany(userItemGroups))
                     {
-                        int priority = 0;
-                        itemsByPriority.AddRange(group.Select(item => (item, priority++)));
-                    }
+                        // Do some post processing on the set of items to ensure that the order is consistent.
+                        if (isFirstSet)
+                        {
+                            // For the first set, preserve the existing order of items and break ties based on the order in which items were added to the queue.
+                            orderedActiveItems.AddRange(set.OrderBy(item => item.PlaylistOrder).ThenBy(item => item.ID));
 
-                    orderedActiveItems = itemsByPriority
-                                         // Order by each user's priority.
-                                         .OrderBy(i => i.priority)
-                                         // Many users will have the same priority of items, so attempt to break the tie by maintaining previous ordering.
-                                         // Suppose there are two users: User1 and User2. User1 adds two items, and then User2 adds a third. If the previous order is not maintained,
-                                         // then after playing the first item by User1, their second item will become priority=0 and jump to the front of the queue (because it was added first).
-                                         .ThenBy(i => i.item.PlaylistOrder)
-                                         // If there are still ties (normally shouldn't happen), break ties by making items added earlier go first.
-                                         // This could happen if e.g. the item orders get reset.
-                                         .ThenBy(i => i.item.ID)
-                                         .Select(i => i.item)
-                                         .ToList();
+                            // Store the order of items to be used for all future sets.
+                            firstSetOrderByUserId = orderedActiveItems.Select((item, index) => (item, index)).ToDictionary(i => i.item.OwnerID, i => i.index);
+                        }
+                        else
+                        {
+                            // For the non-first set, preserve the same ordering of users as in the first set.
+                            orderedActiveItems.AddRange(set.OrderBy(i => firstSetOrderByUserId[i.OwnerID]));
+                        }
+
+                        isFirstSet = false;
+                    }
 
                     break;
             }
@@ -299,6 +307,40 @@ namespace osu.Server.Spectator.Hubs
 
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                 await hub.NotifyPlaylistItemChanged(room, item);
+            }
+        }
+
+        private IEnumerable<IEnumerable<T>> interleaveMany<T>(IEnumerable<IEnumerable<T>> collections)
+        {
+            var enumerators = new List<IEnumerator<T>>();
+
+            try
+            {
+                foreach (var c in collections)
+                    enumerators.Add(c.GetEnumerator());
+
+                while (true)
+                {
+                    // Advance the enumerators, remove any that fail. RemoveAll() is used since it's internally optimised for dispersed removals.
+                    enumerators.RemoveAll(it =>
+                    {
+                        if (it.MoveNext())
+                            return false;
+
+                        it.Dispose();
+                        return true;
+                    });
+
+                    if (enumerators.Count == 0)
+                        break;
+
+                    yield return enumerators.Select(it => it.Current);
+                }
+            }
+            finally
+            {
+                foreach (var it in enumerators)
+                    it.Dispose();
             }
         }
     }
