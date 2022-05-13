@@ -14,7 +14,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     public class MultiplayerAllPlayersRoundRobinQueueTests : MultiplayerTest
     {
         [Fact]
-        public async Task RoundRobinOrdering()
+        public async Task RoundRobinOrderingWithGameplay()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
@@ -28,55 +28,30 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await checkCurrentItem(1);
 
             // User 1 adds an extra item
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapID = 3333,
-                BeatmapChecksum = "3333"
-            });
+            await addItem();
 
             await checkCurrentItem(1);
-            await checkOrder(1, 0);
-            await checkOrder(2, 1);
+            await checkOrder(1, 2);
 
             // Item played.
             await runGameplay();
             await checkCurrentItem(2);
-            await checkOrder(2, 0);
+            await checkOrder(2);
 
             // User 2 adds two items.
             SetUserContext(ContextUser2);
-
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapID = 3333,
-                BeatmapChecksum = "3333"
-            });
-
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapID = 3333,
-                BeatmapChecksum = "3333"
-            });
+            await addItem();
+            await addItem();
 
             await checkCurrentItem(2);
-            await checkOrder(2, 0);
-            await checkOrder(3, 1);
-            await checkOrder(4, 2);
+            await checkOrder(2, 3, 4);
 
             // User 1 adds an item.
             SetUserContext(ContextUser);
-
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapID = 3333,
-                BeatmapChecksum = "3333"
-            });
+            await addItem();
 
             await checkCurrentItem(2);
-            await checkOrder(2, 0);
-            await checkOrder(3, 1);
-            await checkOrder(5, 2);
-            await checkOrder(4, 3);
+            await checkOrder(2, 3, 5, 4);
 
             // Gameplay is now run to ensure the ordering doesn't change.
             await runGameplay();
@@ -111,6 +86,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
         }
 
+        private async Task addItem()
+        {
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+        }
+
         private async Task checkCurrentItem(long expectedItemId)
         {
             using (var usage = await Hub.GetRoom(ROOM_ID))
@@ -122,14 +106,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        private async Task checkOrder(long itemId, ushort order)
+        private async Task checkOrder(params long[] itemIdsInOrder)
         {
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(order, room.Playlist.Single(i => i.ID == itemId).PlaylistOrder);
+                Assert.Equal(itemIdsInOrder, room.Playlist.Where(item => !item.Expired).OrderBy(item => item.PlaylistOrder).Select(item => item.ID));
             }
         }
     }
