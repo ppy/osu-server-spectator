@@ -277,7 +277,7 @@ namespace osu.Server.Spectator.Hubs
                     // Group each user's items in order of addition.
                     var userItemGroups = room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).GroupBy(item => item.OwnerID);
 
-                    foreach (IEnumerable<MultiplayerPlaylistItem> set in interleaveMany(userItemGroups))
+                    foreach (IEnumerable<MultiplayerPlaylistItem> set in userItemGroups.Interleave())
                     {
                         // Do some post processing on the set of items to ensure that the order is consistent.
                         if (isFirstSet)
@@ -311,40 +311,6 @@ namespace osu.Server.Spectator.Hubs
 
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                 await hub.NotifyPlaylistItemChanged(room, item);
-            }
-        }
-
-        private IEnumerable<IEnumerable<T>> interleaveMany<T>(IEnumerable<IEnumerable<T>> collections)
-        {
-            var enumerators = new List<IEnumerator<T>>();
-
-            try
-            {
-                foreach (var c in collections)
-                    enumerators.Add(c.GetEnumerator());
-
-                while (true)
-                {
-                    // Advance the enumerators, remove any that fail. RemoveAll() is used since it's internally optimised for dispersed removals.
-                    enumerators.RemoveAll(it =>
-                    {
-                        if (it.MoveNext())
-                            return false;
-
-                        it.Dispose();
-                        return true;
-                    });
-
-                    if (enumerators.Count == 0)
-                        break;
-
-                    yield return enumerators.Select(it => it.Current);
-                }
-            }
-            finally
-            {
-                foreach (var it in enumerators)
-                    it.Dispose();
             }
         }
     }
