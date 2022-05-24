@@ -94,6 +94,8 @@ namespace osu.Server.Spectator
 
             app.UseWebSockets();
 
+            app.UseSentryTracing();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<SpectatorHub>("/spectator");

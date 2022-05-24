@@ -336,3 +336,4 @@ inspectcode
 /BenchmarkDotNet.Artifacts
 
 **/replays/
+.idea/.idea.osu.Server.Spectator/.idea/misc.xml
