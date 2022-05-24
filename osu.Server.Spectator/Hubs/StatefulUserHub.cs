@@ -12,6 +12,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
+using Sentry;
 using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs
@@ -156,7 +157,19 @@ namespace osu.Server.Spectator.Hubs
 
         #region Implementation of ILogTarget
 
-        void ILogTarget.Error(string message, Exception exception) => Error(message, exception);
+        void ILogTarget.Error(string message, Exception exception)
+        {
+            Error(message, exception);
+
+            SentrySdk.CaptureException(exception, scope =>
+            {
+                scope.User = new User
+                {
+                    Id = Context.UserIdentifier
+                };
+            });
+        }
+
         void ILogTarget.Log(string message, LogLevel logLevel) => Log(message, logLevel);
 
         #endregion
