@@ -34,7 +34,8 @@ namespace osu.Server.Spectator
                        {
 #if DEBUG
                            //todo: figure correct way to get dev environment state
-                           webBuilder.UseStartup<StartupDevelopment>();
+                           webBuilder.UseSentry()
+                                     .UseStartup<StartupDevelopment>();
 #else
                            webBuilder.UseSentry(o =>
                            {
