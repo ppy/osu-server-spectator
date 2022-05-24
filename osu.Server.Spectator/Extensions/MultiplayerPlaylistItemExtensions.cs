@@ -77,10 +77,10 @@ namespace osu.Server.Spectator.Extensions
                 throw new InvalidStateException($"Invalid combination of required mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
             if (!ModUtils.CheckValidRequiredModsForMultiplayer(requiredMods, out invalid))
-                throw new InvalidStateException($"Mods unplayable in multiplayer were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
+                throw new InvalidStateException($"Invalid required mods were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
             if (!ModUtils.CheckValidFreeModsForMultiplayer(allowedMods, out invalid))
-                throw new InvalidStateException($"Mods invalid for 'free mods' were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
+                throw new InvalidStateException($"Invalid free mods were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
             // check aggregate combinations with each allowed mod individually.
             foreach (var allowedMod in allowedMods)
