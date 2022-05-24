@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -31,7 +31,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 room.MatchState = mockRoomState.Object;
 
-                await Hub.UpdateMatchRoomState(room);
+                await Hub.HubContext.NotifyMatchRoomStateChanged(room);
 
                 Receiver.Verify(c => c.MatchRoomStateChanged(mockRoomState.Object), Times.Once);
             }
@@ -42,14 +42,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
                 var mockEvent = new Mock<MatchServerEvent>();
 
-                await Hub.SendMatchEvent(room, mockEvent.Object);
+                await Hub.HubContext.NotifyNewMatchEvent(room, mockEvent.Object);
 
                 Receiver.Verify(c => c.MatchEvent(mockEvent.Object), Times.Once);
             }
@@ -60,7 +60,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var roomUsage = Hub.GetRoom(ROOM_ID))
+            using (var roomUsage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
@@ -71,7 +71,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 user.MatchState = mockRoomState.Object;
 
-                await Hub.UpdateMatchUserState(room, user);
+                await Hub.HubContext.NotifyMatchUserStateChanged(room, user);
 
                 Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, mockRoomState.Object), Times.Once);
             }
@@ -84,12 +84,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var roomUsage = Hub.GetRoom(ROOM_ID))
+            using (var roomUsage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
 
-                typeImplementation = new Mock<MatchTypeImplementation>(room, Hub);
+                typeImplementation = new Mock<MatchTypeImplementation>(room, Hub.HubContext);
                 room.MatchTypeImplementation = typeImplementation.Object;
             }
 
@@ -97,7 +97,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.SendMatchRequest(mockRequest.Object);
 
-            using (var roomUsage = Hub.GetRoom(ROOM_ID))
+            using (var roomUsage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
@@ -110,7 +110,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -121,7 +121,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeSettings(new MultiplayerRoomSettings { MatchType = MatchType.TeamVersus });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -149,7 +149,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);

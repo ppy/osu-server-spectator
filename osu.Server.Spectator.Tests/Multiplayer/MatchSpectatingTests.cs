@@ -43,7 +43,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Clients.Verify(clients => clients.Client(ContextUser2.Object.ConnectionId).UserStateChanged(USER_ID_2, MultiplayerUserState.WaitingForLoad), Times.Never);
 
             await Hub.ChangeState(MultiplayerUserState.Loaded);
-            Receiver.Verify(c => c.MatchStarted(), Times.Once);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+            UserReceiver.Verify(c => c.GameplayStarted(), Times.Once);
             Clients.Verify(clients => clients.Client(ContextUser2.Object.ConnectionId).UserStateChanged(USER_ID_2, MultiplayerUserState.Playing), Times.Never);
 
             await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
@@ -67,7 +68,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task SpectatingUserReceivesLoadRequestedAfterMatchStarted()
+        public async Task SpectatingUserReceivesLoadRequestedAfterGameplayStarted()
         {
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeState(MultiplayerUserState.Ready);

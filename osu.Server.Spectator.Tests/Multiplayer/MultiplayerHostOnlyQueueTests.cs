@@ -35,10 +35,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -65,10 +64,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Idle);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -110,10 +108,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -133,10 +130,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Idle);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -169,14 +165,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-            await Hub.ChangeState(MultiplayerUserState.Results);
+            await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);

@@ -61,7 +61,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -92,7 +92,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "3333"
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -116,7 +116,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.JoinRoom(ROOM_ID);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -145,7 +145,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.RemovePlaylistItem(2);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -196,7 +196,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
             await Hub.RemovePlaylistItem(2);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -263,8 +263,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(1));
@@ -296,7 +295,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "4444"
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -336,7 +335,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "4444"
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -377,7 +376,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "4444"
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -397,8 +396,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -420,7 +418,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             SetUserContext(ContextUser);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -438,7 +436,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "4444"
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -455,8 +453,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+            await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeState(MultiplayerUserState.Ready));
@@ -481,7 +478,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "3333"
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);

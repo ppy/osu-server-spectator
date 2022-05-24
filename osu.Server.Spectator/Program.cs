@@ -34,9 +34,16 @@ namespace osu.Server.Spectator
                        {
 #if DEBUG
                            //todo: figure correct way to get dev environment state
-                           webBuilder.UseStartup<StartupDevelopment>();
+                           webBuilder.UseSentry()
+                                     .UseStartup<StartupDevelopment>();
 #else
-                           webBuilder.UseStartup<Startup>();
+                           webBuilder.UseSentry(o =>
+                           {
+                               o.Dsn = "https://775dc89c1c3142e8a8fa5fd10590f443@sentry.ppy.sh/8";
+                               o.TracesSampleRate = 0.01;
+                               // TODO: set release name
+                           })
+                           .UseStartup<Startup>();
 #endif
 
                            webBuilder.UseUrls(urls: new[] { "http://*:80" });

@@ -152,7 +152,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             var setMods = new[] { new APIMod(new OsuModApproachDifferent()) };
             await Hub.ChangeUserMods(setMods);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -162,7 +162,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             setMods = new[] { new APIMod(new OsuModApproachDifferent()), new APIMod(new OsuModFlashlight()) };
             await Hub.ChangeUserMods(setMods);
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -190,7 +190,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             IEnumerable<APIMod> originalMods;
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -201,7 +201,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserMods(new[] { new APIMod(new OsuModApproachDifferent()), new APIMod(new OsuModHidden()) }));
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -233,7 +233,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 new APIMod(new CatchModDaycore())
             }));
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -262,7 +262,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             IEnumerable<APIMod> originalMods;
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -273,7 +273,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserMods(new[] { new APIMod(new OsuModApproachDifferent()) }));
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -304,11 +304,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             });
 
             await Hub.ChangeUserMods(new[] { new APIMod(new OsuModFlashlight()), new APIMod(new OsuModApproachDifferent()) });
-            assertUserMods(USER_ID, "FL", "AD");
+            await assertUserMods(USER_ID, "FL", "AD");
 
             SetUserContext(ContextUser2);
             await Hub.ChangeUserMods(new[] { new APIMod(new OsuModHardRock()), new APIMod(new OsuModApproachDifferent()) });
-            assertUserMods(USER_ID_2, "HR", "AD");
+            await assertUserMods(USER_ID_2, "HR", "AD");
 
             SetUserContext(ContextUser);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -322,16 +322,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 },
             });
 
-            assertUserMods(USER_ID, "FL");
-            assertUserMods(USER_ID_2, "HR");
+            await assertUserMods(USER_ID, "FL");
+            await assertUserMods(USER_ID_2, "HR");
 
-            void assertUserMods(int userId, params string[] modAcronyms)
+            async Task assertUserMods(int userId, params string[] modAcronyms)
             {
                 Receiver.Verify(c =>
                     c.UserModsChanged(userId, It.Is<IEnumerable<APIMod>>(mods =>
                         mods.Select(m => m.Acronym).SequenceEqual(modAcronyms))), Times.Once);
 
-                using (var usage = Hub.GetRoom(ROOM_ID))
+                using (var usage = await Hub.GetRoom(ROOM_ID))
                 {
                     var room = usage.Item;
                     Debug.Assert(room != null);
@@ -359,7 +359,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeUserMods(new[] { new APIMod(new OsuModApproachDifferent()) });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
@@ -373,7 +373,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "checksum",
             });
 
-            using (var usage = Hub.GetRoom(ROOM_ID))
+            using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);

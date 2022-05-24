@@ -42,12 +42,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // all users finish loading.
             await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
             Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.Playing), Times.Once);
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
 
             // server requests users start playing.
-            Receiver.Verify(r => r.MatchStarted(), Times.Once);
+            UserReceiver.Verify(r => r.GameplayStarted(), Times.Once);
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
 
@@ -106,20 +107,22 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // first user finishes loading.
             SetUserContext(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
             // room is still waiting for second user to load.
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
-            Receiver.Verify(r => r.MatchStarted(), Times.Never);
+            Receiver.Verify(r => r.GameplayStarted(), Times.Never);
 
             // second user finishes loading, which triggers gameplay to start.
             SetUserContext(ContextUser2);
             await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
-                Receiver.Verify(r => r.MatchStarted(), Times.Once);
+                UserReceiver.Verify(r => r.GameplayStarted(), Times.Once);
                 Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
                 Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.Playing), Times.Once);
                 Receiver.Verify(r => r.UserStateChanged(USER_ID_2, MultiplayerUserState.Playing), Times.Once);
@@ -152,6 +155,37 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
             }
+        }
+
+        [Fact]
+        public async Task SecondUserDoesNotReceiveLoadRequestWhenMatchRestartedAndNotReady()
+        {
+            // Start the match initially with both users entering gameplay.
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+
+            // Finish gameplay for both users.
+            SetUserContext(ContextUser2);
+            await Hub.AbortGameplay();
+            SetUserContext(ContextUser);
+            await Hub.AbortGameplay();
+
+            // Restart gameplay for the host user _only_.
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+
+            // Host receives load requested twice total, second user only receives it once.
+            UserReceiver.Verify(r => r.LoadRequested(), Times.Exactly(2));
+            User2Receiver.Verify(r => r.LoadRequested(), Times.Once);
         }
     }
 }

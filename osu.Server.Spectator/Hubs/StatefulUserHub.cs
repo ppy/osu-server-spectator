@@ -12,6 +12,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
+using Sentry;
 using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs
@@ -148,26 +149,27 @@ namespace osu.Server.Spectator.Hubs
 
         protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) => UserStates.GetForUse(userId);
 
-        protected override void Dispose(bool disposing)
-        {
-            // There is a case where we are logging events post context disposal.
-            // This can happen in asynchronous flows where the disposal completes before the async work we are running attempts to log.
-            // There's no easy way to check whether the context is in a disposed state, so this is a best effort solution.
-            postDisposalLoggableIdentifier = Context.UserIdentifier ?? "???";
-            base.Dispose(disposing);
-        }
-
         protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[user:{getLoggableUserIdentifier()}] {message.Trim()}", logLevel);
 
         protected void Error(string message, Exception exception) => logger.Add($"[user:{getLoggableUserIdentifier()}] {message.Trim()}", LogLevel.Error, exception);
 
-        private string getLoggableUserIdentifier() => postDisposalLoggableIdentifier ?? Context.UserIdentifier ?? "???";
-
-        private string? postDisposalLoggableIdentifier;
+        private string getLoggableUserIdentifier() => Context.UserIdentifier ?? "???";
 
         #region Implementation of ILogTarget
 
-        void ILogTarget.Error(string message, Exception exception) => Error(message, exception);
+        void ILogTarget.Error(string message, Exception exception)
+        {
+            Error(message, exception);
+
+            SentrySdk.CaptureException(exception, scope =>
+            {
+                scope.User = new User
+                {
+                    Id = Context.UserIdentifier
+                };
+            });
+        }
+
         void ILogTarget.Log(string message, LogLevel logLevel) => Log(message, logLevel);
 
         #endregion

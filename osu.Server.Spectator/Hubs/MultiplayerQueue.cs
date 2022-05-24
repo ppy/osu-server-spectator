@@ -23,12 +23,12 @@ namespace osu.Server.Spectator.Hubs
         public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentIndex];
 
         private readonly ServerMultiplayerRoom room;
-        private readonly IMultiplayerServerMatchCallbacks hub;
+        private readonly IMultiplayerHubContext hub;
 
         private IDatabaseFactory? dbFactory;
         private int currentIndex;
 
-        public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerServerMatchCallbacks hub)
+        public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
         {
             this.room = room;
             this.hub = hub;
@@ -84,7 +84,7 @@ namespace osu.Server.Spectator.Hubs
                 await db.MarkPlaylistItemAsPlayedAsync(room.RoomID, CurrentItem.ID);
                 room.Playlist[currentIndex] = await (await db.GetPlaylistItemAsync(room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem(db);
 
-                await hub.OnPlaylistItemChanged(room, CurrentItem);
+                await hub.NotifyPlaylistItemChanged(room, CurrentItem);
                 await updatePlaylistOrder(db);
 
                 // In host-only mode, duplicate the playlist item for the next round if no other non-expired items exist.
@@ -170,7 +170,7 @@ namespace osu.Server.Spectator.Hubs
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                 room.Playlist[room.Playlist.IndexOf(existingItem)] = item;
 
-                await hub.OnPlaylistItemChanged(room, item);
+                await hub.NotifyPlaylistItemChanged(room, item);
             }
         }
 
@@ -198,10 +198,14 @@ namespace osu.Server.Spectator.Hubs
                 throw new InvalidStateException("Attempted to remove an item which has already been played.");
 
             using (var db = dbFactory.GetInstance())
+            {
                 await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
 
-            room.Playlist.Remove(item);
-            await hub.OnPlaylistItemRemoved(room, playlistItemId);
+                room.Playlist.Remove(item);
+                await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
+
+                await updatePlaylistOrder(db);
+            }
 
             await updateCurrentItem();
         }
@@ -222,10 +226,12 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task addItem(IDatabaseAccess db, MultiplayerPlaylistItem item)
         {
+            // Add the item to the end of the list initially.
+            item.PlaylistOrder = ushort.MaxValue;
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
             room.Playlist.Add(item);
-            await hub.OnPlaylistItemAdded(room, item);
+            await hub.NotifyPlaylistItemAdded(room, item);
 
             await updatePlaylistOrder(db);
         }
@@ -246,7 +252,7 @@ namespace osu.Server.Spectator.Hubs
             room.Settings.PlaylistItemId = nextItem.ID;
 
             if (nextItem.ID != lastItemID)
-                await hub.OnMatchSettingsChanged(room);
+                await hub.NotifySettingsChanged(room);
         }
 
         /// <summary>
@@ -263,27 +269,33 @@ namespace osu.Server.Spectator.Hubs
                     break;
 
                 case QueueMode.AllPlayersRoundRobin:
-                    var itemsByPriority = new List<(MultiplayerPlaylistItem item, int priority)>();
+                    orderedActiveItems = new List<MultiplayerPlaylistItem>();
 
-                    // Assign a priority for items from each user, starting from 0 and increasing in order which the user added the items.
-                    foreach (var group in room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).GroupBy(item => item.OwnerID))
+                    bool isFirstSet = true;
+                    var firstSetOrderByUserId = new Dictionary<int, int>();
+
+                    // Group each user's items in order of addition.
+                    var userItemGroups = room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).GroupBy(item => item.OwnerID);
+
+                    foreach (IEnumerable<MultiplayerPlaylistItem> set in userItemGroups.Interleave())
                     {
-                        int priority = 0;
-                        itemsByPriority.AddRange(group.Select(item => (item, priority++)));
-                    }
+                        // Do some post processing on the set of items to ensure that the order is consistent.
+                        if (isFirstSet)
+                        {
+                            // For the first set, preserve the existing order of items and break ties based on the order in which items were added to the queue.
+                            orderedActiveItems.AddRange(set.OrderBy(item => item.PlaylistOrder).ThenBy(item => item.ID));
 
-                    orderedActiveItems = itemsByPriority
-                                         // Order by each user's priority.
-                                         .OrderBy(i => i.priority)
-                                         // Many users will have the same priority of items, so attempt to break the tie by maintaining previous ordering.
-                                         // Suppose there are two users: User1 and User2. User1 adds two items, and then User2 adds a third. If the previous order is not maintained,
-                                         // then after playing the first item by User1, their second item will become priority=0 and jump to the front of the queue (because it was added first).
-                                         .ThenBy(i => i.item.PlaylistOrder)
-                                         // If there are still ties (normally shouldn't happen), break ties by making items added earlier go first.
-                                         // This could happen if e.g. the item orders get reset.
-                                         .ThenBy(i => i.item.ID)
-                                         .Select(i => i.item)
-                                         .ToList();
+                            // Store the order of items to be used for all future sets.
+                            firstSetOrderByUserId = orderedActiveItems.Select((item, index) => (item, index)).ToDictionary(i => i.item.OwnerID, i => i.index);
+                        }
+                        else
+                        {
+                            // For the non-first set, preserve the same ordering of users as in the first set.
+                            orderedActiveItems.AddRange(set.OrderBy(i => firstSetOrderByUserId[i.OwnerID]));
+                        }
+
+                        isFirstSet = false;
+                    }
 
                     break;
             }
@@ -298,7 +310,7 @@ namespace osu.Server.Spectator.Hubs
                 item.PlaylistOrder = (ushort)i;
 
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
-                await hub.OnPlaylistItemChanged(room, item);
+                await hub.NotifyPlaylistItemChanged(room, item);
             }
         }
     }
