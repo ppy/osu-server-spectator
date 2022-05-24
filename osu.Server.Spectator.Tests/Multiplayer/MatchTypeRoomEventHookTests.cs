@@ -6,10 +6,9 @@ using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Hubs;
-using osu.Server.Spectator.Tests.Multiplayer;
 using Xunit;
 
-namespace osu.Server.Spectator.Tests
+namespace osu.Server.Spectator.Tests.Multiplayer
 {
     /// <summary>
     /// Tests covering propagation of events through <see cref="ServerMultiplayerRoom"/> to the <see cref="MultiplayerHub"/> via callbacks.
