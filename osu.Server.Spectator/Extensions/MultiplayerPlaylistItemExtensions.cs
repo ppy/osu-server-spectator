@@ -76,7 +76,7 @@ namespace osu.Server.Spectator.Extensions
             if (!ModUtils.CheckCompatibleSet(requiredMods, out var invalid))
                 throw new InvalidStateException($"Invalid combination of required mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
-            if (!ModUtils.CheckValidForMultiplayer(requiredMods, out invalid))
+            if (!ModUtils.CheckValidRequiredModsForMultiplayer(requiredMods, out invalid))
                 throw new InvalidStateException($"Mods unplayable in multiplayer were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
             if (!ModUtils.CheckValidFreeModsForMultiplayer(allowedMods, out invalid))
