@@ -10,6 +10,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets.Catch.Mods;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Mods;
 using Xunit;
 
@@ -378,6 +379,72 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
                 Assert.Empty(room.Users.First().Mods);
             }
+        }
+
+        [Fact]
+        public async Task AddUserUnplayableModThrows()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                RulesetID = 0,
+                RequiredMods = new[] { new APIMod(new OsuModAutoplay()) },
+            }));
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                RulesetID = 0,
+                AllowedMods = new[] { new APIMod(new OsuModAutoplay()) },
+            }));
+        }
+
+        [Fact]
+        public async Task AddMultiplayerUnplayableModThrows()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                RulesetID = 0,
+                RequiredMods = new[] { new APIMod(new ModAdaptiveSpeed()) },
+            }));
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                RulesetID = 0,
+                AllowedMods = new[] { new APIMod(new ModAdaptiveSpeed()) },
+            }));
+        }
+
+        [Fact]
+        public async Task AddMultiplayerInvalidFreeModThrowsOnAllowedModsOnly()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                RulesetID = 0,
+                RequiredMods = new[] { new APIMod(new OsuModDoubleTime()) },
+            });
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                RulesetID = 0,
+                AllowedMods = new[] { new APIMod(new OsuModDoubleTime()) },
+            }));
         }
     }
 }
