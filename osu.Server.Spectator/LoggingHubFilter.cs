@@ -36,6 +36,38 @@ namespace osu.Server.Spectator
             }
         }
 
+        public async Task OnConnectedAsync(HubLifetimeContext context, Func<HubLifetimeContext, Task> next)
+        {
+            if (!(context.Hub is ILogTarget logTarget))
+                throw new InvalidOperationException($"Hub implementation {context.Hub.GetType().Name} doesn't implement {nameof(ILogTarget)}.");
+
+            try
+            {
+                await next(context);
+            }
+            catch (Exception e)
+            {
+                logTarget.Error($"Failed to invoke OnConnectedAsync()", e);
+                throw;
+            }
+        }
+
+        public async Task OnDisconnectedAsync(HubLifetimeContext context, Exception? exception, Func<HubLifetimeContext, Exception?, Task> next)
+        {
+            if (!(context.Hub is ILogTarget logTarget))
+                throw new InvalidOperationException($"Hub implementation {context.Hub.GetType().Name} doesn't implement {nameof(ILogTarget)}.");
+
+            try
+            {
+                await next(context, exception);
+            }
+            catch (Exception e)
+            {
+                logTarget.Error($"Failed to invoke {nameof(OnDisconnectedAsync)}()", e);
+                throw;
+            }
+        }
+
         private static string getMethodCallDisplayString(HubInvocationContext invocationContext)
         {
             var methodCall = $"{invocationContext.HubMethodName}({string.Join(", ", invocationContext.HubMethodArguments.Select(getReadableString))})";
