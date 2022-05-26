@@ -10,6 +10,9 @@ using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator;
 
+/// <summary>
+/// Ensures that shutdown is delayed until any existing usages have ceased.
+/// </summary>
 public class GracefulShutdownManager
 {
     private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
@@ -17,7 +20,7 @@ public class GracefulShutdownManager
     private Task? shutdownTask;
 
     /// <summary>
-    /// Call to trigger and block on waiting for a safe shutdown state.
+    /// Blocks until safe to continue with shutdown. Can be invoked from multiple locations.
     /// </summary>
     public void WaitForSafeShutdown()
     {
@@ -27,7 +30,11 @@ public class GracefulShutdownManager
         shutdownTask.Wait();
     }
 
-    public void AddStore(IEntityStore? store)
+    /// <summary>
+    /// Add an entity store which should be waited on for all usages to have finished.
+    /// </summary>
+    /// <param name="store"></param>
+    public void AddDependentStore(IEntityStore? store)
     {
         if (store == null)
             return;
