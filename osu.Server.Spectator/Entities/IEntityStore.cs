@@ -5,7 +5,18 @@ namespace osu.Server.Spectator.Entities;
 
 public interface IEntityStore
 {
-    bool AnyRemainingUsage { get; }
+    /// <summary>
+    /// Number of entities remaining in use.
+    /// </summary>
+    int RemainingUsages { get; }
 
+    /// <summary>
+    /// A display name for the managed entity.
+    /// </summary>
+    string EntityName { get; }
+
+    /// <summary>
+    /// Inform this entity store that a server shutdown transition is in progress, and new entities should not be allowed.
+    /// </summary>
     void StopAcceptingEntities();
 }

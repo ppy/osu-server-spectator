@@ -40,10 +40,18 @@ namespace osu.Server.Spectator.Entities
         {
         }
 
-        /// <summary>
-        /// Inform this entity store that a server shutdown transition is in progress, and new entities should not be allowed.
-        /// </summary>
         public void StopAcceptingEntities() => acceptingNewEntities = false;
+
+        public int RemainingUsages
+        {
+            get
+            {
+                lock (entityMapping)
+                    return entityMapping.Count;
+            }
+        }
+
+        public string EntityName => typeof(T).Name;
 
         /// <summary>
         /// Retrieves an entity.
@@ -261,15 +269,6 @@ namespace osu.Server.Spectator.Entities
             {
                 if (IsDestroyed) throw new InvalidOperationException("Attempted to use an item which has already been destroyed");
                 if (shouldBeLocked && !isLocked) throw new InvalidOperationException("Attempted to access a tracked entity without holding a lock");
-            }
-        }
-
-        public bool AnyRemainingUsage
-        {
-            get
-            {
-                lock (entityMapping)
-                    return entityMapping.Count > 0;
             }
         }
     }

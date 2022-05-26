@@ -54,12 +54,15 @@ public class GracefulShutdownManager
 
             while (true)
             {
-                bool remaining = dependentStores.Any(store => store.AnyRemainingUsage);
+                var remaining = dependentStores.Select(store => (store.EntityName, store.RemainingUsages));
 
-                if (!remaining)
+                if (remaining.Sum(s => s.RemainingUsages) == 0)
                     break;
 
-                Logger.Log($"Waiting for usages of existing entities to finish...");
+                Logger.Log("Waiting for usages of existing entities to finish...");
+                foreach (var r in remaining)
+                    Logger.Log($"{r.EntityName,10}: {r.RemainingUsages}");
+
                 Thread.Sleep(10000);
             }
 
