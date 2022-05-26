@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -65,6 +66,9 @@ namespace osu.Server.Spectator
                 // IdentityModelEventSource.ShowPII = true;
             });
 
+            // Allow a bit of extra time in addition to the graceful shutdown window for asp.net level forced shutdown.
+            services.Configure<HostOptions>(opts => opts.ShutdownTimeout = GracefulShutdownManager.TIME_BEFORE_FORCEFUL_SHUTDOWN.Add(TimeSpan.FromMinutes(1)));
+
             ConfigureAuthentication(services);
 
             services.AddAuthorization();
@@ -94,8 +98,8 @@ namespace osu.Server.Spectator
 
             // Importantly, we don't care to block `MultiplayerClientState` because they can only be created if a `ServerMultiplayerRoom` is first in existence.
             // More so, we want to allow these states to be created so existing rooms can continue to function until they are disbanded.
-            shutdownManager.AddStore(app.ApplicationServices.GetRequiredService<EntityStore<ServerMultiplayerRoom>>());
-            shutdownManager.AddStore(app.ApplicationServices.GetRequiredService<EntityStore<SpectatorClientState>>());
+            shutdownManager.AddDependentStore(app.ApplicationServices.GetRequiredService<EntityStore<ServerMultiplayerRoom>>());
+            shutdownManager.AddDependentStore(app.ApplicationServices.GetRequiredService<EntityStore<SpectatorClientState>>());
 
             if (env.IsDevelopment())
             {

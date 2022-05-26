@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,6 +16,8 @@ namespace osu.Server.Spectator;
 /// </summary>
 public class GracefulShutdownManager
 {
+    public static readonly TimeSpan TIME_BEFORE_FORCEFUL_SHUTDOWN = TimeSpan.FromHours(6);
+
     private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
 
     private Task? shutdownTask;
@@ -52,12 +55,11 @@ public class GracefulShutdownManager
             foreach (var store in dependentStores)
                 store.StopAcceptingEntities();
 
-            int timeWaited = 0;
+            TimeSpan timeWaited = new TimeSpan();
 
-            const int seconds_between_checks = 10;
-            const int max_hours_before_forceful_shutdown = 6;
+            TimeSpan timeBetweenChecks = TimeSpan.FromSeconds(10);
 
-            while (timeWaited < 3600 * max_hours_before_forceful_shutdown)
+            while (timeWaited < TIME_BEFORE_FORCEFUL_SHUTDOWN)
             {
                 var remaining = dependentStores.Select(store => (store.EntityName, store.RemainingUsages));
 
@@ -68,8 +70,8 @@ public class GracefulShutdownManager
                 foreach (var r in remaining)
                     Logger.Log($"{r.EntityName,10}: {r.RemainingUsages}");
 
-                Thread.Sleep(seconds_between_checks * 1000);
-                timeWaited += seconds_between_checks;
+                Thread.Sleep(timeBetweenChecks);
+                timeWaited = timeWaited.Add(timeBetweenChecks);
             }
 
             Logger.Log("All entities cleaned up. Server shutdown unblocking.");
