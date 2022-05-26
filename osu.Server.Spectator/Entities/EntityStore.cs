@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Hosting;
 using osu.Framework.Extensions.ObjectExtensions;
 using StatsdClient;
 
@@ -15,7 +17,7 @@ namespace osu.Server.Spectator.Entities
     /// Tracks and ensures consistency of a collection of entities that have a related permanent ID.
     /// </summary>
     /// <typeparam name="T">The type of the entity being tracked.</typeparam>
-    public sealed class EntityStore<T>
+    public sealed class EntityStore<T> : IEntityStore
         where T : class
     {
         private readonly Dictionary<long, TrackedEntity> entityMapping = new Dictionary<long, TrackedEntity>();
@@ -23,6 +25,25 @@ namespace osu.Server.Spectator.Entities
         private const int lock_timeout = 5000;
 
         private string statsDPrefix => $"entities.{typeof(T).Name}";
+
+        private bool acceptingNewEntities = true;
+
+        public EntityStore(GracefulShutdownManager shutdownManager, IHostApplicationLifetime applicationLifetime)
+            : this()
+        {
+            // Registration is required here to ensure `ApplicationStopping` triggers the shutdown wait before SignalR disconnects clients.
+            // Hope we can find a better way to make this work in the future.
+            applicationLifetime.ApplicationStopping.Register(shutdownManager.WaitForSafeShutdown);
+        }
+
+        public EntityStore()
+        {
+        }
+
+        /// <summary>
+        /// Inform this entity store that a server shutdown transition is in progress, and new entities should not be allowed.
+        /// </summary>
+        public void StopAcceptingEntities() => acceptingNewEntities = false;
 
         /// <summary>
         /// Retrieves an entity.
@@ -62,6 +83,9 @@ namespace osu.Server.Spectator.Entities
                             DogStatsd.Increment($"{statsDPrefix}.get-notfound");
                             throw new KeyNotFoundException($"Attempted to get untracked entity {typeof(T)} id {id}");
                         }
+
+                        if (!acceptingNewEntities)
+                            throw new HubException("Server is shutting down.");
 
                         entityMapping[id] = item = new TrackedEntity(id, this);
                         DogStatsd.Gauge($"{statsDPrefix}.total-tracked", entityMapping.Count);
@@ -237,6 +261,15 @@ namespace osu.Server.Spectator.Entities
             {
                 if (IsDestroyed) throw new InvalidOperationException("Attempted to use an item which has already been destroyed");
                 if (shouldBeLocked && !isLocked) throw new InvalidOperationException("Attempted to access a tracked entity without holding a lock");
+            }
+        }
+
+        public bool AnyRemainingUsage
+        {
+            get
+            {
+                lock (entityMapping)
+                    return entityMapping.Count > 0;
             }
         }
     }
