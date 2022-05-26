@@ -52,7 +52,12 @@ public class GracefulShutdownManager
             foreach (var store in dependentStores)
                 store.StopAcceptingEntities();
 
-            while (true)
+            int timeWaited = 0;
+
+            const int seconds_between_checks = 10;
+            const int max_hours_before_forceful_shutdown = 6;
+
+            while (timeWaited < 3600 * max_hours_before_forceful_shutdown)
             {
                 var remaining = dependentStores.Select(store => (store.EntityName, store.RemainingUsages));
 
@@ -63,7 +68,8 @@ public class GracefulShutdownManager
                 foreach (var r in remaining)
                     Logger.Log($"{r.EntityName,10}: {r.RemainingUsages}");
 
-                Thread.Sleep(10000);
+                Thread.Sleep(seconds_between_checks * 1000);
+                timeWaited += seconds_between_checks;
             }
 
             Logger.Log("All entities cleaned up. Server shutdown unblocking.");
