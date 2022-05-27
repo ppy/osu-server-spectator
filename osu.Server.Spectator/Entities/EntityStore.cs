@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Hosting;
 using osu.Framework.Extensions.ObjectExtensions;
 using StatsdClient;
 
@@ -27,18 +26,6 @@ namespace osu.Server.Spectator.Entities
         private string statsDPrefix => $"entities.{typeof(T).Name}";
 
         private bool acceptingNewEntities = true;
-
-        public EntityStore(GracefulShutdownManager shutdownManager, IHostApplicationLifetime applicationLifetime)
-            : this()
-        {
-            // Registration is required here to ensure `ApplicationStopping` triggers the shutdown wait before SignalR disconnects clients.
-            // Hope we can find a better way to make this work in the future.
-            applicationLifetime.ApplicationStopping.Register(shutdownManager.WaitForSafeShutdown);
-        }
-
-        public EntityStore()
-        {
-        }
 
         public void StopAcceptingEntities() => acceptingNewEntities = false;
 

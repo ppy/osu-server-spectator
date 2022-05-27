@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -15,7 +14,6 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using osu.Game.Online;
 using osu.Server.Spectator.Authentication;
-using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs;
 
@@ -86,21 +84,8 @@ namespace osu.Server.Spectator
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IHostApplicationLifetime lifetime)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            var shutdownManager = app.ApplicationServices.GetService<GracefulShutdownManager>();
-
-            Debug.Assert(shutdownManager != null);
-
-            // This is done here, but it happens too late in shutdown.
-            // The more important registration is in EntityStore.
-            lifetime.ApplicationStopping.Register(shutdownManager.WaitForSafeShutdown);
-
-            // Importantly, we don't care to block `MultiplayerClientState` because they can only be created if a `ServerMultiplayerRoom` is first in existence.
-            // More so, we want to allow these states to be created so existing rooms can continue to function until they are disbanded.
-            shutdownManager.AddDependentStore(app.ApplicationServices.GetRequiredService<EntityStore<ServerMultiplayerRoom>>());
-            shutdownManager.AddDependentStore(app.ApplicationServices.GetRequiredService<EntityStore<SpectatorClientState>>());
-
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -120,6 +105,13 @@ namespace osu.Server.Spectator
                 endpoints.MapHub<SpectatorHub>("/spectator");
                 endpoints.MapHub<MultiplayerHub>("/multiplayer");
             });
+
+            // Create shutdown manager singleton.
+            // Importantly, this has to be after the endpoint initialisation due to LIFO firing of `ApplicationStopping`.
+            // If this is not done last, signalr will clean up connections before the manager has a chance to gracefully wait for
+            // usage to finish.
+            // See https://github.com/dotnet/aspnetcore/issues/25069#issuecomment-912817907
+            app.ApplicationServices.GetRequiredService<GracefulShutdownManager>();
         }
     }
 }

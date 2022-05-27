@@ -6,8 +6,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
 using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator;
 
@@ -21,6 +23,14 @@ public class GracefulShutdownManager
     private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
 
     private Task? shutdownTask;
+
+    public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime)
+    {
+        addDependentStore(roomStore);
+        addDependentStore(clientStateStore);
+
+        hostApplicationLifetime.ApplicationStopping.Register(WaitForSafeShutdown);
+    }
 
     /// <summary>
     /// Blocks until safe to continue with shutdown. Can be invoked from multiple locations.
@@ -37,7 +47,7 @@ public class GracefulShutdownManager
     /// Add an entity store which should be waited on for all usages to have finished.
     /// </summary>
     /// <param name="store"></param>
-    public void AddDependentStore(IEntityStore? store)
+    private void addDependentStore(IEntityStore? store)
     {
         if (store == null)
             return;
