@@ -65,6 +65,8 @@ namespace osu.Server.Spectator
             });
 
             // Allow a bit of extra time in addition to the graceful shutdown window for asp.net level forced shutdown.
+            // This time may be used to tidy up user states and update the database to a sane state (ie. marking open multiplayer
+            // rooms as closed).
             services.Configure<HostOptions>(opts => opts.ShutdownTimeout = GracefulShutdownManager.TIME_BEFORE_FORCEFUL_SHUTDOWN.Add(TimeSpan.FromMinutes(1)));
 
             ConfigureAuthentication(services);
