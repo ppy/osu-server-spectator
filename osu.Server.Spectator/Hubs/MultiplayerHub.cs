@@ -168,6 +168,10 @@ namespace osu.Server.Spectator.Hubs
 
             using (var db = databaseFactory.GetInstance())
             {
+                // TODO: this call should be transactional, and mark the room as managed by this server instance.
+                // This will allow for other instances to know not to reinitialise the room if the host arrives there.
+                // Alternatively, we can move lobby retrieval away from osu-web and not require this in the first place.
+                // Needs further discussion and consideration either way.
                 var databaseRoom = await db.GetRoomAsync(roomId);
 
                 if (databaseRoom == null)

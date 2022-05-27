@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -63,6 +64,11 @@ namespace osu.Server.Spectator
                 // IdentityModelEventSource.ShowPII = true;
             });
 
+            // Allow a bit of extra time in addition to the graceful shutdown window for asp.net level forced shutdown.
+            // This time may be used to tidy up user states and update the database to a sane state (ie. marking open multiplayer
+            // rooms as closed).
+            services.Configure<HostOptions>(opts => opts.ShutdownTimeout = GracefulShutdownManager.TIME_BEFORE_FORCEFUL_SHUTDOWN.Add(TimeSpan.FromMinutes(1)));
+
             ConfigureAuthentication(services);
 
             services.AddAuthorization();
@@ -101,6 +107,13 @@ namespace osu.Server.Spectator
                 endpoints.MapHub<SpectatorHub>("/spectator");
                 endpoints.MapHub<MultiplayerHub>("/multiplayer");
             });
+
+            // Create shutdown manager singleton.
+            // Importantly, this has to be after the endpoint initialisation due to LIFO firing of `ApplicationStopping`.
+            // If this is not done last, signalr will clean up connections before the manager has a chance to gracefully wait for
+            // usage to finish.
+            // See https://github.com/dotnet/aspnetcore/issues/25069#issuecomment-912817907
+            app.ApplicationServices.GetRequiredService<GracefulShutdownManager>();
         }
     }
 }
