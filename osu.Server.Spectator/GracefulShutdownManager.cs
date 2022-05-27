@@ -26,22 +26,10 @@ public class GracefulShutdownManager
 
     public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime)
     {
-        addDependentStore(roomStore);
-        addDependentStore(clientStateStore);
+        dependentStores.Add(roomStore);
+        dependentStores.Add(clientStateStore);
 
         hostApplicationLifetime.ApplicationStopping.Register(shutdownSafely);
-    }
-
-    /// <summary>
-    /// Add an entity store which should be waited on for all usages to have finished.
-    /// </summary>
-    /// <param name="store"></param>
-    private void addDependentStore(IEntityStore? store)
-    {
-        if (store == null)
-            return;
-
-        dependentStores.Add(store);
     }
 
     private void shutdownSafely()
