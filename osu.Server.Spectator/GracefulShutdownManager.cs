@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
 using osu.Server.Spectator.Entities;
@@ -18,6 +17,9 @@ namespace osu.Server.Spectator;
 /// </summary>
 public class GracefulShutdownManager
 {
+    // This should probably be configurable in the future.
+    // 6 hours is way too long, but set initially to test the whole process out.
+    // We can manually override this for immediate shutdown if/when required from a kubernetes or docker level.
     public static readonly TimeSpan TIME_BEFORE_FORCEFUL_SHUTDOWN = TimeSpan.FromHours(6);
 
     private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
