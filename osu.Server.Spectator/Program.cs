@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Net;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
@@ -22,6 +23,11 @@ namespace osu.Server.Spectator
             {
                 StatsdServerName = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? "localhost",
                 Prefix = "osu.server.spectator",
+                ConstantTags = new[]
+                {
+                    $"hostname:{Dns.GetHostName()}",
+                    $"startup:{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}",
+                }
             });
 
             createHostBuilder(args).Build().Run();
