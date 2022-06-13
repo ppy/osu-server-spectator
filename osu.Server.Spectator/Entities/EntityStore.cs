@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
 using osu.Framework.Extensions.ObjectExtensions;
 using StatsdClient;
 
@@ -80,7 +79,7 @@ namespace osu.Server.Spectator.Entities
                         }
 
                         if (!acceptingNewEntities)
-                            throw new HubException("Server is shutting down.");
+                            throw new ServerShuttingDownException();
 
                         entityMapping[id] = item = new TrackedEntity(id, this);
                         DogStatsd.Gauge($"{statsDPrefix}.total-tracked", entityMapping.Count);
