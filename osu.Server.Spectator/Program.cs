@@ -5,9 +5,11 @@ using System;
 using System.IO;
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using Sentry;
 using StatsdClient;
 
 namespace osu.Server.Spectator
@@ -38,18 +40,20 @@ namespace osu.Server.Spectator
             return Host.CreateDefaultBuilder(args)
                        .ConfigureWebHostDefaults(webBuilder =>
                        {
-#if DEBUG
-                           //todo: figure correct way to get dev environment state
-                           webBuilder.UseSentry()
-                                     .UseStartup<StartupDevelopment>();
-#else
                            webBuilder.UseSentry(o =>
                            {
-                               o.Dsn = "https://775dc89c1c3142e8a8fa5fd10590f443@sentry.ppy.sh/8";
+                               o.AddExceptionFilterForType<HubException>();
                                o.TracesSampleRate = 0.01;
+#if !DEBUG
+                               o.Dsn = "https://775dc89c1c3142e8a8fa5fd10590f443@sentry.ppy.sh/8";
+#endif
                                // TODO: set release name
-                           })
-                           .UseStartup<Startup>();
+                           });
+
+#if DEBUG
+                           webBuilder.UseStartup<StartupDevelopment>();
+#else
+                           webBuilder.UseStartup<Startup>();
 #endif
 
                            webBuilder.UseUrls(urls: new[] { "http://*:80" });
