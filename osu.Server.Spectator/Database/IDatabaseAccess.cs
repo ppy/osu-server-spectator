@@ -103,5 +103,12 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         /// <param name="roomId">The room to retrieve playlist items from.</param>
         Task<multiplayer_playlist_item[]> GetAllPlaylistItemsAsync(long roomId);
+
+        /// <summary>
+        /// Retrieves any changed beatmap set IDs since last call.
+        /// </summary>
+        /// <param name="lastQueueId">A queue ID to fetch updated items since</param>
+        /// <returns>Any updated beatmap set IDs, along with the latest queue ID to use in the next call.</returns>
+        Task<(int[] beatmapSetIds, uint lastQueueId)> GetUpdatedBeatmapSets(uint? lastQueueId);
     }
 }

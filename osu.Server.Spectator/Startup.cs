@@ -106,6 +106,7 @@ namespace osu.Server.Spectator
             {
                 endpoints.MapHub<SpectatorHub>("/spectator");
                 endpoints.MapHub<MultiplayerHub>("/multiplayer");
+                endpoints.MapHub<MetadataHub>("/metadata");
             });
 
             // Create shutdown manager singleton.
