@@ -9,7 +9,7 @@ using osu.Server.Spectator.Database;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class MetadataHub : Hub<IBeatmapClient>
+    public class MetadataHub : Hub<IMetadataClient>, IMetadataServer
     {
         private readonly IDatabaseFactory databaseFactory;
 
@@ -24,6 +24,12 @@ namespace osu.Server.Spectator.Hubs
             Task.Factory.StartNew(pollForChanges, cts.Token);
         }
 
+        public async Task<(int[], uint)> GetChangesSince(uint queueId)
+        {
+            using (var db = databaseFactory.GetInstance())
+                return (await db.GetUpdatedBeatmapSets(lastQueueId));
+        }
+
         private async Task pollForChanges()
         {
             while (!cts.IsCancellationRequested)
@@ -35,7 +41,7 @@ namespace osu.Server.Spectator.Hubs
                     await Clients.All.BeatmapSetsUpdated(beatmapSetIds);
                 }
 
-                Thread.Sleep(1000);
+                await Task.Delay(1000, cts.Token);
             }
         }
 
@@ -46,8 +52,20 @@ namespace osu.Server.Spectator.Hubs
         }
     }
 
-    public interface IBeatmapClient
+    public interface IMetadataClient
     {
         Task BeatmapSetsUpdated(IEnumerable<int> beatmapSetIds);
+    }
+
+    /// <summary>An interface defining the spectator server instance.</summary>
+    public interface IMetadataServer
+    {
+        /// <summary>
+        /// Get any changes since a specific point in the queue.
+        /// Should be used to allow the client to catch up with any changes after being closed or disconnected.
+        /// </summary>
+        /// <param name="queueId">The last processed queue ID.</param>
+        /// <returns></returns>
+        Task<(int[], uint)> GetChangesSince(uint queueId);
     }
 }

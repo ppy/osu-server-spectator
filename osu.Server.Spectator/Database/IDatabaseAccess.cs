@@ -108,7 +108,8 @@ namespace osu.Server.Spectator.Database
         /// Retrieves any changed beatmap set IDs since last call.
         /// </summary>
         /// <param name="lastQueueId">A queue ID to fetch updated items since</param>
+        /// <param name="limit">Maximum number of entries to return. Defaults to 50.</param>
         /// <returns>Any updated beatmap set IDs, along with the latest queue ID to use in the next call.</returns>
-        Task<(int[] beatmapSetIds, uint lastQueueId)> GetUpdatedBeatmapSets(uint? lastQueueId);
+        Task<(int[] beatmapSetIds, uint lastQueueId)> GetUpdatedBeatmapSets(uint? lastQueueId, int limit = 50);
     }
 }

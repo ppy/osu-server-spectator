@@ -261,13 +261,17 @@ namespace osu.Server.Spectator.Database
             return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
         }
 
-        public async Task<(int[] beatmapSetIds, uint lastQueueId)> GetUpdatedBeatmapSets(uint? lastQueueId)
+        public async Task<(int[] beatmapSetIds, uint lastQueueId)> GetUpdatedBeatmapSets(uint? lastQueueId, int limit = 50)
         {
             var connection = await getConnectionAsync();
 
             if (lastQueueId.HasValue)
             {
-                var items = (await connection.QueryAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 AND queue_id > @lastQueueId", new { lastQueueId })).ToArray();
+                var items = (await connection.QueryAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 AND queue_id > @lastQueueId LIMIT @limit", new
+                {
+                    lastQueueId,
+                    limit
+                })).ToArray();
 
                 return (items.Select(i => i.beatmapset_id).ToArray(), items.LastOrDefault()?.queue_id ?? lastQueueId.Value);
             }
