@@ -3,57 +3,80 @@
 
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using MessagePack;
 using Microsoft.AspNetCore.SignalR;
 using osu.Server.Spectator.Database;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class MetadataHub : Hub<IMetadataClient>, IMetadataServer
+    public class MetadataBroadcaster : IDisposable
     {
         private readonly IDatabaseFactory databaseFactory;
+        private readonly IHubContext<MetadataHub> metadataHubContext;
 
-        private readonly CancellationTokenSource cts = new CancellationTokenSource();
+        private readonly Timer timer;
 
         private uint? lastQueueId;
 
-        public MetadataHub(IDatabaseFactory databaseFactory)
+        public MetadataBroadcaster(IDatabaseFactory databaseFactory, IHubContext<MetadataHub> metadataHubContext)
         {
             this.databaseFactory = databaseFactory;
+            this.metadataHubContext = metadataHubContext;
 
-            Task.Factory.StartNew(pollForChanges, cts.Token);
+            timer = new Timer(5000);
+            timer.AutoReset = false;
+            timer.Elapsed += pollForChanges;
+            timer.Start();
         }
 
-        public async Task<BeatmapUpdates> GetChangesSince(uint queueId)
+        private async void pollForChanges(object? sender, ElapsedEventArgs args)
         {
-            using (var db = databaseFactory.GetInstance())
-                return (await db.GetUpdatedBeatmapSets(lastQueueId));
-        }
-
-        private async Task pollForChanges()
-        {
-            while (!cts.IsCancellationRequested)
+            try
             {
                 using (var db = databaseFactory.GetInstance())
                 {
                     var updates = await db.GetUpdatedBeatmapSets(lastQueueId);
 
                     lastQueueId = updates.LastProcessedQueueID;
+                    Console.WriteLine($"Polled beatmap changes up to last queue id {updates.LastProcessedQueueID}");
 
                     if (updates.BeatmapSetIDs.Any())
-                        await Clients.All.BeatmapSetsUpdated(updates);
+                    {
+                        Console.WriteLine($"Broadcasting new beatmaps to client: {string.Join(',', updates.BeatmapSetIDs.Select(i => i.ToString()))}");
+                        await metadataHubContext.Clients.All.SendAsync(nameof(IMetadataClient.BeatmapSetsUpdated), updates);
+                    }
                 }
-
-                await Task.Delay(1000, cts.Token);
             }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error during beatmap update polling: {e}");
+            }
+
+            timer.Start();
         }
 
-        protected override void Dispose(bool disposing)
+        public void Dispose()
         {
-            base.Dispose(disposing);
-            cts.Cancel();
+            timer.Stop();
+            timer.Dispose();
+        }
+    }
+
+    public class MetadataHub : Hub<IMetadataClient>, IMetadataServer
+    {
+        private readonly IDatabaseFactory databaseFactory;
+
+        public MetadataHub(IDatabaseFactory databaseFactory)
+        {
+            this.databaseFactory = databaseFactory;
+        }
+
+        public async Task<BeatmapUpdates> GetChangesSince(uint queueId)
+        {
+            using (var db = databaseFactory.GetInstance())
+                return await db.GetUpdatedBeatmapSets(queueId);
         }
     }
 
