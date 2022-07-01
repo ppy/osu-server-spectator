@@ -10,6 +10,7 @@ using Dapper;
 using MySqlConnector;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator.Database
 {
@@ -261,7 +262,7 @@ namespace osu.Server.Spectator.Database
             return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
         }
 
-        public async Task<(int[] beatmapSetIds, uint lastQueueId)> GetUpdatedBeatmapSets(uint? lastQueueId, int limit = 50)
+        public async Task<BeatmapUpdates> GetUpdatedBeatmapSets(uint? lastQueueId, int limit = 50)
         {
             var connection = await getConnectionAsync();
 
@@ -273,12 +274,12 @@ namespace osu.Server.Spectator.Database
                     limit
                 })).ToArray();
 
-                return (items.Select(i => i.beatmapset_id).ToArray(), items.LastOrDefault()?.queue_id ?? lastQueueId.Value);
+                return new BeatmapUpdates(items.Select(i => i.beatmapset_id).ToArray(), items.LastOrDefault()?.queue_id ?? lastQueueId.Value);
             }
 
             var lastEntry = await connection.QueryFirstAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 ORDER BY queue_id DESC LIMIT 1");
 
-            return (Array.Empty<int>(), lastEntry?.queue_id ?? 0);
+            return new BeatmapUpdates(Array.Empty<int>(), lastEntry?.queue_id ?? 0);
         }
 
         public void Dispose()

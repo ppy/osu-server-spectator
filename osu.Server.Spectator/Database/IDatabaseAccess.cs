@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator.Database
 {
@@ -109,7 +110,7 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         /// <param name="lastQueueId">A queue ID to fetch updated items since</param>
         /// <param name="limit">Maximum number of entries to return. Defaults to 50.</param>
-        /// <returns>Any updated beatmap set IDs, along with the latest queue ID to use in the next call.</returns>
-        Task<(int[] beatmapSetIds, uint lastQueueId)> GetUpdatedBeatmapSets(uint? lastQueueId, int limit = 50);
+        /// <returns>Update metadata.</returns>
+        Task<BeatmapUpdates> GetUpdatedBeatmapSets(uint? lastQueueId, int limit = 50);
     }
 }

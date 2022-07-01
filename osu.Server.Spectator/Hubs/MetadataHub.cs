@@ -1,9 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System.Collections.Generic;
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MessagePack;
 using Microsoft.AspNetCore.SignalR;
 using osu.Server.Spectator.Database;
 
@@ -24,7 +26,7 @@ namespace osu.Server.Spectator.Hubs
             Task.Factory.StartNew(pollForChanges, cts.Token);
         }
 
-        public async Task<(int[], uint)> GetChangesSince(uint queueId)
+        public async Task<BeatmapUpdates> GetChangesSince(uint queueId)
         {
             using (var db = databaseFactory.GetInstance())
                 return (await db.GetUpdatedBeatmapSets(lastQueueId));
@@ -36,9 +38,12 @@ namespace osu.Server.Spectator.Hubs
             {
                 using (var db = databaseFactory.GetInstance())
                 {
-                    (int[] beatmapSetIds, lastQueueId) = await db.GetUpdatedBeatmapSets(lastQueueId);
+                    var updates = await db.GetUpdatedBeatmapSets(lastQueueId);
 
-                    await Clients.All.BeatmapSetsUpdated(beatmapSetIds);
+                    lastQueueId = updates.LastProcessedQueueID;
+
+                    if (updates.BeatmapSetIDs.Any())
+                        await Clients.All.BeatmapSetsUpdated(updates);
                 }
 
                 await Task.Delay(1000, cts.Token);
@@ -52,12 +57,34 @@ namespace osu.Server.Spectator.Hubs
         }
     }
 
-    public interface IMetadataClient
+    /// <summary>
+    /// Describes a set of beatmaps which have been updated in some way.
+    /// </summary>
+    [MessagePackObject(false)]
+    [Serializable]
+    public class BeatmapUpdates
     {
-        Task BeatmapSetsUpdated(IEnumerable<int> beatmapSetIds);
+        [Key(0)]
+        public int[] BeatmapSetIDs { get; set; }
+
+        [Key(1)]
+        public uint LastProcessedQueueID { get; set; }
+
+        public BeatmapUpdates(int[] beatmapSetIDs, uint lastProcessedQueueID)
+        {
+            BeatmapSetIDs = beatmapSetIDs;
+            LastProcessedQueueID = lastProcessedQueueID;
+        }
     }
 
-    /// <summary>An interface defining the spectator server instance.</summary>
+    public interface IMetadataClient
+    {
+        Task BeatmapSetsUpdated(BeatmapUpdates updates);
+    }
+
+    /// <summary>
+    /// Metadata server is responsible for keeping the osu! client up-to-date with any changes.
+    /// </summary>
     public interface IMetadataServer
     {
         /// <summary>
@@ -66,6 +93,6 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="queueId">The last processed queue ID.</param>
         /// <returns></returns>
-        Task<(int[], uint)> GetChangesSince(uint queueId);
+        Task<BeatmapUpdates> GetChangesSince(uint queueId);
     }
 }
