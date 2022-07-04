@@ -2,13 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.Metadata;
 using osu.Server.Spectator.Database;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class MetadataHub : Hub<IMetadataClient>, IMetadataServer
+    public class MetadataHub : LoggingHub<IMetadataClient>, IMetadataServer
     {
         private readonly IDatabaseFactory databaseFactory;
 
