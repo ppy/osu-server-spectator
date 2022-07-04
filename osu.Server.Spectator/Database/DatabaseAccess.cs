@@ -8,9 +8,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
+using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database.Models;
-using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator.Database
 {
