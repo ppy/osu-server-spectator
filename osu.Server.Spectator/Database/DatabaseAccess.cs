@@ -262,7 +262,7 @@ namespace osu.Server.Spectator.Database
             return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
         }
 
-        public async Task<BeatmapUpdates> GetUpdatedBeatmapSets(uint? lastQueueId, int limit = 50)
+        public async Task<BeatmapUpdates> GetUpdatedBeatmapSets(int? lastQueueId, int limit = 50)
         {
             var connection = await getConnectionAsync();
 

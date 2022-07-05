@@ -20,7 +20,7 @@ public class MetadataBroadcaster : IDisposable
 
     private readonly Timer timer;
 
-    private uint? lastQueueId;
+    private int? lastQueueId;
 
     public MetadataBroadcaster(IDatabaseFactory databaseFactory, IHubContext<MetadataHub> metadataHubContext)
     {

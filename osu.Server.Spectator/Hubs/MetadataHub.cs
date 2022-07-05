@@ -16,7 +16,7 @@ namespace osu.Server.Spectator.Hubs
             this.databaseFactory = databaseFactory;
         }
 
-        public async Task<BeatmapUpdates> GetChangesSince(uint queueId)
+        public async Task<BeatmapUpdates> GetChangesSince(int queueId)
         {
             using (var db = databaseFactory.GetInstance())
                 return await db.GetUpdatedBeatmapSets(queueId);

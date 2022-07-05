@@ -10,6 +10,6 @@ namespace osu.Server.Spectator.Database.Models;
 [Serializable]
 public class bss_process_queue_item
 {
-    public uint queue_id;
+    public int queue_id;
     public int beatmapset_id;
 }

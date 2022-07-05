@@ -111,6 +111,6 @@ namespace osu.Server.Spectator.Database
         /// <param name="lastQueueId">A queue ID to fetch updated items since</param>
         /// <param name="limit">Maximum number of entries to return. Defaults to 50.</param>
         /// <returns>Update metadata.</returns>
-        Task<BeatmapUpdates> GetUpdatedBeatmapSets(uint? lastQueueId, int limit = 50);
+        Task<BeatmapUpdates> GetUpdatedBeatmapSets(int? lastQueueId, int limit = 50);
     }
 }
