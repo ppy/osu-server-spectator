@@ -106,6 +106,7 @@ namespace osu.Server.Spectator
             {
                 endpoints.MapHub<SpectatorHub>("/spectator");
                 endpoints.MapHub<MultiplayerHub>("/multiplayer");
+                endpoints.MapHub<MetadataHub>("/metadata");
             });
 
             // Create shutdown manager singleton.
@@ -114,6 +115,8 @@ namespace osu.Server.Spectator
             // usage to finish.
             // See https://github.com/dotnet/aspnetcore/issues/25069#issuecomment-912817907
             app.ApplicationServices.GetRequiredService<GracefulShutdownManager>();
+
+            app.ApplicationServices.GetRequiredService<MetadataBroadcaster>();
         }
     }
 }

@@ -4,6 +4,7 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
+using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database.Models;
 
@@ -103,5 +104,13 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         /// <param name="roomId">The room to retrieve playlist items from.</param>
         Task<multiplayer_playlist_item[]> GetAllPlaylistItemsAsync(long roomId);
+
+        /// <summary>
+        /// Retrieves any changed beatmap set IDs since last call.
+        /// </summary>
+        /// <param name="lastQueueId">A queue ID to fetch updated items since</param>
+        /// <param name="limit">Maximum number of entries to return. Defaults to 50.</param>
+        /// <returns>Update metadata.</returns>
+        Task<BeatmapUpdates> GetUpdatedBeatmapSets(int? lastQueueId, int limit = 50);
     }
 }

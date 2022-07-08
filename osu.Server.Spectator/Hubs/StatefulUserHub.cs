@@ -3,59 +3,33 @@
 
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
-using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
-using Sentry;
-using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs
 {
     [UsedImplicitly]
     [Authorize]
-    public abstract class StatefulUserHub<TClient, TUserState> : Hub<TClient>, ILogTarget
+    public abstract class StatefulUserHub<TClient, TUserState> : LoggingHub<TClient>
         where TUserState : ClientState
         where TClient : class
     {
         protected readonly EntityStore<TUserState> UserStates;
 
-        private readonly Logger logger;
-
-        // ReSharper disable once StaticMemberInGenericType
-        private static int totalConnected;
-
         protected StatefulUserHub(IDistributedCache cache, EntityStore<TUserState> userStates)
         {
-            logger = Logger.GetLogger(GetType().Name.Replace("Hub", string.Empty));
             UserStates = userStates;
         }
 
         protected KeyValuePair<long, TUserState>[] GetAllStates() => UserStates.GetAllEntities();
 
-        /// <summary>
-        /// The osu! user id for the currently processing context.
-        /// </summary>
-        protected int CurrentContextUserId
-        {
-            get
-            {
-                if (Context.UserIdentifier == null)
-                    throw new InvalidOperationException($"Attempted to get user id with null {nameof(Context.UserIdentifier)}");
-
-                return int.Parse(Context.UserIdentifier);
-            }
-        }
-
         public override async Task OnConnectedAsync()
         {
-            Log("Connected");
-            DogStatsd.Gauge($"{logger.Name}.connected", Interlocked.Increment(ref totalConnected));
+            await base.OnConnectedAsync();
 
             try
             {
@@ -71,15 +45,10 @@ namespace osu.Server.Spectator.Hubs
                 Context.Abort();
                 throw;
             }
-
-            await base.OnConnectedAsync();
         }
 
         public sealed override async Task OnDisconnectedAsync(Exception? exception)
         {
-            Log("User disconnected");
-            DogStatsd.Gauge($"{logger.Name}.connected", Interlocked.Decrement(ref totalConnected));
-
             await cleanUpState(true);
         }
 
@@ -148,30 +117,5 @@ namespace osu.Server.Spectator.Hubs
         }
 
         protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) => UserStates.GetForUse(userId);
-
-        protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[user:{getLoggableUserIdentifier()}] {message.Trim()}", logLevel);
-
-        protected void Error(string message, Exception exception) => logger.Add($"[user:{getLoggableUserIdentifier()}] {message.Trim()}", LogLevel.Error, exception);
-
-        private string getLoggableUserIdentifier() => Context.UserIdentifier ?? "???";
-
-        #region Implementation of ILogTarget
-
-        void ILogTarget.Error(string message, Exception exception)
-        {
-            Error(message, exception);
-
-            SentrySdk.CaptureException(exception, scope =>
-            {
-                scope.User = new User
-                {
-                    Id = Context.UserIdentifier
-                };
-            });
-        }
-
-        void ILogTarget.Log(string message, LogLevel logLevel) => Log(message, logLevel);
-
-        #endregion
     }
 }

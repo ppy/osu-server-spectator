@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
+using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database.Models;
 
@@ -259,6 +260,26 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
+        }
+
+        public async Task<BeatmapUpdates> GetUpdatedBeatmapSets(int? lastQueueId, int limit = 50)
+        {
+            var connection = await getConnectionAsync();
+
+            if (lastQueueId.HasValue)
+            {
+                var items = (await connection.QueryAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 AND queue_id > @lastQueueId LIMIT @limit", new
+                {
+                    lastQueueId,
+                    limit
+                })).ToArray();
+
+                return new BeatmapUpdates(items.Select(i => i.beatmapset_id).ToArray(), items.LastOrDefault()?.queue_id ?? lastQueueId.Value);
+            }
+
+            var lastEntry = await connection.QueryFirstOrDefaultAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 ORDER BY queue_id DESC LIMIT 1");
+
+            return new BeatmapUpdates(Array.Empty<int>(), lastEntry?.queue_id ?? 0);
         }
 
         public void Dispose()
