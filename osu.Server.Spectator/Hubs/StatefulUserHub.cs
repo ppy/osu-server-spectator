@@ -49,6 +49,7 @@ namespace osu.Server.Spectator.Hubs
 
         public sealed override async Task OnDisconnectedAsync(Exception? exception)
         {
+            await base.OnDisconnectedAsync(exception);
             await cleanUpState(true);
         }
 
