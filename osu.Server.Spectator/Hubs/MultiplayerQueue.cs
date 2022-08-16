@@ -201,7 +201,15 @@ namespace osu.Server.Spectator.Hubs
             {
                 await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
 
+                // Store the current item to reference later.
+                MultiplayerPlaylistItem currentItem = CurrentItem;
+
                 room.Playlist.Remove(item);
+
+                // If the removed item was earlier in the list than the current item, we need to move the index back one.
+                // The simplest and most resilient way to do this is to search through the entire list for the current item.
+                currentIndex = room.Playlist.IndexOf(currentItem);
+
                 await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
 
                 await updatePlaylistOrder(db);
