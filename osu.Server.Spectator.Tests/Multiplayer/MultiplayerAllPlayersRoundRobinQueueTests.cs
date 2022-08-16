@@ -263,8 +263,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task RemoveWhenCurrentItemIsAtEndOfList()
         {
-            CreateUser(21092239, out var user1Ctx, out _);
-            CreateUser(12792332, out var user2Ctx, out _);
+            CreateUser(1, out var user1Ctx, out _);
+            CreateUser(2, out var user2Ctx, out _);
 
             SetUserContext(user1Ctx);
             await Hub.JoinRoom(ROOM_ID);
