@@ -260,6 +260,58 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await checkOrder(1, 6, 2, 3);
         }
 
+        [Fact]
+        public async Task RemoveWhenCurrentItemIsAtEndOfList()
+        {
+            CreateUser(1, out var user1Ctx, out _);
+            CreateUser(2, out var user2Ctx, out _);
+
+            SetUserContext(user1Ctx);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRoundRobin });
+
+            // Queue: [ 1 ]
+            // List: [ 1 ]
+
+            // Add two more items.
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem { BeatmapID = 2, BeatmapChecksum = "checksum" });
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem { BeatmapID = 3, BeatmapChecksum = "checksum" });
+
+            // Queue: [ 1, 2, 3 ]
+            // List: [ 1, 2, 3 ]
+
+            // Join another user and add one more item.
+            SetUserContext(user2Ctx);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem { BeatmapID = 4, BeatmapChecksum = "checksum" });
+
+            // Queue: [ 1, 4, 2, 3 ]
+            // List: [ 1, 2, 3, 4 ]
+
+            // Run gameplay.
+            SetUserContext(user1Ctx);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+            await LoadAndFinishGameplay(user1Ctx);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            // Queue: [ 4, 2, 3 ]
+            // List: [ 1, 2, 3, 4 ]
+
+            // Now we'll remove item 2.
+            // Notice that while item 4 is at the front of the queue, it is also at the _end_ of the playlist.
+            // Item 3 will have its playlist order updated, which may crash if the current item isn't updated to not reference beyond the end of the list.
+            await Hub.RemovePlaylistItem(2);
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(4, room.Queue.CurrentItem.ID);
+            }
+        }
+
         private async Task runGameplay()
         {
             SetUserContext(ContextUser2);
