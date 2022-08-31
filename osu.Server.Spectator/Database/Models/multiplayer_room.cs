@@ -27,5 +27,6 @@ namespace osu.Server.Spectator.Database.Models
         public database_match_type type { get; set; }
         public database_queue_mode queue_mode { get; set; }
         public ushort auto_start_duration { get; set; }
+        public bool auto_skip { get; set; }
     }
 }
