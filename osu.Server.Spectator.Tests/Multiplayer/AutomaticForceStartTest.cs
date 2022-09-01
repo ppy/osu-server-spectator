@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.StartMatch();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.IsType<ForceGameplayStartCountdown>(usage.Item?.Countdown);
+                Assert.NotNull(usage.Item!.FindCountdownOfType<ForceGameplayStartCountdown>());
         }
 
         [Fact]
@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.AbortGameplay();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.Null(usage.Item?.Countdown);
+                Assert.Null(usage.Item!.FindCountdownOfType<ForceGameplayStartCountdown>());
         }
 
         [Fact]
@@ -127,7 +127,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                task = room.SkipToEndOfCountdown();
+                task = room.SkipToEndOfCountdown<ForceGameplayStartCountdown>();
             }
 
             try
