@@ -13,7 +13,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class MultiplayerCountdownTest : MultiplayerTest
+    public class MultiplayerMatchStartCountdownTest : MultiplayerTest
     {
         private const int test_timeout = 60000;
 
