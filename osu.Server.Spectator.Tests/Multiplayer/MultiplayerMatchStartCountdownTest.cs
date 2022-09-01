@@ -48,8 +48,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.NotNull(room.FindCountdownOfType<MatchStartCountdown>());
-                task = room.GetCurrentCountdownTask<MatchStartCountdown>();
+                MultiplayerCountdown? countdown = room.FindCountdownOfType<MatchStartCountdown>();
+                Assert.NotNull(countdown);
+                task = room.GetCountdownTask(countdown!);
             }
 
             await task;
@@ -385,7 +386,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                task = room.SkipToEndOfCountdown<MatchStartCountdown>();
+                var countdown = room.FindCountdownOfType<ForceGameplayStartCountdown>();
+                task = countdown == null ? Task.CompletedTask : room.SkipToEndOfCountdown(countdown);
             }
 
             try

@@ -105,10 +105,9 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="countdown">The countdown to start. The <see cref="MultiplayerRoom"/> will receive this object for the duration of the countdown.</param>
         /// <param name="onComplete">A callback to be invoked when the countdown completes.</param>
-        public async Task StartCountdown<T>(T countdown, Func<ServerMultiplayerRoom, Task> onComplete)
-            where T : MultiplayerCountdown
+        public async Task StartCountdown(MultiplayerCountdown countdown, Func<ServerMultiplayerRoom, Task> onComplete)
         {
-            await StopAnyCountdown<T>();
+            await StopAnyCountdown(countdown.GetType());
 
             countdown.ID = nextCountdownId++;
 
@@ -167,10 +166,15 @@ namespace osu.Server.Spectator.Hubs
         /// Stops any countdown of the given type, preventing its callback from running.
         /// </summary>
         /// <typeparam name="T">The countdown type.</typeparam>
-        public async Task StopAnyCountdown<T>()
-            where T : MultiplayerCountdown
+        public Task StopAnyCountdown<T>() where T : MultiplayerCountdown => StopAnyCountdown(typeof(T));
+
+        /// <summary>
+        /// Stops any countdown of the given type, preventing its callback from running.
+        /// </summary>
+        /// <param name="countdownType">The countdown type.</param>
+        public async Task StopAnyCountdown(Type countdownType)
         {
-            T? countdown = FindCountdownOfType<T>();
+            MultiplayerCountdown? countdown = FindCountdownOfType(countdownType);
             if (countdown != null)
                 await StopCountdown(countdown);
         }
@@ -189,43 +193,40 @@ namespace osu.Server.Spectator.Hubs
         }
 
         /// <summary>
-        /// Skips to the end of the countdown of the given type, if one is running,
-        /// and runs the callback (e.g. to start the match) as soon as possible unless the countdown has been cancelled.
+        /// Skips to the end of the countdown and runs the callback (e.g. to start the match) as soon as possible unless the countdown has been cancelled.
         /// </summary>
-        /// <typeparam name="T">The countdown type.</typeparam>
+        /// <param name="countdown">The countdown.</param>
         /// <returns>
         /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
         /// </returns>
-        public Task SkipToEndOfCountdown<T>()
-            where T : MultiplayerCountdown
+        public Task SkipToEndOfCountdown(MultiplayerCountdown countdown)
         {
-            MultiplayerCountdown? countdown = FindCountdownOfType<T>();
-
-            if (countdown == null)
+            if (!countdownInfo.TryGetValue(countdown, out CountdownInfo? info))
                 return Task.CompletedTask;
 
-            CountdownInfo info = countdownInfo[countdown];
             info.SkipSource.Cancel();
             return info.Task;
         }
 
         /// <summary>
-        /// Retrieves the task for the countdown of the given type, if one is running.
+        /// Retrieves the task for the given countdown, if one is running.
         /// </summary>
-        /// <typeparam name="T">The countdown type.</typeparam>
-        public Task GetCurrentCountdownTask<T>()
-            where T : MultiplayerCountdown
-        {
-            MultiplayerCountdown? countdown = FindCountdownOfType<T>();
-            return countdown == null ? Task.CompletedTask : countdownInfo[countdown].Task;
-        }
+        /// <param name="countdown">The countdown to retrieve the task of.</param>
+        public Task GetCountdownTask(MultiplayerCountdown countdown) => countdownInfo.TryGetValue(countdown, out CountdownInfo? info) ? info.Task : Task.CompletedTask;
 
         /// <summary>
         /// Searches the currently active countdowns and retrieves the one of a given type.
         /// </summary>
         /// <typeparam name="T">The countdown type.</typeparam>
         /// <returns>The countdown of the given type, or null if no such countdown is running.</returns>
-        public T? FindCountdownOfType<T>() where T : MultiplayerCountdown => (T?)ActiveCountdowns.SingleOrDefault(c => c.GetType() == typeof(T));
+        public T? FindCountdownOfType<T>() where T : MultiplayerCountdown => (T?)FindCountdownOfType(typeof(T));
+
+        /// <summary>
+        /// Searches the currently active countdowns and retrieves the one of a given type.
+        /// </summary>
+        /// <param name="countdownType">The countdown type.</param>
+        /// <returns>The countdown of the given type, or null if no such countdown is running.</returns>
+        public MultiplayerCountdown? FindCountdownOfType(Type countdownType) => ActiveCountdowns.SingleOrDefault(c => c.GetType() == countdownType);
 
         /// <summary>
         /// Searches the currently active countdowns and retrieves the one matching a given ID.

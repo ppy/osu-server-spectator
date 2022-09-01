@@ -127,7 +127,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                task = room.SkipToEndOfCountdown<ForceGameplayStartCountdown>();
+                var countdown = room.FindCountdownOfType<ForceGameplayStartCountdown>();
+                task = countdown == null ? Task.CompletedTask : room.SkipToEndOfCountdown(countdown);
             }
 
             try
