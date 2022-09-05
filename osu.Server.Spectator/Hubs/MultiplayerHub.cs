@@ -433,6 +433,9 @@ namespace osu.Server.Spectator.Hubs
                         if (countdown is MatchStartCountdown && room.Settings.AutoStartEnabled)
                             throw new InvalidStateException("Cannot cancel auto-start countdown.");
 
+                        if (countdown is ForceGameplayStartCountdown)
+                            throw new InvalidStateException("Cannot cancel gameplay start countdown.");
+
                         await room.StopCountdown(countdown);
                         break;
 
