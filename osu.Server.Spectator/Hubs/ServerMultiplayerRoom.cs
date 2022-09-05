@@ -105,8 +105,12 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="countdown">The countdown to start. The <see cref="MultiplayerRoom"/> will receive this object for the duration of the countdown.</param>
         /// <param name="onComplete">A callback to be invoked when the countdown completes.</param>
-        public async Task StartCountdown(MultiplayerCountdown countdown, Func<ServerMultiplayerRoom, Task> onComplete)
+        public async Task StartCountdown<T>(T countdown, Func<ServerMultiplayerRoom, Task> onComplete)
+            where T : MultiplayerCountdown
         {
+            if (countdown.IsExclusive)
+                await StopAllCountdowns<T>();
+
             countdown.ID = nextCountdownId++;
 
             CountdownInfo info = new CountdownInfo(countdown);

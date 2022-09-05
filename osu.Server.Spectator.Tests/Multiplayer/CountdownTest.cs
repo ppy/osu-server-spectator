@@ -256,5 +256,40 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Assert.False(callbackInvoked1);
             Assert.True(callbackInvoked2);
         }
+
+        [Fact]
+        public async Task StartingNewExclusiveCountdownReplacesExisting()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            Mock<ExclusiveCountdown> countdown1 = new Mock<ExclusiveCountdown> { CallBase = true };
+            Mock<MultiplayerCountdown> countdown2 = new Mock<MultiplayerCountdown> { CallBase = true };
+            Mock<ExclusiveCountdown> countdown3 = new Mock<ExclusiveCountdown> { CallBase = true };
+
+            countdown1.Setup(c => c.IsExclusive).Returns(true);
+            countdown2.Setup(c => c.IsExclusive).Returns(false);
+            countdown3.Setup(c => c.IsExclusive).Returns(true);
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                await usage.Item!.StartCountdown(countdown1.Object, _ => Task.CompletedTask);
+                await usage.Item!.StartCountdown(countdown2.Object, _ => Task.CompletedTask);
+                await usage.Item!.StartCountdown(countdown3.Object, _ => Task.CompletedTask);
+                Assert.Null(usage.Item.FindCountdownById(countdown1.Object.ID));
+                Assert.NotNull(usage.Item.FindCountdownById(countdown2.Object.ID));
+                Assert.NotNull(usage.Item.FindCountdownById(countdown3.Object.ID));
+                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStartedEvent>(e => e.Countdown == countdown1.Object)), Times.Once);
+                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStartedEvent>(e => e.Countdown == countdown2.Object)), Times.Once);
+                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStartedEvent>(e => e.Countdown == countdown3.Object)), Times.Once);
+                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStoppedEvent>(e => e.ID == countdown1.Object.ID)), Times.Once);
+                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStoppedEvent>(e => e.ID == countdown2.Object.ID)), Times.Never);
+                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStoppedEvent>(e => e.ID == countdown3.Object.ID)), Times.Never);
+            }
+        }
+
+        public class ExclusiveCountdown : MultiplayerCountdown
+        {
+            public override bool IsExclusive => true;
+        }
     }
 }

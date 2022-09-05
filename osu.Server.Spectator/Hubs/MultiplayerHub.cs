@@ -417,7 +417,6 @@ namespace osu.Server.Spectator.Hubs
                         if (room.Settings.AutoStartEnabled)
                             throw new InvalidStateException("Cannot start manual countdown if auto-start is enabled.");
 
-                        await room.StopAllCountdowns<MatchStartCountdown>();
                         await room.StartCountdown(new MatchStartCountdown { TimeRemaining = startMatchCountdownRequest.Duration }, HubContext.StartMatch);
 
                         break;
