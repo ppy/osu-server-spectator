@@ -121,7 +121,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
-            DerivedCountdown countdown2 = Mock.Of<DerivedCountdown>();
+            MultiplayerCountdown countdown2 = Mock.Of<MultiplayerCountdown>();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -140,7 +140,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
-            DerivedCountdown countdown2 = Mock.Of<DerivedCountdown>();
+            MultiplayerCountdown countdown2 = Mock.Of<MultiplayerCountdown>();
             countdown1.TimeRemaining = TimeSpan.FromSeconds(3);
             countdown2.TimeRemaining = TimeSpan.FromSeconds(3);
 
@@ -180,7 +180,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
-            DerivedCountdown countdown2 = Mock.Of<DerivedCountdown>();
+            MultiplayerCountdown countdown2 = Mock.Of<MultiplayerCountdown>();
             countdown1.TimeRemaining = TimeSpan.FromMinutes(1);
             countdown2.TimeRemaining = TimeSpan.FromMinutes(1);
 
@@ -220,7 +220,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
-            DerivedCountdown countdown2 = Mock.Of<DerivedCountdown>();
+            MultiplayerCountdown countdown2 = Mock.Of<MultiplayerCountdown>();
             countdown1.TimeRemaining = TimeSpan.FromMinutes(1);
             countdown2.TimeRemaining = TimeSpan.FromMinutes(1);
 
@@ -255,10 +255,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             Assert.False(callbackInvoked1);
             Assert.True(callbackInvoked2);
-        }
-
-        public abstract class DerivedCountdown : MultiplayerCountdown
-        {
         }
     }
 }

@@ -195,9 +195,9 @@ namespace osu.Server.Spectator.Hubs
         /// <returns>
         /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
         /// </returns>
-        public Task SkipToEndOfCountdown(MultiplayerCountdown countdown)
+        public Task SkipToEndOfCountdown(MultiplayerCountdown? countdown)
         {
-            if (!countdownInfo.TryGetValue(countdown, out CountdownInfo? info))
+            if (countdown == null || !countdownInfo.TryGetValue(countdown, out CountdownInfo? info))
                 return Task.CompletedTask;
 
             info.SkipSource.Cancel();
@@ -208,21 +208,24 @@ namespace osu.Server.Spectator.Hubs
         /// Retrieves the task for the given countdown, if one is running.
         /// </summary>
         /// <param name="countdown">The countdown to retrieve the task of.</param>
-        public Task GetCountdownTask(MultiplayerCountdown countdown) => countdownInfo.TryGetValue(countdown, out CountdownInfo? info) ? info.Task : Task.CompletedTask;
+        public Task GetCountdownTask(MultiplayerCountdown? countdown)
+            => countdown == null || !countdownInfo.TryGetValue(countdown, out CountdownInfo? info) ? Task.CompletedTask : info.Task;
 
         /// <summary>
         /// Searches the currently active countdowns and retrieves one of the given type.
         /// </summary>
         /// <typeparam name="T">The countdown type.</typeparam>
         /// <returns>A countdown of the given type, or null if no such countdown is running.</returns>
-        public T? FindCountdownOfType<T>() where T : MultiplayerCountdown => ActiveCountdowns.OfType<T>().FirstOrDefault();
+        public T? FindCountdownOfType<T>() where T : MultiplayerCountdown
+            => ActiveCountdowns.OfType<T>().FirstOrDefault();
 
         /// <summary>
         /// Searches the currently active countdowns and retrieves the one matching a given ID.
         /// </summary>
         /// <param name="countdownId">The countdown ID.</param>
         /// <returns>The countdown matching the given ID, or null if no such countdown is running.</returns>
-        public MultiplayerCountdown? FindCountdownById(int countdownId) => ActiveCountdowns.SingleOrDefault(c => c.ID == countdownId);
+        public MultiplayerCountdown? FindCountdownById(int countdownId)
+            => ActiveCountdowns.SingleOrDefault(c => c.ID == countdownId);
 
         private class CountdownInfo : IDisposable
         {
