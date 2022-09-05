@@ -33,25 +33,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task StartAndReplaceCountdown()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-
-            MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
-            MultiplayerCountdown countdown2 = Mock.Of<MultiplayerCountdown>();
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                await usage.Item!.StartCountdown(countdown1, _ => Task.CompletedTask);
-                await usage.Item!.StartCountdown(countdown2, _ => Task.CompletedTask);
-                Assert.Null(usage.Item.FindCountdownById(countdown1.ID));
-                Assert.NotNull(usage.Item.FindCountdownById(countdown2.ID));
-                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStartedEvent>(e => e.Countdown == countdown2)), Times.Once);
-                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStoppedEvent>(e => e.ID == countdown1.ID)), Times.Once);
-            }
-        }
-
-        [Fact]
         public async Task CallbackInvokedWhenCountdownCompletes()
         {
             await Hub.JoinRoom(ROOM_ID);
@@ -150,30 +131,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(usage.Item.FindCountdownById(countdown2.ID));
                 Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStartedEvent>(e => e.Countdown == countdown2)), Times.Once);
                 Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownStoppedEvent>()), Times.Never);
-            }
-        }
-
-        [Fact]
-        public async Task StartAndReplaceMultipleCountdowns()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-
-            MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
-            DerivedCountdown countdown2 = Mock.Of<DerivedCountdown>();
-            DerivedCountdown countdown3 = Mock.Of<DerivedCountdown>();
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                await usage.Item!.StartCountdown(countdown1, _ => Task.CompletedTask);
-                await usage.Item!.StartCountdown(countdown2, _ => Task.CompletedTask);
-                await usage.Item!.StartCountdown(countdown3, _ => Task.CompletedTask);
-                Assert.NotNull(usage.Item.FindCountdownById(countdown1.ID));
-                Assert.Null(usage.Item.FindCountdownById(countdown2.ID));
-                Assert.NotNull(usage.Item.FindCountdownById(countdown3.ID));
-                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStartedEvent>(e => e.Countdown == countdown2)), Times.Once);
-                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStartedEvent>(e => e.Countdown == countdown3)), Times.Once);
-                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStoppedEvent>(e => e.ID == countdown2.ID)), Times.Once);
-                Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStoppedEvent>(e => e.ID != countdown2.ID)), Times.Never);
             }
         }
 
