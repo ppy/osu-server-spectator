@@ -266,10 +266,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Mock<MultiplayerCountdown> countdown2 = new Mock<MultiplayerCountdown> { CallBase = true };
             Mock<ExclusiveCountdown> countdown3 = new Mock<ExclusiveCountdown> { CallBase = true };
 
-            countdown1.Setup(c => c.IsExclusive).Returns(true);
-            countdown2.Setup(c => c.IsExclusive).Returns(false);
-            countdown3.Setup(c => c.IsExclusive).Returns(true);
-
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 await usage.Item!.StartCountdown(countdown1.Object, _ => Task.CompletedTask);
