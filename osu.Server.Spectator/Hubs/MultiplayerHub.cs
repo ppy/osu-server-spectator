@@ -409,7 +409,7 @@ namespace osu.Server.Spectator.Hubs
 
                 switch (request)
                 {
-                    case StartMatchCountdownRequest countdown:
+                    case StartMatchCountdownRequest startMatchCountdownRequest:
                         ensureIsHost(room);
 
                         if (room.State != MultiplayerRoomState.Open)
@@ -418,17 +418,25 @@ namespace osu.Server.Spectator.Hubs
                         if (room.Settings.AutoStartEnabled)
                             throw new InvalidStateException("Cannot start manual countdown if auto-start is enabled.");
 
-                        await room.StartCountdown(new MatchStartCountdown { TimeRemaining = countdown.Duration }, HubContext.StartMatch);
+                        await room.StartCountdown(new MatchStartCountdown { TimeRemaining = startMatchCountdownRequest.Duration }, HubContext.StartMatch);
 
                         break;
 
-                    case StopCountdownRequest _:
+                    case StopCountdownRequest stopCountdownRequest:
                         ensureIsHost(room);
 
-                        if (room.Settings.AutoStartEnabled)
+                        MultiplayerCountdown? countdown = room.FindCountdownById(stopCountdownRequest.ID);
+
+                        if (countdown == null)
+                            break;
+
+                        if (countdown is MatchStartCountdown && room.Settings.AutoStartEnabled)
                             throw new InvalidStateException("Cannot cancel auto-start countdown.");
 
-                        await room.StopCountdown();
+                        if (countdown is ForceGameplayStartCountdown)
+                            throw new InvalidStateException("Cannot cancel gameplay start countdown.");
+
+                        await room.StopCountdown(countdown);
                         break;
 
                     default:
@@ -669,7 +677,7 @@ namespace osu.Server.Spectator.Hubs
                     {
                         bool shouldHaveCountdown = !room.Queue.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
-                        if (shouldHaveCountdown && room.Countdown == null)
+                        if (shouldHaveCountdown && !room.ActiveCountdowns.Any(c => c is MatchStartCountdown))
                             await room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, HubContext.StartMatch);
                     }
 

@@ -2,7 +2,9 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
@@ -56,12 +58,14 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public void UpdateForRetrieval()
         {
-            if (Countdown != null)
+            foreach (var countdown in ActiveCountdowns)
             {
-                DateTimeOffset countdownEnd = countdownStartTime + countdownDuration;
+                var countdownInfo = trackedCountdowns[countdown];
+
+                DateTimeOffset countdownEnd = countdownInfo.StartTime + countdownInfo.Duration;
                 TimeSpan timeRemaining = countdownEnd - DateTimeOffset.Now;
 
-                Countdown.TimeRemaining = timeRemaining.TotalSeconds > 0 ? timeRemaining : TimeSpan.Zero;
+                countdown.TimeRemaining = timeRemaining.TotalSeconds > 0 ? timeRemaining : TimeSpan.Zero;
             }
         }
 
@@ -93,40 +97,38 @@ namespace osu.Server.Spectator.Hubs
 
         #region Countdowns
 
-        private CancellationTokenSource? countdownStopSource;
-        private CancellationTokenSource? countdownSkipSource;
-        private Task countdownTask = Task.CompletedTask;
-        private TimeSpan countdownDuration;
-        private DateTimeOffset countdownStartTime;
+        private int nextCountdownId;
+        private readonly Dictionary<MultiplayerCountdown, CountdownInfo> trackedCountdowns = new Dictionary<MultiplayerCountdown, CountdownInfo>();
 
         /// <summary>
-        /// Starts a new countdown, stopping any existing one.
+        /// Starts a new countdown.
         /// </summary>
         /// <param name="countdown">The countdown to start. The <see cref="MultiplayerRoom"/> will receive this object for the duration of the countdown.</param>
         /// <param name="onComplete">A callback to be invoked when the countdown completes.</param>
-        public async Task StartCountdown(MultiplayerCountdown countdown, Func<ServerMultiplayerRoom, Task> onComplete)
+        public async Task StartCountdown<T>(T countdown, Func<ServerMultiplayerRoom, Task> onComplete)
+            where T : MultiplayerCountdown
         {
-            await StopCountdown();
+            if (countdown.IsExclusive)
+                await StopAllCountdowns<T>();
 
-            var stopSource = countdownStopSource = new CancellationTokenSource();
-            var skipSource = countdownSkipSource = new CancellationTokenSource();
+            countdown.ID = Interlocked.Increment(ref nextCountdownId);
 
-            countdownStartTime = DateTimeOffset.Now;
-            countdownDuration = countdown.TimeRemaining;
+            CountdownInfo countdownInfo = new CountdownInfo(countdown);
 
-            Countdown = countdown;
+            trackedCountdowns[countdown] = countdownInfo;
+            ActiveCountdowns.Add(countdown);
 
-            await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = countdown });
+            await hub.NotifyNewMatchEvent(this, new CountdownStartedEvent(countdown));
 
-            countdownTask = start();
+            countdownInfo.Task = start();
 
             async Task start()
             {
                 // Run the countdown.
                 try
                 {
-                    using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(stopSource.Token, skipSource.Token))
-                        await Task.Delay(countdownDuration, cancellationSource.Token).ConfigureAwait(false);
+                    using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(countdownInfo.StopSource.Token, countdownInfo.SkipSource.Token))
+                        await Task.Delay(countdownInfo.Duration, cancellationSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -142,12 +144,13 @@ namespace osu.Server.Spectator.Hubs
                         if (roomUsage.Item == null)
                             return;
 
-                        if (stopSource.IsCancellationRequested)
+                        if (countdownInfo.StopSource.IsCancellationRequested)
                             return;
 
-                        Debug.Assert(Countdown == countdown);
+                        Debug.Assert(trackedCountdowns.ContainsKey(countdown));
+                        Debug.Assert(ActiveCountdowns.Contains(countdown));
 
-                        await StopCountdown();
+                        await StopCountdown(countdown);
 
                         // The continuation could be run outside of the room lock, however it seems saner to run it within the same lock as the cancellation token usage.
                         // Furthermore, providing a room-id instead of the room becomes cumbersome for usages, so this also provides a nicer API.
@@ -155,58 +158,101 @@ namespace osu.Server.Spectator.Hubs
                     }
                     finally
                     {
-                        stopSource.Dispose();
-                        skipSource.Dispose();
-
-                        // Although we are in a single-threaded context with regards to the construction/setters of the class-level fields,
-                        // subsequent calls to StartCountdown() create new objects/override the class-level fields _before_ waiting on the previous countdown task to complete.
-                        if (countdownStopSource == stopSource)
-                            countdownStopSource = null;
-                        if (countdownSkipSource == skipSource)
-                            countdownSkipSource = null;
+                        countdownInfo.Dispose();
                     }
                 }
             }
         }
 
         /// <summary>
-        /// Stops any current countdown, preventing its callback from running.
-        /// </summary>
-        public async Task StopCountdown()
-        {
-            if (Countdown == null)
-                return;
-
-            countdownStopSource?.Cancel();
-            Countdown = null;
-
-            await hub.NotifyNewMatchEvent(this, new CountdownChangedEvent { Countdown = null });
-        }
-
-        /// <summary>
-        /// Stops the current countdown if it's of the given type, preventing its callback from running.
+        /// Stops all countdowns of the given type, preventing their callbacks from running.
         /// </summary>
         /// <typeparam name="T">The countdown type.</typeparam>
-        public async Task StopCountdown<T>()
+        public async Task StopAllCountdowns<T>()
+            where T : MultiplayerCountdown
         {
-            if (Countdown is T)
-                await StopCountdown();
+            foreach (var countdown in ActiveCountdowns.OfType<T>().ToArray())
+                await StopCountdown(countdown);
         }
 
         /// <summary>
-        /// Skips to the end of the currently-running countdown, if one is running,
-        /// and runs the callback (e.g. to start the match) as soon as possible unless the countdown has been cancelled.
+        /// Stops the given countdown, preventing its callback from running.
         /// </summary>
+        /// <param name="countdown">The countdown to stop.</param>
+        public async Task StopCountdown(MultiplayerCountdown countdown)
+        {
+            if (!trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo))
+                return;
+
+            countdownInfo.StopSource.Cancel();
+
+            trackedCountdowns.Remove(countdown);
+            ActiveCountdowns.Remove(countdownInfo.Countdown);
+
+            await hub.NotifyNewMatchEvent(this, new CountdownStoppedEvent(countdownInfo.Countdown.ID));
+        }
+
+        /// <summary>
+        /// Skips to the end of the given countdown and runs its callback (e.g. to start the match) as soon as possible unless the countdown has been cancelled.
+        /// </summary>
+        /// <param name="countdown">The countdown.</param>
         /// <returns>
         /// A task which will become completed when the active countdown completes. Make sure to await this *outside* a usage.
         /// </returns>
-        public Task SkipToEndOfCountdown()
+        public Task SkipToEndOfCountdown(MultiplayerCountdown? countdown)
         {
-            countdownSkipSource?.Cancel();
-            return countdownTask;
+            if (countdown == null || !trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo))
+                return Task.CompletedTask;
+
+            countdownInfo.SkipSource.Cancel();
+            return countdownInfo.Task;
         }
 
-        public Task GetCurrentCountdownTask() => countdownTask;
+        /// <summary>
+        /// Retrieves the task for the given countdown, if one is running.
+        /// </summary>
+        /// <param name="countdown">The countdown to retrieve the task of.</param>
+        public Task GetCountdownTask(MultiplayerCountdown? countdown)
+            => countdown == null || !trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo) ? Task.CompletedTask : countdownInfo.Task;
+
+        /// <summary>
+        /// Searches the currently active countdowns and retrieves one of the given type.
+        /// </summary>
+        /// <typeparam name="T">The countdown type.</typeparam>
+        /// <returns>A countdown of the given type, or null if no such countdown is running.</returns>
+        public T? FindCountdownOfType<T>() where T : MultiplayerCountdown
+            => ActiveCountdowns.OfType<T>().FirstOrDefault();
+
+        /// <summary>
+        /// Searches the currently active countdowns and retrieves the one matching a given ID.
+        /// </summary>
+        /// <param name="countdownId">The countdown ID.</param>
+        /// <returns>The countdown matching the given ID, or null if no such countdown is running.</returns>
+        public MultiplayerCountdown? FindCountdownById(int countdownId)
+            => ActiveCountdowns.SingleOrDefault(c => c.ID == countdownId);
+
+        private class CountdownInfo : IDisposable
+        {
+            public readonly MultiplayerCountdown Countdown;
+            public readonly CancellationTokenSource StopSource = new CancellationTokenSource();
+            public readonly CancellationTokenSource SkipSource = new CancellationTokenSource();
+            public readonly DateTimeOffset StartTime = DateTimeOffset.Now;
+            public readonly TimeSpan Duration;
+
+            public Task Task { get; set; } = null!;
+
+            public CountdownInfo(MultiplayerCountdown countdown)
+            {
+                Countdown = countdown;
+                Duration = countdown.TimeRemaining;
+            }
+
+            public void Dispose()
+            {
+                StopSource.Dispose();
+                SkipSource.Dispose();
+            }
+        }
 
         #endregion
     }
