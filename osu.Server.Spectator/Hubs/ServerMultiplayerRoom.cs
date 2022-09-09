@@ -111,7 +111,7 @@ namespace osu.Server.Spectator.Hubs
             if (countdown.IsExclusive)
                 await StopAllCountdowns<T>();
 
-            countdown.ID = nextCountdownId++;
+            countdown.ID = Interlocked.Increment(ref nextCountdownId);
 
             CountdownInfo info = new CountdownInfo(countdown);
             countdownInfo[countdown] = info;
