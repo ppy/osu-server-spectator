@@ -60,9 +60,9 @@ namespace osu.Server.Spectator.Hubs
         {
             foreach (var countdown in ActiveCountdowns)
             {
-                var info = countdownInfo[countdown];
+                var countdownInfo = trackedCountdowns[countdown];
 
-                DateTimeOffset countdownEnd = info.StartTime + info.Duration;
+                DateTimeOffset countdownEnd = countdownInfo.StartTime + countdownInfo.Duration;
                 TimeSpan timeRemaining = countdownEnd - DateTimeOffset.Now;
 
                 countdown.TimeRemaining = timeRemaining.TotalSeconds > 0 ? timeRemaining : TimeSpan.Zero;
@@ -98,7 +98,7 @@ namespace osu.Server.Spectator.Hubs
         #region Countdowns
 
         private int nextCountdownId;
-        private readonly Dictionary<MultiplayerCountdown, CountdownInfo> countdownInfo = new Dictionary<MultiplayerCountdown, CountdownInfo>();
+        private readonly Dictionary<MultiplayerCountdown, CountdownInfo> trackedCountdowns = new Dictionary<MultiplayerCountdown, CountdownInfo>();
 
         /// <summary>
         /// Starts a new countdown.
@@ -113,22 +113,22 @@ namespace osu.Server.Spectator.Hubs
 
             countdown.ID = Interlocked.Increment(ref nextCountdownId);
 
-            CountdownInfo info = new CountdownInfo(countdown);
-            countdownInfo[countdown] = info;
+            CountdownInfo countdownInfo = new CountdownInfo(countdown);
 
+            trackedCountdowns[countdown] = countdownInfo;
             ActiveCountdowns.Add(countdown);
 
             await hub.NotifyNewMatchEvent(this, new CountdownStartedEvent(countdown));
 
-            info.Task = start();
+            countdownInfo.Task = start();
 
             async Task start()
             {
                 // Run the countdown.
                 try
                 {
-                    using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(info.StopSource.Token, info.SkipSource.Token))
-                        await Task.Delay(info.Duration, cancellationSource.Token).ConfigureAwait(false);
+                    using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(countdownInfo.StopSource.Token, countdownInfo.SkipSource.Token))
+                        await Task.Delay(countdownInfo.Duration, cancellationSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -144,10 +144,10 @@ namespace osu.Server.Spectator.Hubs
                         if (roomUsage.Item == null)
                             return;
 
-                        if (info.StopSource.IsCancellationRequested)
+                        if (countdownInfo.StopSource.IsCancellationRequested)
                             return;
 
-                        Debug.Assert(countdownInfo.ContainsKey(countdown));
+                        Debug.Assert(trackedCountdowns.ContainsKey(countdown));
                         Debug.Assert(ActiveCountdowns.Contains(countdown));
 
                         await StopCountdown(countdown);
@@ -158,7 +158,7 @@ namespace osu.Server.Spectator.Hubs
                     }
                     finally
                     {
-                        info.Dispose();
+                        countdownInfo.Dispose();
                     }
                 }
             }
@@ -181,15 +181,15 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="countdown">The countdown to stop.</param>
         public async Task StopCountdown(MultiplayerCountdown countdown)
         {
-            if (!countdownInfo.TryGetValue(countdown, out CountdownInfo? data))
+            if (!trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo))
                 return;
 
-            data.StopSource.Cancel();
+            countdownInfo.StopSource.Cancel();
 
-            countdownInfo.Remove(countdown);
-            ActiveCountdowns.Remove(data.Countdown);
+            trackedCountdowns.Remove(countdown);
+            ActiveCountdowns.Remove(countdownInfo.Countdown);
 
-            await hub.NotifyNewMatchEvent(this, new CountdownStoppedEvent(data.Countdown.ID));
+            await hub.NotifyNewMatchEvent(this, new CountdownStoppedEvent(countdownInfo.Countdown.ID));
         }
 
         /// <summary>
@@ -201,11 +201,11 @@ namespace osu.Server.Spectator.Hubs
         /// </returns>
         public Task SkipToEndOfCountdown(MultiplayerCountdown? countdown)
         {
-            if (countdown == null || !countdownInfo.TryGetValue(countdown, out CountdownInfo? info))
+            if (countdown == null || !trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo))
                 return Task.CompletedTask;
 
-            info.SkipSource.Cancel();
-            return info.Task;
+            countdownInfo.SkipSource.Cancel();
+            return countdownInfo.Task;
         }
 
         /// <summary>
@@ -213,7 +213,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="countdown">The countdown to retrieve the task of.</param>
         public Task GetCountdownTask(MultiplayerCountdown? countdown)
-            => countdown == null || !countdownInfo.TryGetValue(countdown, out CountdownInfo? info) ? Task.CompletedTask : info.Task;
+            => countdown == null || !trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo) ? Task.CompletedTask : countdownInfo.Task;
 
         /// <summary>
         /// Searches the currently active countdowns and retrieves one of the given type.
