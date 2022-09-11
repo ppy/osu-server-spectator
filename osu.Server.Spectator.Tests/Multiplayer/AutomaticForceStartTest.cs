@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.Countdown;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -22,7 +21,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.StartMatch();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.NotNull(usage.Item!.FindCountdownOfType<ForceGameplayStartCountdown>());
+                Assert.IsType<ForceGameplayStartCountdown>(usage.Item?.Countdown);
         }
 
         [Fact]
@@ -35,7 +34,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.AbortGameplay();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.Null(usage.Item!.FindCountdownOfType<ForceGameplayStartCountdown>());
+                Assert.Null(usage.Item?.Countdown);
         }
 
         [Fact]
@@ -119,23 +118,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact]
-        public async Task CountdownCannotBeStopped()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.StartMatch();
-
-            int countdownId;
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-                countdownId = usage.Item!.FindCountdownOfType<ForceGameplayStartCountdown>()!.ID;
-
-            await Assert.ThrowsAsync<InvalidStateException>(async () => await Hub.SendMatchRequest(new StopCountdownRequest(countdownId)));
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.NotNull(usage.Item!.FindCountdownOfType<ForceGameplayStartCountdown>());
-        }
-
         private async Task skipToEndOfCountdown()
         {
             Task task;
@@ -145,7 +127,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                task = room.SkipToEndOfCountdown(room.FindCountdownOfType<ForceGameplayStartCountdown>());
+                task = room.SkipToEndOfCountdown();
             }
 
             try

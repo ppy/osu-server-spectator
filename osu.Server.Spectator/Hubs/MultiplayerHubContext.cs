@@ -95,9 +95,9 @@ namespace osu.Server.Spectator.Hubs
             foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
                 await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
 
-            // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop any match start countdown.
+            // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop the countdown.
             // For example, gameplay-specific changes to the match settings or the current playlist item.
-            await room.StopAllCountdowns<MatchStartCountdown>();
+            await room.StopCountdown();
         }
 
         public async Task EnsureAllUsersValidMods(ServerMultiplayerRoom room)
@@ -193,7 +193,7 @@ namespace osu.Server.Spectator.Hubs
         {
             Debug.Assert(room.State == MultiplayerRoomState.WaitingForLoad);
 
-            await room.StopAllCountdowns<ForceGameplayStartCountdown>();
+            await room.StopCountdown<ForceGameplayStartCountdown>();
 
             bool anyUserPlaying = false;
 
