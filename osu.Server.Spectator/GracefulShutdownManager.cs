@@ -5,8 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.Countdown;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 
@@ -23,9 +26,13 @@ public class GracefulShutdownManager
     public static readonly TimeSpan TIME_BEFORE_FORCEFUL_SHUTDOWN = TimeSpan.FromHours(6);
 
     private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
+    private readonly IHubContext<MultiplayerHub> multiplayerHubContext;
 
-    public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime)
+    public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime,
+                                   IHubContext<MultiplayerHub> multiplayerHubContext)
     {
+        this.multiplayerHubContext = multiplayerHubContext;
+
         dependentStores.Add(roomStore);
         dependentStores.Add(clientStateStore);
 
@@ -39,12 +46,30 @@ public class GracefulShutdownManager
         foreach (var store in dependentStores)
             store.StopAcceptingEntities();
 
-        TimeSpan timeWaited = new TimeSpan();
+        multiplayerHubContext.Clients.All.SendAsync(nameof(IMultiplayerClient.MatchEvent), new CountdownStartedEvent(new ServerShuttingDownCountdown
+        {
+            TimeRemaining = TIME_BEFORE_FORCEFUL_SHUTDOWN
+        }));
 
+        TimeSpan timeWaited = new TimeSpan();
         TimeSpan timeBetweenChecks = TimeSpan.FromSeconds(10);
+        bool finalNotificationSent = false;
 
         while (timeWaited < TIME_BEFORE_FORCEFUL_SHUTDOWN)
         {
+            TimeSpan timeRemaining = TIME_BEFORE_FORCEFUL_SHUTDOWN - timeWaited;
+
+            if (timeRemaining.TotalMinutes <= 5 && !finalNotificationSent)
+            {
+                multiplayerHubContext.Clients.All.SendAsync(nameof(IMultiplayerClient.MatchEvent), new CountdownStartedEvent(new ServerShuttingDownCountdown
+                {
+                    TimeRemaining = timeRemaining,
+                    FinalNotification = true
+                }));
+
+                finalNotificationSent = true;
+            }
+
             var remaining = dependentStores.Select(store => (store.EntityName, store.RemainingUsages));
 
             if (remaining.Sum(s => s.RemainingUsages) == 0)
