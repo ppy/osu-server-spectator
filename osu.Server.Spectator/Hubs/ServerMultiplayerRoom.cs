@@ -105,7 +105,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="countdown">The countdown to start. The <see cref="MultiplayerRoom"/> will receive this object for the duration of the countdown.</param>
         /// <param name="onComplete">A callback to be invoked when the countdown completes.</param>
-        public async Task StartCountdown<T>(T countdown, Func<ServerMultiplayerRoom, Task> onComplete)
+        public async Task StartCountdown<T>(T countdown, Func<ServerMultiplayerRoom, Task>? onComplete = null)
             where T : MultiplayerCountdown
         {
             if (countdown.IsExclusive)
@@ -154,7 +154,8 @@ namespace osu.Server.Spectator.Hubs
 
                         // The continuation could be run outside of the room lock, however it seems saner to run it within the same lock as the cancellation token usage.
                         // Furthermore, providing a room-id instead of the room becomes cumbersome for usages, so this also provides a nicer API.
-                        await onComplete(roomUsage.Item);
+                        if (onComplete != null)
+                            await onComplete(roomUsage.Item);
                     }
                     finally
                     {

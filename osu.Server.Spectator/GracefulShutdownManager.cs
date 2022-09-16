@@ -5,11 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Microsoft.AspNetCore.SignalR;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.Countdown;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 
@@ -26,12 +25,11 @@ public class GracefulShutdownManager
     public static readonly TimeSpan TIME_BEFORE_FORCEFUL_SHUTDOWN = TimeSpan.FromHours(6);
 
     private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
-    private readonly IHubContext<MultiplayerHub> multiplayerHubContext;
+    private readonly EntityStore<ServerMultiplayerRoom> roomStore;
 
-    public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime,
-                                   IHubContext<MultiplayerHub> multiplayerHubContext)
+    public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime)
     {
-        this.multiplayerHubContext = multiplayerHubContext;
+        this.roomStore = roomStore;
 
         dependentStores.Add(roomStore);
         dependentStores.Add(clientStateStore);
@@ -46,10 +44,13 @@ public class GracefulShutdownManager
         foreach (var store in dependentStores)
             store.StopAcceptingEntities();
 
-        multiplayerHubContext.Clients.All.SendAsync(nameof(IMultiplayerClient.MatchEvent), new CountdownStartedEvent(new ServerShuttingDownCountdown
+        performOnAllRooms(async r =>
         {
-            TimeRemaining = TIME_BEFORE_FORCEFUL_SHUTDOWN
-        }));
+            await r.StartCountdown(new ServerShuttingDownCountdown
+            {
+                TimeRemaining = TIME_BEFORE_FORCEFUL_SHUTDOWN
+            });
+        }).Wait();
 
         TimeSpan timeWaited = new TimeSpan();
         TimeSpan timeBetweenChecks = TimeSpan.FromSeconds(10);
@@ -61,11 +62,14 @@ public class GracefulShutdownManager
 
             if (timeRemaining.TotalMinutes <= 5 && !finalNotificationSent)
             {
-                multiplayerHubContext.Clients.All.SendAsync(nameof(IMultiplayerClient.MatchEvent), new CountdownStartedEvent(new ServerShuttingDownCountdown
+                performOnAllRooms(async r =>
                 {
-                    TimeRemaining = timeRemaining,
-                    FinalNotification = true
-                }));
+                    await r.StartCountdown(new ServerShuttingDownCountdown
+                    {
+                        TimeRemaining = timeRemaining,
+                        FinalNotification = true
+                    });
+                }).Wait();
 
                 finalNotificationSent = true;
             }
@@ -84,5 +88,19 @@ public class GracefulShutdownManager
         }
 
         Logger.Log("All entities cleaned up. Server shutdown unblocking.");
+    }
+
+    private async Task performOnAllRooms(Func<ServerMultiplayerRoom, Task> action)
+    {
+        var rooms = roomStore.GetAllEntities();
+
+        foreach (var roomId in rooms.Select(r => r.Key))
+        {
+            using (ItemUsage<ServerMultiplayerRoom> roomUsage = await roomStore.GetForUse(roomId))
+            {
+                if (roomUsage.Item != null)
+                    await action(roomUsage.Item);
+            }
+        }
     }
 }
