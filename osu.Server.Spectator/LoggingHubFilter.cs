@@ -47,7 +47,7 @@ namespace osu.Server.Spectator
             }
             catch (Exception e)
             {
-                logTarget.Error($"Failed to invoke OnConnectedAsync()", e);
+                logTarget.Error("Failed to invoke OnConnectedAsync()", e);
                 throw;
             }
         }

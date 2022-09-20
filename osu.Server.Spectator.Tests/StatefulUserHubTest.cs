@@ -63,7 +63,7 @@ namespace osu.Server.Spectator.Tests
                 ClientState? firstState = state.Item;
 
                 Assert.NotNull(firstState);
-                Assert.Equal(mockContext.Object.ConnectionId, firstState?.ConnectionId);
+                Assert.Equal(mockContext.Object.ConnectionId, firstState.ConnectionId);
             }
 
             // connect a second time as the same user without disconnecting the original connection.
