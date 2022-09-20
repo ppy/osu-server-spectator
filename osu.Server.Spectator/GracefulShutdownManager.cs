@@ -54,26 +54,9 @@ public class GracefulShutdownManager
 
         TimeSpan timeWaited = new TimeSpan();
         TimeSpan timeBetweenChecks = TimeSpan.FromSeconds(10);
-        bool finalNotificationSent = false;
 
         while (timeWaited < TIME_BEFORE_FORCEFUL_SHUTDOWN)
         {
-            TimeSpan timeRemaining = TIME_BEFORE_FORCEFUL_SHUTDOWN - timeWaited;
-
-            if (timeRemaining.TotalMinutes <= 5 && !finalNotificationSent)
-            {
-                performOnAllRooms(async r =>
-                {
-                    await r.StartCountdown(new ServerShuttingDownCountdown
-                    {
-                        TimeRemaining = timeRemaining,
-                        FinalNotification = true
-                    });
-                }).Wait();
-
-                finalNotificationSent = true;
-            }
-
             var remaining = dependentStores.Select(store => (store.EntityName, store.RemainingUsages));
 
             if (remaining.Sum(s => s.RemainingUsages) == 0)
