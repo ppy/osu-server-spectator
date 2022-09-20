@@ -192,6 +192,10 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task endPlaySession(int userId, SpectatorState state)
         {
+            // Ensure that the state is no longer playing (e.g. if client crashes).
+            if (state.State == SpectatedUserState.Playing)
+                state.State = SpectatedUserState.Quit;
+
             await Clients.All.UserFinishedPlaying(userId, state);
         }
     }
