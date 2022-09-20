@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
+using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 
@@ -23,9 +25,12 @@ public class GracefulShutdownManager
     public static readonly TimeSpan TIME_BEFORE_FORCEFUL_SHUTDOWN = TimeSpan.FromHours(6);
 
     private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
+    private readonly EntityStore<ServerMultiplayerRoom> roomStore;
 
     public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime)
     {
+        this.roomStore = roomStore;
+
         dependentStores.Add(roomStore);
         dependentStores.Add(clientStateStore);
 
@@ -39,8 +44,15 @@ public class GracefulShutdownManager
         foreach (var store in dependentStores)
             store.StopAcceptingEntities();
 
-        TimeSpan timeWaited = new TimeSpan();
+        performOnAllRooms(async r =>
+        {
+            await r.StartCountdown(new ServerShuttingDownCountdown
+            {
+                TimeRemaining = TIME_BEFORE_FORCEFUL_SHUTDOWN
+            });
+        }).Wait();
 
+        TimeSpan timeWaited = new TimeSpan();
         TimeSpan timeBetweenChecks = TimeSpan.FromSeconds(10);
 
         while (timeWaited < TIME_BEFORE_FORCEFUL_SHUTDOWN)
@@ -59,5 +71,19 @@ public class GracefulShutdownManager
         }
 
         Logger.Log("All entities cleaned up. Server shutdown unblocking.");
+    }
+
+    private async Task performOnAllRooms(Func<ServerMultiplayerRoom, Task> action)
+    {
+        var rooms = roomStore.GetAllEntities();
+
+        foreach (var roomId in rooms.Select(r => r.Key))
+        {
+            using (ItemUsage<ServerMultiplayerRoom> roomUsage = await roomStore.GetForUse(roomId))
+            {
+                if (roomUsage.Item != null)
+                    await action(roomUsage.Item);
+            }
+        }
     }
 }
