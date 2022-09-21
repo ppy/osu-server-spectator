@@ -26,7 +26,7 @@ namespace osu.Server.Spectator.Tests
 
             Assert.NotNull(deserializedRoomState);
 
-            Assert.Equal(state.TeamID, deserializedRoomState!.TeamID);
+            Assert.Equal(state.TeamID, deserializedRoomState.TeamID);
         }
 
         [Fact(Skip = "Won't work without abstract class definitions (temporarily removed).")]
@@ -49,7 +49,7 @@ namespace osu.Server.Spectator.Tests
 
             Assert.NotNull(deserializedRoomState);
 
-            Assert.Equal(state.Teams.Count, deserializedRoomState!.Teams.Count);
+            Assert.Equal(state.Teams.Count, deserializedRoomState.Teams.Count);
             Assert.Equal(state.Teams.First().ID, deserializedRoomState.Teams.First().ID);
             Assert.Equal(state.Teams.First().Name, deserializedRoomState.Teams.First().Name);
         }

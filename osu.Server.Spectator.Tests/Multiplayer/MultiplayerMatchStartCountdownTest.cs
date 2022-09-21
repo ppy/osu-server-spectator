@@ -51,7 +51,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 MultiplayerCountdown? countdown = room.FindCountdownOfType<MatchStartCountdown>();
                 Assert.NotNull(countdown);
 
-                task = room.GetCountdownTask(countdown!);
+                task = room.GetCountdownTask(countdown);
             }
 
             await task;
@@ -84,7 +84,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 MultiplayerCountdown? countdown = room.FindCountdownOfType<MatchStartCountdown>();
                 Assert.NotNull(countdown);
-                Assert.InRange(countdown!.TimeRemaining.TotalSeconds, 30, 60);
+                Assert.InRange(countdown.TimeRemaining.TotalSeconds, 30, 60);
                 GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
             }
 
@@ -210,7 +210,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 MultiplayerCountdown? countdown = usage.Item!.FindCountdownOfType<MatchStartCountdown>();
                 Assert.NotNull(countdown);
-                Assert.Equal(60, countdown!.TimeRemaining.TotalSeconds);
+                Assert.Equal(60, countdown.TimeRemaining.TotalSeconds);
             }
 
             Thread.Sleep(2000);
@@ -329,7 +329,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Assert.NotNull(countdown);
 
-                countdownId = countdown!.ID;
+                countdownId = countdown.ID;
             }
 
             await Assert.ThrowsAsync<InvalidStateException>(async () => await Hub.SendMatchRequest(new StopCountdownRequest(countdownId)));

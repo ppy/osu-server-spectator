@@ -58,12 +58,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Ready);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
+            }
 
             await Hub.StartMatch();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
+            }
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.StartMatch());
         }
@@ -83,14 +89,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.StartMatch();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
+            }
 
             await Hub.AbortGameplay();
             SetUserContext(ContextUser2);
             await Hub.AbortGameplay();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
+            }
         }
 
         [Fact]
@@ -107,10 +119,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
+                Assert.NotNull(room.Item);
 
-                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
-                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Idle);
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
+
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
             }
 
             await Hub.ChangeState(MultiplayerUserState.Loaded);
@@ -118,8 +132,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Playing);
-                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Idle);
+                Assert.NotNull(room.Item);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Playing);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
             }
         }
 
@@ -138,8 +153,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item?.State);
-                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
+                Assert.All(room.Item.Users, u => Assert.Equal(MultiplayerUserState.WaitingForLoad, u.State));
             }
 
             SetUserContext(ContextUser);
@@ -151,8 +167,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
-                Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
+                Assert.NotNull(room.Item);
+                Assert.All(room.Item.Users, u => Assert.Equal(MultiplayerUserState.Playing, u.State));
+                Assert.Equal(MultiplayerRoomState.Playing, room.Item.State);
             }
 
             // first user exits gameplay
@@ -160,14 +177,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.AbortGameplay();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(MultiplayerRoomState.Playing, room.Item?.State);
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.Playing, room.Item.State);
+            }
 
             // second user gets disconnected
             SetUserContext(ContextUser2);
             await Hub.LeaveRoom();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
+            }
         }
 
         [Fact]
@@ -189,8 +212,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Results);
-                Assert.Single(room.Item?.Users, u => u.State == MultiplayerUserState.Idle);
+                Assert.NotNull(room.Item);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Results);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
             }
         }
 
@@ -229,17 +253,21 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.All(room.Item?.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+            {
+                Assert.NotNull(room.Item);
+                Assert.All(room.Item.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+            }
 
             // one user enters a ready state.
             await Hub.ChangeState(MultiplayerUserState.Ready);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.Idle));
-                Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.Ready));
+                Assert.NotNull(room.Item);
+                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.Idle));
+                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.Ready));
 
-                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
             }
 
             // host requests the start of the match.
@@ -250,8 +278,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad));
-                Assert.Single(room.Item?.Users.Where(u => u.State == MultiplayerUserState.Idle));
+                Assert.NotNull(room.Item);
+                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad));
+                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.Idle));
             }
         }
 
@@ -265,21 +294,33 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // Test during WaitingForLoad state.
             await Hub.ChangeState(MultiplayerUserState.Idle);
+
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(MultiplayerUserState.WaitingForLoad, room.Item?.Users[0].State);
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerUserState.WaitingForLoad, room.Item.Users[0].State);
+            }
 
             // Test during Playing state.
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
             await Hub.ChangeState(MultiplayerUserState.Idle);
+
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(MultiplayerUserState.Playing, room.Item?.Users[0].State);
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerUserState.Playing, room.Item.Users[0].State);
+            }
 
             // Test during FinishedPlay state (allows switching to idle).
             await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
             await Hub.ChangeState(MultiplayerUserState.Idle);
+
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(MultiplayerUserState.Idle, room.Item?.Users[0].State);
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerUserState.Idle, room.Item.Users[0].State);
+            }
         }
 
         [Fact]
@@ -294,8 +335,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Equal(MultiplayerUserState.Idle, room.Item?.Users[0].State);
-                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerUserState.Idle, room.Item.Users[0].State);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
             }
 
             // Test during Playing state.
@@ -306,8 +348,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Equal(MultiplayerUserState.Idle, room.Item?.Users[0].State);
-                Assert.Equal(MultiplayerRoomState.Open, room.Item?.State);
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerUserState.Idle, room.Item.Users[0].State);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
             }
         }
 
