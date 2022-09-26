@@ -2,6 +2,8 @@ name: Build and publish
 
 on:
   push:
+    branches:
+      - master
     tags:
       - '*'
 
@@ -21,9 +23,13 @@ jobs:
           images: |
             pppy/osu-server-spectator
           # generate Docker tags based on the following events/attributes
+          # on tag event: tag using git tag, and as latest if the tag doesn't contain hyphens (pre-releases)
+          # on push event: tag using git sha, branch name and as latest-dev
           tags: |
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
+            type=raw,value=latest-dev,enable=${{ github.ref_type == 'branch' && github.ref_name == 'master' }}
             type=raw,value=${{ github.ref_name }}
+            type=raw,value=${{ github.sha }},enable=${{ github.ref_type == 'branch' }}
           flavor: |
             latest=false
       -
