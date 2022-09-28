@@ -9,6 +9,8 @@ RUN dotnet restore
 # Copy everything else and build
 COPY . ./
 RUN dotnet publish -c Release -o out
+# get rid of bloat
+RUN rm -rf ./out/runtimes ./out/osu.Game.Resources.dll ./out/osuTK.dll
 
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:6.0
