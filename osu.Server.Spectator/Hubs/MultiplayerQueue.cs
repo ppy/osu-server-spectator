@@ -188,8 +188,9 @@ namespace osu.Server.Spectator.Hubs
             if (item == null)
                 throw new InvalidStateException("Item does not exist in the room.");
 
-            if (item == CurrentItem)
-                throw new InvalidStateException("The room's current item cannot be removed.");
+            // The current item check is only an optimisation for this condition. It is guaranteed for the single item in the room to be the current item.
+            if (item == CurrentItem && UpcomingItems.Count() == 1)
+                throw new InvalidStateException("The only item in the room cannot be removed.");
 
             if (item.OwnerID != user.UserID && !user.Equals(room.Host))
                 throw new InvalidStateException("Attempted to remove an item which is not owned by the user.");
@@ -200,17 +201,12 @@ namespace osu.Server.Spectator.Hubs
             using (var db = dbFactory.GetInstance())
             {
                 await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
-
-                // Store the current item to reference later.
-                MultiplayerPlaylistItem currentItem = CurrentItem;
-
                 room.Playlist.Remove(item);
-
-                // If the removed item was earlier in the list than the current item, we need to move the index back one.
-                // The simplest and most resilient way to do this is to search through the entire list for the current item.
-                currentIndex = room.Playlist.IndexOf(currentItem);
-
                 await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
+
+                // If either an item indexed earlier in the list was removed or the current item was removed, the index needs to be refreshed.
+                // Importantly, this is done before the playlist order is updated since the update requires the current item.
+                currentIndex = room.Playlist.IndexOf(UpcomingItems.First());
 
                 await updatePlaylistOrder(db);
             }
