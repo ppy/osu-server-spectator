@@ -112,5 +112,12 @@ namespace osu.Server.Spectator.Database
         /// <param name="limit">Maximum number of entries to return. Defaults to 50.</param>
         /// <returns>Update metadata.</returns>
         Task<BeatmapUpdates> GetUpdatedBeatmapSets(int? lastQueueId, int limit = 50);
+
+        /// <summary>
+        /// Retrieves the score ID for a given score token. Will return null while the score has not yet been submitted.
+        /// </summary>
+        /// <param name="token">The score token.</param>
+        /// <returns>The score ID.</returns>
+        Task<long?> GetScoreIdFromToken(long token);
     }
 }

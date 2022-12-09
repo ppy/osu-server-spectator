@@ -16,7 +16,8 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<EntityStore<MultiplayerClientState>>()
                                     .AddSingleton<EntityStore<ServerMultiplayerRoom>>()
                                     .AddSingleton<GracefulShutdownManager>()
-                                    .AddSingleton<MetadataBroadcaster>();
+                                    .AddSingleton<MetadataBroadcaster>()
+                                    .AddSingleton<ScoreUploader>();
         }
 
         public static IServiceCollection AddDatabaseServices(this IServiceCollection serviceCollection)
