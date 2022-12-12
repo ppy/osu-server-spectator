@@ -50,7 +50,9 @@ namespace osu.Server.Spectator.Tests
             database.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => "user");
             database.Setup(db => db.GetBeatmapChecksumAsync(beatmap_id)).ReturnsAsync(() => "d2a97fb2fa4529a5e857fe0466dc1daf");
 
-            hub = new SpectatorHub(cache, clientStates, databaseFactory.Object, new ScoreUploader(databaseFactory.Object));
+            var scoreUploader = new Mock<IScoreUploader>();
+
+            hub = new SpectatorHub(cache, clientStates, databaseFactory.Object, scoreUploader.Object);
         }
 
         [Fact]

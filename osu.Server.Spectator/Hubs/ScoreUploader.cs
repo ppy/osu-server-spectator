@@ -14,7 +14,7 @@ using Timer = System.Timers.Timer;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class ScoreUploader : IDisposable
+    public class ScoreUploader : IScoreUploader, IDisposable
     {
         /// <summary>
         /// A timeout to drop scores which haven't had IDs assigned to their tokens.

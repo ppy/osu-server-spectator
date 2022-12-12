@@ -19,9 +19,9 @@ namespace osu.Server.Spectator.Hubs
         public const string REPLAYS_PATH = "replays";
 
         private readonly IDatabaseFactory databaseFactory;
-        private readonly ScoreUploader scoreUploader;
+        private readonly IScoreUploader scoreUploader;
 
-        public SpectatorHub(IDistributedCache cache, EntityStore<SpectatorClientState> users, IDatabaseFactory databaseFactory, ScoreUploader scoreUploader)
+        public SpectatorHub(IDistributedCache cache, EntityStore<SpectatorClientState> users, IDatabaseFactory databaseFactory, IScoreUploader scoreUploader)
             : base(cache, users)
         {
             this.databaseFactory = databaseFactory;
