@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         private const int timeout_seconds = 30;
 
-        // private bool shouldSaveReplays => Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
+        private bool shouldSaveReplays => Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
 
         private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
@@ -93,6 +93,9 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task uploadScore(long scoreId, UploadItem item)
         {
+            if (!shouldSaveReplays)
+                return;
+
             var now = DateTimeOffset.UtcNow;
 
             item.Score.ScoreInfo.Date = now;
