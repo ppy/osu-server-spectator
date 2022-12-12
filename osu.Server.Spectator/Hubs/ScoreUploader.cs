@@ -57,26 +57,28 @@ namespace osu.Server.Spectator.Hubs
 
                 using (var db = databaseFactory.GetInstance())
                 {
-                    while (queue.TryDequeue(out var item))
+                    int countToTry = queue.Count;
+
+                    for (int i = 0; i < countToTry; i++)
                     {
+                        if (!queue.TryDequeue(out var item))
+                            continue;
+
                         long? scoreId = await db.GetScoreIdFromToken(item.Token);
 
-                        if (scoreId == null)
+                        if (scoreId == null && !item.Cancellation.IsCancellationRequested)
                         {
-                            if (item.Cancellation.IsCancellationRequested)
-                            {
-                                Console.WriteLine($"Score upload timed out for token: {item.Token}");
-                                item.Dispose();
-                                continue;
-                            }
-
-                            // Score is not ready yet.
+                            // Score is not ready yet - enqueue for the next attempt.
                             queue.Enqueue(item);
+                            continue;
                         }
-                        else
+
+                        using (item)
                         {
-                            await uploadScore(scoreId.Value, item);
-                            item.Dispose();
+                            if (scoreId != null)
+                                await uploadScore(scoreId.Value, item);
+                            else
+                                Console.WriteLine($"Score upload timed out for token: {item.Token}");
                         }
                     }
                 }
