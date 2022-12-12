@@ -4,19 +4,27 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
 using osu.Server.Spectator.Database;
+using Timer = System.Timers.Timer;
 
 namespace osu.Server.Spectator.Hubs
 {
     public class ScoreUploader : IDisposable
     {
+        /// <summary>
+        /// A timeout to drop scores which haven't had IDs assigned to their tokens.
+        /// This can happen if the user forcefully terminated the game before the API score submission request is sent, but after EndPlaySession() has been invoked.
+        /// </summary>
+        private const int timeout_seconds = 30;
+
         // private bool shouldSaveReplays => Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
 
-        private readonly ConcurrentQueue<(long token, Score score)> queue = new ConcurrentQueue<(long token, Score score)>();
+        private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
         private readonly Timer timer;
 
@@ -30,7 +38,13 @@ namespace osu.Server.Spectator.Hubs
             timer.Start();
         }
 
-        public void Enqueue(long token, Score score) => queue.Enqueue((token, score));
+        public void Enqueue(long token, Score score)
+        {
+            var cancellation = new CancellationTokenSource();
+            cancellation.CancelAfter(TimeSpan.FromSeconds(timeout_seconds));
+
+            queue.Enqueue(new UploadItem(token, score, cancellation));
+        }
 
         private async void update(object? sender, ElapsedEventArgs args)
         {
@@ -45,16 +59,24 @@ namespace osu.Server.Spectator.Hubs
                 {
                     while (queue.TryDequeue(out var item))
                     {
-                        long? scoreId = await db.GetScoreIdFromToken(item.token);
+                        long? scoreId = await db.GetScoreIdFromToken(item.Token);
 
                         if (scoreId == null)
                         {
+                            if (item.Cancellation.IsCancellationRequested)
+                            {
+                                Console.WriteLine($"Score upload timed out for token: {item.Token}");
+                                item.Dispose();
+                                continue;
+                            }
+
                             // Score is not ready yet.
                             queue.Enqueue(item);
                         }
                         else
                         {
-                            await uploadScore(scoreId.Value, item.score);
+                            await uploadScore(scoreId.Value, item);
+                            item.Dispose();
                         }
                     }
                 }
@@ -69,18 +91,18 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        private async Task uploadScore(long scoreId, Score score)
+        private async Task uploadScore(long scoreId, UploadItem item)
         {
             var now = DateTimeOffset.UtcNow;
 
-            score.ScoreInfo.Date = now;
-            var legacyEncoder = new LegacyScoreEncoder(score, null);
+            item.Score.ScoreInfo.Date = now;
+            var legacyEncoder = new LegacyScoreEncoder(item.Score, null);
 
             string path = Path.Combine(SpectatorHub.REPLAYS_PATH, now.Year.ToString(), now.Month.ToString(), now.Day.ToString());
 
             Directory.CreateDirectory(path);
 
-            string filename = $"replay-{score.ScoreInfo.Ruleset.ShortName}_{score.ScoreInfo.BeatmapInfo.OnlineID}_{scoreId}.osr";
+            string filename = $"replay-{item.Score.ScoreInfo.Ruleset.ShortName}_{item.Score.ScoreInfo.BeatmapInfo.OnlineID}_{scoreId}.osr";
 
             Console.WriteLine($"Writing replay for score {scoreId} to {filename}");
 
@@ -92,6 +114,14 @@ namespace osu.Server.Spectator.Hubs
         {
             timer.Stop();
             timer.Dispose();
+        }
+
+        private record UploadItem(long Token, Score Score, CancellationTokenSource Cancellation) : IDisposable
+        {
+            public void Dispose()
+            {
+                Cancellation.Dispose();
+            }
         }
     }
 }
