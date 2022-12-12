@@ -15,6 +15,8 @@ namespace osu.Server.Spectator.Hubs
 
         public Score? Score;
 
+        public long? ScoreToken;
+
         [JsonConstructor]
         public SpectatorClientState(in string connectionId, in int userId)
             : base(connectionId, userId)
