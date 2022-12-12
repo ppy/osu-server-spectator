@@ -96,16 +96,14 @@ namespace osu.Server.Spectator.Hubs
             if (!shouldSaveReplays)
                 return;
 
-            var now = DateTimeOffset.UtcNow;
-
-            item.Score.ScoreInfo.Date = now;
+            var scoreInfo = item.Score.ScoreInfo;
             var legacyEncoder = new LegacyScoreEncoder(item.Score, null);
 
-            string path = Path.Combine(SpectatorHub.REPLAYS_PATH, now.Year.ToString(), now.Month.ToString(), now.Day.ToString());
+            string path = Path.Combine(SpectatorHub.REPLAYS_PATH, scoreInfo.Date.Year.ToString(), scoreInfo.Date.Month.ToString(), scoreInfo.Date.Day.ToString());
 
             Directory.CreateDirectory(path);
 
-            string filename = $"replay-{item.Score.ScoreInfo.Ruleset.ShortName}_{item.Score.ScoreInfo.BeatmapInfo.OnlineID}_{scoreId}.osr";
+            string filename = $"replay-{scoreInfo.Ruleset.ShortName}_{scoreInfo.BeatmapInfo.OnlineID}_{scoreId}.osr";
 
             Console.WriteLine($"Writing replay for score {scoreId} to {filename}");
 

@@ -116,6 +116,8 @@ namespace osu.Server.Spectator.Hubs
                     if (score == null || scoreToken == null)
                         return;
 
+                    score.ScoreInfo.Date = DateTimeOffset.UtcNow;
+
                     scoreUploader.Enqueue(scoreToken.Value, score);
                 }
                 finally
