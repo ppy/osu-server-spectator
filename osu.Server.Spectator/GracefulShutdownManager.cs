@@ -27,12 +27,14 @@ public class GracefulShutdownManager
     private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
     private readonly EntityStore<ServerMultiplayerRoom> roomStore;
 
-    public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime)
+    public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime,
+                                   IScoreUploader scoreUploader)
     {
         this.roomStore = roomStore;
 
         dependentStores.Add(roomStore);
         dependentStores.Add(clientStateStore);
+        dependentStores.Add(scoreUploader);
 
         hostApplicationLifetime.ApplicationStopping.Register(shutdownSafely);
     }

@@ -45,6 +45,8 @@ namespace osu.Server.Spectator.Hubs
 
         public void Enqueue(long token, Score score)
         {
+            Interlocked.Increment(ref remainingUsages);
+
             var cancellation = new CancellationTokenSource();
             cancellation.CancelAfter(TimeSpan.FromSeconds(timeout_seconds));
 
@@ -84,6 +86,8 @@ namespace osu.Server.Spectator.Hubs
                                 await uploadScore(scoreId.Value, item);
                             else
                                 Console.WriteLine($"Score upload timed out for token: {item.Token}");
+
+                            Interlocked.Decrement(ref remainingUsages);
                         }
                     }
                 }
@@ -133,6 +137,17 @@ namespace osu.Server.Spectator.Hubs
             {
                 Cancellation.Dispose();
             }
+        }
+
+        private int remainingUsages;
+
+        public int RemainingUsages => remainingUsages;
+
+        public string EntityName => "Score uploads";
+
+        public void StopAcceptingEntities()
+        {
+            // Handled by the spectator hub.
         }
     }
 }
