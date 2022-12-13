@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,8 +22,6 @@ namespace osu.Server.Spectator.Hubs
         /// This can happen if the user forcefully terminated the game before the API score submission request is sent, but after EndPlaySession() has been invoked.
         /// </summary>
         private const int timeout_seconds = 30;
-
-        private bool shouldSaveReplays => Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
 
         private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
@@ -107,22 +106,19 @@ namespace osu.Server.Spectator.Hubs
 
         private async Task uploadScore(long scoreId, UploadItem item)
         {
-            if (!shouldSaveReplays)
+            if (!AppSettings.SaveReplays)
                 return;
 
-            var scoreInfo = item.Score.ScoreInfo;
-            var legacyEncoder = new LegacyScoreEncoder(item.Score, null);
+            using (var outStream = new MemoryStream())
+            {
+                new LegacyScoreEncoder(item.Score, null).Encode(outStream, true);
 
-            string path = Path.Combine(SpectatorHub.REPLAYS_PATH, scoreInfo.Date.Year.ToString(), scoreInfo.Date.Month.ToString(), scoreInfo.Date.Day.ToString());
+                outStream.Seek(0, SeekOrigin.Begin);
 
-            Directory.CreateDirectory(path);
+                Console.WriteLine($"Uploading replay for score {scoreId}");
 
-            string filename = $"replay-{scoreInfo.Ruleset.ShortName}_{scoreInfo.BeatmapInfo.OnlineID}_{scoreId}.osr";
-
-            Console.WriteLine($"Writing replay for score {scoreId} to {filename}");
-
-            using (var outStream = File.Create(Path.Combine(path, filename)))
-                legacyEncoder.Encode(outStream);
+                S3.Upload(AppSettings.ReplaysBucket, scoreId.ToString(CultureInfo.InvariantCulture), outStream, outStream.Length);
+            }
         }
 
         public void Dispose()
