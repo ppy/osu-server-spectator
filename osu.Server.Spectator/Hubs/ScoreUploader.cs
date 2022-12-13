@@ -27,10 +27,15 @@ namespace osu.Server.Spectator.Hubs
         private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
         private readonly Timer timer;
+        private readonly CancellationTokenSource timerCancellationSource;
+        private readonly CancellationToken timerCancellationToken;
 
         public ScoreUploader(IDatabaseFactory databaseFactory)
         {
             this.databaseFactory = databaseFactory;
+
+            timerCancellationSource = new CancellationTokenSource();
+            timerCancellationToken = timerCancellationSource.Token;
 
             timer = new Timer(5000);
             timer.AutoReset = false;
@@ -89,7 +94,10 @@ namespace osu.Server.Spectator.Hubs
             }
             finally
             {
-                timer.Start();
+                if (timerCancellationToken.IsCancellationRequested)
+                    timer.Dispose();
+                else
+                    timer.Start();
             }
         }
 
@@ -115,8 +123,8 @@ namespace osu.Server.Spectator.Hubs
 
         public void Dispose()
         {
-            timer.Stop();
-            timer.Dispose();
+            timerCancellationSource.Cancel();
+            timerCancellationSource.Dispose();
         }
 
         private record UploadItem(long Token, Score Score, CancellationTokenSource Cancellation) : IDisposable
