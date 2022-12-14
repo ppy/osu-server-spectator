@@ -29,6 +29,7 @@ namespace osu.Server.Spectator.Tests
 
             mockStorage = new Mock<IScoreStorage>();
             uploader = new ScoreUploader(databaseFactory.Object, mockStorage.Object);
+            uploader.UploadInterval = 10000; // Set a high timer interval for testing purposes.
         }
 
         [Fact]
