@@ -34,6 +34,8 @@ namespace osu.Server.Spectator.Tests
             RulesetID = 0,
         };
 
+        private readonly Mock<IScoreUploader> scoreUploader;
+
         public SpectatorHubTest()
         {
             if (Directory.Exists(SpectatorHub.REPLAYS_PATH))
@@ -50,7 +52,7 @@ namespace osu.Server.Spectator.Tests
             database.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => "user");
             database.Setup(db => db.GetBeatmapChecksumAsync(beatmap_id)).ReturnsAsync(() => "d2a97fb2fa4529a5e857fe0466dc1daf");
 
-            var scoreUploader = new Mock<IScoreUploader>();
+            scoreUploader = new Mock<IScoreUploader>();
 
             hub = new SpectatorHub(cache, clientStates, databaseFactory.Object, scoreUploader.Object);
         }
@@ -86,13 +88,9 @@ namespace osu.Server.Spectator.Tests
             mockReceiver.Verify(clients => clients.UserSentFrames(streamer_id, data));
         }
 
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task ReplayDataIsSaved(bool savingEnabled)
+        [Fact]
+        public async Task ReplayDataIsSaved()
         {
-            Environment.SetEnvironmentVariable("SAVE_REPLAYS", savingEnabled ? "1" : "0");
-
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
             mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
@@ -104,25 +102,11 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            await hub.BeginPlaySession(0, state);
+            await hub.BeginPlaySession(1234, state);
             await hub.SendFrameData(new FrameDataBundle(new ScoreInfo(), new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
-
-            Assert.False(Directory.Exists(SpectatorHub.REPLAYS_PATH));
-
             await hub.EndPlaySession(state);
 
-            if (savingEnabled)
-            {
-                Assert.True(Directory.Exists(SpectatorHub.REPLAYS_PATH));
-
-                var files = Directory.GetFiles(SpectatorHub.REPLAYS_PATH, "*", SearchOption.AllDirectories);
-                Assert.Single(files);
-                Assert.EndsWith($"-{streamer_id}-0-{beatmap_id}.osr", files.Single());
-            }
-            else
-            {
-                Assert.False(Directory.Exists(SpectatorHub.REPLAYS_PATH));
-            }
+            scoreUploader.Verify(u => u.Enqueue(1234, It.IsAny<Score>()), Times.Once);
         }
 
         [Theory]
