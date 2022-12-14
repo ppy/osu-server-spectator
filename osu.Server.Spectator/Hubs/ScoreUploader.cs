@@ -80,13 +80,16 @@ namespace osu.Server.Spectator.Hubs
                             continue;
                         }
 
-                        using (item)
+                        try
                         {
                             if (scoreId != null)
                                 await uploadScore(scoreId.Value, item);
                             else
                                 Console.WriteLine($"Score upload timed out for token: {item.Token}");
-
+                        }
+                        finally
+                        {
+                            item.Dispose();
                             Interlocked.Decrement(ref remainingUsages);
                         }
                     }
