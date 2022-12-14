@@ -144,6 +144,7 @@ namespace osu.Server.Spectator.Hubs
 
         private int remainingUsages;
 
+        // Using the count of items in the queue isn't correct since items are dequeued for processing.
         public int RemainingUsages => remainingUsages;
 
         public string EntityName => "Score uploads";
