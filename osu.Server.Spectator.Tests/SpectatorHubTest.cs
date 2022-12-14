@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
@@ -16,6 +15,7 @@ using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Storage;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests
@@ -34,6 +34,10 @@ namespace osu.Server.Spectator.Tests
             RulesetID = 0,
         };
 
+        private readonly ScoreUploader scoreUploader;
+        private readonly Mock<IScoreStorage> mockScoreStorage;
+        private readonly Mock<IDatabaseAccess> mockDatabase;
+
         public SpectatorHubTest()
         {
             if (Directory.Exists(SpectatorHub.REPLAYS_PATH))
@@ -44,15 +48,17 @@ namespace osu.Server.Spectator.Tests
 
             var clientStates = new EntityStore<SpectatorClientState>();
 
+            mockDatabase = new Mock<IDatabaseAccess>();
+            mockDatabase.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => "user");
+            mockDatabase.Setup(db => db.GetBeatmapChecksumAsync(beatmap_id)).ReturnsAsync(() => "d2a97fb2fa4529a5e857fe0466dc1daf");
+
             var databaseFactory = new Mock<IDatabaseFactory>();
-            var database = new Mock<IDatabaseAccess>();
-            databaseFactory.Setup(factory => factory.GetInstance()).Returns(database.Object);
-            database.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => "user");
-            database.Setup(db => db.GetBeatmapChecksumAsync(beatmap_id)).ReturnsAsync(() => "d2a97fb2fa4529a5e857fe0466dc1daf");
+            databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
 
-            var scoreUploader = new Mock<IScoreUploader>();
+            mockScoreStorage = new Mock<IScoreStorage>();
+            scoreUploader = new ScoreUploader(databaseFactory.Object, mockScoreStorage.Object);
 
-            hub = new SpectatorHub(cache, clientStates, databaseFactory.Object, scoreUploader.Object);
+            hub = new SpectatorHub(cache, clientStates, databaseFactory.Object, scoreUploader);
         }
 
         [Fact]
@@ -104,25 +110,18 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            await hub.BeginPlaySession(0, state);
+            mockDatabase.Setup(db => db.GetScoreIdFromToken(1234)).Returns(Task.FromResult<long?>(456));
+
+            await hub.BeginPlaySession(1234, state);
             await hub.SendFrameData(new FrameDataBundle(new ScoreInfo(), new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
-
-            Assert.False(Directory.Exists(SpectatorHub.REPLAYS_PATH));
-
             await hub.EndPlaySession(state);
 
-            if (savingEnabled)
-            {
-                Assert.True(Directory.Exists(SpectatorHub.REPLAYS_PATH));
+            await scoreUploader.Flush();
 
-                var files = Directory.GetFiles(SpectatorHub.REPLAYS_PATH, "*", SearchOption.AllDirectories);
-                Assert.Single(files);
-                Assert.EndsWith($"-{streamer_id}-0-{beatmap_id}.osr", files.Single());
-            }
+            if (savingEnabled)
+                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Once);
             else
-            {
-                Assert.False(Directory.Exists(SpectatorHub.REPLAYS_PATH));
-            }
+                mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
         }
 
         [Theory]

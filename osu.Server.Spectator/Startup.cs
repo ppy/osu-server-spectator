@@ -117,7 +117,7 @@ namespace osu.Server.Spectator
             app.ApplicationServices.GetRequiredService<GracefulShutdownManager>();
 
             app.ApplicationServices.GetRequiredService<MetadataBroadcaster>();
-            app.ApplicationServices.GetRequiredService<IScoreUploader>();
+            app.ApplicationServices.GetRequiredService<ScoreUploader>();
         }
     }
 }

@@ -3,59 +3,81 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Globalization;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using osu.Game.Scoring;
-using osu.Game.Scoring.Legacy;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Storage;
 using Timer = System.Timers.Timer;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class ScoreUploader : IScoreUploader, IDisposable
+    public class ScoreUploader : IEntityStore, IDisposable
     {
         /// <summary>
-        /// A timeout to drop scores which haven't had IDs assigned to their tokens.
+        /// Amount of time (in milliseconds) between checks for pending score uploads.
+        /// </summary>
+        public double UploadInterval
+        {
+            get => timer.Interval;
+            set => timer.Interval = value;
+        }
+
+        /// <summary>
+        /// Amount of time (in milliseconds) before any individual score times out if a score ID hasn't been set.
         /// This can happen if the user forcefully terminated the game before the API score submission request is sent, but after EndPlaySession() has been invoked.
         /// </summary>
-        private const int timeout_seconds = 30;
+        public double TimeoutInterval = 30000;
 
         private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
+        private readonly IScoreStorage scoreStorage;
         private readonly Timer timer;
         private readonly CancellationTokenSource timerCancellationSource;
         private readonly CancellationToken timerCancellationToken;
 
-        public ScoreUploader(IDatabaseFactory databaseFactory)
+        public ScoreUploader(IDatabaseFactory databaseFactory, IScoreStorage scoreStorage)
         {
             this.databaseFactory = databaseFactory;
+            this.scoreStorage = scoreStorage;
 
             timerCancellationSource = new CancellationTokenSource();
             timerCancellationToken = timerCancellationSource.Token;
 
             timer = new Timer(5000);
             timer.AutoReset = false;
-            timer.Elapsed += update;
+            timer.Elapsed += (_, _) => Task.Run(Flush);
             timer.Start();
         }
 
+        /// <summary>
+        /// Enqueues a new score to be uploaded.
+        /// </summary>
+        /// <param name="token">The score's token.</param>
+        /// <param name="score">The score.</param>
         public void Enqueue(long token, Score score)
         {
+            if (!AppSettings.SaveReplays)
+                return;
+
             Interlocked.Increment(ref remainingUsages);
 
             var cancellation = new CancellationTokenSource();
-            cancellation.CancelAfter(TimeSpan.FromSeconds(timeout_seconds));
+            cancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
 
             queue.Enqueue(new UploadItem(token, score, cancellation));
         }
 
-        private async void update(object? sender, ElapsedEventArgs args)
+        /// <summary>
+        /// Flushes all pending uploads.
+        /// </summary>
+        public async Task Flush()
         {
             try
             {
+                timer.Stop();
+
                 if (queue.IsEmpty)
                     return;
 
@@ -79,13 +101,19 @@ namespace osu.Server.Spectator.Hubs
                             continue;
                         }
 
-                        using (item)
+                        try
                         {
                             if (scoreId != null)
-                                await uploadScore(scoreId.Value, item);
+                            {
+                                item.Score.ScoreInfo.OnlineID = scoreId.Value;
+                                await scoreStorage.WriteAsync(item.Score);
+                            }
                             else
                                 Console.WriteLine($"Score upload timed out for token: {item.Token}");
-
+                        }
+                        finally
+                        {
+                            item.Dispose();
                             Interlocked.Decrement(ref remainingUsages);
                         }
                     }
@@ -101,23 +129,6 @@ namespace osu.Server.Spectator.Hubs
                     timer.Dispose();
                 else
                     timer.Start();
-            }
-        }
-
-        private async Task uploadScore(long scoreId, UploadItem item)
-        {
-            if (!AppSettings.SaveReplays)
-                return;
-
-            using (var outStream = new MemoryStream())
-            {
-                new LegacyScoreEncoder(item.Score, null).Encode(outStream, true);
-
-                outStream.Seek(0, SeekOrigin.Begin);
-
-                Console.WriteLine($"Uploading replay for score {scoreId}");
-
-                await S3.Upload(AppSettings.ReplaysBucket, scoreId.ToString(CultureInfo.InvariantCulture), outStream, outStream.Length);
             }
         }
 
@@ -137,6 +148,7 @@ namespace osu.Server.Spectator.Hubs
 
         private int remainingUsages;
 
+        // Using the count of items in the queue isn't correct since items are dequeued for processing.
         public int RemainingUsages => remainingUsages;
 
         public string EntityName => "Score uploads";

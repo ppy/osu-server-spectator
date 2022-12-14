@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Storage;
 
 namespace osu.Server.Spectator.Extensions
 {
@@ -17,7 +18,8 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<EntityStore<ServerMultiplayerRoom>>()
                                     .AddSingleton<GracefulShutdownManager>()
                                     .AddSingleton<MetadataBroadcaster>()
-                                    .AddSingleton<IScoreUploader, ScoreUploader>();
+                                    .AddSingleton<IScoreStorage, FileScoreStorage>()
+                                    .AddSingleton<ScoreUploader>();
         }
 
         public static IServiceCollection AddDatabaseServices(this IServiceCollection serviceCollection)
