@@ -30,7 +30,7 @@ namespace SampleSpectatorClient
 
             while (true)
             {
-                await sendingClient.BeginPlaying(new SpectatorState { BeatmapID = 88 });
+                await sendingClient.BeginPlaying(0, new SpectatorState { BeatmapID = 88 });
 
                 Thread.Sleep(1000);
 

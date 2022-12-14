@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Hubs
             this.databaseFactory = databaseFactory;
         }
 
-        public async Task BeginPlaySession(SpectatorState state)
+        public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
         {
             using (var usage = await GetOrCreateLocalUserState())
             {
@@ -43,6 +43,7 @@ namespace osu.Server.Spectator.Hubs
                 }
 
                 clientState.State = state;
+                clientState.ScoreToken = scoreToken;
 
                 if (state.RulesetID == null) throw new ArgumentNullException(nameof(state.RulesetID));
                 if (state.BeatmapID == null) throw new ArgumentNullException(nameof(state.BeatmapID));
