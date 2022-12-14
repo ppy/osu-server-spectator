@@ -117,7 +117,7 @@ namespace osu.Server.Spectator.Hubs
 
                 Console.WriteLine($"Uploading replay for score {scoreId}");
 
-                S3.Upload(AppSettings.ReplaysBucket, scoreId.ToString(CultureInfo.InvariantCulture), outStream, outStream.Length);
+                await S3.Upload(AppSettings.ReplaysBucket, scoreId.ToString(CultureInfo.InvariantCulture), outStream, outStream.Length);
             }
         }
 
