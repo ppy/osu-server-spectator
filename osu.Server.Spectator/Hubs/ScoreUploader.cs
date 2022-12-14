@@ -16,10 +16,19 @@ namespace osu.Server.Spectator.Hubs
     public class ScoreUploader : IEntityStore, IDisposable
     {
         /// <summary>
-        /// A timeout to drop scores which haven't had IDs assigned to their tokens.
+        /// Amount of time (in milliseconds) between checks for pending score uploads.
+        /// </summary>
+        public double UploadInterval
+        {
+            get => timer.Interval;
+            set => timer.Interval = value;
+        }
+
+        /// <summary>
+        /// Amount of time (in milliseconds) before any individual score times out if a score ID hasn't been set.
         /// This can happen if the user forcefully terminated the game before the API score submission request is sent, but after EndPlaySession() has been invoked.
         /// </summary>
-        private const int timeout_seconds = 30;
+        public double TimeoutInterval = 30000;
 
         private bool shouldSaveReplays => Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
 
@@ -57,7 +66,7 @@ namespace osu.Server.Spectator.Hubs
             Interlocked.Increment(ref remainingUsages);
 
             var cancellation = new CancellationTokenSource();
-            cancellation.CancelAfter(TimeSpan.FromSeconds(timeout_seconds));
+            cancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
 
             queue.Enqueue(new UploadItem(token, score, cancellation));
         }
