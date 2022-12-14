@@ -3,18 +3,17 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using osu.Game.Scoring;
-using osu.Game.Scoring.Legacy;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Storage;
 using Timer = System.Timers.Timer;
 
 namespace osu.Server.Spectator.Hubs
 {
-    public class ScoreUploader : IScoreUploader, IDisposable
+    public class ScoreUploader : IEntityStore, IDisposable
     {
         /// <summary>
         /// A timeout to drop scores which haven't had IDs assigned to their tokens.
@@ -26,25 +25,35 @@ namespace osu.Server.Spectator.Hubs
 
         private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
+        private readonly IScoreStorage scoreStorage;
         private readonly Timer timer;
         private readonly CancellationTokenSource timerCancellationSource;
         private readonly CancellationToken timerCancellationToken;
 
-        public ScoreUploader(IDatabaseFactory databaseFactory)
+        public ScoreUploader(IDatabaseFactory databaseFactory, IScoreStorage scoreStorage)
         {
             this.databaseFactory = databaseFactory;
+            this.scoreStorage = scoreStorage;
 
             timerCancellationSource = new CancellationTokenSource();
             timerCancellationToken = timerCancellationSource.Token;
 
             timer = new Timer(5000);
             timer.AutoReset = false;
-            timer.Elapsed += update;
+            timer.Elapsed += (_, _) => Task.Run(Flush);
             timer.Start();
         }
 
+        /// <summary>
+        /// Enqueues a new score to be uploaded.
+        /// </summary>
+        /// <param name="token">The score's token.</param>
+        /// <param name="score">The score.</param>
         public void Enqueue(long token, Score score)
         {
+            if (!shouldSaveReplays)
+                return;
+
             Interlocked.Increment(ref remainingUsages);
 
             var cancellation = new CancellationTokenSource();
@@ -53,10 +62,15 @@ namespace osu.Server.Spectator.Hubs
             queue.Enqueue(new UploadItem(token, score, cancellation));
         }
 
-        private async void update(object? sender, ElapsedEventArgs args)
+        /// <summary>
+        /// Flushes all pending uploads.
+        /// </summary>
+        public async Task Flush()
         {
             try
             {
+                timer.Stop();
+
                 if (queue.IsEmpty)
                     return;
 
@@ -83,7 +97,10 @@ namespace osu.Server.Spectator.Hubs
                         try
                         {
                             if (scoreId != null)
-                                await uploadScore(scoreId.Value, item);
+                            {
+                                item.Score.ScoreInfo.OnlineID = scoreId.Value;
+                                await scoreStorage.WriteAsync(item.Score);
+                            }
                             else
                                 Console.WriteLine($"Score upload timed out for token: {item.Token}");
                         }
@@ -106,26 +123,6 @@ namespace osu.Server.Spectator.Hubs
                 else
                     timer.Start();
             }
-        }
-
-        private async Task uploadScore(long scoreId, UploadItem item)
-        {
-            if (!shouldSaveReplays)
-                return;
-
-            var scoreInfo = item.Score.ScoreInfo;
-            var legacyEncoder = new LegacyScoreEncoder(item.Score, null);
-
-            string path = Path.Combine(SpectatorHub.REPLAYS_PATH, scoreInfo.Date.Year.ToString(), scoreInfo.Date.Month.ToString(), scoreInfo.Date.Day.ToString());
-
-            Directory.CreateDirectory(path);
-
-            string filename = $"replay-{scoreInfo.Ruleset.ShortName}_{scoreInfo.BeatmapInfo.OnlineID}_{scoreId}.osr";
-
-            Console.WriteLine($"Writing replay for score {scoreId} to {filename}");
-
-            using (var outStream = File.Create(Path.Combine(path, filename)))
-                legacyEncoder.Encode(outStream);
         }
 
         public void Dispose()

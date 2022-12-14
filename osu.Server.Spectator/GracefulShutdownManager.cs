@@ -28,7 +28,7 @@ public class GracefulShutdownManager
     private readonly EntityStore<ServerMultiplayerRoom> roomStore;
 
     public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime,
-                                   IScoreUploader scoreUploader)
+                                   ScoreUploader scoreUploader)
     {
         this.roomStore = roomStore;
 

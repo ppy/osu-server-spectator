@@ -1,13 +1,13 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Threading.Tasks;
 using osu.Game.Scoring;
-using osu.Server.Spectator.Entities;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Storage
 {
-    public interface IScoreUploader : IEntityStore
+    public interface IScoreStorage
     {
-        void Enqueue(long token, Score score);
+        Task WriteAsync(Score score);
     }
 }
