@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Scoring;
@@ -94,6 +95,7 @@ namespace osu.Server.Spectator.Tests
 
             // Score with no token.
             uploader.Enqueue(2, new Score());
+            Thread.Sleep(1000); // Wait for cancellation.
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
 
