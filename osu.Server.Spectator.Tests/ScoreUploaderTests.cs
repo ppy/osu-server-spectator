@@ -145,6 +145,20 @@ namespace osu.Server.Spectator.Tests
             Assert.Equal(1, uploadCount);
         }
 
+        [Fact]
+        public async Task TimedOutItemGetsOneAttempt()
+        {
+            enableUpload();
+
+            uploader.TimeoutInterval = 0;
+
+            // Score with no token.
+            uploader.Enqueue(1, new Score());
+            Thread.Sleep(1000); // Wait for cancellation.
+            await uploader.Flush();
+            mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Once);
+        }
+
         private void enableUpload() => Environment.SetEnvironmentVariable("SAVE_REPLAYS", "1");
         private void disableUpload() => Environment.SetEnvironmentVariable("SAVE_REPLAYS", "0");
     }
