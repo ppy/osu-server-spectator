@@ -286,7 +286,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleAsync<long?>("SELECT `score_id` FROM `solo_score_tokens` WHERE `id` = @Id", new
+            return await connection.QuerySingleOrDefaultAsync<long?>("SELECT `score_id` FROM `solo_score_tokens` WHERE `id` = @Id", new
             {
                 Id = token
             });
