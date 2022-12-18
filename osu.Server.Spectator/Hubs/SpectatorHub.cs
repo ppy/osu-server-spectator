@@ -3,14 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
-using osu.Game.Scoring.Legacy;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 
@@ -20,14 +18,14 @@ namespace osu.Server.Spectator.Hubs
     {
         public const string REPLAYS_PATH = "replays";
 
-        private bool shouldSaveReplays => Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
-
         private readonly IDatabaseFactory databaseFactory;
+        private readonly ScoreUploader scoreUploader;
 
-        public SpectatorHub(IDistributedCache cache, EntityStore<SpectatorClientState> users, IDatabaseFactory databaseFactory)
+        public SpectatorHub(IDistributedCache cache, EntityStore<SpectatorClientState> users, IDatabaseFactory databaseFactory, ScoreUploader scoreUploader)
             : base(cache, users)
         {
             this.databaseFactory = databaseFactory;
+            this.scoreUploader = scoreUploader;
         }
 
         public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
@@ -72,6 +70,7 @@ namespace osu.Server.Spectator.Hubs
                                 OnlineID = state.BeatmapID.Value,
                                 MD5Hash = beatmapChecksum,
                             },
+                            MaximumStatistics = state.MaximumStatistics
                         }
                     };
                 }
@@ -109,30 +108,17 @@ namespace osu.Server.Spectator.Hubs
             {
                 try
                 {
-                    var score = usage.Item?.Score;
+                    Score? score = usage.Item?.Score;
+                    long? scoreToken = usage.Item?.ScoreToken;
 
                     // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
                     // For now it's safe to drop these frames.
-                    if (score == null)
+                    if (score == null || scoreToken == null)
                         return;
 
-                    var now = DateTimeOffset.UtcNow;
+                    score.ScoreInfo.Date = DateTimeOffset.UtcNow;
 
-                    if (shouldSaveReplays)
-                    {
-                        score.ScoreInfo.Date = now;
-                        var legacyEncoder = new LegacyScoreEncoder(score, null);
-
-                        string path = Path.Combine(REPLAYS_PATH, now.Year.ToString(), now.Month.ToString(), now.Day.ToString());
-
-                        Directory.CreateDirectory(path);
-
-                        string filename = $"{now.ToUnixTimeSeconds()}-{CurrentContextUserId}-{score.ScoreInfo.Ruleset.OnlineID}-{score.ScoreInfo.BeatmapInfo.OnlineID}.osr";
-
-                        Log($"Writing replay for user {CurrentContextUserId} to {filename}");
-                        using (var outStream = File.Create(Path.Combine(path, filename)))
-                            legacyEncoder.Encode(outStream);
-                    }
+                    scoreUploader.Enqueue(scoreToken.Value, score);
                 }
                 finally
                 {

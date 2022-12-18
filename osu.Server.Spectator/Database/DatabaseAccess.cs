@@ -282,6 +282,16 @@ namespace osu.Server.Spectator.Database
             return new BeatmapUpdates(Array.Empty<int>(), lastEntry?.queue_id ?? 0);
         }
 
+        public async Task<long?> GetScoreIdFromToken(long token)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<long?>("SELECT `score_id` FROM `solo_score_tokens` WHERE `id` = @Id", new
+            {
+                Id = token
+            });
+        }
+
         public void Dispose()
         {
             openConnection?.Dispose();

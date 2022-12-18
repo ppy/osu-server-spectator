@@ -3,10 +3,12 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Timers;
 using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.Metadata;
 using osu.Server.Spectator.Database;
+using Timer = System.Timers.Timer;
 
 namespace osu.Server.Spectator.Hubs;
 
@@ -19,6 +21,8 @@ public class MetadataBroadcaster : IDisposable
     private readonly IHubContext<MetadataHub> metadataHubContext;
 
     private readonly Timer timer;
+    private readonly CancellationTokenSource timerCancellationSource;
+    private readonly CancellationToken timerCancellationToken;
 
     private int? lastQueueId;
 
@@ -26,6 +30,9 @@ public class MetadataBroadcaster : IDisposable
     {
         this.databaseFactory = databaseFactory;
         this.metadataHubContext = metadataHubContext;
+
+        timerCancellationSource = new CancellationTokenSource();
+        timerCancellationToken = timerCancellationSource.Token;
 
         timer = new Timer(5000);
         timer.AutoReset = false;
@@ -55,13 +62,18 @@ public class MetadataBroadcaster : IDisposable
         {
             Console.WriteLine($"Error during beatmap update polling: {e}");
         }
-
-        timer.Start();
+        finally
+        {
+            if (timerCancellationToken.IsCancellationRequested)
+                timer.Dispose();
+            else
+                timer.Start();
+        }
     }
 
     public void Dispose()
     {
-        timer.Stop();
-        timer.Dispose();
+        timerCancellationSource.Cancel();
+        timerCancellationSource.Dispose();
     }
 }
