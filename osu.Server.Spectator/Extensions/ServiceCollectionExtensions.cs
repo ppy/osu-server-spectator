@@ -18,7 +18,7 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<EntityStore<ServerMultiplayerRoom>>()
                                     .AddSingleton<GracefulShutdownManager>()
                                     .AddSingleton<MetadataBroadcaster>()
-                                    .AddSingleton<IScoreStorage, FileScoreStorage>()
+                                    .AddSingleton<IScoreStorage, S3ScoreStorage>()
                                     .AddSingleton<ScoreUploader>();
         }
 

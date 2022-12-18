@@ -30,8 +30,6 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public double TimeoutInterval = 30000;
 
-        private bool shouldSaveReplays => Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
-
         private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
         private readonly IScoreStorage scoreStorage;
@@ -60,7 +58,7 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="score">The score.</param>
         public void Enqueue(long token, Score score)
         {
-            if (!shouldSaveReplays)
+            if (!AppSettings.SaveReplays)
                 return;
 
             Interlocked.Increment(ref remainingUsages);

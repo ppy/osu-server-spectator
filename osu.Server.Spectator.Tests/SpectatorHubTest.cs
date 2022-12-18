@@ -97,7 +97,7 @@ namespace osu.Server.Spectator.Tests
         [InlineData(true)]
         public async Task ReplayDataIsSaved(bool savingEnabled)
         {
-            Environment.SetEnvironmentVariable("SAVE_REPLAYS", savingEnabled ? "1" : "0");
+            AppSettings.SaveReplays = savingEnabled;
 
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
