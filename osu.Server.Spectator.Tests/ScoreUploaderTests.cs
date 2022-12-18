@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Scoring;
@@ -28,6 +29,7 @@ namespace osu.Server.Spectator.Tests
 
             mockStorage = new Mock<IScoreStorage>();
             uploader = new ScoreUploader(databaseFactory.Object, mockStorage.Object);
+            uploader.UploadInterval = 10000; // Set a high timer interval for testing purposes.
         }
 
         [Fact]
@@ -94,6 +96,7 @@ namespace osu.Server.Spectator.Tests
 
             // Score with no token.
             uploader.Enqueue(2, new Score());
+            Thread.Sleep(1000); // Wait for cancellation.
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
 
@@ -141,6 +144,20 @@ namespace osu.Server.Spectator.Tests
             uploader.Enqueue(1, new Score());
             await uploader.Flush();
             Assert.Equal(1, uploadCount);
+        }
+
+        [Fact]
+        public async Task TimedOutItemGetsOneAttempt()
+        {
+            enableUpload();
+
+            uploader.TimeoutInterval = 0;
+
+            // Score with no token.
+            uploader.Enqueue(1, new Score());
+            Thread.Sleep(1000); // Wait for cancellation.
+            await uploader.Flush();
+            mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Once);
         }
 
         private void enableUpload() => Environment.SetEnvironmentVariable("SAVE_REPLAYS", "1");

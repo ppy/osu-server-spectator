@@ -45,7 +45,7 @@ namespace osu.Server.Spectator.Hubs
             timerCancellationSource = new CancellationTokenSource();
             timerCancellationToken = timerCancellationSource.Token;
 
-            timer = new Timer(5000);
+            timer = new Timer(50);
             timer.AutoReset = false;
             timer.Elapsed += (_, _) => Task.Run(Flush);
             timer.Start();
