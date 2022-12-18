@@ -7,7 +7,7 @@ namespace osu.Server.Spectator
 {
     public static class AppSettings
     {
-        public static bool SaveReplays { get; }
+        public static bool SaveReplays { get; set; }
         public static string S3Key { get; }
         public static string S3Secret { get; }
         public static string ReplaysBucket { get; }

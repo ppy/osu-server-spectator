@@ -160,7 +160,7 @@ namespace osu.Server.Spectator.Tests
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Once);
         }
 
-        private void enableUpload() => Environment.SetEnvironmentVariable("SAVE_REPLAYS", "1");
-        private void disableUpload() => Environment.SetEnvironmentVariable("SAVE_REPLAYS", "0");
+        private void enableUpload() => AppSettings.SaveReplays = true;
+        private void disableUpload() => AppSettings.SaveReplays = false;
     }
 }
