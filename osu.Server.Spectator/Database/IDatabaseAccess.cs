@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
 using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Scoring;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Database
@@ -112,6 +113,12 @@ namespace osu.Server.Spectator.Database
         /// <param name="limit">Maximum number of entries to return. Defaults to 50.</param>
         /// <returns>Update metadata.</returns>
         Task<BeatmapUpdates> GetUpdatedBeatmapSets(int? lastQueueId, int limit = 50);
+
+        /// <summary>
+        /// Mark a score as having a replay available.
+        /// </summary>
+        /// <param name="score">The score to mark.</param>
+        Task MarkScoreHasReplay(Score score);
 
         /// <summary>
         /// Retrieves the score ID for a given score token. Will return null while the score has not yet been submitted.
