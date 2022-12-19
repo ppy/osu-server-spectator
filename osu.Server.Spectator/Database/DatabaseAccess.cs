@@ -10,6 +10,7 @@ using Dapper;
 using MySqlConnector;
 using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Scoring;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Database
@@ -280,6 +281,16 @@ namespace osu.Server.Spectator.Database
             var lastEntry = await connection.QueryFirstOrDefaultAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 ORDER BY queue_id DESC LIMIT 1");
 
             return new BeatmapUpdates(Array.Empty<int>(), lastEntry?.queue_id ?? 0);
+        }
+
+        public async Task MarkScoreHasReplay(Score score)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync("UPDATE `solo_scores` SET `has_replay` = 1 WHERE `id` = @scoreId", new
+            {
+                scoreId = score.ScoreInfo.OnlineID,
+            });
         }
 
         public async Task<long?> GetScoreIdFromToken(long token)

@@ -107,6 +107,7 @@ namespace osu.Server.Spectator.Hubs
                             {
                                 item.Score.ScoreInfo.OnlineID = scoreId.Value;
                                 await scoreStorage.WriteAsync(item.Score);
+                                await db.MarkScoreHasReplay(item.Score);
                             }
                             else
                                 Console.WriteLine($"Score upload timed out for token: {item.Token}");
