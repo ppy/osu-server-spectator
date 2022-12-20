@@ -6,6 +6,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 using osu.Server.Spectator.Storage;
+using StackExchange.Redis;
 
 namespace osu.Server.Spectator.Extensions
 {
@@ -24,7 +25,8 @@ namespace osu.Server.Spectator.Extensions
 
         public static IServiceCollection AddDatabaseServices(this IServiceCollection serviceCollection)
         {
-            return serviceCollection.AddSingleton<IDatabaseFactory, DatabaseFactory>();
+            return serviceCollection.AddSingleton<IDatabaseFactory, DatabaseFactory>()
+                                    .AddSingleton<IConnectionMultiplexer, ConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(AppSettings.RedisHost));
         }
     }
 }
