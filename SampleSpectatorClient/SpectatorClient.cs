@@ -25,6 +25,7 @@ namespace SampleSpectatorClient
             connection.On<int, SpectatorState>(nameof(ISpectatorClient.UserBeganPlaying), ((ISpectatorClient)this).UserBeganPlaying);
             connection.On<int, FrameDataBundle>(nameof(ISpectatorClient.UserSentFrames), ((ISpectatorClient)this).UserSentFrames);
             connection.On<int, SpectatorState>(nameof(ISpectatorClient.UserFinishedPlaying), ((ISpectatorClient)this).UserFinishedPlaying);
+            connection.On<int, long>(nameof(ISpectatorClient.UserFinishedPlaying), ((ISpectatorClient)this).UserScoreProcessed);
         }
 
         Task ISpectatorClient.UserBeganPlaying(int userId, SpectatorState state)
@@ -52,6 +53,12 @@ namespace SampleSpectatorClient
         Task ISpectatorClient.UserSentFrames(int userId, FrameDataBundle data)
         {
             Console.WriteLine($"{connection.ConnectionId} Received frames from {userId}: {data.Frames.First()}");
+            return Task.CompletedTask;
+        }
+
+        Task ISpectatorClient.UserScoreProcessed(int userId, long scoreId)
+        {
+            Console.WriteLine($"{connection.ConnectionId} Processing score with ID scoreId for player {userId} completed");
             return Task.CompletedTask;
         }
 
