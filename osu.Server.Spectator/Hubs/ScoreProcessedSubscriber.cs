@@ -6,8 +6,10 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using osu.Framework.Logging;
+using osu.Game.Online.Spectator;
 using osu.Server.Spectator.Database;
 using StackExchange.Redis;
 using StatsdClient;
@@ -30,12 +32,15 @@ public sealed class ScoreProcessedSubscriber : IScoreProcessedSubscriber, IDispo
     private readonly ConcurrentDictionary<long, ScoreProcessedSubscription> subscriptions = new ConcurrentDictionary<long, ScoreProcessedSubscription>();
     private readonly Timer timer;
     private readonly Logger logger;
+    private readonly IHubContext<SpectatorHub> spectatorHubContext;
 
     public ScoreProcessedSubscriber(
         IDatabaseFactory databaseFactory,
-        IConnectionMultiplexer redis)
+        IConnectionMultiplexer redis,
+        IHubContext<SpectatorHub> spectatorHubContext)
     {
         this.databaseFactory = databaseFactory;
+        this.spectatorHubContext = spectatorHubContext;
 
         timer = new Timer(1000);
         timer.AutoReset = true;
@@ -72,7 +77,7 @@ public sealed class ScoreProcessedSubscriber : IScoreProcessedSubscriber, IDispo
         }
     }
 
-    public async Task RegisterForNotificationAsync(string receiverConnectionId, int userId, long scoreToken, ScoreProcessedAsyncCallback callback)
+    public async Task RegisterForNotificationAsync(string receiverConnectionId, int userId, long scoreToken)
     {
         try
         {
@@ -86,7 +91,7 @@ public sealed class ScoreProcessedSubscriber : IScoreProcessedSubscriber, IDispo
                 return;
             }
 
-            var subscription = new ScoreProcessedSubscription(receiverConnectionId, userId, scoreId.Value, callback);
+            var subscription = new ScoreProcessedSubscription(receiverConnectionId, userId, scoreId.Value, spectatorHubContext);
 
             // because the score submission flow happens concurrently with the spectator play finished flow,
             // it is theoretically possible for the score processing to complete before the spectator hub had a chance to register for notifications.
@@ -154,22 +159,23 @@ public sealed class ScoreProcessedSubscriber : IScoreProcessedSubscriber, IDispo
         private readonly string receiverConnectionId;
         private readonly int userId;
         private readonly long scoreId;
-        private readonly ScoreProcessedAsyncCallback callback;
+        private readonly IHubContext<SpectatorHub> spectatorHubContext;
 
         private readonly CancellationTokenSource cancellationTokenSource;
         public bool TimedOut => cancellationTokenSource.IsCancellationRequested;
 
-        public ScoreProcessedSubscription(string receiverConnectionId, int userId, long scoreId, ScoreProcessedAsyncCallback callback)
+        public ScoreProcessedSubscription(string receiverConnectionId, int userId, long scoreId, IHubContext<SpectatorHub> spectatorHubContext)
         {
             this.receiverConnectionId = receiverConnectionId;
             this.userId = userId;
             this.scoreId = scoreId;
-            this.callback = callback;
+            this.spectatorHubContext = spectatorHubContext;
 
             cancellationTokenSource = new CancellationTokenSource(timeout_interval_ms);
         }
 
-        public Task InvokeAsync() => callback.Invoke(receiverConnectionId, userId, scoreId);
+        public Task InvokeAsync()
+            => spectatorHubContext.Clients.Client(receiverConnectionId).SendAsync(nameof(ISpectatorClient.UserScoreProcessed), userId, scoreId);
 
         public void Dispose() => cancellationTokenSource.Dispose();
     }

@@ -16,8 +16,7 @@ public interface IScoreProcessedSubscriber
     /// <param name="receiverConnectionId">The ID of the connection that should receive the notifications.</param>
     /// <param name="userId">The ID of the user who set the score.</param>
     /// <param name="scoreId">The ID of the score which is being processed.</param>
-    /// <param name="callback">The callback to execute when the score has been successfully processed.</param>
-    Task RegisterForNotificationAsync(string receiverConnectionId, int userId, long scoreId, ScoreProcessedAsyncCallback callback);
+    Task RegisterForNotificationAsync(string receiverConnectionId, int userId, long scoreId);
 }
 
 /// <summary>
