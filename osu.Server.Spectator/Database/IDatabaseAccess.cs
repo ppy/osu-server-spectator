@@ -126,5 +126,10 @@ namespace osu.Server.Spectator.Database
         /// <param name="token">The score token.</param>
         /// <returns>The score ID.</returns>
         Task<long?> GetScoreIdFromToken(long token);
+
+        /// <summary>
+        /// Returns <see langword="true"/> if the score with the supplied <paramref name="scoreId"/> has been successfully processed.
+        /// </summary>
+        Task<bool> IsScoreProcessedAsync(long scoreId);
     }
 }

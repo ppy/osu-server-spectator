@@ -20,7 +20,8 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<GracefulShutdownManager>()
                                     .AddSingleton<MetadataBroadcaster>()
                                     .AddSingleton<IScoreStorage, S3ScoreStorage>()
-                                    .AddSingleton<ScoreUploader>();
+                                    .AddSingleton<ScoreUploader>()
+                                    .AddSingleton<IScoreProcessedSubscriber, ScoreProcessedSubscriber>();
         }
 
         public static IServiceCollection AddDatabaseServices(this IServiceCollection serviceCollection)
