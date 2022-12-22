@@ -24,7 +24,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// The amount of time allowed for players to finish loading gameplay before they're either forced into gameplay (if loaded) or booted to the menu (if still loading).
         /// </summary>
-        private static readonly TimeSpan gameplay_load_timeout = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan gameplay_load_timeout = TimeSpan.FromSeconds(30);
 
         private readonly IHubContext<MultiplayerHub> context;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
