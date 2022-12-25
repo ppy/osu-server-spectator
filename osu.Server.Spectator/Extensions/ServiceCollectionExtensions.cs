@@ -24,6 +24,9 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<IScoreProcessedSubscriber, ScoreProcessedSubscriber>();
         }
 
+        /// <summary>
+        /// Adds MySQL (<see cref="IDatabaseFactory"/>) and Redis (<see cref="IConnectionMultiplexer"/>) services.
+        /// </summary>
         public static IServiceCollection AddDatabaseServices(this IServiceCollection serviceCollection)
         {
             return serviceCollection.AddSingleton<IDatabaseFactory, DatabaseFactory>()
