@@ -20,12 +20,19 @@ namespace osu.Server.Spectator.Hubs
 
         private readonly IDatabaseFactory databaseFactory;
         private readonly ScoreUploader scoreUploader;
+        private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
 
-        public SpectatorHub(IDistributedCache cache, EntityStore<SpectatorClientState> users, IDatabaseFactory databaseFactory, ScoreUploader scoreUploader)
+        public SpectatorHub(
+            IDistributedCache cache,
+            EntityStore<SpectatorClientState> users,
+            IDatabaseFactory databaseFactory,
+            ScoreUploader scoreUploader,
+            IScoreProcessedSubscriber scoreProcessedSubscriber)
             : base(cache, users)
         {
             this.databaseFactory = databaseFactory;
             this.scoreUploader = scoreUploader;
+            this.scoreProcessedSubscriber = scoreProcessedSubscriber;
         }
 
         public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
@@ -119,6 +126,7 @@ namespace osu.Server.Spectator.Hubs
                     score.ScoreInfo.Date = DateTimeOffset.UtcNow;
 
                     scoreUploader.Enqueue(scoreToken.Value, score);
+                    await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, CurrentContextUserId, scoreToken.Value);
                 }
                 finally
                 {

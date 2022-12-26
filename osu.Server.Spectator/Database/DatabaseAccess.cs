@@ -303,6 +303,16 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task<bool> IsScoreProcessedAsync(long scoreId)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<bool>("SELECT 1 FROM `solo_scores_process_history` WHERE `score_id` = @ScoreId", new
+            {
+                ScoreId = scoreId
+            });
+        }
+
         public void Dispose()
         {
             openConnection?.Dispose();

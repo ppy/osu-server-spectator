@@ -58,7 +58,9 @@ namespace osu.Server.Spectator.Tests
             mockScoreStorage = new Mock<IScoreStorage>();
             scoreUploader = new ScoreUploader(databaseFactory.Object, mockScoreStorage.Object);
 
-            hub = new SpectatorHub(cache, clientStates, databaseFactory.Object, scoreUploader);
+            var mockScoreProcessedSubscriber = new Mock<IScoreProcessedSubscriber>();
+
+            hub = new SpectatorHub(cache, clientStates, databaseFactory.Object, scoreUploader, mockScoreProcessedSubscriber.Object);
         }
 
         [Fact]

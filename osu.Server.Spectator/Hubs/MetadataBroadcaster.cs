@@ -54,7 +54,7 @@ public class MetadataBroadcaster : IDisposable
                 if (updates.BeatmapSetIDs.Any())
                 {
                     Console.WriteLine($"Broadcasting new beatmaps to client: {string.Join(',', updates.BeatmapSetIDs.Select(i => i.ToString()))}");
-                    await metadataHubContext.Clients.All.SendAsync(nameof(IMetadataClient.BeatmapSetsUpdated), updates);
+                    await metadataHubContext.Clients.All.SendAsync(nameof(IMetadataClient.BeatmapSetsUpdated), updates, cancellationToken: timerCancellationToken);
                 }
             }
         }
