@@ -18,6 +18,7 @@ namespace osu.Server.Spectator.Hubs
 {
     public class MultiplayerQueue
     {
+        public const int HOST_LIMIT = 50;
         public const int PER_USER_LIMIT = 3;
 
         public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentIndex];
@@ -106,10 +107,17 @@ namespace osu.Server.Spectator.Hubs
         {
             if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
 
-            if (room.Settings.QueueMode == QueueMode.HostOnly && !user.Equals(room.Host))
-                throw new NotHostException();
+            bool isHostOnly = room.Settings.QueueMode == QueueMode.HostOnly;
 
-            if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= PER_USER_LIMIT)
+            if (isHostOnly)
+            {
+                if (!user.Equals(room.Host))
+                    throw new NotHostException();
+
+                if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= HOST_LIMIT)
+                    throw new InvalidStateException($"Can't enqueue more than {HOST_LIMIT} items at once.");
+            }
+            else if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= PER_USER_LIMIT)
                 throw new InvalidStateException($"Can't enqueue more than {PER_USER_LIMIT} items at once.");
 
             using (var db = dbFactory.GetInstance())

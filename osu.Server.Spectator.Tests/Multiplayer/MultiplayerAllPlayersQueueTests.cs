@@ -179,7 +179,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task UserMayOnlyContainLimitedNumberOfItems()
+        public async Task UserMayOnlyAddLimitedNumberOfItems()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
