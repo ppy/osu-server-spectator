@@ -179,24 +179,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task HostMayAddManyItems()
-        {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
-
-            for (int i = 1; i < MultiplayerQueue.PER_USER_LIMIT + 1; i++)
-                await addItem();
-
-            async Task addItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapID = 3333,
-                BeatmapChecksum = "3333"
-            });
-        }
-
-        [Fact]
         public async Task UserMayOnlyAddLimitedNumberOfItems()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
