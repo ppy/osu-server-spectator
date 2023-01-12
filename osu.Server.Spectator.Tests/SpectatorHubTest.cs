@@ -9,10 +9,12 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using osu.Game.Beatmaps;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 using osu.Server.Spectator.Storage;
@@ -227,6 +229,50 @@ namespace osu.Server.Spectator.Tests
             await hub.OnDisconnectedAsync(new Exception());
 
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Quit)), Times.Once());
+        }
+
+        [Theory]
+        [InlineData(BeatmapOnlineStatus.LocallyModified, false)]
+        [InlineData(BeatmapOnlineStatus.None, false)]
+        [InlineData(BeatmapOnlineStatus.Graveyard, false)]
+        [InlineData(BeatmapOnlineStatus.WIP, false)]
+        [InlineData(BeatmapOnlineStatus.Pending, false)]
+        [InlineData(BeatmapOnlineStatus.Ranked, true)]
+        [InlineData(BeatmapOnlineStatus.Approved, true)]
+        [InlineData(BeatmapOnlineStatus.Qualified, false)]
+        [InlineData(BeatmapOnlineStatus.Loved, false)]
+        public async Task ScoresAreOnlySavedOnRankedBeatmaps(BeatmapOnlineStatus status, bool saved)
+        {
+            AppSettings.SaveReplays = true;
+
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockReceiver.Object);
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            mockDatabase.Setup(db => db.GetScoreIdFromToken(1234)).Returns(Task.FromResult<long?>(456));
+            mockDatabase.Setup(db => db.GetBeatmapAsync(beatmap_id)).Returns(Task.FromResult(new database_beatmap
+            {
+                approved = status,
+                checksum = "checksum"
+            })!);
+
+            await hub.BeginPlaySession(1234, state);
+            await hub.SendFrameData(new FrameDataBundle(new ScoreInfo(), new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+            await hub.EndPlaySession(state);
+
+            await scoreUploader.Flush();
+
+            if (saved)
+                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Once);
+            else
+                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Never);
         }
     }
 }
