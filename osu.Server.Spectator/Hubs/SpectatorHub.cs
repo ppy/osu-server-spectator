@@ -19,6 +19,16 @@ namespace osu.Server.Spectator.Hubs
     {
         public const string REPLAYS_PATH = "replays";
 
+        /// <summary>
+        /// Minimum beatmap status to save replays for.
+        /// </summary>
+        private const BeatmapOnlineStatus min_beatmap_status_for_replays = BeatmapOnlineStatus.Ranked;
+
+        /// <summary>
+        /// Maximum beatmap status to save replays for.
+        /// </summary>
+        private const BeatmapOnlineStatus max_beatmap_status_for_replays = BeatmapOnlineStatus.Loved;
+
         private readonly IDatabaseFactory databaseFactory;
         private readonly ScoreUploader scoreUploader;
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
@@ -127,7 +137,7 @@ namespace osu.Server.Spectator.Hubs
 
                     // Do nothing with scores on unranked beatmaps.
                     var status = score.ScoreInfo.BeatmapInfo.Status;
-                    if (status != BeatmapOnlineStatus.Ranked && status != BeatmapOnlineStatus.Approved)
+                    if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
                         return;
 
                     score.ScoreInfo.Date = DateTimeOffset.UtcNow;
