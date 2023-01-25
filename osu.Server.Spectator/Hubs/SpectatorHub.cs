@@ -10,6 +10,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs
@@ -17,6 +18,16 @@ namespace osu.Server.Spectator.Hubs
     public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {
         public const string REPLAYS_PATH = "replays";
+
+        /// <summary>
+        /// Minimum beatmap status to save replays for.
+        /// </summary>
+        private const BeatmapOnlineStatus min_beatmap_status_for_replays = BeatmapOnlineStatus.Ranked;
+
+        /// <summary>
+        /// Maximum beatmap status to save replays for.
+        /// </summary>
+        private const BeatmapOnlineStatus max_beatmap_status_for_replays = BeatmapOnlineStatus.Loved;
 
         private readonly IDatabaseFactory databaseFactory;
         private readonly ScoreUploader scoreUploader;
@@ -55,10 +66,10 @@ namespace osu.Server.Spectator.Hubs
 
                 using (var db = databaseFactory.GetInstance())
                 {
-                    string? beatmapChecksum = await db.GetBeatmapChecksumAsync(state.BeatmapID.Value);
+                    database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
                     string? username = await db.GetUsernameAsync(CurrentContextUserId);
 
-                    if (string.IsNullOrEmpty(beatmapChecksum))
+                    if (string.IsNullOrEmpty(beatmap?.checksum))
                         throw new ArgumentException(nameof(state.BeatmapID));
 
                     clientState.Score = new Score
@@ -75,7 +86,8 @@ namespace osu.Server.Spectator.Hubs
                             BeatmapInfo = new BeatmapInfo
                             {
                                 OnlineID = state.BeatmapID.Value,
-                                MD5Hash = beatmapChecksum,
+                                MD5Hash = beatmap.checksum,
+                                Status = beatmap.approved
                             },
                             MaximumStatistics = state.MaximumStatistics
                         }
@@ -121,6 +133,11 @@ namespace osu.Server.Spectator.Hubs
                     // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
                     // For now it's safe to drop these frames.
                     if (score == null || scoreToken == null)
+                        return;
+
+                    // Do nothing with scores on unranked beatmaps.
+                    var status = score.ScoreInfo.BeatmapInfo.Status;
+                    if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
                         return;
 
                     score.ScoreInfo.Date = DateTimeOffset.UtcNow;

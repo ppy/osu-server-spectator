@@ -11,6 +11,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using osu.Game.Beatmaps;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -227,6 +228,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         ends_at = DateTimeOffset.Now.AddMinutes(5),
                         user_id = int.Parse(Hub.Context.UserIdentifier!)
                     });
+
+            Database.Setup(db => db.GetBeatmapAsync(It.IsAny<int>()))
+                    .Returns<int>(async id => new database_beatmap { approved = BeatmapOnlineStatus.Ranked, checksum = await Database.Object.GetBeatmapChecksumAsync(id) });
 
             Database.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
                     .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.

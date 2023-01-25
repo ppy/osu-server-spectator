@@ -57,14 +57,19 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<string?> GetBeatmapChecksumAsync(int beatmapId)
+        public async Task<database_beatmap?> GetBeatmapAsync(int beatmapId)
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleOrDefaultAsync<string?>("SELECT checksum from osu_beatmaps WHERE beatmap_id = @BeatmapID AND deleted_at IS NULL", new
+            return await connection.QuerySingleOrDefaultAsync<database_beatmap>("SELECT * FROM osu_beatmaps WHERE beatmap_id = @BeatmapId AND deleted_at IS NULL", new
             {
                 BeatmapId = beatmapId
             });
+        }
+
+        public async Task<string?> GetBeatmapChecksumAsync(int beatmapId)
+        {
+            return (await GetBeatmapAsync(beatmapId))?.checksum;
         }
 
         public async Task MarkRoomActiveAsync(MultiplayerRoom room)
