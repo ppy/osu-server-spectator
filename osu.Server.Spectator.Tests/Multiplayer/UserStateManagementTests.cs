@@ -385,5 +385,64 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             UserReceiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Never);
             User2Receiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Never);
         }
+
+        [Fact]
+        public async Task EnsureThereIsNoGameplayGroupMemoryLeak()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.ChangeState(MultiplayerUserState.Spectating);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.ChangeState(MultiplayerUserState.Spectating);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeState(MultiplayerUserState.Spectating);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.ChangeState(MultiplayerUserState.Spectating);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+
+			SetUserContext(ContextUser);
+            await Hub.StartMatch();
+
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            SetUserContext(ContextUser2);           
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+			SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID, 0);
+            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID);
+            
+			await Hub.ChangeState(MultiplayerUserState.Idle);
+            SetUserContext(ContextUser2);
+			await Hub.ChangeState(MultiplayerUserState.Idle);
+
+            VerifyAddedToGameplayGroup(ContextUser, ROOM_ID, 1);
+            VerifyAddedToGameplayGroup(ContextUser2, ROOM_ID, 2);
+
+            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            Receiver.Verify(r => r.LoadRequested(), Times.Never);
+
+            await Hub.ChangeState(MultiplayerUserState.Spectating);
+
+			SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+
+            await Hub.StartMatch();
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Exactly(2));
+            Receiver.Verify(r => r.LoadRequested(), Times.Never);
+        }
     }
 }
