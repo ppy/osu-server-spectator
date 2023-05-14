@@ -128,25 +128,26 @@ namespace osu.Server.Spectator.Hubs
         {
             log(room, user, $"User state changed from {user.State} to {state}");
 
-            user.State = state;
-
             string? connectionId = users.GetConnectionIdForUser(user.UserID);
 
 			if (connectionId != null)
 			{
-                switch (state)
+                if (state == MultiplayerUserState.FinishedPlay)
                 {
-                    case MultiplayerUserState.FinishedPlay:
-                        await context.Groups.RemoveFromGroupAsync(connectionId, MultiplayerHub.GetGroupId(room.RoomID, true));
-                        break;
-
-                    case MultiplayerUserState.Ready:
-                    case MultiplayerUserState.Spectating:
-                    case MultiplayerUserState.Idle:
+                    // when entering FinishedPlay state, we can be confident that player can be removed from group
+                    await context.Groups.RemoveFromGroupAsync(connectionId, MultiplayerHub.GetGroupId(room.RoomID, true));
+                }
+                else
+                {
+                    // when leaving Results state, we can be confident that player can be removed from group
+                    if (user.State == MultiplayerUserState.Results)
+                    {
                         await context.Groups.AddToGroupAsync(connectionId, MultiplayerHub.GetGroupId(room.RoomID, true));
-                        break;
+                    }
                 }
 			}
+
+            user.State = state;
 
 			await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), user.UserID, user.State);
         }
