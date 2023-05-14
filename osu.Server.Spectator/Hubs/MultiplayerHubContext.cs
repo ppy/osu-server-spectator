@@ -137,12 +137,12 @@ namespace osu.Server.Spectator.Hubs
                 switch (state)
                 {
                     case MultiplayerUserState.FinishedPlay:
-                    case MultiplayerUserState.Idle:
                         await context.Groups.RemoveFromGroupAsync(connectionId, MultiplayerHub.GetGroupId(room.RoomID, true));
                         break;
 
                     case MultiplayerUserState.Ready:
                     case MultiplayerUserState.Spectating:
+                    case MultiplayerUserState.Idle:
                         await context.Groups.AddToGroupAsync(connectionId, MultiplayerHub.GetGroupId(room.RoomID, true));
                         break;
                 }
@@ -166,7 +166,7 @@ namespace osu.Server.Spectator.Hubs
             if (room.Queue.CurrentItem.Expired)
                 throw new InvalidStateException("Cannot start an expired playlist item.");
 
-            var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
+            var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready || u.State == MultiplayerUserState.Idle).ToArray();
 
             // If no users are ready, skip the current item in the queue.
             if (readyUsers.Length == 0)
