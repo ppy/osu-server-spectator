@@ -106,7 +106,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task OnlyReadiedUpUsersTransitionToPlay()
+        public async Task BothReadiedUpAndIdleUsersTransitionToPlay()
         {
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeState(MultiplayerUserState.Ready);
@@ -124,7 +124,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
 
                 Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
             }
 
             await Hub.ChangeState(MultiplayerUserState.Loaded);
@@ -134,7 +134,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 Assert.NotNull(room.Item);
                 Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Playing);
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Playing);
             }
         }
 
