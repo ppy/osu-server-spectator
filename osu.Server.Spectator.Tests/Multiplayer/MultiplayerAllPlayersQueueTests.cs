@@ -201,7 +201,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await LoadAndFinishGameplay(ContextUser);
+            await LoadAndFinishGameplay(ContextUser, ContextUser2);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             // The first user should now be able to add another item.

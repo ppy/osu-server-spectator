@@ -122,20 +122,21 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(room.Item);
 
                 Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
-
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
-            }
+				Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad).Count());
+			}
 
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-            using (var room = await Rooms.GetForUse(ROOM_ID))
+			SetUserContext(ContextUser2);
+			await Hub.ChangeState(MultiplayerUserState.Loaded);
+			await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+			using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Playing);
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Playing);
-            }
+				Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.Playing).Count());
+			}
         }
 
         [Fact]
@@ -205,21 +206,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
 
             await Hub.StartMatch();
-            await LoadAndFinishGameplay(ContextUser);
+            await LoadAndFinishGameplay(ContextUser, ContextUser2);
 
             VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
-            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID, false);
+            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Results);
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
+                Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.Results).Count());
             }
         }
 
         [Fact]
-        public async Task OnlyReadyPlayersAreAddedToAndRemovedFromGameplayGroup()
+        public async Task BothReadyAndIdlePlayersAreAddedToAndRemovedFromGameplayGroup()
         {
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeState(MultiplayerUserState.Ready);
@@ -233,17 +233,23 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-            VerifyAddedToGameplayGroup(ContextUser, ROOM_ID);
-            VerifyAddedToGameplayGroup(ContextUser2, ROOM_ID, false);
+			SetUserContext(ContextUser2);
+			await Hub.ChangeState(MultiplayerUserState.Loaded);
+			await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+			VerifyAddedToGameplayGroup(ContextUser, ROOM_ID);
+            VerifyAddedToGameplayGroup(ContextUser2, ROOM_ID);
 
             await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
+			SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-            VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
-            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID, false);
-        }
+			VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
+			VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID);
+		}
 
         [Fact]
-        public async Task NotReadyUsersDontGetLoadRequest()
+        public async Task IdleUsersDoGetLoadRequest()
         {
             await Hub.JoinRoom(ROOM_ID);
 
@@ -279,8 +285,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad));
-                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.Idle));
+                Assert.True(room.Item.Users.All(u => u.State == MultiplayerUserState.WaitingForLoad));
             }
         }
 

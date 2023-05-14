@@ -292,16 +292,19 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(user1Ctx);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
-            await LoadAndFinishGameplay(user1Ctx);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
+            await LoadAndFinishGameplay(user1Ctx, user2Ctx);
+			await Hub.ChangeState(MultiplayerUserState.Idle);
+			SetUserContext(user2Ctx);
+			await Hub.ChangeState(MultiplayerUserState.Idle);
 
-            // Queue: [ 4, 2, 3 ]
-            // List: [ 1, 2, 3, 4 ]
+			// Queue: [ 4, 2, 3 ]
+			// List: [ 1, 2, 3, 4 ]
 
-            // Now we'll remove item 2.
-            // Notice that while item 4 is at the front of the queue, it is also at the _end_ of the playlist.
-            // Item 3 will have its playlist order updated, which may crash if the current item isn't updated to not reference beyond the end of the list.
-            await Hub.RemovePlaylistItem(2);
+			// Now we'll remove item 2.
+			// Notice that while item 4 is at the front of the queue, it is also at the _end_ of the playlist.
+			// Item 3 will have its playlist order updated, which may crash if the current item isn't updated to not reference beyond the end of the list.
+			SetUserContext(user1Ctx);
+			await Hub.RemovePlaylistItem(2);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {

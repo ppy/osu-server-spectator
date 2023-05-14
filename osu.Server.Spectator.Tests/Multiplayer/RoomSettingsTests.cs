@@ -78,7 +78,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.StartMatch();
 
             UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
-            User2Receiver.Verify(r => r.LoadRequested(), Times.Never);
+            User2Receiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
         [Fact]
