@@ -122,21 +122,21 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(room.Item);
 
                 Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
-				Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad).Count());
-			}
+                Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad).Count());
+            }
 
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-			SetUserContext(ContextUser2);
-			await Hub.ChangeState(MultiplayerUserState.Loaded);
-			await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-			using (var room = await Rooms.GetForUse(ROOM_ID))
+            using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-				Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.Playing).Count());
-			}
+                Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.Playing).Count());
+            }
         }
 
         [Fact]
@@ -233,20 +233,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-			SetUserContext(ContextUser2);
-			await Hub.ChangeState(MultiplayerUserState.Loaded);
-			await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-			VerifyAddedToGameplayGroup(ContextUser, ROOM_ID);
+            VerifyAddedToGameplayGroup(ContextUser, ROOM_ID);
             VerifyAddedToGameplayGroup(ContextUser2, ROOM_ID);
 
             await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-			SetUserContext(ContextUser);
+            SetUserContext(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-			VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
-			VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID);
-		}
+            VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
+            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID);
+        }
 
         [Fact]
         public async Task IdleUsersDoGetLoadRequest()
@@ -405,7 +405,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.Idle);
             await Hub.ChangeState(MultiplayerUserState.Ready);
 
-			SetUserContext(ContextUser);
+            SetUserContext(ContextUser);
             await Hub.StartMatch();
 
             await Hub.ChangeState(MultiplayerUserState.Loaded);
@@ -416,15 +416,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
             await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-			SetUserContext(ContextUser);
+            SetUserContext(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
             VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID, 0);
             VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID);
             
-			await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
             SetUserContext(ContextUser2);
-			await Hub.ChangeState(MultiplayerUserState.Idle);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
 
             VerifyAddedToGameplayGroup(ContextUser, ROOM_ID, 1);
             VerifyAddedToGameplayGroup(ContextUser2, ROOM_ID, 2);
@@ -434,7 +434,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.ChangeState(MultiplayerUserState.Spectating);
 
-			SetUserContext(ContextUser);
+            SetUserContext(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Ready);
 
             await Hub.StartMatch();

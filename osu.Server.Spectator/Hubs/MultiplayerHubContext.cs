@@ -130,8 +130,8 @@ namespace osu.Server.Spectator.Hubs
 
             string? connectionId = users.GetConnectionIdForUser(user.UserID);
 
-			if (connectionId != null)
-			{
+            if (connectionId != null)
+            {
                 if (state == MultiplayerUserState.FinishedPlay)
                 {
                     // when entering FinishedPlay state, we can be confident that player can be removed from group
@@ -145,11 +145,11 @@ namespace osu.Server.Spectator.Hubs
                         await context.Groups.AddToGroupAsync(connectionId, MultiplayerHub.GetGroupId(room.RoomID, true));
                     }
                 }
-			}
+            }
 
             user.State = state;
 
-			await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), user.UserID, user.State);
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), user.UserID, user.State);
         }
 
         public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
@@ -167,15 +167,15 @@ namespace osu.Server.Spectator.Hubs
             if (room.Queue.CurrentItem.Expired)
                 throw new InvalidStateException("Cannot start an expired playlist item.");
 
-			if (!room.Users.Any(u => u.State == MultiplayerUserState.Ready))
-			{
-				await room.Queue.FinishCurrentItem();
-				return;
-			}
+            if (!room.Users.Any(u => u.State == MultiplayerUserState.Ready))
+            {
+                await room.Queue.FinishCurrentItem();
+                return;
+            }
 
-			var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready || u.State == MultiplayerUserState.Idle).ToArray();
+            var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready || u.State == MultiplayerUserState.Idle).ToArray();
 
-			foreach (var u in readyUsers)
+            foreach (var u in readyUsers)
                 await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
 
             await ChangeRoomState(room, MultiplayerRoomState.WaitingForLoad);

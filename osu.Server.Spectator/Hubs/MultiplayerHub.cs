@@ -108,12 +108,12 @@ namespace osu.Server.Spectator.Hubs
                         room.UpdateForRetrieval();
 
                         await addDatabaseUser(room, roomUser);
-						await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
+                        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
                         // add user to gameplay group because we want idle players to start playing as well
-						await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId, true));
+                        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId, true));
 
-						Log(room, "User joined");
+                        Log(room, "User joined");
                     }
                     catch
                     {
