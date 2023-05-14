@@ -165,7 +165,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         /// </summary>
         /// <param name="context">The user context.</param>
         /// <param name="roomId">The room ID.</param>
-        /// <param name="wasAdded">Whether to verify that the user context was added, otherwise verify not.</param>
+        /// <param name="addedTimes">Number of times that the user context was supposed to be added.</param>
         protected void VerifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, int addedTimes = 1)
             => Groups.Verify(groups => groups.AddToGroupAsync(
                 context.Object.ConnectionId,
@@ -177,7 +177,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         /// </summary>
         /// <param name="context">The user context.</param>
         /// <param name="roomId">The room ID.</param>
-        /// <param name="wasRemoved">Whether to verify that the user context was removed, otherwise verify not.</param>
+        /// <param name="removedTimes">Number of times that the user context was supposed to be removed.</param>
         protected void VerifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, int removedTimes = 1)
             => Groups.Verify(groups => groups.RemoveFromGroupAsync(
                 context.Object.ConnectionId,
