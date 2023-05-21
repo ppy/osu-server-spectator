@@ -58,7 +58,7 @@ namespace osu.Server.Spectator.Authentication
             };
         }
 
-        public void Configure(string name, JwtBearerOptions options)
+        public void Configure(string? name, JwtBearerOptions options)
             => Configure(options);
 
         /// <summary>
