@@ -45,7 +45,8 @@ namespace osu.Server.Spectator
         /// </summary>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            if (!Context.Request.Headers.TryGetValue("user_id", out var userIdString))
+            string? userIdString;
+            if (!Context.Request.Headers.TryGetValue("user_id", out var userIdValues) || (userIdString = userIdValues) == null)
                 userIdString = Interlocked.Increment(ref userIDCounter).ToString();
 
             var claim = new Claim(ClaimTypes.NameIdentifier, userIdString);
