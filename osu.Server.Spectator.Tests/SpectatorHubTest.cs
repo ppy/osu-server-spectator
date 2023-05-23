@@ -52,10 +52,9 @@ namespace osu.Server.Spectator.Tests
 
             mockDatabase = new Mock<IDatabaseAccess>();
             mockDatabase.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => "user");
-            mockDatabase.Setup(db => db.GetBeatmapAsync(beatmap_id)).ReturnsAsync(() => new database_beatmap { checksum = "d2a97fb2fa4529a5e857fe0466dc1daf" });
 
             mockDatabase.Setup(db => db.GetBeatmapAsync(It.IsAny<int>()))
-                        .Returns<int>(async id => new database_beatmap { approved = BeatmapOnlineStatus.Ranked, checksum = (await mockDatabase.Object.GetBeatmapAsync(id))?.checksum });
+                        .Returns<int>(async id => await Task.Run(() => new database_beatmap { approved = BeatmapOnlineStatus.Ranked, checksum = (id == beatmap_id ? "d2a97fb2fa4529a5e857fe0466dc1daf" : string.Empty) }));
 
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
