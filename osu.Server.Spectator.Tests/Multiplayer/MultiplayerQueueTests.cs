@@ -19,7 +19,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task AddNonExistentBeatmap()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync((string?)null);
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync((database_beatmap?)null);
 
             await Hub.JoinRoom(ROOM_ID);
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -32,7 +32,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task AddCustomizedBeatmapThrows()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(9999)).ReturnsAsync("correct checksum");
+            Database.Setup(d => d.GetBeatmapAsync(9999)).ReturnsAsync(new database_beatmap { checksum = "correct checksum" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -73,7 +73,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task RoomStartsWithCorrectQueueingMode()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
             Database.Setup(db => db.GetRoomAsync(ROOM_ID))
                     .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(() => new multiplayer_room
@@ -104,7 +104,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task JoinedRoomContainsAllPlaylistItems()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             InitialiseRoom(ROOM_ID);
 
@@ -130,7 +130,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task GuestsCanRemoveTheirOwnItems()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -159,7 +159,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task GuestsCanNotRemoveOtherUsersItems()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -180,7 +180,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task HostCanRemoveGuestsItems()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -210,7 +210,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task ExternalItemsCanNotBeRemoved()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -228,7 +228,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task CurrentItemCanNotBeRemovedIfSingle()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -239,7 +239,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task CurrentItemCanBeRemovedIfNotSingle()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -266,7 +266,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task ExpiredItemsCanNotBeRemoved()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -296,8 +296,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task GuestsCanUpdateTheirOwnItems()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
+            Database.Setup(d => d.GetBeatmapAsync(4444)).ReturnsAsync(new database_beatmap { checksum = "4444" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -335,8 +335,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task HostCanUpdateGuestsItems()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
+            Database.Setup(d => d.GetBeatmapAsync(4444)).ReturnsAsync(new database_beatmap { checksum = "4444" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -375,8 +375,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task HostCanChangeItemsWhenMaxItemsReached()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
+            Database.Setup(d => d.GetBeatmapAsync(4444)).ReturnsAsync(new database_beatmap { checksum = "4444" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -411,7 +411,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task ExpiredItemsCanNotBeChanged()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
@@ -432,8 +432,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task OwnerChangesWhenItemChanges()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
+            Database.Setup(d => d.GetBeatmapAsync(4444)).ReturnsAsync(new database_beatmap { checksum = "4444" });
 
             await Hub.JoinRoom(ROOM_ID);
             SetUserContext(ContextUser2);
@@ -484,7 +484,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task PlayersUnReadiedWhenCurrentItemIsEdited()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Database.Models;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -16,7 +17,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task RoundRobinOrderingWithGameplay()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRoundRobin });
@@ -69,7 +70,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task RoundRobinOrderingWithManyUsers()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             CreateUser(1, out var contextUser1, out _);
             CreateUser(2, out var contextUser2, out _);
@@ -235,7 +236,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task OrderUpdatedOnRemoval()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayersRoundRobin });

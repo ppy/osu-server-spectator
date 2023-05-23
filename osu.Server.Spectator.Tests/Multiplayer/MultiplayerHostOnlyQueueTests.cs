@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -16,7 +17,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task GuestsCannotAddItems()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
             await Hub.JoinRoom(ROOM_ID);
 
             SetUserContext(ContextUser2);
@@ -32,7 +33,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task HostMayAddManyItems()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
@@ -112,7 +113,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task NewPlaylistNotAddedAfterMatchStartWithMultipleItems()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
             // Add another item in free-for-all mode.
             await Hub.JoinRoom(ROOM_ID);
@@ -172,8 +173,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task ItemLastInQueueWhenChangingToAllPlayersMode()
         {
-            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
-            Database.Setup(d => d.GetBeatmapChecksumAsync(4444)).ReturnsAsync("4444");
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
+            Database.Setup(d => d.GetBeatmapAsync(4444)).ReturnsAsync(new database_beatmap { checksum = "4444" });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
