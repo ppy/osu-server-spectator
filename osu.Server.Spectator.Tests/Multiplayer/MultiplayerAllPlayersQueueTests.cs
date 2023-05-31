@@ -179,7 +179,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task UserMayOnlyAddLimitedNumberOfItems()
+        public async Task HostMayAddManyItems()
         {
             Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
 
@@ -189,22 +189,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             for (int i = 1; i < MultiplayerQueue.PER_USER_LIMIT; i++)
                 await addItem();
 
-            // First user is not allowed to add more items.
-            await Assert.ThrowsAsync<InvalidStateException>(addItem);
-
-            // Second user should be able to add items.
-            SetUserContext(ContextUser2);
-            await Hub.JoinRoom(ROOM_ID);
+            // Host should be allowed to add many items even in non-host-only queue modes.
             await addItem();
-
-            // Play a single map from the first user.
-            SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.StartMatch();
-            await LoadAndFinishGameplay(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-
-            // The first user should now be able to add another item.
+            await addItem();
             await addItem();
 
             async Task addItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -212,6 +199,53 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333"
             });
+        }
+
+        [Fact]
+        public async Task UserMayOnlyAddLimitedNumberOfItems()
+        {
+            Database.Setup(d => d.GetBeatmapChecksumAsync(3333)).ReturnsAsync("3333");
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            // Play initial beatmap to clear the queue.
+            await playBeatmap();
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            // Non-host user should be able to add items up to a defined limit.
+            for (int i = 0; i < MultiplayerQueue.PER_USER_LIMIT; i++)
+                await addItem();
+
+            // User is not allowed to add more items.
+            await Assert.ThrowsAsync<InvalidStateException>(addItem);
+
+            // Play a single map from the first user.
+            await playBeatmap();
+
+            // User should now be able to add one more item.
+            SetUserContext(ContextUser2);
+
+            await addItem();
+            await Assert.ThrowsAsync<InvalidStateException>(addItem);
+
+            async Task addItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            });
+
+            async Task playBeatmap()
+            {
+                SetUserContext(ContextUser);
+
+                await Hub.ChangeState(MultiplayerUserState.Ready);
+                await Hub.StartMatch();
+                await LoadAndFinishGameplay(ContextUser);
+                await Hub.ChangeState(MultiplayerUserState.Idle);
+            }
         }
     }
 }
