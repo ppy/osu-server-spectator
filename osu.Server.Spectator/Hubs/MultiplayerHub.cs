@@ -192,7 +192,8 @@ namespace osu.Server.Spectator.Hubs
                         MatchType = databaseRoom.type.ToMatchType(),
                         QueueMode = databaseRoom.queue_mode.ToQueueMode(),
                         AutoStartDuration = TimeSpan.FromSeconds(databaseRoom.auto_start_duration),
-                        AutoSkip = databaseRoom.auto_skip
+                        AutoSkip = databaseRoom.auto_skip,
+                        NoScoreMultiplier = databaseRoom.no_score_multiplier
                     }
                 };
 
