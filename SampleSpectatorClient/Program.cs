@@ -12,6 +12,7 @@ using osu.Framework.Utils;
 using osu.Game.Online;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 
 namespace SampleSpectatorClient
@@ -38,10 +39,12 @@ namespace SampleSpectatorClient
 
                 for (int i = 0; i < 50; i++)
                 {
-                    await sendingClient.SendFrames(new FrameDataBundle(new ScoreInfo(), new[]
-                    {
-                        new LegacyReplayFrame(i, RNG.Next(0, 512), RNG.Next(0, 512), ReplayButtonState.None)
-                    }));
+                    await sendingClient.SendFrames(new FrameDataBundle(
+                        new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
+                        new[]
+                        {
+                            new LegacyReplayFrame(i, RNG.Next(0, 512), RNG.Next(0, 512), ReplayButtonState.None)
+                        }));
                     Thread.Sleep(50);
                 }
 
