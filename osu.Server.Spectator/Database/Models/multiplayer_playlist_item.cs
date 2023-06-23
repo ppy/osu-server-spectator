@@ -65,19 +65,25 @@ namespace osu.Server.Spectator.Database.Models
             played_at = item.PlayedAt;
         }
 
-        public async Task<MultiplayerPlaylistItem> ToMultiplayerPlaylistItem(IDatabaseAccess db) => new MultiplayerPlaylistItem
+        public async Task<MultiplayerPlaylistItem> ToMultiplayerPlaylistItem(IDatabaseAccess db)
         {
-            ID = id,
-            OwnerID = owner_id,
-            BeatmapID = beatmap_id,
-            BeatmapChecksum = (await db.GetBeatmapChecksumAsync(beatmap_id)) ?? string.Empty,
-            RulesetID = ruleset_id,
-            RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(required_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
-            AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
-            Expired = expired,
-            PlaylistOrder = playlist_order ?? 0,
-            PlayedAt = played_at,
-        };
+            var beatmap = await db.GetBeatmapAsync(beatmap_id);
+            var playlistItem = new MultiplayerPlaylistItem
+            {
+                ID = id,
+                OwnerID = owner_id,
+                BeatmapID = beatmap_id,
+                BeatmapChecksum = beatmap?.checksum ?? string.Empty,
+                RulesetID = ruleset_id,
+                RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(required_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
+                AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
+                Expired = expired,
+                PlaylistOrder = playlist_order ?? 0,
+                PlayedAt = played_at,
+                StarRating = beatmap?.difficultyrating ?? 0.0
+            };
+            return playlistItem;
+        }
 
         public multiplayer_playlist_item Clone() => (multiplayer_playlist_item)MemberwiseClone();
     }

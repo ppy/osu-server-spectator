@@ -67,11 +67,6 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<string?> GetBeatmapChecksumAsync(int beatmapId)
-        {
-            return (await GetBeatmapAsync(beatmapId))?.checksum;
-        }
-
         public async Task MarkRoomActiveAsync(MultiplayerRoom room)
         {
             var connection = await getConnectionAsync();
