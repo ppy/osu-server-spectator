@@ -32,7 +32,6 @@ namespace osu.Server.Spectator
                 {
                     BucketName = bucket,
                     Key = key,
-                    CannedACL = S3CannedACL.PublicRead,
                     Headers =
                     {
                         ContentLength = contentLength,
