@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Hubs
             cancellationSource = new CancellationTokenSource();
             cancellationToken = cancellationSource.Token;
 
-            Task.Run(runFlushLoop);
+            Task.Factory.StartNew(runFlushLoop, TaskCreationOptions.LongRunning);
         }
 
         private void runFlushLoop()
