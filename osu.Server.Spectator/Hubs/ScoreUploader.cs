@@ -81,8 +81,6 @@ namespace osu.Server.Spectator.Hubs
                 if (queue.IsEmpty)
                     return;
 
-                Console.WriteLine($"Flushing upload queue with {queue.Count} scores");
-
                 using (var db = databaseFactory.GetInstance())
                 {
                     int countToTry = queue.Count;
