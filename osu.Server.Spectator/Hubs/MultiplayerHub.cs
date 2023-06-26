@@ -110,9 +110,6 @@ namespace osu.Server.Spectator.Hubs
                         await addDatabaseUser(room, roomUser);
                         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
 
-                        // add user to gameplay group because we want idle players to start playing as well
-                        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId, true));
-
                         Log(room, "User joined");
                     }
                     catch
@@ -617,8 +614,7 @@ namespace osu.Server.Spectator.Hubs
         /// Get the group ID to be used for multiplayer messaging.
         /// </summary>
         /// <param name="roomId">The databased room ID.</param>
-        /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
-        public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
+        public static string GetGroupId(long roomId) => $"room:{roomId}";
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
@@ -833,7 +829,6 @@ namespace osu.Server.Spectator.Hubs
 
             Log(room, wasKick ? "User kicked" : "User left");
 
-            await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
 
             var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);

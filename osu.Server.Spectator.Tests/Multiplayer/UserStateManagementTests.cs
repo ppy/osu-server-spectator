@@ -208,44 +208,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser, ContextUser2);
 
-            VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
-            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID);
-
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
                 Assert.Equal(2, room.Item.Users.Count(u => u.State == MultiplayerUserState.Results));
             }
-        }
-
-        [Fact]
-        public async Task BothReadyAndIdlePlayersAreAddedToAndRemovedFromGameplayGroup()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-
-            SetUserContext(ContextUser2);
-            await Hub.JoinRoom(ROOM_ID);
-
-            SetUserContext(ContextUser);
-
-            await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
-
-            SetUserContext(ContextUser2);
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
-
-            VerifyAddedToGameplayGroup(ContextUser, ROOM_ID);
-            VerifyAddedToGameplayGroup(ContextUser2, ROOM_ID);
-
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-            SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-
-            VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
-            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID);
         }
 
         [Fact]
@@ -279,8 +246,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // host requests the start of the match.
             await Hub.StartMatch();
 
-            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
-            Receiver.Verify(r => r.LoadRequested(), Times.Never);
+            Receiver.Verify(r => r.LoadRequested(), Times.Once);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
@@ -384,65 +350,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             User2Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Once);
             UserReceiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Never);
             User2Receiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task EnsureThereIsNoGameplayGroupMemoryLeak()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.ChangeState(MultiplayerUserState.Spectating);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-            await Hub.ChangeState(MultiplayerUserState.Spectating);
-
-            SetUserContext(ContextUser2);
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Spectating);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-            await Hub.ChangeState(MultiplayerUserState.Spectating);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-
-            SetUserContext(ContextUser);
-            await Hub.StartMatch();
-
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
-
-            SetUserContext(ContextUser2);           
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
-
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-            SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-
-            VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID, 0);
-            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID);
-            
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-            SetUserContext(ContextUser2);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-
-            VerifyAddedToGameplayGroup(ContextUser, ROOM_ID, 1);
-            VerifyAddedToGameplayGroup(ContextUser2, ROOM_ID, 2);
-
-            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
-            Receiver.Verify(r => r.LoadRequested(), Times.Never);
-
-            await Hub.ChangeState(MultiplayerUserState.Spectating);
-
-            SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-
-            await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
-
-            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Exactly(2));
-            Receiver.Verify(r => r.LoadRequested(), Times.Never);
         }
     }
 }

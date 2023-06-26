@@ -62,7 +62,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 Assert.Null(room.FindCountdownOfType<MatchStartCountdown>());
-                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+                Receiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
 
@@ -85,7 +85,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 MultiplayerCountdown? countdown = room.FindCountdownOfType<MatchStartCountdown>();
                 Assert.NotNull(countdown);
                 Assert.InRange(countdown.TimeRemaining.TotalSeconds, 30, 60);
-                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
+                Receiver.Verify(r => r.LoadRequested(), Times.Never);
             }
 
             await skipToEndOfCountdown();
@@ -96,7 +96,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 Assert.Null(room.FindCountdownOfType<MatchStartCountdown>());
-                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+                Receiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
 
@@ -122,7 +122,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Assert.Null(room.FindCountdownOfType<MatchStartCountdown>());
                 Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownStoppedEvent>()), Times.Exactly(1));
-                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
+                Receiver.Verify(r => r.LoadRequested(), Times.Never);
             }
         }
 
@@ -173,7 +173,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Receiver.Verify(r => r.MatchEvent(It.IsAny<CountdownStartedEvent>()), Times.Exactly(2));
                 Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStoppedEvent>(e => e.ID == firstCountdown.ID)), Times.Once);
-                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
+                Receiver.Verify(r => r.LoadRequested(), Times.Never);
             }
 
             await skipToEndOfCountdown();
@@ -185,7 +185,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Assert.Null(room.FindCountdownOfType<MatchStartCountdown>());
                 Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStoppedEvent>(e => e.ID == secondCountdown.ID)), Times.Once);
-                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+                Receiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
 
@@ -257,7 +257,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(usage.Item!.FindCountdownOfType<MatchStartCountdown>());
 
             await skipToEndOfCountdown();
-            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            Receiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
         [Fact(Timeout = test_timeout)]
@@ -274,7 +274,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(usage.Item!.FindCountdownOfType<MatchStartCountdown>());
 
             await skipToEndOfCountdown();
-            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            Receiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
         [Fact(Timeout = test_timeout)]
@@ -310,7 +310,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 Assert.Single(room.Playlist.Where(p => p.Expired));
-                GameplayReceiver.Verify(r => r.LoadRequested(), Times.Never);
+                Receiver.Verify(r => r.LoadRequested(), Times.Never);
             }
         }
 

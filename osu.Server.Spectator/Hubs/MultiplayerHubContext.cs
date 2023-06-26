@@ -128,18 +128,7 @@ namespace osu.Server.Spectator.Hubs
         {
             log(room, user, $"User state changed from {user.State} to {state}");
 
-            var previousState = user.State;
             user.State = state;
-
-            string? connectionId = users.GetConnectionIdForUser(user.UserID);
-
-            if (connectionId != null)
-            {
-                if (state == MultiplayerUserState.FinishedPlay)
-                    await context.Groups.RemoveFromGroupAsync(connectionId, MultiplayerHub.GetGroupId(room.RoomID, true));
-                else if (previousState == MultiplayerUserState.Results)
-                    await context.Groups.AddToGroupAsync(connectionId, MultiplayerHub.GetGroupId(room.RoomID, true));
-            }
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), user.UserID, user.State);
         }
@@ -173,7 +162,7 @@ namespace osu.Server.Spectator.Hubs
 
             await ChangeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID, true)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
 
             await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
         }
