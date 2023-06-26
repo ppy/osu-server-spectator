@@ -122,7 +122,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(room.Item);
 
                 Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
-                Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad).Count());
+                Assert.Equal(2, room.Item.Users.Count(u => u.State == MultiplayerUserState.WaitingForLoad));
             }
 
             await Hub.ChangeState(MultiplayerUserState.Loaded);
@@ -135,7 +135,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-                Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.Playing).Count());
+                Assert.Equal(2, room.Item.Users.Count(u => u.State == MultiplayerUserState.Playing));
             }
         }
 
@@ -214,7 +214,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-                Assert.Equal(2, room.Item.Users.Where(u => u.State == MultiplayerUserState.Results).Count());
+                Assert.Equal(2, room.Item.Users.Count(u => u.State == MultiplayerUserState.Results));
             }
         }
 

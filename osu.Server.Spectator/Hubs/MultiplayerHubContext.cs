@@ -160,7 +160,7 @@ namespace osu.Server.Spectator.Hubs
                 throw new InvalidStateException("Cannot start an expired playlist item.");
 
             // If no users are ready, skip the current item in the queue.
-            if (!room.Users.Any(u => u.State == MultiplayerUserState.Ready))
+            if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
             {
                 await room.Queue.FinishCurrentItem();
                 return;
