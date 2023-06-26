@@ -29,15 +29,13 @@ namespace osu.Server.Spectator.Tests
 
             mockStorage = new Mock<IScoreStorage>();
             uploader = new ScoreUploader(databaseFactory.Object, mockStorage.Object);
-            uploader.UploadInterval = 10000; // Set a high timer interval for testing purposes.
+            uploader.UploadInterval = 1000; // Set a high timer interval for testing purposes.
         }
 
         [Fact]
         public async Task ScoreUploadsEveryInterval()
         {
             enableUpload();
-
-            uploader.UploadInterval = 1000;
 
             // First score.
             uploader.Enqueue(1, new Score());
