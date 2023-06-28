@@ -4,6 +4,7 @@
 using System.Threading.Tasks;
 using System.Linq;
 using Moq;
+using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using Xunit;
@@ -103,6 +104,46 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 Assert.NotNull(room.Item);
                 Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
+            }
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData(DownloadState.Unknown)]
+        [InlineData(DownloadState.Downloading)]
+        [InlineData(DownloadState.NotDownloaded)]
+        public async Task UsersWithoutBeatmapWillNotEnterGameplay(DownloadState? state)
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await MarkCurrentUserMarkReadyAndAvailable();
+
+            // user 2 is not ready and doesn't have the beatmap.
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            if (state.HasValue)
+                await Hub.ChangeBeatmapAvailability(new BeatmapAvailability(state.Value));
+
+            SetUserContext(ContextUser);
+            await Hub.StartMatch();
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
+
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.WaitingForLoad);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
+            }
+
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Playing);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
             }
         }
 
