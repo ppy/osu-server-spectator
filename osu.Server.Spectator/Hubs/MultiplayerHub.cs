@@ -364,12 +364,7 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
-                    return;
-
-                user.BeatmapAvailability = newBeatmapAvailability;
-
-                await Clients.Group(GetGroupId(room.RoomID)).UserBeatmapAvailabilityChanged(CurrentContextUserId, newBeatmapAvailability);
+                await HubContext.ChangeAndBroadcastUserBeatmapAvailability(room, user, newBeatmapAvailability);
             }
         }
 
@@ -604,7 +599,7 @@ namespace osu.Server.Spectator.Hubs
                     Log(room, $"Switching queue mode to {settings.QueueMode}");
                 }
 
-                await HubContext.NotifySettingsChanged(room);
+                await HubContext.NotifySettingsChanged(room, false);
 
                 await updateRoomStateIfRequired(room);
             }

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using osu.Framework.Logging;
+using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -65,22 +66,22 @@ namespace osu.Server.Spectator.Hubs
             return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemRemoved), playlistItemId);
         }
 
-        public async Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
+        public async Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged)
         {
             await EnsureAllUsersValidMods(room);
 
             if (item.ID == room.Settings.PlaylistItemId)
-                await UnreadyAllUsers(room);
+                await UnreadyAllUsers(room, beatmapChanged);
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemChanged), item);
         }
 
-        public async Task NotifySettingsChanged(ServerMultiplayerRoom room)
+        public async Task NotifySettingsChanged(ServerMultiplayerRoom room, bool playlistItemChanged)
         {
             await EnsureAllUsersValidMods(room);
 
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
-            await UnreadyAllUsers(room);
+            await UnreadyAllUsers(room, playlistItemChanged);
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.SettingsChanged), room.Settings);
         }
@@ -90,10 +91,20 @@ namespace osu.Server.Spectator.Hubs
             return rooms.GetForUse(roomId);
         }
 
-        public async Task UnreadyAllUsers(ServerMultiplayerRoom room)
+        public async Task UnreadyAllUsers(ServerMultiplayerRoom room, bool resetBeatmapAvailability)
         {
+            log(room, null, "Unreadying all users");
+
             foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
                 await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
+
+            if (resetBeatmapAvailability)
+            {
+                log(room, null, "Resetting all users' beatmap availability");
+
+                foreach (var user in room.Users)
+                    await ChangeAndBroadcastUserBeatmapAvailability(room, user, new BeatmapAvailability(DownloadState.Unknown));
+            }
 
             // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop any match start countdown.
             // For example, gameplay-specific changes to the match settings or the current playlist item.
@@ -131,6 +142,16 @@ namespace osu.Server.Spectator.Hubs
             user.State = state;
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), user.UserID, user.State);
+        }
+
+        public async Task ChangeAndBroadcastUserBeatmapAvailability(ServerMultiplayerRoom room, MultiplayerRoomUser user, BeatmapAvailability newBeatmapAvailability)
+        {
+            if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
+                return;
+
+            user.BeatmapAvailability = newBeatmapAvailability;
+
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserBeatmapAvailabilityChanged), user.UserID, user.BeatmapAvailability);
         }
 
         public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
