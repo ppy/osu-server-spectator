@@ -176,7 +176,10 @@ namespace osu.Server.Spectator.Hubs
                 return;
             }
 
-            var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready || u.State == MultiplayerUserState.Idle).ToArray();
+            var readyUsers = room.Users.Where(u =>
+                u.BeatmapAvailability.State == DownloadState.LocallyAvailable
+                && (u.State == MultiplayerUserState.Ready || u.State == MultiplayerUserState.Idle)
+            ).ToArray();
 
             foreach (var u in readyUsers)
                 await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
