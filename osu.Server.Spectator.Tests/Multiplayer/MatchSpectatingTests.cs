@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task CanTransitionFromReadyToSpectating()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
             await Hub.ChangeState(MultiplayerUserState.Spectating);
         }
 
@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task SpectatingUserStateDoesNotChange()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
@@ -60,7 +60,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
 
             SetUserContext(ContextUser);
             await Hub.StartMatch();
@@ -71,7 +71,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task SpectatingUserReceivesLoadRequestedAfterGameplayStarted()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
             await Hub.StartMatch();
             Receiver.Verify(c => c.LoadRequested(), Times.Once);
 

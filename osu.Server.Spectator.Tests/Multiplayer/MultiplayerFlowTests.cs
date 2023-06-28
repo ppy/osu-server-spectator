@@ -25,7 +25,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
 
             // some users enter a ready state.
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
@@ -117,9 +117,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // both users become ready.
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
             SetUserContext(ContextUser2);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
@@ -212,9 +212,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
             await Hub.StartMatch();
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             SetUserContext(ContextUser2);
@@ -228,7 +228,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // Restart gameplay with just host being ready.
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
             await Hub.StartMatch();
 
             // Both Host and second user receive it twice.

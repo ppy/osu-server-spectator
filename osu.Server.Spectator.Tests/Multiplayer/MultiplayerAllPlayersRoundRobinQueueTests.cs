@@ -290,7 +290,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // Run gameplay.
             SetUserContext(user1Ctx);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
+            SetUserContext(user2Ctx);
+            await MarkCurrentUserMarkReadyAndAvailable();
+            SetUserContext(user1Ctx);
+
             await Hub.StartMatch();
             await LoadAndFinishGameplay(user1Ctx, user2Ctx);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -318,10 +322,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         private async Task runGameplay()
         {
             SetUserContext(ContextUser2);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             await Hub.StartMatch();
 
             await LoadAndFinishGameplay(ContextUser, ContextUser2);

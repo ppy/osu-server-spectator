@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
 
@@ -81,7 +81,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // And a second time...
             await Hub.ChangeState(MultiplayerUserState.Idle);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
 
@@ -125,7 +126,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // Play the first item in host-only mode.
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
 
@@ -147,7 +148,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // Play the second item in host-only mode.
             await Hub.ChangeState(MultiplayerUserState.Idle);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
 
@@ -182,7 +184,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "3333"
             });
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserMarkReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);

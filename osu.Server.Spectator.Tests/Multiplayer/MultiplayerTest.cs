@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -183,6 +184,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         /// </summary>
         /// <param name="context">The user context.</param>
         protected void SetUserContext(Mock<HubCallerContext> context) => Hub.Context = context.Object;
+
+        protected async Task MarkCurrentUserMarkReadyAndAvailable()
+        {
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+        }
 
         protected async Task LoadAndFinishGameplay(params Mock<HubCallerContext>[] users)
         {
