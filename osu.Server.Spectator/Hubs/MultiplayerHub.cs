@@ -458,8 +458,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
-                var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
-                if (readyUsers.Length == 0)
+                if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
                     throw new InvalidStateException("Can't start match when no users are ready.");
 
                 await HubContext.StartMatch(room);
