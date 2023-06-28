@@ -12,6 +12,7 @@ using Moq;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -52,10 +53,13 @@ namespace osu.Server.Spectator.Tests
 
             mockDatabase = new Mock<IDatabaseAccess>();
             mockDatabase.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => "user");
-            mockDatabase.Setup(db => db.GetBeatmapChecksumAsync(beatmap_id)).ReturnsAsync(() => "d2a97fb2fa4529a5e857fe0466dc1daf");
 
             mockDatabase.Setup(db => db.GetBeatmapAsync(It.IsAny<int>()))
-                        .Returns<int>(async id => new database_beatmap { approved = BeatmapOnlineStatus.Ranked, checksum = await mockDatabase.Object.GetBeatmapChecksumAsync(id) });
+                        .ReturnsAsync((int id) => new database_beatmap
+                        {
+                            approved = BeatmapOnlineStatus.Ranked,
+                            checksum = (id == beatmap_id ? "d2a97fb2fa4529a5e857fe0466dc1daf" : string.Empty)
+                        });
 
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
@@ -92,7 +96,9 @@ namespace osu.Server.Spectator.Tests
             mockClients.Verify(clients => clients.All, Times.Once);
             mockReceiver.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state))), Times.Once());
 
-            var data = new FrameDataBundle(new ScoreInfo(), new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) });
+            var data = new FrameDataBundle(
+                new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) });
 
             // check streaming data is propagating to watchers
             await hub.SendFrameData(data);
@@ -120,7 +126,9 @@ namespace osu.Server.Spectator.Tests
             mockDatabase.Setup(db => db.GetScoreIdFromToken(1234)).Returns(Task.FromResult<long?>(456));
 
             await hub.BeginPlaySession(1234, state);
-            await hub.SendFrameData(new FrameDataBundle(new ScoreInfo(), new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+            await hub.SendFrameData(new FrameDataBundle(
+                new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
             await hub.EndPlaySession(state);
 
             await scoreUploader.Flush();
@@ -267,7 +275,9 @@ namespace osu.Server.Spectator.Tests
             })!);
 
             await hub.BeginPlaySession(1234, state);
-            await hub.SendFrameData(new FrameDataBundle(new ScoreInfo(), new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+            await hub.SendFrameData(new FrameDataBundle(
+                new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
             await hub.EndPlaySession(state);
 
             await scoreUploader.Flush();

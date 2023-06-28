@@ -121,12 +121,12 @@ namespace osu.Server.Spectator.Hubs
 
             using (var db = dbFactory.GetInstance())
             {
-                string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.BeatmapID);
+                var beatmap = await db.GetBeatmapAsync(item.BeatmapID);
 
-                if (beatmapChecksum == null)
+                if (beatmap == null)
                     throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
 
-                if (item.BeatmapChecksum != beatmapChecksum)
+                if (item.BeatmapChecksum != beatmap.checksum)
                     throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
 
                 if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
@@ -134,6 +134,7 @@ namespace osu.Server.Spectator.Hubs
 
                 item.EnsureModsValid();
                 item.OwnerID = user.UserID;
+                item.StarRating = beatmap.difficultyrating;
 
                 await addItem(db, item);
                 await updateCurrentItem();
@@ -146,12 +147,12 @@ namespace osu.Server.Spectator.Hubs
 
             using (var db = dbFactory.GetInstance())
             {
-                string? beatmapChecksum = await db.GetBeatmapChecksumAsync(item.BeatmapID);
+                var beatmap = await db.GetBeatmapAsync(item.BeatmapID);
 
-                if (beatmapChecksum == null)
+                if (beatmap == null)
                     throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
 
-                if (item.BeatmapChecksum != beatmapChecksum)
+                if (item.BeatmapChecksum != beatmap.checksum)
                     throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
 
                 if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
@@ -159,6 +160,7 @@ namespace osu.Server.Spectator.Hubs
 
                 item.EnsureModsValid();
                 item.OwnerID = user.UserID;
+                item.StarRating = beatmap.difficultyrating;
 
                 var existingItem = room.Playlist.SingleOrDefault(i => i.ID == item.ID);
 

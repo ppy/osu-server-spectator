@@ -231,10 +231,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     });
 
             Database.Setup(db => db.GetBeatmapAsync(It.IsAny<int>()))
-                    .Returns<int>(async id => new database_beatmap { approved = BeatmapOnlineStatus.Ranked, checksum = await Database.Object.GetBeatmapChecksumAsync(id) });
-
-            Database.Setup(db => db.GetBeatmapChecksumAsync(It.IsAny<int>()))
-                    .ReturnsAsync("checksum"); // doesn't matter if bogus, just needs to be non-empty.
+                    .ReturnsAsync(new database_beatmap { approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" }); // doesn't matter if bogus, just needs to be non-empty.
 
             Database.Setup(db => db.GetPlaylistItemAsync(It.IsAny<long>(), It.IsAny<long>()))
                     .Returns<long, long>((roomId, playlistItemId) => Task.FromResult(playlistItems.Single(i => i.id == playlistItemId && i.room_id == roomId).Clone()));

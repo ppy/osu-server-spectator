@@ -13,5 +13,6 @@ namespace osu.Server.Spectator.Database.Models
     {
         public string? checksum { get; set; }
         public BeatmapOnlineStatus approved { get; set; }
+        public double difficultyrating { get; set; }
     }
 }

@@ -40,11 +40,6 @@ namespace osu.Server.Spectator.Database
         Task<database_beatmap?> GetBeatmapAsync(int beatmapId);
 
         /// <summary>
-        /// Returns the checksum of the beatmap with the given <paramref name="beatmapId"/>.
-        /// </summary>
-        Task<string?> GetBeatmapChecksumAsync(int beatmapId);
-
-        /// <summary>
         /// Marks the given <paramref name="room"/> as active and accepting new players.
         /// </summary>
         Task MarkRoomActiveAsync(MultiplayerRoom room);

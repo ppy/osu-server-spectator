@@ -9,7 +9,6 @@ using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Storage;
-using Timer = System.Timers.Timer;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -18,11 +17,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Amount of time (in milliseconds) between checks for pending score uploads.
         /// </summary>
-        public double UploadInterval
-        {
-            get => timer.Interval;
-            set => timer.Interval = value;
-        }
+        public int UploadInterval { get; set; } = 50;
 
         /// <summary>
         /// Amount of time (in milliseconds) before any individual score times out if a score ID hasn't been set.
@@ -33,22 +28,29 @@ namespace osu.Server.Spectator.Hubs
         private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
         private readonly IScoreStorage scoreStorage;
-        private readonly Timer timer;
-        private readonly CancellationTokenSource timerCancellationSource;
-        private readonly CancellationToken timerCancellationToken;
+        private readonly CancellationTokenSource cancellationSource;
+        private readonly CancellationToken cancellationToken;
 
         public ScoreUploader(IDatabaseFactory databaseFactory, IScoreStorage scoreStorage)
         {
             this.databaseFactory = databaseFactory;
             this.scoreStorage = scoreStorage;
 
-            timerCancellationSource = new CancellationTokenSource();
-            timerCancellationToken = timerCancellationSource.Token;
+            cancellationSource = new CancellationTokenSource();
+            cancellationToken = cancellationSource.Token;
 
-            timer = new Timer(50);
-            timer.AutoReset = false;
-            timer.Elapsed += (_, _) => Task.Run(Flush);
-            timer.Start();
+            Task.Factory.StartNew(runFlushLoop, TaskCreationOptions.LongRunning);
+        }
+
+        private void runFlushLoop()
+        {
+            while (!queue.IsEmpty || !cancellationToken.IsCancellationRequested)
+            {
+                // ReSharper disable once MethodSupportsCancellation
+                // We don't want flush to be cancelled as it needs to finish uploading.
+                Flush().Wait();
+                Thread.Sleep(UploadInterval);
+            }
         }
 
         /// <summary>
@@ -76,12 +78,8 @@ namespace osu.Server.Spectator.Hubs
         {
             try
             {
-                timer.Stop();
-
                 if (queue.IsEmpty)
                     return;
-
-                Console.WriteLine($"Beginning upload of {queue.Count} scores");
 
                 using (var db = databaseFactory.GetInstance())
                 {
@@ -124,19 +122,12 @@ namespace osu.Server.Spectator.Hubs
             {
                 Console.WriteLine($"Error during score upload: {e}");
             }
-            finally
-            {
-                if (timerCancellationToken.IsCancellationRequested)
-                    timer.Dispose();
-                else
-                    timer.Start();
-            }
         }
 
         public void Dispose()
         {
-            timerCancellationSource.Cancel();
-            timerCancellationSource.Dispose();
+            cancellationSource.Cancel();
+            cancellationSource.Dispose();
         }
 
         private record UploadItem(long Token, Score Score, CancellationTokenSource Cancellation) : IDisposable
