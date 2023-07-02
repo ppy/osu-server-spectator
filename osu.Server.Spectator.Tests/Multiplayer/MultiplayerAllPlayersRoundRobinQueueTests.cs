@@ -324,11 +324,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             SetUserContext(ContextUser2);
             await MarkCurrentUserReadyAndAvailable();
-            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
             SetUserContext(ContextUser);
             await MarkCurrentUserReadyAndAvailable();
-            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             await Hub.StartMatch();
 
             await LoadAndFinishGameplay(ContextUser, ContextUser2);

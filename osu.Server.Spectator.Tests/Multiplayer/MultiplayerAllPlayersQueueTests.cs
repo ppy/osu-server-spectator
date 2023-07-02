@@ -227,7 +227,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
 
             await MarkCurrentUserReadyAndAvailable();
-            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser, ContextUser2);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -246,7 +245,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 SetUserContext(ContextUser);
 
                 await MarkCurrentUserReadyAndAvailable();
-                await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
                 await Hub.StartMatch();
                 await LoadAndFinishGameplay(ContextUser);
                 await Hub.ChangeState(MultiplayerUserState.Idle);

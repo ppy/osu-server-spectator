@@ -83,7 +83,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // And a second time...
             await Hub.ChangeState(MultiplayerUserState.Idle);
             await MarkCurrentUserReadyAndAvailable();
-            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
 
@@ -150,7 +149,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // Play the second item in host-only mode.
             await Hub.ChangeState(MultiplayerUserState.Idle);
             await MarkCurrentUserReadyAndAvailable();
-            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
 
