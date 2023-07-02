@@ -155,30 +155,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         /// <summary>
-        /// Verifies that the given user context was either added or not added to the gameplay group.
-        /// </summary>
-        /// <param name="context">The user context.</param>
-        /// <param name="roomId">The room ID.</param>
-        /// <param name="addedTimes">Number of times that the user context was supposed to be added.</param>
-        protected void VerifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, int addedTimes = 1)
-            => Groups.Verify(groups => groups.AddToGroupAsync(
-                context.Object.ConnectionId,
-                MultiplayerHub.GetGroupId(roomId),
-                It.IsAny<CancellationToken>()), Times.Exactly(addedTimes));
-
-        /// <summary>
-        /// Verifies that the given user context was either removed or not removed from the gameplay group.
-        /// </summary>
-        /// <param name="context">The user context.</param>
-        /// <param name="roomId">The room ID.</param>
-        /// <param name="removedTimes">Number of times that the user context was supposed to be removed.</param>
-        protected void VerifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, int removedTimes = 1)
-            => Groups.Verify(groups => groups.RemoveFromGroupAsync(
-                context.Object.ConnectionId,
-                MultiplayerHub.GetGroupId(roomId),
-                It.IsAny<CancellationToken>()), Times.Exactly(removedTimes));
-
-        /// <summary>
         /// Sets the multiplayer hub's current user context.
         /// </summary>
         /// <param name="context">The user context.</param>
