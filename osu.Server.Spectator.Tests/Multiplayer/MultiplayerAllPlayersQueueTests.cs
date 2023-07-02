@@ -48,7 +48,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
 
@@ -79,7 +79,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -126,7 +126,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "4444"
             });
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -150,7 +150,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -226,7 +226,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser);
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser, ContextUser2);
@@ -245,7 +245,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 SetUserContext(ContextUser);
 
-                await MarkCurrentUserMarkReadyAndAvailable();
+                await MarkCurrentUserReadyAndAvailable();
                 await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
                 await Hub.StartMatch();
                 await LoadAndFinishGameplay(ContextUser);

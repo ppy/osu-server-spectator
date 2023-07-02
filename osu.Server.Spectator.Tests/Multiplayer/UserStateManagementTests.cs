@@ -18,7 +18,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.Ready), Times.Once);
         }
 
@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser);
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.StartMatch());
@@ -57,7 +57,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
@@ -84,10 +84,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser);
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
@@ -115,7 +115,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UsersWithoutBeatmapWillNotEnterGameplay(DownloadState? state)
         {
             await Hub.JoinRoom(ROOM_ID);
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
 
             // user 2 is not ready and doesn't have the beatmap.
             SetUserContext(ContextUser2);
@@ -151,7 +151,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task BothReadyAndIdleUsersTransitionToPlay()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
 
             // user 2 is not ready but has the beatmap. should join gameplay.
             SetUserContext(ContextUser2);
@@ -187,11 +187,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UserDisconnectsDuringGameplayUpdatesRoomState()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser);
             await Hub.StartMatch();
@@ -242,7 +242,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task OnlyFinishedUsersTransitionToResults()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
@@ -278,7 +278,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
 
             // one user enters a ready state.
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
@@ -306,7 +306,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
 
             // Test during WaitingForLoad state.
@@ -346,7 +346,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             // Test during WaitingForLoad state.
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await Hub.AbortGameplay();
 
@@ -358,7 +358,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
 
             // Test during Playing state.
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             await Hub.AbortGameplay();
@@ -377,7 +377,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AbortGameplay());
 
-            await MarkCurrentUserMarkReadyAndAvailable();
+            await MarkCurrentUserReadyAndAvailable();
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AbortGameplay());
         }
 

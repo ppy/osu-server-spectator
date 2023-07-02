@@ -160,7 +160,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         /// <param name="context">The user context.</param>
         protected void SetUserContext(Mock<HubCallerContext> context) => Hub.Context = context.Object;
 
-        protected async Task MarkCurrentUserMarkReadyAndAvailable()
+        protected async Task MarkCurrentUserReadyAndAvailable()
         {
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
