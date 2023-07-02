@@ -120,7 +120,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                   });
 
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID))).Returns(Receiver.Object);
-            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID))).Returns(Receiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2))).Returns(Receiver2.Object);
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
