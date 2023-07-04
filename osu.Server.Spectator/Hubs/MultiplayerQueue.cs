@@ -164,6 +164,12 @@ namespace osu.Server.Spectator.Hubs
 
                 var existingItem = room.Playlist.SingleOrDefault(i => i.ID == item.ID);
 
+                if (existingItem == CurrentItem)
+                {
+                    if (room.State != MultiplayerRoomState.Open)
+                        throw new InvalidStateException("The current item in the room cannot be edited when currently being played.");
+                }
+
                 if (existingItem == null)
                     throw new InvalidStateException("Attempted to change an item that doesn't exist.");
 
@@ -197,9 +203,15 @@ namespace osu.Server.Spectator.Hubs
             if (item == null)
                 throw new InvalidStateException("Item does not exist in the room.");
 
-            // The current item check is only an optimisation for this condition. It is guaranteed for the single item in the room to be the current item.
-            if (item == CurrentItem && UpcomingItems.Count() == 1)
-                throw new InvalidStateException("The only item in the room cannot be removed.");
+            if (item == CurrentItem)
+            {
+                // The current item check is only an optimisation for this condition. It is guaranteed for the single item in the room to be the current item.
+                if (UpcomingItems.Count() == 1)
+                    throw new InvalidStateException("The only item in the room cannot be removed.");
+
+                if (room.State != MultiplayerRoomState.Open)
+                    throw new InvalidStateException("The current item in the room cannot be removed when currently being played.");
+            }
 
             if (item.OwnerID != user.UserID && !user.Equals(room.Host))
                 throw new InvalidStateException("Attempted to remove an item which is not owned by the user.");
