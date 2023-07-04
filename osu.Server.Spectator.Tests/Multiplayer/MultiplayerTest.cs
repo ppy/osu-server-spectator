@@ -192,6 +192,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
         protected async Task LoadAndFinishGameplay(params Mock<HubCallerContext>[] users)
         {
+            await LoadGameplay(users);
+            await FinishGameplay(users);
+        }
+
+        protected async Task LoadGameplay(params Mock<HubCallerContext>[] users)
+        {
             foreach (var u in users)
             {
                 SetUserContext(u);
@@ -199,7 +205,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await Hub.ChangeState(MultiplayerUserState.Loaded);
                 await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
             }
+        }
 
+        protected async Task FinishGameplay(params Mock<HubCallerContext>[] users)
+        {
             foreach (var u in users)
             {
                 SetUserContext(u);

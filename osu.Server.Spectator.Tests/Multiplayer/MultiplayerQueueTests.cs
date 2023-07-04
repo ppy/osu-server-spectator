@@ -430,6 +430,40 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
+        public async Task CurrentlyPlayingItemsCannotBeChangedOrRemoved()
+        {
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.StartMatch();
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            }));
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(1));
+
+            await LoadGameplay(ContextUser);
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333"
+            }));
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(1));
+
+            await FinishGameplay(ContextUser);
+        }
+
+        [Fact]
         public async Task OwnerChangesWhenItemChanges()
         {
             Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
