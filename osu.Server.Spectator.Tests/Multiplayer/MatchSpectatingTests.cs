@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task CanTransitionFromReadyToSpectating()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.ChangeState(MultiplayerUserState.Spectating);
         }
 
@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task SpectatingUserStateDoesNotChange()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
 
             await Hub.StartMatch();
-            GameplayReceiver.Verify(c => c.LoadRequested(), Times.Once);
+            Receiver.Verify(c => c.LoadRequested(), Times.Once);
             Clients.Verify(clients => clients.Client(ContextUser2.Object.ConnectionId).UserStateChanged(USER_ID_2, MultiplayerUserState.WaitingForLoad), Times.Never);
 
             await Hub.ChangeState(MultiplayerUserState.Loaded);
@@ -60,21 +60,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser);
             await Hub.StartMatch();
-            GameplayReceiver.Verify(c => c.LoadRequested(), Times.Once);
+            Receiver.Verify(c => c.LoadRequested(), Times.Once);
         }
 
         [Fact]
         public async Task SpectatingUserReceivesLoadRequestedAfterGameplayStarted()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
-            Receiver.Verify(c => c.LoadRequested(), Times.Never);
-            GameplayReceiver.Verify(c => c.LoadRequested(), Times.Once);
+            Receiver.Verify(c => c.LoadRequested(), Times.Once);
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
@@ -82,8 +81,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Caller.Verify(c => c.LoadRequested(), Times.Once);
 
             // Ensure no other clients received LoadRequested().
-            Receiver.Verify(c => c.LoadRequested(), Times.Never);
-            GameplayReceiver.Verify(c => c.LoadRequested(), Times.Once);
+            Receiver.Verify(c => c.LoadRequested(), Times.Once);
         }
     }
 }

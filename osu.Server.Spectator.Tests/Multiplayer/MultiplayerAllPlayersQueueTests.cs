@@ -48,7 +48,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
 
@@ -79,7 +79,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -126,7 +126,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "4444"
             });
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -150,7 +150,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -222,11 +222,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // User is not allowed to add more items.
             await Assert.ThrowsAsync<InvalidStateException>(addItem);
 
-            // Play a single map from the first user.
-            await playBeatmap();
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
-            // User should now be able to add one more item.
-            SetUserContext(ContextUser2);
+            SetUserContext(ContextUser);
+
+            await MarkCurrentUserReadyAndAvailable();
+            await Hub.StartMatch();
+            await LoadAndFinishGameplay(ContextUser, ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Idle);
 
             await addItem();
             await Assert.ThrowsAsync<InvalidStateException>(addItem);
@@ -241,7 +244,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 SetUserContext(ContextUser);
 
-                await Hub.ChangeState(MultiplayerUserState.Ready);
+                await MarkCurrentUserReadyAndAvailable();
                 await Hub.StartMatch();
                 await LoadAndFinishGameplay(ContextUser);
                 await Hub.ChangeState(MultiplayerUserState.Idle);

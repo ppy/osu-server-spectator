@@ -4,7 +4,9 @@
 using System.Threading.Tasks;
 using System.Linq;
 using Moq;
+using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -16,7 +18,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.Ready), Times.Once);
         }
 
@@ -44,7 +46,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser);
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.StartMatch());
@@ -55,7 +57,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
@@ -82,10 +84,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
@@ -105,14 +107,21 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact]
-        public async Task OnlyReadiedUpUsersTransitionToPlay()
+        [Theory]
+        [InlineData(null)]
+        [InlineData(DownloadState.Unknown)]
+        [InlineData(DownloadState.Downloading)]
+        [InlineData(DownloadState.NotDownloaded)]
+        public async Task UsersWithoutBeatmapWillNotEnterGameplay(DownloadState? state)
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
+            // user 2 is not ready and doesn't have the beatmap.
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
+            if (state.HasValue)
+                await Hub.ChangeBeatmapAvailability(new BeatmapAvailability(state.Value));
 
             SetUserContext(ContextUser);
             await Hub.StartMatch();
@@ -139,14 +148,50 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
+        public async Task BothReadyAndIdleUsersTransitionToPlay()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await MarkCurrentUserReadyAndAvailable();
+
+            // user 2 is not ready but has the beatmap. should join gameplay.
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+
+            SetUserContext(ContextUser);
+            await Hub.StartMatch();
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
+                Assert.Equal(2, room.Item.Users.Count(u => u.State == MultiplayerUserState.WaitingForLoad));
+            }
+
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(2, room.Item.Users.Count(u => u.State == MultiplayerUserState.Playing));
+            }
+        }
+
+        [Fact]
         public async Task UserDisconnectsDuringGameplayUpdatesRoomState()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser);
             await Hub.StartMatch();
@@ -197,58 +242,32 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task OnlyFinishedUsersTransitionToResults()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
             SetUserContext(ContextUser);
 
             await Hub.StartMatch();
-            await LoadAndFinishGameplay(ContextUser);
-
-            VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
-            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID, false);
+            await LoadAndFinishGameplay(ContextUser, ContextUser2);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Results);
-                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
+                Assert.Equal(2, room.Item.Users.Count(u => u.State == MultiplayerUserState.Results));
             }
         }
 
         [Fact]
-        public async Task OnlyReadyPlayersAreAddedToAndRemovedFromGameplayGroup()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-
-            SetUserContext(ContextUser2);
-            await Hub.JoinRoom(ROOM_ID);
-
-            SetUserContext(ContextUser);
-
-            await Hub.StartMatch();
-            await Hub.ChangeState(MultiplayerUserState.Loaded);
-            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
-
-            VerifyAddedToGameplayGroup(ContextUser, ROOM_ID);
-            VerifyAddedToGameplayGroup(ContextUser2, ROOM_ID, false);
-
-            await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
-
-            VerifyRemovedFromGameplayGroup(ContextUser, ROOM_ID);
-            VerifyRemovedFromGameplayGroup(ContextUser2, ROOM_ID, false);
-        }
-
-        [Fact]
-        public async Task NotReadyUsersDontGetLoadRequest()
+        public async Task IdleUsersDoGetLoadRequest()
         {
             await Hub.JoinRoom(ROOM_ID);
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
             SetUserContext(ContextUser);
 
@@ -259,7 +278,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
 
             // one user enters a ready state.
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
@@ -273,14 +292,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // host requests the start of the match.
             await Hub.StartMatch();
 
-            GameplayReceiver.Verify(r => r.LoadRequested(), Times.Once);
-            Receiver.Verify(r => r.LoadRequested(), Times.Never);
+            Receiver.Verify(r => r.LoadRequested(), Times.Once);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.WaitingForLoad));
-                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.Idle));
+                Assert.True(room.Item.Users.All(u => u.State == MultiplayerUserState.WaitingForLoad));
             }
         }
 
@@ -289,7 +306,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
 
             // Test during WaitingForLoad state.
@@ -329,7 +346,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             // Test during WaitingForLoad state.
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await Hub.AbortGameplay();
 
@@ -341,7 +358,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
 
             // Test during Playing state.
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await Hub.ChangeState(MultiplayerUserState.Loaded);
             await Hub.AbortGameplay();
@@ -360,7 +377,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AbortGameplay());
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AbortGameplay());
         }
 

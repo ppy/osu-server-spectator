@@ -283,7 +283,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "3333"
             });
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -416,7 +416,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -437,7 +437,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -507,12 +507,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await LoadAndFinishGameplay(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Idle);
 
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeState(MultiplayerUserState.Ready));
+            await Assert.ThrowsAsync<InvalidStateException>(MarkCurrentUserReadyAndAvailable);
         }
 
         [Fact]
@@ -524,7 +524,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem

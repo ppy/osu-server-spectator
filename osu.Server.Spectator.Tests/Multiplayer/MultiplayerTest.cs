@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -42,11 +43,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         /// A general non-gameplay receiver for the room with ID <see cref="ROOM_ID"/>.
         /// </summary>
         protected readonly Mock<DelegatingMultiplayerClient> Receiver;
-
-        /// <summary>
-        /// A general gameplay receiver for the room with ID <see cref="ROOM_ID"/>.
-        /// </summary>
-        protected readonly Mock<DelegatingMultiplayerClient> GameplayReceiver;
 
         /// <summary>
         /// A general non-gameplay receiver for the room with ID <see cref="ROOM_ID_2"/>.
@@ -98,9 +94,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             UserStates = new EntityStore<MultiplayerClientState>();
             Clients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             Groups = new Mock<IGroupManager>();
-            Receiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, false)) { CallBase = true };
-            GameplayReceiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID, true)) { CallBase = true };
-            Receiver2 = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID_2, false)) { CallBase = true };
+            Receiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID)) { CallBase = true };
+            Receiver2 = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID_2)) { CallBase = true };
             Caller = new Mock<IMultiplayerClient>();
 
             var hubContext = new Mock<IHubContext<MultiplayerHub>>();
@@ -124,9 +119,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                       connectionIds.Remove(connectionId);
                   });
 
-            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, false))).Returns(Receiver.Object);
-            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID, true))).Returns(GameplayReceiver.Object);
-            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2, false))).Returns(Receiver2.Object);
+            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID))).Returns(Receiver.Object);
+            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2))).Returns(Receiver2.Object);
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
             Hub = new TestMultiplayerHub(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
@@ -138,9 +132,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser);
 
-            IEnumerable<IMultiplayerClient> getClientsForGroup(long roomId, bool gameplay)
+            IEnumerable<IMultiplayerClient> getClientsForGroup(long roomId)
             {
-                if (!groupMapping.TryGetValue(MultiplayerHub.GetGroupId(roomId, gameplay), out var connectionIds))
+                if (!groupMapping.TryGetValue(MultiplayerHub.GetGroupId(roomId), out var connectionIds))
                     yield break;
 
                 foreach (var id in connectionIds)
@@ -161,34 +155,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         /// <summary>
-        /// Verifies that the given user context was either added or not added to the gameplay group.
-        /// </summary>
-        /// <param name="context">The user context.</param>
-        /// <param name="roomId">The room ID.</param>
-        /// <param name="wasAdded">Whether to verify that the user context was added, otherwise verify not.</param>
-        protected void VerifyAddedToGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasAdded = true)
-            => Groups.Verify(groups => groups.AddToGroupAsync(
-                context.Object.ConnectionId,
-                MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasAdded ? Times.Once : Times.Never);
-
-        /// <summary>
-        /// Verifies that the given user context was either removed or not removed from the gameplay group.
-        /// </summary>
-        /// <param name="context">The user context.</param>
-        /// <param name="roomId">The room ID.</param>
-        /// <param name="wasRemoved">Whether to verify that the user context was removed, otherwise verify not.</param>
-        protected void VerifyRemovedFromGameplayGroup(Mock<HubCallerContext> context, long roomId, bool wasRemoved = true)
-            => Groups.Verify(groups => groups.RemoveFromGroupAsync(
-                context.Object.ConnectionId,
-                MultiplayerHub.GetGroupId(roomId, true),
-                It.IsAny<CancellationToken>()), wasRemoved ? Times.Once : Times.Never);
-
-        /// <summary>
         /// Sets the multiplayer hub's current user context.
         /// </summary>
         /// <param name="context">The user context.</param>
         protected void SetUserContext(Mock<HubCallerContext> context) => Hub.Context = context.Object;
+
+        protected async Task MarkCurrentUserReadyAndAvailable()
+        {
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+        }
 
         protected async Task LoadAndFinishGameplay(params Mock<HubCallerContext>[] users)
         {

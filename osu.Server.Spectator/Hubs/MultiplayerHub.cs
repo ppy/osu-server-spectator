@@ -364,12 +364,7 @@ namespace osu.Server.Spectator.Hubs
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
-                    return;
-
-                user.BeatmapAvailability = newBeatmapAvailability;
-
-                await Clients.Group(GetGroupId(room.RoomID)).UserBeatmapAvailabilityChanged(CurrentContextUserId, newBeatmapAvailability);
+                await HubContext.ChangeAndBroadcastUserBeatmapAvailability(room, user, newBeatmapAvailability);
             }
         }
 
@@ -463,8 +458,7 @@ namespace osu.Server.Spectator.Hubs
                 if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
                     throw new InvalidStateException("Can't start match when the host is not ready.");
 
-                var readyUsers = room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray();
-                if (readyUsers.Length == 0)
+                if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
                     throw new InvalidStateException("Can't start match when no users are ready.");
 
                 await HubContext.StartMatch(room);
@@ -604,7 +598,7 @@ namespace osu.Server.Spectator.Hubs
                     Log(room, $"Switching queue mode to {settings.QueueMode}");
                 }
 
-                await HubContext.NotifySettingsChanged(room);
+                await HubContext.NotifySettingsChanged(room, false);
 
                 await updateRoomStateIfRequired(room);
             }
@@ -614,8 +608,7 @@ namespace osu.Server.Spectator.Hubs
         /// Get the group ID to be used for multiplayer messaging.
         /// </summary>
         /// <param name="roomId">The databased room ID.</param>
-        /// <param name="gameplay">Whether the group ID should be for active gameplay, or room control messages.</param>
-        public static string GetGroupId(long roomId, bool gameplay = false) => $"room:{roomId}:{gameplay}";
+        public static string GetGroupId(long roomId) => $"room:{roomId}";
 
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
@@ -830,7 +823,6 @@ namespace osu.Server.Spectator.Hubs
 
             Log(room, wasKick ? "User kicked" : "User left");
 
-            await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID, true));
             await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
 
             var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);

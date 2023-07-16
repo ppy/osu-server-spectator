@@ -72,13 +72,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.All(room.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
             }
 
-            // Check that users have been removed from groups by attempting to start gameplay, and making sure the second user does not start while in an idle state.
+            // Check that both users start gameplay - the second user also starts despite being in an idle state.
             SetUserContext(ContextUser);
             await Hub.ChangeState(MultiplayerUserState.Ready);
             await Hub.StartMatch();
 
             UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
-            User2Receiver.Verify(r => r.LoadRequested(), Times.Never);
+            User2Receiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
         [Fact]

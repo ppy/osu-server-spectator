@@ -61,7 +61,8 @@ namespace osu.Server.Spectator.Hubs
         /// </remarks>
         /// <param name="room">The room to send the event to.</param>
         /// <param name="item">The changed item.</param>
-        Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item);
+        /// <param name="beatmapChanged">Whether the beatmap changed.</param>
+        Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged);
 
         /// <summary>
         /// Notifies users in a room that the room's settings have changed.
@@ -70,7 +71,8 @@ namespace osu.Server.Spectator.Hubs
         /// Adjusts user mod selections to ensure mod validity, unreadies all users, and stops the current countdown.
         /// </remarks>
         /// <param name="room">The room to send the event to.</param>
-        Task NotifySettingsChanged(ServerMultiplayerRoom room);
+        /// <param name="playlistItemChanged">Whether the current playlist item changed.</param>
+        Task NotifySettingsChanged(ServerMultiplayerRoom room, bool playlistItemChanged);
 
         /// <summary>
         /// Retrieves a <see cref="ServerMultiplayerRoom"/> usage.
@@ -85,7 +87,8 @@ namespace osu.Server.Spectator.Hubs
         /// Stops the current countdown.
         /// </remarks>
         /// <param name="room">The room to unready users in.</param>
-        Task UnreadyAllUsers(ServerMultiplayerRoom room);
+        /// <param name="resetBeatmapAvailability">Whether to reset availabilities (ie. if the beatmap changed).</param>
+        Task UnreadyAllUsers(ServerMultiplayerRoom room, bool resetBeatmapAvailability);
 
         /// <summary>
         /// Adjusts user mod selections to ensure they're valid for the current playlist item.
@@ -109,6 +112,14 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="user">The user.</param>
         /// <param name="state">The new state.</param>
         Task ChangeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state);
+
+        /// <summary>
+        /// Changes a user's beatmap availability for the current playlist item.
+        /// </summary>
+        /// <param name="room">The room containing the user.</param>
+        /// <param name="user">The user.</param>
+        /// <param name="availability">The new availability.</param>
+        Task ChangeAndBroadcastUserBeatmapAvailability(ServerMultiplayerRoom room, MultiplayerRoomUser user, BeatmapAvailability availability);
 
         /// <summary>
         /// Changes a room's state.

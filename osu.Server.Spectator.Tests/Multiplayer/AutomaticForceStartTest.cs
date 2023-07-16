@@ -17,7 +17,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task CountdownStartsWhenMatchStarts()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             await Hub.StartMatch();
 
@@ -29,7 +29,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task CountdownStopsWhenAllPlayersAbort()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             await Hub.StartMatch();
             await Hub.AbortGameplay();
@@ -42,7 +42,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task LoadingUsersAbortWhenCountdownEnds()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
 
             await skipToEndOfCountdown();
@@ -64,7 +64,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task LoadedUsersStartWhenCountdownEnds()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
             await Hub.ChangeState(MultiplayerUserState.Loaded);
 
@@ -87,11 +87,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task ReadyAndLoadedUsersStartWhenCountdownEnds()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             // User 1 becomes ready for gameplay.
             SetUserContext(ContextUser);
@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task CountdownCannotBeStopped()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
 
             int countdownId;
