@@ -5,6 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Metadata;
+using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Spectator;
 using osu.Server.Spectator.Storage;
 using StackExchange.Redis;
 

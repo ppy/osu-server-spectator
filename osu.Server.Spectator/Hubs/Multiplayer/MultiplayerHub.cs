@@ -17,7 +17,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {

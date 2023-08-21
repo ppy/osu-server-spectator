@@ -13,7 +13,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Hubs.Spectator
 {
     public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {

@@ -12,7 +12,7 @@ using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {

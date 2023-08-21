@@ -11,6 +11,8 @@ using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Spectator;
 
 namespace osu.Server.Spectator;
 

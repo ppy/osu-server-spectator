@@ -15,7 +15,7 @@ using StackExchange.Redis;
 using StatsdClient;
 using Timer = System.Timers.Timer;
 
-namespace osu.Server.Spectator.Hubs;
+namespace osu.Server.Spectator.Hubs.Spectator;
 
 public sealed class ScoreProcessedSubscriber : IScoreProcessedSubscriber, IDisposable
 {

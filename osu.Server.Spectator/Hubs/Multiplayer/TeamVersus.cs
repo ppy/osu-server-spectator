@@ -5,7 +5,7 @@ using System.Linq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class TeamVersus : MatchTypeImplementation
     {

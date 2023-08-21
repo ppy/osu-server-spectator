@@ -3,7 +3,7 @@
 
 using osu.Game.Online.Multiplayer;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public abstract class MatchTypeImplementation
     {

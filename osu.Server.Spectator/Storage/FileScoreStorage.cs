@@ -6,7 +6,7 @@ using System.IO;
 using System.Threading.Tasks;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
-using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Spectator;
 
 namespace osu.Server.Spectator.Storage
 {

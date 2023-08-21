@@ -3,7 +3,7 @@
 
 using System.Threading.Tasks;
 
-namespace osu.Server.Spectator.Hubs;
+namespace osu.Server.Spectator.Hubs.Spectator;
 
 /// <summary>
 /// Allows hub clients to receive notifications about the completion of processing of a score.
