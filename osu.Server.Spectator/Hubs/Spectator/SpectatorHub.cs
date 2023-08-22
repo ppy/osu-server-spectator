@@ -136,7 +136,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                         return;
 
                     // Do nothing with scores on unranked beatmaps.
-                    var status = score.ScoreInfo.BeatmapInfo.Status;
+                    var status = score.ScoreInfo.BeatmapInfo!.Status;
                     if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
                         return;
 
@@ -187,7 +187,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             // for now, send *all* player states to users on connect.
             // we don't want this for long, but while the lazer user base is small it should be okay.
             foreach (var kvp in GetAllStates())
-                await Clients.Caller.UserBeganPlaying((int)kvp.Key, kvp.Value.State);
+                await Clients.Caller.UserBeganPlaying((int)kvp.Key, kvp.Value.State!);
 
             await base.OnConnectedAsync();
         }
