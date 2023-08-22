@@ -5,11 +5,12 @@ using System;
 
 // ReSharper disable InconsistentNaming (matches database table)
 
-namespace osu.Server.Spectator.Database.Models;
-
-[Serializable]
-public class bss_process_queue_item
+namespace osu.Server.Spectator.Database.Models
 {
-    public int queue_id;
-    public int beatmapset_id;
+    [Serializable]
+    public class bss_process_queue_item
+    {
+        public int queue_id;
+        public int beatmapset_id;
+    }
 }

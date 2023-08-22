@@ -3,12 +3,13 @@
 
 using Microsoft.AspNetCore.SignalR;
 
-namespace osu.Server.Spectator;
-
-public class ServerShuttingDownException : HubException
+namespace osu.Server.Spectator
 {
-    public ServerShuttingDownException()
-        : base("Server is shutting down.")
+    public class ServerShuttingDownException : HubException
     {
+        public ServerShuttingDownException()
+            : base("Server is shutting down.")
+        {
+        }
     }
 }
