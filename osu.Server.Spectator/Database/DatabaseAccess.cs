@@ -324,7 +324,7 @@ namespace osu.Server.Spectator.Database
                 return openConnection;
 
             string host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-            string user = Environment.GetEnvironmentVariable("DB_USER") ?? "root";
+            string user = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
             string port = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
             DapperExtensions.InstallDateTimeOffsetMapper();
