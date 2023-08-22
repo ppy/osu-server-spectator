@@ -15,7 +15,7 @@ using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     /// <summary>
     /// Allows communication with multiplayer clients from potentially outside of a direct <see cref="MultiplayerHub"/> context.

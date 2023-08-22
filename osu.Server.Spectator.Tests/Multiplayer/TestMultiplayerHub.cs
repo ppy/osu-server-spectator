@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
-using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Multiplayer;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {

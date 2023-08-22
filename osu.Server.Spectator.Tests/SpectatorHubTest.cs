@@ -18,6 +18,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Spectator;
 using osu.Server.Spectator.Storage;
 using Xunit;
 

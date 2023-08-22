@@ -6,7 +6,7 @@ using System.IO;
 using System.Threading.Tasks;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
-using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Spectator;
 
 namespace osu.Server.Spectator.Storage
 {
@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Storage
 
             Directory.CreateDirectory(path);
 
-            string filename = $"replay-{scoreInfo.Ruleset.ShortName}_{scoreInfo.BeatmapInfo.OnlineID}_{score.ScoreInfo.OnlineID}.osr";
+            string filename = $"replay-{scoreInfo.Ruleset.ShortName}_{scoreInfo.BeatmapInfo!.OnlineID}_{score.ScoreInfo.OnlineID}.osr";
 
             Console.WriteLine($"Writing replay for score {score.ScoreInfo.OnlineID} to {filename}");
 

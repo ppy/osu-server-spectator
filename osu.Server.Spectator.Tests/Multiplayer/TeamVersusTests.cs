@@ -6,7 +6,7 @@ using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
-using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Multiplayer;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer

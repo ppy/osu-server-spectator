@@ -17,7 +17,7 @@ using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
-using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Multiplayer;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {

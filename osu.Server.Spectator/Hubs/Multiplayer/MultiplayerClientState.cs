@@ -4,7 +4,7 @@
 using System;
 using Newtonsoft.Json;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     [Serializable]
     public class MultiplayerClientState : ClientState

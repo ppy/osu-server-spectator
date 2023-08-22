@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
 
-namespace osu.Server.Spectator.Hubs
+namespace osu.Server.Spectator.Hubs.Spectator
 {
     [Serializable]
     public class SpectatorClientState : ClientState
