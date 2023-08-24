@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
@@ -44,9 +43,6 @@ namespace osu.Server.Spectator.Tests
 
         public SpectatorHubTest()
         {
-            if (Directory.Exists(SpectatorHub.REPLAYS_PATH))
-                Directory.Delete(SpectatorHub.REPLAYS_PATH, true);
-
             // not used for now, but left here for potential future usage.
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
