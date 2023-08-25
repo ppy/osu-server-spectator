@@ -100,6 +100,11 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v2
+        with:
+          # the "Create Sentry release" step relies on accessing git history
+          # to find the SHA of the previous release and set the range of new commits in the release being deployed.
+          # do a full clone rather than a shallow one to allow it to do that.
+          fetch-depth: 0
       -
         name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
