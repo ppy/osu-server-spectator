@@ -17,8 +17,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
 {
     public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {
-        public const string REPLAYS_PATH = "replays";
-
         /// <summary>
         /// Minimum beatmap status to save replays for.
         /// </summary>
