@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Threading.Tasks;
+using osu.Game.Online;
 
 namespace osu.Server.Spectator.Hubs.Spectator
 {
@@ -16,7 +17,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
         /// <param name="receiverConnectionId">The ID of the connection that should receive the notifications.</param>
         /// <param name="userId">The ID of the user who set the score.</param>
         /// <param name="scoreId">The ID of the score which is being processed.</param>
-        Task RegisterForNotificationAsync(string receiverConnectionId, int userId, long scoreId);
+        Task RegisterForNotificationAsync(string receiverConnectionId, int userId, ScoreToken scoreId);
     }
 
     /// <summary>

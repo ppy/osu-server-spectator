@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using osu.Game.Online;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
@@ -58,7 +59,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="token">The score's token.</param>
         /// <param name="score">The score.</param>
-        public void Enqueue(long token, Score score)
+        public void Enqueue(ScoreToken token, Score score)
         {
             if (!AppSettings.SaveReplays)
                 return;
@@ -130,7 +131,7 @@ namespace osu.Server.Spectator.Hubs
             cancellationSource.Dispose();
         }
 
-        private record UploadItem(long Token, Score Score, CancellationTokenSource Cancellation) : IDisposable
+        private record UploadItem(ScoreToken Token, Score Score, CancellationTokenSource Cancellation) : IDisposable
         {
             public void Dispose()
             {

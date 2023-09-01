@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
+using osu.Game.Online;
 using osu.Game.Online.Spectator;
 
 namespace SampleSpectatorClient
@@ -62,7 +63,7 @@ namespace SampleSpectatorClient
             return Task.CompletedTask;
         }
 
-        public Task BeginPlaying(long? scoreToken, SpectatorState state) => connection.SendAsync(nameof(ISpectatorServer.BeginPlaySession), scoreToken, state);
+        public Task BeginPlaying(ScoreToken? scoreToken, SpectatorState state) => connection.SendAsync(nameof(ISpectatorServer.BeginPlaySession), scoreToken?.ID, scoreToken?.Type, state);
 
         public Task SendFrames(FrameDataBundle data) => connection.SendAsync(nameof(ISpectatorServer.SendFrameData), data);
 

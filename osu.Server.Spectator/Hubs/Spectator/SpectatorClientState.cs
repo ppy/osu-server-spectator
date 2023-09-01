@@ -3,6 +3,7 @@
 
 using System;
 using Newtonsoft.Json;
+using osu.Game.Online;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
 
@@ -15,7 +16,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         public Score? Score;
 
-        public long? ScoreToken;
+        public ScoreToken? ScoreToken;
 
         [JsonConstructor]
         public SpectatorClientState(in string connectionId, in int userId)

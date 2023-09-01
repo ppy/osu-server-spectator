@@ -31,7 +31,7 @@ namespace SampleSpectatorClient
 
             while (true)
             {
-                await sendingClient.BeginPlaying(0, new SpectatorState { BeatmapID = 88 });
+                await sendingClient.BeginPlaying(new ScoreToken(0, ScoreTokenType.Solo), new SpectatorState { BeatmapID = 88 });
 
                 Thread.Sleep(1000);
 

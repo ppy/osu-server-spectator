@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using osu.Framework.Logging;
+using osu.Game.Online;
 using osu.Game.Online.Spectator;
 using osu.Server.Spectator.Database;
 using StackExchange.Redis;
@@ -77,7 +78,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
         }
 
-        public async Task RegisterForNotificationAsync(string receiverConnectionId, int userId, long scoreToken)
+        public async Task RegisterForNotificationAsync(string receiverConnectionId, int userId, ScoreToken scoreToken)
         {
             try
             {

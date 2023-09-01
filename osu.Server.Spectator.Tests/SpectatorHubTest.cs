@@ -9,6 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Beatmaps;
+using osu.Game.Online;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Rulesets.Scoring;
@@ -83,7 +84,7 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            await hub.BeginPlaySession(0, new SpectatorState
+            await hub.BeginPlaySession(new ScoreToken(0, ScoreTokenType.Solo), new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -120,9 +121,10 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            mockDatabase.Setup(db => db.GetScoreIdFromToken(1234)).Returns(Task.FromResult<long?>(456));
+            mockDatabase.Setup(db => db.GetScoreIdFromToken(new ScoreToken(1234, ScoreTokenType.Solo)))
+                        .Returns(Task.FromResult<long?>(456));
 
-            await hub.BeginPlaySession(1234, state);
+            await hub.BeginPlaySession(new ScoreToken(1234, ScoreTokenType.Solo), state);
             await hub.SendFrameData(new FrameDataBundle(
                 new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
@@ -164,7 +166,7 @@ namespace osu.Server.Spectator.Tests
             if (ongoing)
             {
                 hub.Context = streamerContext.Object;
-                await hub.BeginPlaySession(0, state);
+                await hub.BeginPlaySession(new ScoreToken(0, ScoreTokenType.Solo), state);
 
                 mockCaller.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state))), Times.Once);
             }
@@ -193,7 +195,7 @@ namespace osu.Server.Spectator.Tests
             hub.Clients = mockClients.Object;
 
             // Begin play.
-            await hub.BeginPlaySession(0, new SpectatorState
+            await hub.BeginPlaySession(new ScoreToken(0, ScoreTokenType.Solo), new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -226,7 +228,7 @@ namespace osu.Server.Spectator.Tests
             hub.Clients = mockClients.Object;
 
             // Begin play.
-            await hub.BeginPlaySession(0, new SpectatorState
+            await hub.BeginPlaySession(new ScoreToken(0, ScoreTokenType.Solo), new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -264,14 +266,15 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            mockDatabase.Setup(db => db.GetScoreIdFromToken(1234)).Returns(Task.FromResult<long?>(456));
+            mockDatabase.Setup(db => db.GetScoreIdFromToken(new ScoreToken(1234, ScoreTokenType.Multiplayer)))
+                        .Returns(Task.FromResult<long?>(456));
             mockDatabase.Setup(db => db.GetBeatmapAsync(beatmap_id)).Returns(Task.FromResult(new database_beatmap
             {
                 approved = status,
                 checksum = "checksum"
             })!);
 
-            await hub.BeginPlaySession(1234, state);
+            await hub.BeginPlaySession(new ScoreToken(1234, ScoreTokenType.Multiplayer), state);
             await hub.SendFrameData(new FrameDataBundle(
                 new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));

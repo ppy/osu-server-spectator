@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Moq;
+using osu.Game.Online;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Hubs;
@@ -22,7 +23,8 @@ namespace osu.Server.Spectator.Tests
         public ScoreUploaderTests()
         {
             mockDatabase = new Mock<IDatabaseAccess>();
-            mockDatabase.Setup(db => db.GetScoreIdFromToken(1)).Returns(Task.FromResult<long?>(2));
+            mockDatabase.Setup(db => db.GetScoreIdFromToken(new ScoreToken(1, ScoreTokenType.Solo)))
+                        .Returns(Task.FromResult<long?>(2));
 
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
@@ -38,12 +40,12 @@ namespace osu.Server.Spectator.Tests
             enableUpload();
 
             // First score.
-            uploader.Enqueue(1, new Score());
+            uploader.Enqueue(new ScoreToken(1, ScoreTokenType.Solo), new Score());
             await Task.Delay(2000);
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Once);
 
             // Second score (ensure the loop keeps running).
-            uploader.Enqueue(1, new Score());
+            uploader.Enqueue(new ScoreToken(1, ScoreTokenType.Solo), new Score());
             await Task.Delay(2000);
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Exactly(2));
         }
@@ -53,7 +55,7 @@ namespace osu.Server.Spectator.Tests
         {
             disableUpload();
 
-            uploader.Enqueue(1, new Score());
+            uploader.Enqueue(new ScoreToken(1, ScoreTokenType.Solo), new Score());
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
         }
@@ -63,7 +65,7 @@ namespace osu.Server.Spectator.Tests
         {
             enableUpload();
 
-            uploader.Enqueue(1, new Score());
+            uploader.Enqueue(new ScoreToken(1, ScoreTokenType.Solo), new Score());
             await uploader.Flush();
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Once);
@@ -75,12 +77,13 @@ namespace osu.Server.Spectator.Tests
             enableUpload();
 
             // Score with no token.
-            uploader.Enqueue(2, new Score());
+            uploader.Enqueue(new ScoreToken(2, ScoreTokenType.Solo), new Score());
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
 
             // Give the score a token.
-            mockDatabase.Setup(db => db.GetScoreIdFromToken(2)).Returns(Task.FromResult<long?>(3));
+            mockDatabase.Setup(db => db.GetScoreIdFromToken(new ScoreToken(2, ScoreTokenType.Solo)))
+                        .Returns(Task.FromResult<long?>(3));
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 3)), Times.Once);
         }
@@ -93,18 +96,19 @@ namespace osu.Server.Spectator.Tests
             uploader.TimeoutInterval = 0;
 
             // Score with no token.
-            uploader.Enqueue(2, new Score());
+            uploader.Enqueue(new ScoreToken(2, ScoreTokenType.Solo), new Score());
             Thread.Sleep(1000); // Wait for cancellation.
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
 
             // Give the score a token now. It should still not upload because it has timed out.
-            mockDatabase.Setup(db => db.GetScoreIdFromToken(2)).Returns(Task.FromResult<long?>(3));
+            mockDatabase.Setup(db => db.GetScoreIdFromToken(new ScoreToken(2, ScoreTokenType.Solo)))
+                        .Returns(Task.FromResult<long?>(3));
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
 
             // New score that has a token (ensure the loop keeps running).
-            uploader.Enqueue(1, new Score());
+            uploader.Enqueue(new ScoreToken(1, ScoreTokenType.Solo), new Score());
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Once);
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Once);
@@ -129,7 +133,7 @@ namespace osu.Server.Spectator.Tests
                        });
 
             // Throwing score.
-            uploader.Enqueue(1, new Score());
+            uploader.Enqueue(new ScoreToken(1, ScoreTokenType.Solo), new Score());
             await uploader.Flush();
             Assert.Equal(0, uploadCount);
 
@@ -139,7 +143,7 @@ namespace osu.Server.Spectator.Tests
             await uploader.Flush();
             Assert.Equal(0, uploadCount);
 
-            uploader.Enqueue(1, new Score());
+            uploader.Enqueue(new ScoreToken(1, ScoreTokenType.Solo), new Score());
             await uploader.Flush();
             Assert.Equal(1, uploadCount);
         }
@@ -152,7 +156,7 @@ namespace osu.Server.Spectator.Tests
             uploader.TimeoutInterval = 0;
 
             // Score with no token.
-            uploader.Enqueue(1, new Score());
+            uploader.Enqueue(new ScoreToken(1, ScoreTokenType.Solo), new Score());
             Thread.Sleep(1000); // Wait for cancellation.
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Once);

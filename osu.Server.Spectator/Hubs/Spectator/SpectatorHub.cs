@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Beatmaps;
+using osu.Game.Online;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
@@ -44,7 +45,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
         }
 
-        public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
+        public async Task BeginPlaySession(ScoreToken? scoreToken, SpectatorState state)
         {
             using (var usage = await GetOrCreateLocalUserState())
             {
@@ -126,7 +127,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 try
                 {
                     Score? score = usage.Item?.Score;
-                    long? scoreToken = usage.Item?.ScoreToken;
+                    ScoreToken? scoreToken = usage.Item?.ScoreToken;
 
                     // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
                     // For now it's safe to drop these frames.
@@ -140,8 +141,8 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                     score.ScoreInfo.Date = DateTimeOffset.UtcNow;
 
-                    scoreUploader.Enqueue(scoreToken.Value, score);
-                    await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, CurrentContextUserId, scoreToken.Value);
+                    scoreUploader.Enqueue(scoreToken, score);
+                    await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, CurrentContextUserId, scoreToken);
                 }
                 finally
                 {

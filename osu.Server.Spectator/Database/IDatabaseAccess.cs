@@ -4,6 +4,7 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
+using osu.Game.Online;
 using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Scoring;
@@ -125,7 +126,7 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         /// <param name="token">The score token.</param>
         /// <returns>The score ID.</returns>
-        Task<long?> GetScoreIdFromToken(long token);
+        Task<long?> GetScoreIdFromToken(ScoreToken token);
 
         /// <summary>
         /// Returns <see langword="true"/> if the score with the supplied <paramref name="scoreId"/> has been successfully processed.

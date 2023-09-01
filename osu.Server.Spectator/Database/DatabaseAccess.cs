@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
+using osu.Game.Online;
 using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Scoring;
@@ -293,14 +294,27 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<long?> GetScoreIdFromToken(long token)
+        public async Task<long?> GetScoreIdFromToken(ScoreToken token)
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleOrDefaultAsync<long?>("SELECT `score_id` FROM `solo_score_tokens` WHERE `id` = @Id", new
+            switch (token.Type)
             {
-                Id = token
-            });
+                case ScoreTokenType.Solo:
+                    return await connection.QuerySingleOrDefaultAsync<long?>("SELECT `score_id` FROM `solo_score_tokens` WHERE `id` = @Id", new
+                    {
+                        Id = token.ID
+                    });
+
+                case ScoreTokenType.Multiplayer:
+                    return await connection.QuerySingleOrDefaultAsync<long?>("SELECT `score_id` FROM `multiplayer_score_links` WHERE `id` = @Id", new
+                    {
+                        Id = token.ID
+                    });
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(token), token.Type, "Unrecognised token type");
+            }
         }
 
         public async Task<bool> IsScoreProcessedAsync(long scoreId)
