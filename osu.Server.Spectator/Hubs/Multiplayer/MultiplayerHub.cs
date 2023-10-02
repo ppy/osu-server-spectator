@@ -233,6 +233,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
+        public async Task InvitePlayer(int userId)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var user = userUsage.Item;
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                await Clients.User(userId.ToString()).Invited(user.UserId, room.RoomID, room.Settings.Password);
+            }
+        }
+
         public async Task TransferHost(int userId)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
