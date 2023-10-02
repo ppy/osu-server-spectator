@@ -55,6 +55,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.UserKicked(user);
         }
 
+        public virtual async Task Invited(int invitedBy, long roomID, string password)
+        {
+            foreach (var c in clients)
+                await c.Invited(invitedBy, roomID, password);
+        }
+
         public virtual async Task HostChanged(int userId)
         {
             foreach (var c in clients)
