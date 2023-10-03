@@ -98,6 +98,28 @@ public class MultiplayerInviteTest : MultiplayerTest
     }
 
     [Fact]
+    public async Task UserCantInviteRestrictedUser()
+    {
+        SetUserContext(ContextUser);
+        await Hub.JoinRoom(ROOM_ID);
+
+        var invitedUserReceiver = new Mock<IMultiplayerClient>();
+        Clients.Setup(clients => clients.User(USER_ID_2.ToString())).Returns(invitedUserReceiver.Object);
+
+        Database.Setup(d => d.GetUserRelation(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new phpbb_zebra { friend = true });
+        Database.Setup(d => d.IsUserRestrictedAsync(It.IsAny<int>())).ReturnsAsync(true);
+
+        SetUserContext(ContextUser);
+        await Assert.ThrowsAsync<InvalidStateException>(() => Hub.InvitePlayer(USER_ID_2));
+
+        invitedUserReceiver.Verify(r => r.Invited(
+            It.IsAny<int>(),
+            It.IsAny<long>(),
+            It.IsAny<string>()
+        ), Times.Never);
+    }
+
+    [Fact]
     public async Task UserCanInviteUserWithEnabledPMs()
     {
         SetUserContext(ContextUser);

@@ -237,6 +237,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             using (var db = databaseFactory.GetInstance())
             {
+                bool isRestricted = await db.IsUserRestrictedAsync(userId);
+                if (isRestricted)
+                    throw new InvalidStateException("Can't invite a restricted user to a room.");
+
                 var relation = await db.GetUserRelation(CurrentContextUserId, userId);
                 if (relation?.foe ?? false)
                     throw new UserBlockedException();
