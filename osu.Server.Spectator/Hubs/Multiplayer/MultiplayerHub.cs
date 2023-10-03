@@ -235,6 +235,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task InvitePlayer(int userId)
         {
+            using (var db = databaseFactory.GetInstance())
+            {
+                var relation = await db.GetUserRelation(CurrentContextUserId, userId);
+                if (relation?.foe ?? false)
+                    throw new UserBlockedException();
+
+                var inverseRelation = await db.GetUserRelation(userId, CurrentContextUserId);
+
+                if (inverseRelation == null)
+                {
+                    bool userAllowsPMs = await db.GetUserAllowsPMs(userId);
+                    if (!userAllowsPMs)
+                        throw new UserBlocksPMsException();
+                }
+                else if (inverseRelation.foe)
+                    throw new UserBlockedException();
+            }
+
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
