@@ -263,6 +263,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 var user = userUsage.Item;
                 var room = roomUsage.Item;
 
+                if (user == null)
+                    throw new InvalidStateException("Local user was not found in the expected room");
+
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
