@@ -140,7 +140,9 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                     score.ScoreInfo.Date = DateTimeOffset.UtcNow;
 
-                    scoreUploader.Enqueue(scoreToken.Value, score);
+                    if (score.ScoreInfo.Passed)
+                        scoreUploader.Enqueue(scoreToken.Value, score);
+
                     await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, CurrentContextUserId, scoreToken.Value);
                 }
                 finally
