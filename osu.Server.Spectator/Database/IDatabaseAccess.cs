@@ -121,11 +121,11 @@ namespace osu.Server.Spectator.Database
         Task MarkScoreHasReplay(Score score);
 
         /// <summary>
-        /// Retrieves the score ID for a given score token. Will return null while the score has not yet been submitted.
+        /// Retrieves the <see cref="SoloScore"/> for a given score token. Will return null while the score has not yet been submitted.
         /// </summary>
         /// <param name="token">The score token.</param>
-        /// <returns>The score ID.</returns>
-        Task<long?> GetScoreIdFromToken(long token);
+        /// <returns>The <see cref="SoloScore"/>.</returns>
+        Task<SoloScore?> GetScoreFromToken(long token);
 
         /// <summary>
         /// Returns <see langword="true"/> if the score with the supplied <paramref name="scoreId"/> has been successfully processed.

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs;
 using osu.Server.Spectator.Storage;
 using Xunit;
@@ -22,7 +23,14 @@ namespace osu.Server.Spectator.Tests
         public ScoreUploaderTests()
         {
             mockDatabase = new Mock<IDatabaseAccess>();
-            mockDatabase.Setup(db => db.GetScoreIdFromToken(1)).Returns(Task.FromResult<long?>(2));
+            mockDatabase.Setup(db => db.GetScoreFromToken(1)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            {
+                ScoreInfo =
+                {
+                    ID = 2,
+                    Passed = true
+                }
+            }));
 
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
@@ -80,8 +88,17 @@ namespace osu.Server.Spectator.Tests
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
 
             // Give the score a token.
-            mockDatabase.Setup(db => db.GetScoreIdFromToken(2)).Returns(Task.FromResult<long?>(3));
+            mockDatabase.Setup(db => db.GetScoreFromToken(2)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            {
+                ScoreInfo =
+                {
+                    ID = 3,
+                    Passed = true
+                }
+            }));
+
             await uploader.Flush();
+
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 3)), Times.Once);
         }
 
@@ -99,7 +116,15 @@ namespace osu.Server.Spectator.Tests
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
 
             // Give the score a token now. It should still not upload because it has timed out.
-            mockDatabase.Setup(db => db.GetScoreIdFromToken(2)).Returns(Task.FromResult<long?>(3));
+            mockDatabase.Setup(db => db.GetScoreFromToken(2)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            {
+                ScoreInfo =
+                {
+                    ID = 3,
+                    Passed = true
+                }
+            }));
+
             await uploader.Flush();
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
 

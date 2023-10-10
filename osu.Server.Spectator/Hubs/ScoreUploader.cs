@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Storage;
 
@@ -90,9 +91,9 @@ namespace osu.Server.Spectator.Hubs
                         if (!queue.TryDequeue(out var item))
                             continue;
 
-                        long? scoreId = await db.GetScoreIdFromToken(item.Token);
+                        SoloScore? dbScore = await db.GetScoreFromToken(item.Token);
 
-                        if (scoreId == null && !item.Cancellation.IsCancellationRequested)
+                        if (dbScore == null && !item.Cancellation.IsCancellationRequested)
                         {
                             // Score is not ready yet - enqueue for the next attempt.
                             queue.Enqueue(item);
@@ -101,14 +102,26 @@ namespace osu.Server.Spectator.Hubs
 
                         try
                         {
-                            if (scoreId != null)
+                            if (dbScore == null)
                             {
-                                item.Score.ScoreInfo.OnlineID = scoreId.Value;
-                                await scoreStorage.WriteAsync(item.Score);
-                                await db.MarkScoreHasReplay(item.Score);
-                            }
-                            else
                                 Console.WriteLine($"Score upload timed out for token: {item.Token}");
+                                return;
+                            }
+
+                            if (!dbScore.ScoreInfo.Passed)
+                                return;
+
+                            var updatedScore = new Score
+                            {
+                                Replay = item.Score.Replay,
+                                ScoreInfo = dbScore.ScoreInfo.ToScoreInfo(item.Score.ScoreInfo.Mods, item.Score.ScoreInfo.BeatmapInfo)
+                            };
+
+                            // This needs to be updated to a valid reference for the score encoder.
+                            updatedScore.ScoreInfo.Ruleset = item.Score.ScoreInfo.Ruleset;
+
+                            await scoreStorage.WriteAsync(updatedScore);
+                            await db.MarkScoreHasReplay(updatedScore);
                         }
                         finally
                         {

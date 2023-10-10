@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using osu.Framework.Logging;
 using osu.Game.Online.Spectator;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using StackExchange.Redis;
 using StatsdClient;
 using Timer = System.Timers.Timer;
@@ -83,20 +84,20 @@ namespace osu.Server.Spectator.Hubs.Spectator
             {
                 using var db = databaseFactory.GetInstance();
 
-                long? scoreId = await db.GetScoreIdFromToken(scoreToken);
+                SoloScore? score = await db.GetScoreFromToken(scoreToken);
 
-                if (scoreId == null)
+                if (score == null)
                 {
                     DogStatsd.Increment($"{statsd_prefix}.subscriptions.dropped");
                     return;
                 }
 
-                var subscription = new ScoreProcessedSubscription(receiverConnectionId, userId, scoreId.Value, spectatorHubContext);
+                var subscription = new ScoreProcessedSubscription(receiverConnectionId, userId, (long)score.id, spectatorHubContext);
 
                 // because the score submission flow happens concurrently with the spectator play finished flow,
                 // it is theoretically possible for the score processing to complete before the spectator hub had a chance to register for notifications.
                 // to cover off this possibility, check the database directly once.
-                if (await db.IsScoreProcessedAsync(scoreId.Value))
+                if (await db.IsScoreProcessedAsync((long)score.id))
                 {
                     using (subscription)
                         await subscription.InvokeAsync();
@@ -104,7 +105,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     return;
                 }
 
-                subscriptions.TryAdd(scoreId.Value, subscription);
+                subscriptions.TryAdd((long)score.id, subscription);
                 DogStatsd.Gauge($"{statsd_prefix}.subscriptions.total", subscriptions.Count);
             }
             catch (Exception ex)
