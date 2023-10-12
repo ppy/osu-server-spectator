@@ -28,7 +28,7 @@ public class MultiplayerInviteTest : MultiplayerTest
         invitedUserReceiver.Verify(r => r.Invited(
             USER_ID,
             ROOM_ID,
-            ""
+            string.Empty
         ), Times.Once);
     }
 
@@ -136,23 +136,25 @@ public class MultiplayerInviteTest : MultiplayerTest
         invitedUserReceiver.Verify(r => r.Invited(
             USER_ID,
             ROOM_ID,
-            ""
+            string.Empty
         ), Times.Once);
     }
 
     [Fact]
     public async Task UserCanInviteIntoRoomWithPassword()
     {
+        const string password = "password";
+
         Database.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
                 .Callback<long>(InitialiseRoom)
                 .ReturnsAsync(new multiplayer_room
                 {
-                    password = "password",
+                    password = password,
                     user_id = USER_ID
                 });
 
         SetUserContext(ContextUser);
-        await Hub.JoinRoomWithPassword(ROOM_ID, "password");
+        await Hub.JoinRoomWithPassword(ROOM_ID, password);
 
         var invitedUserReceiver = new Mock<IMultiplayerClient>();
         Clients.Setup(clients => clients.User(USER_ID_2.ToString())).Returns(invitedUserReceiver.Object);
@@ -165,7 +167,7 @@ public class MultiplayerInviteTest : MultiplayerTest
         invitedUserReceiver.Verify(r => r.Invited(
             USER_ID,
             ROOM_ID,
-            "password"
+            password
         ), Times.Once);
     }
 }
