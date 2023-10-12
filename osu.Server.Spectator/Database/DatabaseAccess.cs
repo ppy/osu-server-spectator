@@ -240,9 +240,7 @@ namespace osu.Server.Spectator.Database
                 "DELETE FROM multiplayer_playlist_items p"
                 + " WHERE p.room_id = @RoomID"
                 + " AND p.expired = 0"
-                + " AND (SELECT COUNT(*) FROM multiplayer_score_links l WHERE l.playlist_item_id = p.id) = 0"
-                // condition below can be removed once scores are fully moved to multiplayer_score_links
-                + " AND (SELECT COUNT(*) FROM multiplayer_scores s WHERE s.playlist_item_id = p.id) = 0",
+                + " AND (SELECT COUNT(*) FROM multiplayer_score_links l WHERE l.playlist_item_id = p.id) = 0",
                 new
                 {
                     RoomID = room.RoomID
