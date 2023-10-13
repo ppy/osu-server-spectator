@@ -233,6 +233,47 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
+        public async Task InvitePlayer(int userId)
+        {
+            using (var db = databaseFactory.GetInstance())
+            {
+                bool isRestricted = await db.IsUserRestrictedAsync(userId);
+                if (isRestricted)
+                    throw new InvalidStateException("Can't invite a restricted user to a room.");
+
+                var relation = await db.GetUserRelation(CurrentContextUserId, userId);
+
+                // The local user has the player they are trying to invite blocked.
+                if (relation?.foe == true)
+                    throw new UserBlockedException();
+
+                var inverseRelation = await db.GetUserRelation(userId, CurrentContextUserId);
+
+                // The player being invited has the local user blocked.
+                if (inverseRelation?.foe == true)
+                    throw new UserBlockedException();
+
+                // The player being invited disallows unsolicited PMs and the local user is not their friend.
+                if (inverseRelation?.friend != true && !await db.GetUserAllowsPMs(userId))
+                    throw new UserBlocksPMsException();
+            }
+
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var user = userUsage.Item;
+                var room = roomUsage.Item;
+
+                if (user == null)
+                    throw new InvalidStateException("Local user was not found in the expected room");
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                await Clients.User(userId.ToString()).Invited(user.UserId, room.RoomID, room.Settings.Password);
+            }
+        }
+
         public async Task TransferHost(int userId)
         {
             using (var userUsage = await GetOrCreateLocalUserState())

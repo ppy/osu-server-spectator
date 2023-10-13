@@ -131,5 +131,15 @@ namespace osu.Server.Spectator.Database
         /// Returns <see langword="true"/> if the score with the supplied <paramref name="scoreId"/> has been successfully processed.
         /// </summary>
         Task<bool> IsScoreProcessedAsync(long scoreId);
+
+        /// <summary>
+        /// Returns information about if the user with the supplied <paramref name="zebraId"/> has been added as a friend or blocked by the user with the supplied <paramref name="userId"/>.
+        /// </summary>
+        Task<phpbb_zebra?> GetUserRelation(int userId, int zebraId);
+
+        /// <summary>
+        /// Returns <see langword="true"/> if the user with the supplied <paramref name="userId"/> allows private messages from people not on their friends list.
+        /// </summary>
+        Task<bool> GetUserAllowsPMs(int userId);
     }
 }

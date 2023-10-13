@@ -44,6 +44,7 @@ namespace SampleMultiplayerClient
             connection.On<MultiplayerPlaylistItem>(nameof(IMultiplayerClient.PlaylistItemAdded), ((IMultiplayerClient)this).PlaylistItemAdded);
             connection.On<MultiplayerPlaylistItem>(nameof(IMultiplayerClient.PlaylistItemChanged), ((IMultiplayerClient)this).PlaylistItemChanged);
             connection.On<long>(nameof(IMultiplayerClient.PlaylistItemRemoved), ((IMultiplayerClient)this).PlaylistItemRemoved);
+            connection.On<int, long, string>(nameof(IMultiplayerClient.Invited), ((IMultiplayerClient)this).Invited);
         }
 
         public MultiplayerUserState State { get; private set; }
@@ -110,6 +111,9 @@ namespace SampleMultiplayerClient
         public Task RemovePlaylistItem(long playlistItemId) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.RemovePlaylistItem), playlistItemId);
 
+        public Task InvitePlayer(int userId)
+            => connection.InvokeAsync(nameof(IMultiplayerServer.InvitePlayer), userId);
+
         Task IMultiplayerClient.RoomStateChanged(MultiplayerRoomState state)
         {
             Debug.Assert(Room != null);
@@ -135,6 +139,11 @@ namespace SampleMultiplayerClient
         }
 
         public Task UserKicked(MultiplayerRoomUser user) => ((IMultiplayerClient)this).UserLeft(user);
+
+        Task IMultiplayerClient.Invited(int invitedBy, long roomID, string password)
+        {
+            return Task.CompletedTask;
+        }
 
         Task IMultiplayerClient.HostChanged(int userId)
         {

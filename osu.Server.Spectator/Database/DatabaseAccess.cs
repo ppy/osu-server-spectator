@@ -313,6 +313,27 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task<phpbb_zebra?> GetUserRelation(int userId, int zebraId)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<phpbb_zebra?>("SELECT * FROM `phpbb_zebra` WHERE `user_id` = @UserId AND `zebra_id` = @ZebraId", new
+            {
+                UserId = userId,
+                ZebraId = zebraId
+            });
+        }
+
+        public async Task<bool> GetUserAllowsPMs(int userId)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<bool>("SELECT `user_allow_pm` FROM `phpbb_users` WHERE `user_id` = @UserId", new
+            {
+                UserId = userId
+            });
+        }
+
         public void Dispose()
         {
             openConnection?.Dispose();

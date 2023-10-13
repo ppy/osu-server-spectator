@@ -94,8 +94,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             UserStates = new EntityStore<MultiplayerClientState>();
             Clients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             Groups = new Mock<IGroupManager>();
-            Receiver = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID)) { CallBase = true };
-            Receiver2 = new Mock<DelegatingMultiplayerClient>(getClientsForGroup(ROOM_ID_2)) { CallBase = true };
+
+            Receiver = new Mock<DelegatingMultiplayerClient> { CallBase = true };
+            Receiver.Setup(c => c.Clients).Returns(getClientsForGroup(ROOM_ID));
+
+            Receiver2 = new Mock<DelegatingMultiplayerClient> { CallBase = true };
+            Receiver2.Setup(c => c.Clients).Returns(getClientsForGroup(ROOM_ID_2));
+
             Caller = new Mock<IMultiplayerClient>();
 
             var hubContext = new Mock<IHubContext<MultiplayerHub>>();
