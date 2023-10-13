@@ -6,7 +6,6 @@ using System.IO;
 using System.Threading.Tasks;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
-using osu.Server.Spectator.Hubs.Spectator;
 
 namespace osu.Server.Spectator.Storage
 {
@@ -14,18 +13,13 @@ namespace osu.Server.Spectator.Storage
     {
         public Task WriteAsync(Score score)
         {
-            var scoreInfo = score.ScoreInfo;
             var legacyEncoder = new LegacyScoreEncoder(score, null);
 
-            string path = Path.Combine(SpectatorHub.REPLAYS_PATH, scoreInfo.Date.Year.ToString(), scoreInfo.Date.Month.ToString(), scoreInfo.Date.Day.ToString());
-
-            Directory.CreateDirectory(path);
-
-            string filename = $"replay-{scoreInfo.Ruleset.ShortName}_{scoreInfo.BeatmapInfo!.OnlineID}_{score.ScoreInfo.OnlineID}.osr";
+            string filename = score.ScoreInfo.OnlineID.ToString();
 
             Console.WriteLine($"Writing replay for score {score.ScoreInfo.OnlineID} to {filename}");
 
-            using (var outStream = File.Create(Path.Combine(path, filename)))
+            using (var outStream = File.Create(Path.Combine(AppSettings.ReplaysPath, filename)))
                 legacyEncoder.Encode(outStream);
 
             return Task.CompletedTask;
