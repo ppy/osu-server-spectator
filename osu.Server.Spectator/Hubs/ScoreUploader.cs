@@ -111,17 +111,11 @@ namespace osu.Server.Spectator.Hubs
                             if (!dbScore.ScoreInfo.Passed)
                                 return;
 
-                            var updatedScore = new Score
-                            {
-                                Replay = item.Score.Replay,
-                                ScoreInfo = dbScore.ScoreInfo.ToScoreInfo(item.Score.ScoreInfo.Mods, item.Score.ScoreInfo.BeatmapInfo)
-                            };
+                            item.Score.ScoreInfo.OnlineID = dbScore.ScoreInfo.OnlineID;
+                            item.Score.ScoreInfo.Passed = dbScore.ScoreInfo.Passed;
 
-                            // This needs to be updated to a valid reference for the score encoder.
-                            updatedScore.ScoreInfo.Ruleset = item.Score.ScoreInfo.Ruleset;
-
-                            await scoreStorage.WriteAsync(updatedScore);
-                            await db.MarkScoreHasReplay(updatedScore);
+                            await scoreStorage.WriteAsync(item.Score);
+                            await db.MarkScoreHasReplay(item.Score);
                         }
                         finally
                         {

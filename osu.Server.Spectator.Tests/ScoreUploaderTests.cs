@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Moq;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -38,6 +39,39 @@ namespace osu.Server.Spectator.Tests
             mockStorage = new Mock<IScoreStorage>();
             uploader = new ScoreUploader(databaseFactory.Object, mockStorage.Object);
             uploader.UploadInterval = 1000; // Set a high timer interval for testing purposes.
+        }
+
+        /// <summary>
+        /// Currently the replay upload process deals with two sources of score data.
+        /// One is local to the spectator server and created in `SpectatorHub.BeginPlaySession()`.
+        /// Among others, it contains the username of the player, which in the legacy replay format
+        /// is the only piece of information that links the replay to the player.
+        /// The other source is the database. This source will contain the online ID and passed state of the score,
+        /// which will not be available in the local instance.
+        /// This test ensures that the two are merged correctly in order to not drop any important data.
+        /// </summary>
+        [Fact]
+        public async Task ScoreDataMergedCorrectly()
+        {
+            enableUpload();
+
+            uploader.Enqueue(1, new Score
+            {
+                ScoreInfo =
+                {
+                    User = new APIUser
+                    {
+                        Id = 1234,
+                        Username = "some user",
+                    }
+                    // note OnlineID and Passed not set.
+                }
+            });
+            await Task.Delay(2000);
+            mockStorage.Verify(s => s.WriteAsync(
+                It.Is<Score>(score => score.ScoreInfo.OnlineID == 2
+                                      && score.ScoreInfo.Passed
+                                      && score.ScoreInfo.User.Username == "some user")), Times.Once);
         }
 
         [Fact]
