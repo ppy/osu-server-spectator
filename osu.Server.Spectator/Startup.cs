@@ -27,7 +27,11 @@ namespace osu.Server.Spectator
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSignalR(options => options.AddFilter<LoggingHubFilter>())
+            services.AddSignalR(options =>
+                    {
+                        options.AddFilter<LoggingHubFilter>();
+                        options.AddFilter<ConcurrentConnectionLimiter>();
+                    })
                     .AddMessagePackProtocol(options =>
                     {
                         // This is required for match type states/events, which are regularly sent as derived implementations where that type is not conveyed in the invocation signature itself.
