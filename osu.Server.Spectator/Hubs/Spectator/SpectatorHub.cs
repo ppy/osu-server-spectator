@@ -12,6 +12,7 @@ using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs.Spectator
 {
@@ -48,7 +49,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
         {
             using (var usage = await GetOrCreateLocalUserState())
             {
-                var clientState = (usage.Item ??= new SpectatorClientState(Context.ConnectionId, CurrentContextUserId));
+                var clientState = (usage.Item ??= new SpectatorClientState(Context.ConnectionId, Context.GetUserId()));
 
                 if (clientState.State != null)
                 {
@@ -65,7 +66,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 using (var db = databaseFactory.GetInstance())
                 {
                     database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
-                    string? username = await db.GetUsernameAsync(CurrentContextUserId);
+                    string? username = await db.GetUsernameAsync(Context.GetUserId());
 
                     if (string.IsNullOrEmpty(beatmap?.checksum))
                         throw new ArgumentException(nameof(state.BeatmapID));
@@ -77,7 +78,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                             APIMods = state.Mods.ToArray(),
                             User =
                             {
-                                Id = CurrentContextUserId,
+                                Id = Context.GetUserId(),
                                 Username = username,
                             },
                             Ruleset = LegacyHelper.GetRulesetFromLegacyID(state.RulesetID.Value).RulesetInfo,
@@ -94,7 +95,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
 
             // let's broadcast to every player temporarily. probably won't stay this way.
-            await Clients.All.UserBeganPlaying(CurrentContextUserId, state);
+            await Clients.All.UserBeganPlaying(Context.GetUserId(), state);
         }
 
         public async Task SendFrameData(FrameDataBundle data)
@@ -115,7 +116,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                 score.Replay.Frames.AddRange(data.Frames);
 
-                await Clients.Group(GetGroupId(CurrentContextUserId)).UserSentFrames(CurrentContextUserId, data);
+                await Clients.Group(GetGroupId(Context.GetUserId())).UserSentFrames(Context.GetUserId(), data);
             }
         }
 
@@ -141,7 +142,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     score.ScoreInfo.Date = DateTimeOffset.UtcNow;
 
                     scoreUploader.Enqueue(scoreToken.Value, score);
-                    await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, CurrentContextUserId, scoreToken.Value);
+                    await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, Context.GetUserId(), scoreToken.Value);
                 }
                 finally
                 {
@@ -149,7 +150,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 }
             }
 
-            await endPlaySession(CurrentContextUserId, state);
+            await endPlaySession(Context.GetUserId(), state);
         }
 
         public async Task StartWatchingUser(int userId)

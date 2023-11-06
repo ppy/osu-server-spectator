@@ -10,6 +10,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -114,7 +115,7 @@ namespace osu.Server.Spectator.Tests
             public async Task CreateUserState()
             {
                 using (var state = await GetOrCreateLocalUserState())
-                    state.Item = new ClientState(Context.ConnectionId, CurrentContextUserId);
+                    state.Item = new ClientState(Context.ConnectionId, Context.GetUserId());
             }
         }
     }

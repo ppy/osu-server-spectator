@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -59,7 +60,7 @@ namespace osu.Server.Spectator.Hubs
 
             try
             {
-                usage = await UserStates.GetForUse(CurrentContextUserId);
+                usage = await UserStates.GetForUse(Context.GetUserId());
             }
             catch (KeyNotFoundException)
             {
@@ -106,7 +107,7 @@ namespace osu.Server.Spectator.Hubs
 
         protected async Task<ItemUsage<TUserState>> GetOrCreateLocalUserState()
         {
-            var usage = await UserStates.GetForUse(CurrentContextUserId, true);
+            var usage = await UserStates.GetForUse(Context.GetUserId(), true);
 
             if (usage.Item != null && usage.Item.ConnectionId != Context.ConnectionId)
             {

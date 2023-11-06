@@ -28,20 +28,6 @@ namespace osu.Server.Spectator.Hubs
             logger = Logger.GetLogger(Name);
         }
 
-        /// <summary>
-        /// The osu! user id for the currently processing context.
-        /// </summary>
-        protected int CurrentContextUserId
-        {
-            get
-            {
-                if (Context.UserIdentifier == null)
-                    throw new InvalidOperationException($"Attempted to get user id with null {nameof(Context.UserIdentifier)}");
-
-                return int.Parse(Context.UserIdentifier);
-            }
-        }
-
         public override async Task OnConnectedAsync()
         {
             Log("Connected");
