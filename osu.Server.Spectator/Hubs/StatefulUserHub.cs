@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Distributed;
+using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
@@ -15,9 +16,9 @@ namespace osu.Server.Spectator.Hubs
 {
     [UsedImplicitly]
     [Authorize]
-    public abstract class StatefulUserHub<TClient, TUserState> : LoggingHub<TClient>
+    public abstract class StatefulUserHub<TClient, TUserState> : LoggingHub<TClient>, IStatefulUserHub
         where TUserState : ClientState
-        where TClient : class
+        where TClient : class, IStatefulUserHubClient
     {
         protected readonly EntityStore<TUserState> UserStates;
 

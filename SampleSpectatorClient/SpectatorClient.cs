@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
+using osu.Game.Online;
 using osu.Game.Online.Spectator;
 
 namespace SampleSpectatorClient
@@ -26,6 +27,7 @@ namespace SampleSpectatorClient
             connection.On<int, FrameDataBundle>(nameof(ISpectatorClient.UserSentFrames), ((ISpectatorClient)this).UserSentFrames);
             connection.On<int, SpectatorState>(nameof(ISpectatorClient.UserFinishedPlaying), ((ISpectatorClient)this).UserFinishedPlaying);
             connection.On<int, long>(nameof(ISpectatorClient.UserScoreProcessed), ((ISpectatorClient)this).UserScoreProcessed);
+            connection.On(nameof(IStatefulUserHubClient.DisconnectRequested), ((IStatefulUserHubClient)this).DisconnectRequested);
         }
 
         Task ISpectatorClient.UserBeganPlaying(int userId, SpectatorState state)
@@ -69,5 +71,11 @@ namespace SampleSpectatorClient
         public Task EndPlaying(SpectatorState state) => connection.SendAsync(nameof(ISpectatorServer.EndPlaySession), state);
 
         public Task WatchUser(int userId) => connection.SendAsync(nameof(ISpectatorServer.StartWatchingUser), userId);
+
+        public Task DisconnectRequested()
+        {
+            Console.WriteLine($"{connection.ConnectionId} Disconnect requested");
+            return Task.CompletedTask;
+        }
     }
 }
