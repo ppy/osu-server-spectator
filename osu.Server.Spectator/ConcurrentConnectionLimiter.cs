@@ -53,12 +53,16 @@ namespace osu.Server.Spectator
                     {
                         log(context, "connection from new client instance, dropping existing state");
 
-                        foreach (var hub in stateful_user_hubs)
+                        foreach (var hubType in stateful_user_hubs)
                         {
-                            var hubContextType = typeof(IHubContext<>).MakeGenericType(hub);
+                            var hubContextType = typeof(IHubContext<>).MakeGenericType(hubType);
                             var hubContext = serviceProvider.GetRequiredService(hubContextType) as IHubContext;
-                            hubContext?.Clients.Client(userState.Item.ConnectionIds[hub])
-                                      .SendCoreAsync(nameof(IStatefulUserHubClient.DisconnectRequested), Array.Empty<object>());
+
+                            if (userState.Item.ConnectionIds.TryGetValue(hubType, out var connectionId))
+                            {
+                                hubContext?.Clients.Client(connectionId)
+                                          .SendCoreAsync(nameof(IStatefulUserHubClient.DisconnectRequested), Array.Empty<object>());
+                            }
                         }
 
                         log(context, "existing state dropped");
