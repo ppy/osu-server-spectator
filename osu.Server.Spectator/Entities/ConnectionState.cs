@@ -33,6 +33,6 @@ namespace osu.Server.Spectator.Entities
         }
 
         public void RegisterConnectionId(HubLifetimeContext context)
-            => ConnectionIds.Add(context.Hub.GetType(), context.Context.ConnectionId);
+            => ConnectionIds[context.Hub.GetType()] = context.Context.ConnectionId;
     }
 }

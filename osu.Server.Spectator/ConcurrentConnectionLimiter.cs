@@ -80,14 +80,15 @@ namespace osu.Server.Spectator
 
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            // TODO: allow things to execute for hubs that aren't exclusive (like metadata or whatever)
-
             var userId = invocationContext.Context.GetUserId();
 
             using (var userState = await connectionStates.GetForUse(userId))
             {
-                if (invocationContext.Context.GetTokenId() != userState.Item?.TokenId)
+                if (invocationContext.Context.GetTokenId() != userState.Item?.TokenId
+                    || invocationContext.Context.ConnectionId != userState.Item?.ConnectionIds[invocationContext.Hub.GetType()])
+                {
                     throw new InvalidStateException("State is not valid for this connection");
+                }
             }
 
             return await next(invocationContext);
