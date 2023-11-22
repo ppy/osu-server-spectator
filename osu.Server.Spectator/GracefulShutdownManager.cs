@@ -29,14 +29,22 @@ namespace osu.Server.Spectator
         private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
         private readonly EntityStore<ServerMultiplayerRoom> roomStore;
 
-        public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime,
-                                       ScoreUploader scoreUploader)
+        public GracefulShutdownManager(
+            EntityStore<ServerMultiplayerRoom> roomStore,
+            EntityStore<SpectatorClientState> clientStateStore,
+            IHostApplicationLifetime hostApplicationLifetime,
+            ScoreUploader scoreUploader,
+            EntityStore<ConnectionState> connectionStateStore)
         {
             this.roomStore = roomStore;
 
             dependentStores.Add(roomStore);
             dependentStores.Add(clientStateStore);
             dependentStores.Add(scoreUploader);
+            dependentStores.Add(connectionStateStore);
+            // Importantly, we don't care to block `MultiplayerClientState` stores because they can only be created
+            // if a `ServerMultiplayerRoom` is first in existence.
+            // More so, we want to allow these states to be created so existing rooms can continue to function until they are disbanded.
 
             hostApplicationLifetime.ApplicationStopping.Register(shutdownSafely);
         }
