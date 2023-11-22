@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
@@ -332,6 +333,16 @@ namespace osu.Server.Spectator.Database
             return await connection.QuerySingleOrDefaultAsync<bool>("SELECT `user_allow_pm` FROM `phpbb_users` WHERE `user_id` = @UserId", new
             {
                 UserId = userId
+            });
+        }
+
+        public async Task UpdateLastVisitTimeToNowAsync(IEnumerable<int> userIds)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync("UPDATE `phpbb_users` SET `user_lastvisit` = UNIX_TIMESTAMP() WHERE `user_id` in @UserIds", new
+            {
+                UserIds = userIds
             });
         }
 

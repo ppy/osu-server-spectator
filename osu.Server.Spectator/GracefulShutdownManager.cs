@@ -11,6 +11,7 @@ using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Metadata;
 using osu.Server.Spectator.Hubs.Multiplayer;
 using osu.Server.Spectator.Hubs.Spectator;
 
@@ -29,14 +30,19 @@ namespace osu.Server.Spectator
         private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
         private readonly EntityStore<ServerMultiplayerRoom> roomStore;
 
-        public GracefulShutdownManager(EntityStore<ServerMultiplayerRoom> roomStore, EntityStore<SpectatorClientState> clientStateStore, IHostApplicationLifetime hostApplicationLifetime,
-                                       ScoreUploader scoreUploader)
+        public GracefulShutdownManager(
+            EntityStore<ServerMultiplayerRoom> roomStore,
+            EntityStore<SpectatorClientState> clientStateStore,
+            IHostApplicationLifetime hostApplicationLifetime,
+            ScoreUploader scoreUploader,
+            EntityStore<MetadataClientState> metadataClientStore)
         {
             this.roomStore = roomStore;
 
             dependentStores.Add(roomStore);
             dependentStores.Add(clientStateStore);
             dependentStores.Add(scoreUploader);
+            dependentStores.Add(metadataClientStore);
 
             hostApplicationLifetime.ApplicationStopping.Register(shutdownSafely);
         }
