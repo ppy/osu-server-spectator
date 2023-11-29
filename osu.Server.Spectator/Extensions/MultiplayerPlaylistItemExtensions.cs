@@ -9,8 +9,6 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Utils;
 
-#nullable enable
-
 namespace osu.Server.Spectator.Extensions
 {
     public static class MultiplayerPlaylistItemExtensions

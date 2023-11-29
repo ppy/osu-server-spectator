@@ -67,6 +67,9 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
                     string? username = await db.GetUsernameAsync(CurrentContextUserId);
 
+                    if (string.IsNullOrEmpty(username))
+                        throw new ArgumentException(nameof(username));
+
                     if (string.IsNullOrEmpty(beatmap?.checksum))
                         throw new ArgumentException(nameof(state.BeatmapID));
 
