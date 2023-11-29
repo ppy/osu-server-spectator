@@ -40,6 +40,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             timer.Start();
         }
 
+        // ReSharper disable once AsyncVoidMethod
         private async void pollForChanges(object? sender, ElapsedEventArgs args)
         {
             try
