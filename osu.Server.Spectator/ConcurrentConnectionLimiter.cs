@@ -38,7 +38,7 @@ namespace osu.Server.Spectator
         {
             try
             {
-                var userId = context.Context.GetUserId();
+                int userId = context.Context.GetUserId();
 
                 using (var userState = await connectionStates.GetForUse(userId, true))
                 {
