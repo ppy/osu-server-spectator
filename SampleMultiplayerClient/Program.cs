@@ -157,7 +157,11 @@ namespace SampleMultiplayerClient
         {
             var connection = new HubConnectionBuilder()
                              .AddMessagePackProtocol(options => { options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS; })
-                             .WithUrl("http://localhost:80/multiplayer", http => http.Headers.Add("user_id", userId.ToString()))
+                             .WithUrl("http://localhost:80/multiplayer", http =>
+                             {
+                                 http.Headers.Add("user_id", userId.ToString());
+                                 http.Headers.Add("client_id", Guid.NewGuid().ToString());
+                             })
                              .ConfigureLogging(logging =>
                              {
                                  // logging.AddFilter("Microsoft.AspNetCore.SignalR", LogLevel.Debug);

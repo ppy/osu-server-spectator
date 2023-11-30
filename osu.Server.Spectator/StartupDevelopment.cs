@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Security.Claims;
 using System.Security.Principal;
 using System.Text.Encodings.Web;
@@ -40,10 +41,21 @@ namespace osu.Server.Spectator
         }
 
         /// <summary>
-        /// Marks all authentication requests as successful, and injects the
-        /// default company id into the user claims.
+        /// Marks all authentication requests as successful, and injects required user claims.
         /// </summary>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            var nameIdentifierClaim = createNameIdentifierClaim();
+            var clientIdClaim = createClientIdClaim();
+
+            var authenticationTicket = new AuthenticationTicket(
+                new ClaimsPrincipal(new[] { new ClaimsIdentity(new[] { nameIdentifierClaim, clientIdClaim }, AUTH_SCHEME) }),
+                new AuthenticationProperties(), AUTH_SCHEME);
+
+            return Task.FromResult(AuthenticateResult.Success(authenticationTicket));
+        }
+
+        private Claim createNameIdentifierClaim()
         {
             string? userIdString = null;
 
@@ -52,13 +64,21 @@ namespace osu.Server.Spectator
 
             userIdString ??= Interlocked.Increment(ref userIDCounter).ToString();
 
-            var claim = new Claim(ClaimTypes.NameIdentifier, userIdString);
+            var nameIdentifierClaim = new Claim(ClaimTypes.NameIdentifier, userIdString);
+            return nameIdentifierClaim;
+        }
 
-            var authenticationTicket = new AuthenticationTicket(
-                new ClaimsPrincipal(new[] { new ClaimsIdentity(new[] { claim }, AUTH_SCHEME) }),
-                new AuthenticationProperties(), AUTH_SCHEME);
+        private Claim createClientIdClaim()
+        {
+            string? clientIdString = null;
 
-            return Task.FromResult(AuthenticateResult.Success(authenticationTicket));
+            if (Context.Request.Headers.TryGetValue("client_id", out var clientIdValue))
+                clientIdString = clientIdValue;
+
+            clientIdString ??= Guid.NewGuid().ToString();
+
+            var clientIdClaim = new Claim("jti", clientIdString);
+            return clientIdClaim;
         }
     }
 

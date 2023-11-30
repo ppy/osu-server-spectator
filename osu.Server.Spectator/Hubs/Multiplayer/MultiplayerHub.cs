@@ -16,6 +16,7 @@ using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -42,7 +43,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             bool isRestricted;
             using (var db = databaseFactory.GetInstance())
-                isRestricted = await db.IsUserRestrictedAsync(CurrentContextUserId);
+                isRestricted = await db.IsUserRestrictedAsync(Context.GetUserId());
 
             if (isRestricted)
                 throw new InvalidStateException("Can't join a room when restricted.");
@@ -56,7 +57,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
 
                 // add the user to the room.
-                var roomUser = new MultiplayerRoomUser(CurrentContextUserId);
+                var roomUser = new MultiplayerRoomUser(Context.GetUserId());
 
                 // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
                 bool newRoomFetchStarted = false;
@@ -98,7 +99,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                                 throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
                         }
 
-                        userUsage.Item = new MultiplayerClientState(Context.ConnectionId, CurrentContextUserId, roomId);
+                        userUsage.Item = new MultiplayerClientState(Context.ConnectionId, Context.GetUserId(), roomId);
 
                         // because match type implementations may send subsequent information via Users collection hooks,
                         // inform clients before adding user to the room.
@@ -180,7 +181,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (databaseRoom.ends_at != null && databaseRoom.ends_at < DateTimeOffset.Now)
                     throw new InvalidStateException("Match has already ended.");
 
-                if (databaseRoom.user_id != CurrentContextUserId)
+                if (databaseRoom.user_id != Context.GetUserId())
                     throw new InvalidStateException("Non-host is attempting to join match before host");
 
                 var room = new ServerMultiplayerRoom(roomId, HubContext)
@@ -241,13 +242,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (isRestricted)
                     throw new InvalidStateException("Can't invite a restricted user to a room.");
 
-                var relation = await db.GetUserRelation(CurrentContextUserId, userId);
+                var relation = await db.GetUserRelation(Context.GetUserId(), userId);
 
                 // The local user has the player they are trying to invite blocked.
                 if (relation?.foe == true)
                     throw new UserBlockedException();
 
-                var inverseRelation = await db.GetUserRelation(userId, CurrentContextUserId);
+                var inverseRelation = await db.GetUserRelation(userId, Context.GetUserId());
 
                 // The player being invited has the local user blocked.
                 if (inverseRelation?.foe == true)
@@ -346,7 +347,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
 
                 if (user == null)
                     throw new InvalidStateException("Local user was not found in the expected room");
@@ -400,7 +401,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
 
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
@@ -419,7 +420,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
 
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
@@ -438,7 +439,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
 
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
@@ -515,7 +516,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
@@ -536,7 +537,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
@@ -557,7 +558,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
@@ -575,7 +576,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == CurrentContextUserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
@@ -832,7 +833,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         private void ensureIsHost(MultiplayerRoom room)
         {
-            if (room.Host?.UserID != CurrentContextUserId)
+            if (room.Host?.UserID != Context.GetUserId())
                 throw new NotHostException();
         }
 

@@ -141,5 +141,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             return (Task)GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public)!.Invoke(this, args)!;
         }
+
+        public async Task DisconnectRequested()
+        {
+            foreach (var c in Clients)
+                await c.DisconnectRequested();
+        }
     }
 }

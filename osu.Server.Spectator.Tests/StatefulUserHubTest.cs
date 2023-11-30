@@ -9,7 +9,9 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Moq;
+using osu.Game.Online;
 using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs;
 using Xunit;
 
@@ -104,7 +106,7 @@ namespace osu.Server.Spectator.Tests
         private void setNewConnectionId(string? connectionId = null) =>
             mockContext.Setup(context => context.ConnectionId).Returns(connectionId ?? Guid.NewGuid().ToString());
 
-        private class TestStatefulHub : StatefulUserHub<object, ClientState>
+        private class TestStatefulHub : StatefulUserHub<IStatefulUserHubClient, ClientState>
         {
             public TestStatefulHub(IDistributedCache cache, EntityStore<ClientState> userStates)
                 : base(cache, userStates)
@@ -114,7 +116,7 @@ namespace osu.Server.Spectator.Tests
             public async Task CreateUserState()
             {
                 using (var state = await GetOrCreateLocalUserState())
-                    state.Item = new ClientState(Context.ConnectionId, CurrentContextUserId);
+                    state.Item = new ClientState(Context.ConnectionId, Context.GetUserId());
             }
         }
     }
