@@ -42,34 +42,40 @@ namespace osu.Server.Spectator
 
                 using (var userState = await connectionStates.GetForUse(userId, true))
                 {
-                    if (context.Context.GetTokenId() == userState.Item?.TokenId)
+                    if (userState.Item == null)
                     {
+                        log(context, "connection from first client instance");
+                        userState.Item = new ConnectionState(context);
+                        return;
+                    }
+
+                    if (context.Context.GetTokenId() == userState.Item.TokenId)
+                    {
+                        // The assumption is that the client has already dropped the old connection,
+                        // so we don't bother to ask for a disconnection.
+
                         log(context, "subsequent connection from same client instance, registering");
+                        // Importantly, this will replace the old connection, ensuring it cannot be
+                        // used to communicate on anymore.
                         userState.Item.RegisterConnectionId(context);
                         return;
                     }
 
-                    if (userState.Item != null)
+                    log(context, "connection from new client instance, dropping existing state");
+
+                    foreach (var hubType in stateful_user_hubs)
                     {
-                        log(context, "connection from new client instance, dropping existing state");
+                        var hubContextType = typeof(IHubContext<>).MakeGenericType(hubType);
+                        var hubContext = serviceProvider.GetRequiredService(hubContextType) as IHubContext;
 
-                        foreach (var hubType in stateful_user_hubs)
+                        if (userState.Item.ConnectionIds.TryGetValue(hubType, out var connectionId))
                         {
-                            var hubContextType = typeof(IHubContext<>).MakeGenericType(hubType);
-                            var hubContext = serviceProvider.GetRequiredService(hubContextType) as IHubContext;
-
-                            if (userState.Item.ConnectionIds.TryGetValue(hubType, out var connectionId))
-                            {
-                                hubContext?.Clients.Client(connectionId)
-                                          .SendCoreAsync(nameof(IStatefulUserHubClient.DisconnectRequested), Array.Empty<object>());
-                            }
+                            hubContext?.Clients.Client(connectionId)
+                                      .SendCoreAsync(nameof(IStatefulUserHubClient.DisconnectRequested), Array.Empty<object>());
                         }
-
-                        log(context, "existing state dropped");
                     }
-                    else
-                        log(context, "connection from first client instance");
 
+                    log(context, "existing state dropped");
                     userState.Item = new ConnectionState(context);
                 }
             }
