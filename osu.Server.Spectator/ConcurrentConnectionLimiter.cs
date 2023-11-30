@@ -90,7 +90,7 @@ namespace osu.Server.Spectator
 
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            var userId = invocationContext.Context.GetUserId();
+            int userId = invocationContext.Context.GetUserId();
 
             using (var userState = await connectionStates.GetForUse(userId))
             {
@@ -112,7 +112,7 @@ namespace osu.Server.Spectator
                     // network disconnection. wait for user to return.
                     return;
 
-                var userId = context.Context.GetUserId();
+                int userId = context.Context.GetUserId();
 
                 using (var userState = await connectionStates.GetForUse(userId, true))
                 {
