@@ -118,5 +118,70 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.True(room.Item?.Users.Any(u => u.UserID == USER_ID));
         }
+
+        [Fact]
+        public async Task HostAbortsMatchWhileMatchNotInProgress()
+        {
+            SetUserContext(ContextUser);
+            await Hub.JoinRoom(ROOM_ID);
+            await MarkCurrentUserReadyAndAvailable();
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await MarkCurrentUserReadyAndAvailable();
+
+            SetUserContext(ContextUser);
+            await Hub.AbortMatch();
+
+            UserReceiver.Verify(r => r.GameplayAborted(It.IsAny<GameplayAbortReason>()), Times.Never);
+            User2Receiver.Verify(r => r.GameplayAborted(It.IsAny<GameplayAbortReason>()), Times.Never);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                Assert.True(room.Item?.Users.All(u => u.State == MultiplayerUserState.Ready));
+        }
+
+        [Fact]
+        public async Task HostAbortsInProgressMatch()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await MarkCurrentUserReadyAndAvailable();
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await MarkCurrentUserReadyAndAvailable();
+
+            SetUserContext(ContextUser);
+            await Hub.StartMatch();
+
+            // Host exits and aborts.
+            await Hub.AbortGameplay();
+            await Hub.AbortMatch();
+
+            UserReceiver.Verify(r => r.GameplayAborted(It.IsAny<GameplayAbortReason>()), Times.Never);
+            User2Receiver.Verify(r => r.GameplayAborted(GameplayAbortReason.HostAbortedTheMatch), Times.Once);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                Assert.True(room.Item?.Users.All(u => u.State == MultiplayerUserState.Idle));
+        }
+
+        [Fact]
+        public async Task NonHostAbortsMatch()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await MarkCurrentUserReadyAndAvailable();
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await MarkCurrentUserReadyAndAvailable();
+
+            SetUserContext(ContextUser);
+            await Hub.StartMatch();
+
+            await LoadGameplay(ContextUser, ContextUser2);
+
+            // User 2 attempts to abort the match.
+            SetUserContext(ContextUser2);
+            await Assert.ThrowsAsync<NotHostException>(() => Hub.AbortMatch());
+        }
     }
 }
