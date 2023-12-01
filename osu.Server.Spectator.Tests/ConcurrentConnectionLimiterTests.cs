@@ -162,5 +162,56 @@ namespace osu.Server.Spectator.Tests
             Assert.Single(connectionStates.GetEntityUnsafe(1234)!.ConnectionIds);
             Assert.Equal("efgh", connectionStates.GetEntityUnsafe(1234)!.ConnectionIds.Single().Value);
         }
+
+        [Fact]
+        public async Task TestHubDisconnectsTrackedSeparately()
+        {
+            var firstContextMock = new Mock<HubCallerContext>();
+            var secondContextMock = new Mock<HubCallerContext>();
+            string commonTokenId = Guid.NewGuid().ToString();
+
+            firstContextMock.Setup(ctx => ctx.UserIdentifier).Returns("1234");
+            firstContextMock.Setup(ctx => ctx.ConnectionId).Returns("abcd");
+            firstContextMock.Setup(ctx => ctx.User).Returns(new ClaimsPrincipal(new[]
+            {
+                new ClaimsIdentity(new[]
+                {
+                    new Claim("jti", commonTokenId)
+                })
+            }));
+
+            secondContextMock.Setup(ctx => ctx.UserIdentifier).Returns("1234");
+            secondContextMock.Setup(ctx => ctx.ConnectionId).Returns("efgh");
+            secondContextMock.Setup(ctx => ctx.User).Returns(new ClaimsPrincipal(new[]
+            {
+                new ClaimsIdentity(new[]
+                {
+                    new Claim("jti", commonTokenId)
+                })
+            }));
+
+            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object);
+
+            var firstLifetimeContext = new HubLifetimeContext(firstContextMock.Object, serviceProviderMock.Object, new FirstHub());
+            await filter.OnConnectedAsync(firstLifetimeContext, _ => Task.CompletedTask);
+
+            var secondLifetimeContext = new HubLifetimeContext(secondContextMock.Object, serviceProviderMock.Object, new SecondHub());
+            await filter.OnConnectedAsync(secondLifetimeContext, _ => Task.CompletedTask);
+            Assert.Equal(2, connectionStates.GetEntityUnsafe(1234)!.ConnectionIds.Count);
+            Assert.Equal("abcd", connectionStates.GetEntityUnsafe(1234)!.ConnectionIds[typeof(FirstHub)]);
+            Assert.Equal("efgh", connectionStates.GetEntityUnsafe(1234)!.ConnectionIds[typeof(SecondHub)]);
+
+            await filter.OnDisconnectedAsync(firstLifetimeContext, null, (_, _) => Task.CompletedTask);
+            Assert.Single(connectionStates.GetEntityUnsafe(1234)!.ConnectionIds);
+            Assert.Equal("efgh", connectionStates.GetEntityUnsafe(1234)!.ConnectionIds[typeof(SecondHub)]);
+        }
+
+        private class FirstHub : Hub
+        {
+        }
+
+        private class SecondHub : Hub
+        {
+        }
     }
 }
