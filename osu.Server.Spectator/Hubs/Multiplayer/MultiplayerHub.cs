@@ -520,8 +520,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 foreach (var user in room.Users.Where(u => isGameplayState(u.State)))
                 {
-                    await Clients.User(user.UserID.ToString()).GameplayAborted(GameplayAbortReason.HostAbortedTheMatch);
                     await HubContext.ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+                    await Clients.User(user.UserID.ToString()).GameplayAborted(GameplayAbortReason.HostAbortedTheMatch);
                 }
 
                 await updateRoomStateIfRequired(room);
