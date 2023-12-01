@@ -121,9 +121,23 @@ namespace osu.Server.Spectator
 
                 using (var userState = await connectionStates.GetForUse(userId, true))
                 {
-                    if (userState.Item?.TokenId == context.Context.GetTokenId())
+                    string? registeredConnectionId = null;
+
+                    bool tokenIdMatches = context.Context.GetTokenId() == userState.Item?.TokenId;
+                    bool hubRegistered = userState.Item?.ConnectionIds.TryGetValue(context.Hub.GetType(), out registeredConnectionId) == true;
+                    bool connectionIdMatches = registeredConnectionId == context.Context.ConnectionId;
+
+                    bool connectionCanBeCleanedUp = tokenIdMatches && hubRegistered && connectionIdMatches;
+
+                    if (connectionCanBeCleanedUp)
                     {
-                        log(context, "disconnected");
+                        log(context, "disconnected from hub");
+                        userState.Item!.ConnectionIds.Remove(context.Hub.GetType());
+                    }
+
+                    if (userState.Item?.ConnectionIds.Count == 0)
+                    {
+                        log(context, "all connections closed, destroying state");
                         userState.Destroy();
                     }
                 }
