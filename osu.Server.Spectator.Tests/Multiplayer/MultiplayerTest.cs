@@ -157,6 +157,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             clientMapping[userId] = client.Object;
 
             Clients.Setup(clients => clients.Client(userId.ToString())).Returns(client.Object);
+            Clients.Setup(clients => clients.User(userId.ToString())).Returns(client.Object);
         }
 
         /// <summary>
