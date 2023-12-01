@@ -68,7 +68,7 @@ namespace osu.Server.Spectator
                         var hubContextType = typeof(IHubContext<>).MakeGenericType(hubType);
                         var hubContext = serviceProvider.GetRequiredService(hubContextType) as IHubContext;
 
-                        if (userState.Item.ConnectionIds.TryGetValue(hubType, out var connectionId))
+                        if (userState.Item.ConnectionIds.TryGetValue(hubType, out string? connectionId))
                         {
                             hubContext?.Clients.Client(connectionId)
                                       .SendCoreAsync(nameof(IStatefulUserHubClient.DisconnectRequested), Array.Empty<object>());
