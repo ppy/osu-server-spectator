@@ -94,11 +94,16 @@ namespace osu.Server.Spectator
 
             using (var userState = await connectionStates.GetForUse(userId))
             {
-                if (invocationContext.Context.GetTokenId() != userState.Item?.TokenId
-                    || invocationContext.Context.ConnectionId != userState.Item?.ConnectionIds[invocationContext.Hub.GetType()])
-                {
+                string? registeredConnectionId = null;
+
+                bool tokenIdMatches = invocationContext.Context.GetTokenId() == userState.Item?.TokenId;
+                bool hubRegistered = userState.Item?.ConnectionIds.TryGetValue(invocationContext.Hub.GetType(), out registeredConnectionId) == true;
+                bool connectionIdMatches = registeredConnectionId == invocationContext.Context.ConnectionId;
+
+                bool connectionIsValid = tokenIdMatches && hubRegistered && connectionIdMatches;
+
+                if (!connectionIsValid)
                     throw new InvalidStateException("State is not valid for this connection");
-                }
             }
 
             return await next(invocationContext);
