@@ -35,7 +35,7 @@ namespace SampleMultiplayerClient
             connection.On<int, MultiplayerUserState>(nameof(IMultiplayerClient.UserStateChanged), ((IMultiplayerClient)this).UserStateChanged);
             connection.On<int, BeatmapAvailability>(nameof(IMultiplayerClient.UserBeatmapAvailabilityChanged), ((IMultiplayerClient)this).UserBeatmapAvailabilityChanged);
             connection.On(nameof(IMultiplayerClient.LoadRequested), ((IMultiplayerClient)this).LoadRequested);
-            connection.On(nameof(IMultiplayerClient.LoadAborted), ((IMultiplayerClient)this).LoadAborted);
+            connection.On<GameplayAbortReason>(nameof(IMultiplayerClient.GameplayAborted), ((IMultiplayerClient)this).GameplayAborted);
             connection.On(nameof(IMultiplayerClient.GameplayStarted), ((IMultiplayerClient)this).GameplayStarted);
             connection.On(nameof(IMultiplayerClient.ResultsReady), ((IMultiplayerClient)this).ResultsReady);
             connection.On<int, IEnumerable<APIMod>>(nameof(IMultiplayerClient.UserModsChanged), ((IMultiplayerClient)this).UserModsChanged);
@@ -101,11 +101,11 @@ namespace SampleMultiplayerClient
         public Task StartMatch() =>
             connection.InvokeAsync(nameof(IMultiplayerServer.StartMatch));
 
+        public Task AbortMatch() =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.AbortMatch));
+
         public Task AbortGameplay() =>
             connection.InvokeAsync(nameof(IMultiplayerServer.AbortGameplay));
-
-        public Task AbortGameplayReal() =>
-            connection.InvokeAsync(nameof(IMultiplayerServer.AbortGameplayReal));
 
         public Task AddPlaylistItem(MultiplayerPlaylistItem item) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.AddPlaylistItem), item);
@@ -220,9 +220,9 @@ namespace SampleMultiplayerClient
             return Task.CompletedTask;
         }
 
-        Task IMultiplayerClient.LoadAborted()
+        Task IMultiplayerClient.GameplayAborted(GameplayAbortReason reason)
         {
-            Console.WriteLine($"User {UserID} gameplay load was aborted");
+            Console.WriteLine($"User {UserID} gameplay load was aborted ({reason})");
             return Task.CompletedTask;
         }
 
