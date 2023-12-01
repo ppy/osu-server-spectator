@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -120,6 +121,46 @@ namespace osu.Server.Spectator.Tests
                 typeof(SpectatorHub).GetMethod(nameof(SpectatorHub.StartWatchingUser))!, new object[] { 1234 });
             // should throw.
             await Assert.ThrowsAsync<InvalidStateException>(() => filter.InvokeMethodAsync(firstInvocationContext, _ => new ValueTask<object?>(new object())).AsTask());
+        }
+
+        [Fact]
+        public async Task TestStaleDisconnectIsANoOp()
+        {
+            var firstContextMock = new Mock<HubCallerContext>();
+            var secondContextMock = new Mock<HubCallerContext>();
+            string commonTokenId = Guid.NewGuid().ToString();
+
+            firstContextMock.Setup(ctx => ctx.UserIdentifier).Returns("1234");
+            firstContextMock.Setup(ctx => ctx.ConnectionId).Returns("abcd");
+            firstContextMock.Setup(ctx => ctx.User).Returns(new ClaimsPrincipal(new[]
+            {
+                new ClaimsIdentity(new[]
+                {
+                    new Claim("jti", commonTokenId)
+                })
+            }));
+
+            secondContextMock.Setup(ctx => ctx.UserIdentifier).Returns("1234");
+            secondContextMock.Setup(ctx => ctx.ConnectionId).Returns("efgh");
+            secondContextMock.Setup(ctx => ctx.User).Returns(new ClaimsPrincipal(new[]
+            {
+                new ClaimsIdentity(new[]
+                {
+                    new Claim("jti", commonTokenId)
+                })
+            }));
+
+            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object);
+
+            var firstLifetimeContext = new HubLifetimeContext(firstContextMock.Object, serviceProviderMock.Object, hubMock.Object);
+            await filter.OnConnectedAsync(firstLifetimeContext, _ => Task.CompletedTask);
+
+            var secondLifetimeContext = new HubLifetimeContext(secondContextMock.Object, serviceProviderMock.Object, hubMock.Object);
+            await filter.OnConnectedAsync(secondLifetimeContext, _ => Task.CompletedTask);
+
+            await filter.OnDisconnectedAsync(firstLifetimeContext, null, (_, _) => Task.CompletedTask);
+            Assert.Single(connectionStates.GetEntityUnsafe(1234)!.ConnectionIds);
+            Assert.Equal("efgh", connectionStates.GetEntityUnsafe(1234)!.ConnectionIds.Single().Value);
         }
     }
 }
