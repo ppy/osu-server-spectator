@@ -528,6 +528,27 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
+        public async Task AbortGameplayReal()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                ensureIsHost(room);
+
+                foreach (var user in room.Users.Where(u => isGameplayState(u.State)))
+                {
+                    await Clients.User(user.UserID.ToString()).LoadAborted();
+                    await HubContext.ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+                }
+
+                await updateRoomStateIfRequired(room);
+            }
+        }
+
         public async Task AddPlaylistItem(MultiplayerPlaylistItem item)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
