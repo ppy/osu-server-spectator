@@ -68,7 +68,7 @@ namespace osu.Server.Spectator
                         var hubContextType = typeof(IHubContext<>).MakeGenericType(hubType);
                         var hubContext = serviceProvider.GetRequiredService(hubContextType) as IHubContext;
 
-                        if (userState.Item.ConnectionIds.TryGetValue(hubType, out var connectionId))
+                        if (userState.Item.ConnectionIds.TryGetValue(hubType, out string? connectionId))
                         {
                             hubContext?.Clients.Client(connectionId)
                                       .SendCoreAsync(nameof(IStatefulUserHubClient.DisconnectRequested), Array.Empty<object>());
@@ -94,11 +94,16 @@ namespace osu.Server.Spectator
 
             using (var userState = await connectionStates.GetForUse(userId))
             {
-                if (invocationContext.Context.GetTokenId() != userState.Item?.TokenId
-                    || invocationContext.Context.ConnectionId != userState.Item?.ConnectionIds[invocationContext.Hub.GetType()])
-                {
+                string? registeredConnectionId = null;
+
+                bool tokenIdMatches = invocationContext.Context.GetTokenId() == userState.Item?.TokenId;
+                bool hubRegistered = userState.Item?.ConnectionIds.TryGetValue(invocationContext.Hub.GetType(), out registeredConnectionId) == true;
+                bool connectionIdMatches = registeredConnectionId == invocationContext.Context.ConnectionId;
+
+                bool connectionIsValid = tokenIdMatches && hubRegistered && connectionIdMatches;
+
+                if (!connectionIsValid)
                     throw new InvalidStateException("State is not valid for this connection");
-                }
             }
 
             return await next(invocationContext);
@@ -116,9 +121,23 @@ namespace osu.Server.Spectator
 
                 using (var userState = await connectionStates.GetForUse(userId, true))
                 {
-                    if (userState.Item?.TokenId == context.Context.GetTokenId())
+                    string? registeredConnectionId = null;
+
+                    bool tokenIdMatches = context.Context.GetTokenId() == userState.Item?.TokenId;
+                    bool hubRegistered = userState.Item?.ConnectionIds.TryGetValue(context.Hub.GetType(), out registeredConnectionId) == true;
+                    bool connectionIdMatches = registeredConnectionId == context.Context.ConnectionId;
+
+                    bool connectionCanBeCleanedUp = tokenIdMatches && hubRegistered && connectionIdMatches;
+
+                    if (connectionCanBeCleanedUp)
                     {
-                        log(context, "disconnected");
+                        log(context, "disconnected from hub");
+                        userState.Item!.ConnectionIds.Remove(context.Hub.GetType());
+                    }
+
+                    if (userState.Item?.ConnectionIds.Count == 0)
+                    {
+                        log(context, "all connections closed, destroying state");
                         userState.Destroy();
                     }
                 }
