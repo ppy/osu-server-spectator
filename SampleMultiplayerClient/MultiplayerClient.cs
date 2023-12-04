@@ -222,7 +222,7 @@ namespace SampleMultiplayerClient
 
         Task IMultiplayerClient.GameplayAborted(GameplayAbortReason reason)
         {
-            Console.WriteLine($"User {UserID} gameplay load was aborted ({reason})");
+            Console.WriteLine($"User {UserID} gameplay was aborted ({reason})");
             return Task.CompletedTask;
         }
 
