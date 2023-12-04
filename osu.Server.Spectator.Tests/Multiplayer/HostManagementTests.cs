@@ -131,7 +131,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser);
-            await Hub.AbortMatch();
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AbortMatch());
 
             UserReceiver.Verify(r => r.GameplayAborted(It.IsAny<GameplayAbortReason>()), Times.Never);
             User2Receiver.Verify(r => r.GameplayAborted(It.IsAny<GameplayAbortReason>()), Times.Never);
@@ -157,7 +157,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.AbortGameplay();
             await Hub.AbortMatch();
 
-            UserReceiver.Verify(r => r.GameplayAborted(It.IsAny<GameplayAbortReason>()), Times.Never);
+            UserReceiver.Verify(r => r.GameplayAborted(It.IsAny<GameplayAbortReason>()), Times.Once);
             User2Receiver.Verify(r => r.GameplayAborted(GameplayAbortReason.HostAbortedTheMatch), Times.Once);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
