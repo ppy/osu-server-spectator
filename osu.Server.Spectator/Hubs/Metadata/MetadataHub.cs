@@ -16,7 +16,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
     {
         private readonly IDatabaseFactory databaseFactory;
 
-        private const string online_presence_watchers_group = "metadata:online-presence-watchers";
+        internal const string ONLINE_PRESENCE_WATCHERS_GROUP = "metadata:online-presence-watchers";
 
         public MetadataHub(
             IDistributedCache cache,
@@ -52,11 +52,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
                     await Clients.Caller.UserPresenceUpdated(userState.Value.UserId, userState.Value.ToUserPresence());
             }
 
-            await Groups.AddToGroupAsync(Context.ConnectionId, online_presence_watchers_group);
+            await Groups.AddToGroupAsync(Context.ConnectionId, ONLINE_PRESENCE_WATCHERS_GROUP);
         }
 
         public Task EndWatchingUserPresence()
-            => Groups.RemoveFromGroupAsync(Context.ConnectionId, online_presence_watchers_group);
+            => Groups.RemoveFromGroupAsync(Context.ConnectionId, ONLINE_PRESENCE_WATCHERS_GROUP);
 
         public async Task UpdateActivity(UserActivity? activity)
         {
@@ -91,7 +91,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             if (userPresence?.Status == UserStatus.Offline)
                 userPresence = null;
 
-            return Clients.Group(online_presence_watchers_group).UserPresenceUpdated(userId, userPresence);
+            return Clients.Group(ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence);
         }
     }
 }
