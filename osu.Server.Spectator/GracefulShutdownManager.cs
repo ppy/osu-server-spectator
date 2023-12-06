@@ -11,6 +11,7 @@ using osu.Framework.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
+using osu.Server.Spectator.Hubs.Metadata;
 using osu.Server.Spectator.Hubs.Multiplayer;
 using osu.Server.Spectator.Hubs.Spectator;
 
@@ -34,7 +35,8 @@ namespace osu.Server.Spectator
             EntityStore<SpectatorClientState> clientStateStore,
             IHostApplicationLifetime hostApplicationLifetime,
             ScoreUploader scoreUploader,
-            EntityStore<ConnectionState> connectionStateStore)
+            EntityStore<ConnectionState> connectionStateStore,
+            EntityStore<MetadataClientState> metadataClientStore)
         {
             this.roomStore = roomStore;
 
@@ -42,6 +44,8 @@ namespace osu.Server.Spectator
             dependentStores.Add(clientStateStore);
             dependentStores.Add(scoreUploader);
             dependentStores.Add(connectionStateStore);
+            dependentStores.Add(metadataClientStore);
+
             // Importantly, we don't care to block `MultiplayerClientState` stores because they can only be created
             // if a `ServerMultiplayerRoom` is first in existence.
             // More so, we want to allow these states to be created so existing rooms can continue to function until they are disbanded.
