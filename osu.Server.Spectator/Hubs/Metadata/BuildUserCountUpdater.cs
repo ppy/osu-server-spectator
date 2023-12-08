@@ -57,6 +57,9 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         private async Task updateBuildUserCounts()
         {
+            if (!AppSettings.TrackBuildUserCounts)
+                return;
+
             using var db = databaseFactory.GetInstance();
 
             IEnumerable<osu_build> builds = await db.GetAllLazerBuildsAsync();

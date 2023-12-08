@@ -44,6 +44,7 @@ namespace osu.Server.Spectator.Tests
             await trackUser(5, "deadbeef");
             await trackUser(6, "unknown");
 
+            AppSettings.TrackBuildUserCounts = true;
             var updater = new BuildUserCountUpdater(clientStates, databaseFactoryMock.Object)
             {
                 UpdateInterval = 50
