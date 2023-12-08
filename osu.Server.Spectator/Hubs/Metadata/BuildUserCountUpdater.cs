@@ -60,26 +60,34 @@ namespace osu.Server.Spectator.Hubs.Metadata
             using var db = databaseFactory.GetInstance();
 
             IEnumerable<osu_build> builds = await db.GetAllLazerBuildsAsync();
-            Dictionary<string, osu_build> buildsByHash = builds.Where(build => build.hash != null)
-                                                               .ToDictionary(build => string.Concat(build.hash!.Select(b => b.ToString("X2"))), StringComparer.OrdinalIgnoreCase);
+            var buildsByHash = builds.Where(build => build.hash != null)
+                                     .ToDictionary(build => string.Concat(build.hash!.Select(b => b.ToString("X2"))), StringComparer.OrdinalIgnoreCase);
 
-            Dictionary<string, int> usersByHash = clientStates.GetAllEntities()
-                                                              .Where(kvp => kvp.Value.VersionHash != null)
-                                                              .GroupBy(kvp => kvp.Value.VersionHash!)
-                                                              .ToDictionary(grp => grp.Key, grp => grp.Count());
+            var usersByHash = clientStates.GetAllEntities()
+                                          .Where(kvp => kvp.Value.VersionHash != null)
+                                          .GroupBy(kvp => kvp.Value.VersionHash!)
+                                          .ToDictionary(grp => grp.Key, grp => (uint)grp.Count(), StringComparer.OrdinalIgnoreCase);
 
-            foreach (var (hash, count) in usersByHash)
+            // we must loop over all builds as returned by the database,
+            // because if we were to loop by the `usersByHash` dictionary,
+            // it would not be possible for a build's users count to be set to 0 after the last user has disconnected
+            // (because there would be no key-value entry in `usersByHash` in such a scenario).
+            foreach (var (hash, build) in buildsByHash)
             {
-                if (buildsByHash.TryGetValue(hash, out var build))
+                uint newUsers = usersByHash.GetValueOrDefault(hash);
+
+                // perform the absolute minimal number of updates.
+                if (newUsers != build.users)
                 {
-                    build.users = (uint)count;
+                    build.users = newUsers;
                     await db.UpdateBuildUserCountAsync(build);
                 }
-                else
-                {
-                    logger.Add($"Unrecognised version hash {hash} reported by {count} clients. Skipping update.");
-                }
             }
+
+            var unknownHashes = usersByHash.Keys.Except(buildsByHash.Keys, StringComparer.OrdinalIgnoreCase);
+
+            foreach (string unknownHash in unknownHashes)
+                logger.Add($"Unrecognised version hash {unknownHash} reported by {usersByHash[unknownHash]} clients. Skipping update.");
         }
 
         public void Dispose()
