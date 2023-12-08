@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
@@ -33,7 +34,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             using (var usage = await GetOrCreateLocalUserState())
             {
-                usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId());
+                Context.GetHttpContext()?.Request.Headers.TryGetValue("OsuVersionHash", out var versionHash);
+                usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
                 await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
             }
         }

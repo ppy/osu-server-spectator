@@ -3,6 +3,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -51,6 +52,10 @@ namespace osu.Server.Spectator.Tests
                        .Returns(mockCaller.Object);
 
             mockGroupManager = new Mock<IGroupManager>();
+
+            // this is to ensure that the `Context.GetHttpContext()` call in `MetadataHub.OnConnectedAsync()` doesn't nullref
+            // (the method in question is an extension, and it accesses `Features`; mocking further is not required).
+            mockContext.Setup(ctx => ctx.Features).Returns(new Mock<IFeatureCollection>().Object);
 
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
@@ -126,7 +131,7 @@ namespace osu.Server.Spectator.Tests
         {
             using (var usage = await userStates.GetForUse(100, true))
             {
-                usage.Item = new MetadataClientState("abcdef", 100)
+                usage.Item = new MetadataClientState("abcdef", 100, null)
                 {
                     UserActivity = new UserActivity.ChoosingBeatmap(),
                     UserStatus = UserStatus.Online
@@ -135,7 +140,7 @@ namespace osu.Server.Spectator.Tests
 
             using (var usage = await userStates.GetForUse(101, true))
             {
-                usage.Item = new MetadataClientState("abcdef", 101)
+                usage.Item = new MetadataClientState("abcdef", 101, null)
                 {
                     UserActivity = new UserActivity.ChoosingBeatmap(),
                     UserStatus = UserStatus.DoNotDisturb
