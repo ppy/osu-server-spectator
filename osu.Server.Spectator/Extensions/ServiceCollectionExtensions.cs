@@ -26,7 +26,8 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<MetadataBroadcaster>()
                                     .AddSingleton<IScoreStorage, S3ScoreStorage>()
                                     .AddSingleton<ScoreUploader>()
-                                    .AddSingleton<IScoreProcessedSubscriber, ScoreProcessedSubscriber>();
+                                    .AddSingleton<IScoreProcessedSubscriber, ScoreProcessedSubscriber>()
+                                    .AddSingleton<BuildUserCountUpdater>();
         }
 
         /// <summary>

@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
@@ -333,6 +334,24 @@ namespace osu.Server.Spectator.Database
             {
                 UserId = userId
             });
+        }
+
+        public async Task<IEnumerable<osu_build>> GetAllLazerBuildsAsync()
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QueryAsync<osu_build>(
+                "SELECT `build_id`, `version`, `hash`, `users` "
+                + "FROM `osu_builds` `b` "
+                + "JOIN `osu_updates`.`streams` `s` ON `b`.`stream_id` = `s`.`stream_id` "
+                + "WHERE `s`.`name` = 'lazer'");
+        }
+
+        public async Task UpdateBuildUserCountAsync(osu_build build)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync("UPDATE `osu_builds` SET `users` = @users WHERE `build_id` = @build_id", build);
         }
 
         public void Dispose()
