@@ -220,7 +220,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 else if (user.State == MultiplayerUserState.WaitingForLoad)
                 {
                     await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
-                    await context.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.LoadAborted));
+                    await context.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.GameplayAborted), GameplayAbortReason.LoadTookTooLong);
                     log(room, user, "Gameplay aborted because this user took too long to load.");
                 }
             }

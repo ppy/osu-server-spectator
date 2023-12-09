@@ -507,6 +507,29 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
+        public async Task AbortMatch()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                ensureIsHost(room);
+
+                if (room.State != MultiplayerRoomState.WaitingForLoad && room.State != MultiplayerRoomState.Playing)
+                    throw new InvalidStateException("Cannot abort a match that hasn't started.");
+
+                foreach (var user in room.Users)
+                    await HubContext.ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+
+                await Clients.Group(GetGroupId(room.RoomID)).GameplayAborted(GameplayAbortReason.HostAbortedTheMatch);
+
+                await updateRoomStateIfRequired(room);
+            }
+        }
+
         public async Task AbortGameplay()
         {
             using (var userUsage = await GetOrCreateLocalUserState())

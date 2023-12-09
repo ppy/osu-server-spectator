@@ -55,7 +55,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.True(room.State == MultiplayerRoomState.Open);
                 Assert.Equal(MultiplayerUserState.Idle, room.Users.Single(u => u.UserID == USER_ID).State);
 
-                UserReceiver.Verify(r => r.LoadAborted(), Times.Once);
+                UserReceiver.Verify(r => r.GameplayAborted(It.Is<GameplayAbortReason>(reason => reason == GameplayAbortReason.LoadTookTooLong)), Times.Once);
                 UserReceiver.Verify(r => r.GameplayStarted(), Times.Never);
             }
         }
@@ -78,7 +78,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.True(room.State == MultiplayerRoomState.Playing);
                 Assert.Equal(MultiplayerUserState.Playing, room.Users.Single(u => u.UserID == USER_ID).State);
 
-                UserReceiver.Verify(r => r.LoadAborted(), Times.Never);
+                UserReceiver.Verify(r => r.GameplayAborted(It.Is<GameplayAbortReason>(reason => reason == GameplayAbortReason.LoadTookTooLong)), Times.Never);
                 UserReceiver.Verify(r => r.GameplayStarted(), Times.Once);
             }
         }
