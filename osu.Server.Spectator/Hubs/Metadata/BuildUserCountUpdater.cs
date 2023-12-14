@@ -62,7 +62,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             using var db = databaseFactory.GetInstance();
 
-            IEnumerable<osu_build> builds = await db.GetAllLazerBuildsAsync();
+            IEnumerable<osu_build> builds = await db.GetAllMainLazerBuildsAsync();
             var buildsByHash = builds.Where(build => build.hash != null)
                                      .ToDictionary(build => string.Concat(build.hash!.Select(b => b.ToString("X2"))), StringComparer.OrdinalIgnoreCase);
 

@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task TestPeriodicUpdates()
         {
-            databaseAccessMock.Setup(db => db.GetAllLazerBuildsAsync())
+            databaseAccessMock.Setup(db => db.GetAllMainLazerBuildsAsync())
                               .ReturnsAsync(new[]
                               {
                                   new osu_build { build_id = 1, hash = new byte[] { 0xCA, 0xFE, 0xBA, 0xBE }, users = 0, version = "2023.1208.0" },
