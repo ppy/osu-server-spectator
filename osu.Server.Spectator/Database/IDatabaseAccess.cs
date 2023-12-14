@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
 using osu.Game.Online.Metadata;
@@ -141,5 +142,15 @@ namespace osu.Server.Spectator.Database
         /// Returns <see langword="true"/> if the user with the supplied <paramref name="userId"/> allows private messages from people not on their friends list.
         /// </summary>
         Task<bool> GetUserAllowsPMs(int userId);
+
+        /// <summary>
+        /// Returns all available builds from the lazer release stream.
+        /// </summary>
+        Task<IEnumerable<osu_build>> GetAllLazerBuildsAsync();
+
+        /// <summary>
+        /// Updates the <see cref="osu_build.users"/> count of a given <paramref name="build"/>.
+        /// </summary>
+        Task UpdateBuildUserCountAsync(osu_build build);
     }
 }

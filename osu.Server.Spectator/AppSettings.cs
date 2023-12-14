@@ -25,6 +25,8 @@ namespace osu.Server.Spectator
 
         public static string RedisHost { get; }
 
+        public static bool TrackBuildUserCounts { get; set; }
+
         static AppSettings()
         {
             SaveReplays = Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
@@ -34,6 +36,8 @@ namespace osu.Server.Spectator
             ReplaysBucket = Environment.GetEnvironmentVariable("REPLAYS_BUCKET") ?? string.Empty;
 
             RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "localhost";
+
+            TrackBuildUserCounts = Environment.GetEnvironmentVariable("TRACK_BUILD_USER_COUNTS") == "1";
         }
     }
 }

@@ -11,11 +11,12 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         public UserStatus? UserStatus { get; set; }
 
-        // TODO: build hash
+        public string? VersionHash { get; set; }
 
-        public MetadataClientState(in string connectionId, in int userId)
+        public MetadataClientState(in string connectionId, in int userId, in string? versionHash)
             : base(in connectionId, in userId)
         {
+            VersionHash = versionHash;
         }
 
         public UserPresence ToUserPresence() => new UserPresence
