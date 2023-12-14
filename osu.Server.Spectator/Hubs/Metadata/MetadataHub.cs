@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Primitives;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
 using osu.Server.Spectator.Database;
@@ -34,7 +35,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             using (var usage = await GetOrCreateLocalUserState())
             {
-                Context.GetHttpContext()?.Request.Headers.TryGetValue("OsuVersionHash", out var versionHash);
+                string? versionHash = null;
+
+                if (Context.GetHttpContext()?.Request.Headers.TryGetValue("OsuVersionHash", out StringValues headerValue) == true)
+                    versionHash = headerValue;
+
                 usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
                 await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
             }
