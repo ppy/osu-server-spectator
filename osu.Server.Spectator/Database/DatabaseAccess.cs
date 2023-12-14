@@ -342,9 +342,8 @@ namespace osu.Server.Spectator.Database
 
             return await connection.QueryAsync<osu_build>(
                 "SELECT `build_id`, `version`, `hash`, `users` "
-                + "FROM `osu_builds` `b` "
-                + "JOIN `osu_updates`.`streams` `s` ON `b`.`stream_id` = `s`.`stream_id` "
-                + "WHERE `s`.`name` = 'lazer'");
+                + "FROM `osu_builds` "
+                + "WHERE stream_id = 7 AND allow_bancho = 1");
         }
 
         public async Task UpdateBuildUserCountAsync(osu_build build)
