@@ -336,7 +336,7 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<IEnumerable<osu_build>> GetAllLazerBuildsAsync()
+        public async Task<IEnumerable<osu_build>> GetAllMainLazerBuildsAsync()
         {
             var connection = await getConnectionAsync();
 
@@ -344,6 +344,16 @@ namespace osu.Server.Spectator.Database
                 "SELECT `build_id`, `version`, `hash`, `users` "
                 + "FROM `osu_builds` "
                 + "WHERE stream_id = 7 AND allow_bancho = 1");
+        }
+
+        public async Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync()
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QueryAsync<osu_build>(
+                "SELECT `build_id`, `version`, `hash`, `users` "
+                + "FROM `osu_builds` "
+                + "WHERE `stream_id` IS NULL AND `version` LIKE '%-lazer-%' AND `allow_bancho` = 1");
         }
 
         public async Task UpdateBuildUserCountAsync(osu_build build)

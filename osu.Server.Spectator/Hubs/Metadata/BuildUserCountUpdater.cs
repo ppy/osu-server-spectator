@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework.Logging;
@@ -62,35 +63,79 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             using var db = databaseFactory.GetInstance();
 
-            IEnumerable<osu_build> builds = await db.GetAllLazerBuildsAsync();
-            var buildsByHash = builds.Where(build => build.hash != null)
-                                     .ToDictionary(build => string.Concat(build.hash!.Select(b => b.ToString("X2"))), StringComparer.OrdinalIgnoreCase);
+            var mainBuilds = await db.GetAllMainLazerBuildsAsync();
+            var platformBuilds = await db.GetAllPlatformSpecificLazerBuildsAsync();
+
+            // note that this is not a one-to-one mapping.
+            // a build may be accessible via multiple platform-specific hashes.
+            var buildsByHash = constructHashToBuildMapping(mainBuilds, platformBuilds);
+            var newUserCounts = mainBuilds.ToDictionary(build => build, _ => (uint)0);
 
             var usersByHash = clientStates.GetAllEntities()
                                           .Where(kvp => kvp.Value.VersionHash != null)
                                           .GroupBy(kvp => kvp.Value.VersionHash!)
                                           .ToDictionary(grp => grp.Key, grp => (uint)grp.Count(), StringComparer.OrdinalIgnoreCase);
 
-            // we must loop over all builds as returned by the database,
-            // because if we were to loop by the `usersByHash` dictionary,
-            // it would not be possible for a build's users count to be set to 0 after the last user has disconnected
-            // (because there would be no key-value entry in `usersByHash` in such a scenario).
-            foreach (var (hash, build) in buildsByHash)
+            foreach (var (versionHash, userCount) in usersByHash)
             {
-                uint newUsers = usersByHash.GetValueOrDefault(hash);
+                if (buildsByHash.TryGetValue(versionHash, out var build))
+                    newUserCounts[build] += userCount;
+                else
+                    logger.Add($"Unrecognised version hash {versionHash} reported by {userCount} clients. Skipping update.");
+            }
 
-                // perform the absolute minimal number of updates.
-                if (newUsers != build.users)
+            foreach (var (build, newUserCount) in newUserCounts)
+            {
+                if (build.users != newUserCount)
                 {
-                    build.users = newUsers;
+                    build.users = newUserCount;
                     await db.UpdateBuildUserCountAsync(build);
                 }
             }
+        }
 
-            var unknownHashes = usersByHash.Keys.Except(buildsByHash.Keys, StringComparer.OrdinalIgnoreCase);
+        private static readonly Regex build_version_regex = new Regex(@"(?<version>\d+\.\d+\.\d+)-lazer-.+", RegexOptions.Compiled);
 
-            foreach (string unknownHash in unknownHashes)
-                logger.Add($"Unrecognised version hash {unknownHash} reported by {usersByHash[unknownHash]} clients. Skipping update.");
+        private Dictionary<string, osu_build> constructHashToBuildMapping(IEnumerable<osu_build> mainBuilds, IEnumerable<osu_build> platformBuilds)
+        {
+            var mainBuildsByVersion = mainBuilds.Where(build => build.version != null).ToDictionary(build => build.version!);
+
+            var result = new Dictionary<string, osu_build>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var platformBuild in platformBuilds)
+            {
+                if (platformBuild.hash == null)
+                {
+                    logger.Add($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has no hash");
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(platformBuild.version))
+                {
+                    logger.Add($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has empty version");
+                    continue;
+                }
+
+                var match = build_version_regex.Match(platformBuild.version);
+
+                if (!match.Success)
+                {
+                    logger.Add($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has non-conformant version {platformBuild.version}");
+                    continue;
+                }
+
+                string mainVersion = match.Groups["version"].Value;
+
+                if (!mainBuildsByVersion.TryGetValue(mainVersion, out var mainBuild))
+                {
+                    logger.Add($"Data anomaly during creation of hash-to-build mapping: No parent build found for platform build {platformBuild.build_id} with version {platformBuild.version}");
+                    continue;
+                }
+
+                result.Add(string.Concat(platformBuild.hash!.Select(b => b.ToString("X2"))), mainBuild);
+            }
+
+            return result;
         }
 
         public void Dispose()
