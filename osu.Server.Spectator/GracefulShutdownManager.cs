@@ -29,6 +29,7 @@ namespace osu.Server.Spectator
 
         private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
         private readonly EntityStore<ServerMultiplayerRoom> roomStore;
+        private readonly BuildUserCountUpdater buildUserCountUpdater;
 
         public GracefulShutdownManager(
             EntityStore<ServerMultiplayerRoom> roomStore,
@@ -36,9 +37,11 @@ namespace osu.Server.Spectator
             IHostApplicationLifetime hostApplicationLifetime,
             ScoreUploader scoreUploader,
             EntityStore<ConnectionState> connectionStateStore,
-            EntityStore<MetadataClientState> metadataClientStore)
+            EntityStore<MetadataClientState> metadataClientStore,
+            BuildUserCountUpdater buildUserCountUpdater)
         {
             this.roomStore = roomStore;
+            this.buildUserCountUpdater = buildUserCountUpdater;
 
             dependentStores.Add(roomStore);
             dependentStores.Add(clientStateStore);
@@ -56,6 +59,10 @@ namespace osu.Server.Spectator
         private void shutdownSafely()
         {
             Logger.Log("Server shutdown triggered");
+
+            // stop tracking user counts.
+            // it is presumed that another instance will take over doing so.
+            buildUserCountUpdater.Dispose();
 
             foreach (var store in dependentStores)
                 store.StopAcceptingEntities();
