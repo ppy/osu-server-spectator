@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -23,8 +24,9 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         private readonly EntityStore<MetadataClientState> clientStates;
         private readonly IDatabaseFactory databaseFactory;
-        private readonly CancellationTokenSource cancellationSource;
         private readonly Logger logger;
+
+        private CancellationTokenSource? cancellationSource;
 
         public BuildUserCountUpdater(
             EntityStore<MetadataClientState> clientStates,
@@ -41,7 +43,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         private void runUpdateLoop()
         {
-            while (!cancellationSource.IsCancellationRequested)
+            while (cancellationSource?.IsCancellationRequested == false)
             {
                 try
                 {
@@ -140,8 +142,9 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         public void Dispose()
         {
-            cancellationSource.Cancel();
-            cancellationSource.Dispose();
+            cancellationSource?.Cancel();
+            cancellationSource?.Dispose();
+            cancellationSource = null;
         }
     }
 }
