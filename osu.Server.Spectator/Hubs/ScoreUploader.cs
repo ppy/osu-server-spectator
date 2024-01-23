@@ -108,11 +108,11 @@ namespace osu.Server.Spectator.Hubs
                                 return;
                             }
 
-                            if (!dbScore.ScoreInfo.Passed)
+                            if (!dbScore.passed)
                                 return;
 
-                            item.Score.ScoreInfo.OnlineID = dbScore.ScoreInfo.OnlineID;
-                            item.Score.ScoreInfo.Passed = dbScore.ScoreInfo.Passed;
+                            item.Score.ScoreInfo.OnlineID = (long)dbScore.id;
+                            item.Score.ScoreInfo.Passed = dbScore.passed;
 
                             await scoreStorage.WriteAsync(item.Score);
                             await db.MarkScoreHasReplay(item.Score);
