@@ -122,11 +122,8 @@ namespace osu.Server.Spectator.Tests
 
             mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
-                ScoreInfo =
-                {
-                    ID = 456,
-                    Passed = true
-                }
+                id = 456,
+                passed = true
             }));
 
             await hub.BeginPlaySession(1234, state);
@@ -273,11 +270,8 @@ namespace osu.Server.Spectator.Tests
 
             mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
-                ScoreInfo =
-                {
-                    ID = 456,
-                    Passed = true
-                }
+                id = 456,
+                passed = true
             }));
 
             mockDatabase.Setup(db => db.GetBeatmapAsync(beatmap_id)).Returns(Task.FromResult(new database_beatmap
@@ -318,11 +312,8 @@ namespace osu.Server.Spectator.Tests
 
             mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
-                ScoreInfo =
-                {
-                    ID = 456,
-                    Passed = false
-                }
+                id = 456,
+                passed = false
             }));
 
             await hub.BeginPlaySession(1234, state);

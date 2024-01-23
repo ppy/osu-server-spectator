@@ -26,11 +26,8 @@ namespace osu.Server.Spectator.Tests
             mockDatabase = new Mock<IDatabaseAccess>();
             mockDatabase.Setup(db => db.GetScoreFromToken(1)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
-                ScoreInfo =
-                {
-                    ID = 2,
-                    Passed = true
-                }
+                id = 2,
+                passed = true
             }));
 
             var databaseFactory = new Mock<IDatabaseFactory>();
@@ -124,11 +121,8 @@ namespace osu.Server.Spectator.Tests
             // Give the score a token.
             mockDatabase.Setup(db => db.GetScoreFromToken(2)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
-                ScoreInfo =
-                {
-                    ID = 3,
-                    Passed = true
-                }
+                id = 3,
+                passed = true
             }));
 
             await uploader.Flush();
@@ -152,11 +146,8 @@ namespace osu.Server.Spectator.Tests
             // Give the score a token now. It should still not upload because it has timed out.
             mockDatabase.Setup(db => db.GetScoreFromToken(2)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
-                ScoreInfo =
-                {
-                    ID = 3,
-                    Passed = true
-                }
+                id = 3,
+                passed = true
             }));
 
             await uploader.Flush();

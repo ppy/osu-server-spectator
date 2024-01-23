@@ -288,7 +288,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE `solo_scores` SET `has_replay` = 1 WHERE `id` = @scoreId", new
+            await connection.ExecuteAsync("UPDATE `scores` SET `has_replay` = 1 WHERE `id` = @scoreId", new
             {
                 scoreId = score.ScoreInfo.OnlineID,
             });
@@ -299,7 +299,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QuerySingleOrDefaultAsync<SoloScore?>(
-                "SELECT * FROM `solo_scores` WHERE `id` = (SELECT `score_id` FROM `solo_score_tokens` WHERE `id` = @Id)", new
+                "SELECT * FROM `scores` WHERE `id` = (SELECT `score_id` FROM `score_tokens` WHERE `id` = @Id)", new
                 {
                     Id = token
                 });
@@ -309,7 +309,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleOrDefaultAsync<bool>("SELECT 1 FROM `solo_scores_process_history` WHERE `score_id` = @ScoreId", new
+            return await connection.QuerySingleOrDefaultAsync<bool>("SELECT 1 FROM `score_process_history` WHERE `score_id` = @ScoreId", new
             {
                 ScoreId = scoreId
             });
