@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Database
         /// <summary>
         /// Returns the <see cref="multiplayer_room"/> with the given <paramref name="roomId"/>.
         /// </summary>
-        Task<multiplayer_room> GetRoomAsync(long roomId);
+        Task<multiplayer_room?> GetRoomAsync(long roomId);
 
         /// <summary>
         /// Retrieves a beatmap corresponding to the given <paramref name="beatmapId"/>.
