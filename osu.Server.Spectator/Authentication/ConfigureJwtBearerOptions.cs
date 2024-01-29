@@ -2,11 +2,11 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
@@ -40,7 +40,7 @@ namespace osu.Server.Spectator.Authentication
             {
                 OnTokenValidated = async context =>
                 {
-                    var jwtToken = (JwtSecurityToken)context.SecurityToken;
+                    var jwtToken = (JsonWebToken)context.SecurityToken;
                     int tokenUserId = int.Parse(jwtToken.Subject);
 
                     using (var db = databaseFactory.GetInstance())
