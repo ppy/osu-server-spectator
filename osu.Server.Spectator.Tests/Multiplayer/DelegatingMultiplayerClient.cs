@@ -17,7 +17,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     /// Used in testing. Delegates calls to one or more <see cref="IMultiplayerClient"/>s.
     /// Note: All members must be virtual!!
     /// </summary>
-    public class DelegatingMultiplayerClient : IMultiplayerClient, IClientProxy
+    public class DelegatingMultiplayerClient : IMultiplayerClient, ISingleClientProxy
     {
         public virtual IEnumerable<IMultiplayerClient> Clients => Enumerable.Empty<IMultiplayerClient>();
 
@@ -144,6 +144,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = new CancellationToken())
         {
             return (Task)GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public)!.Invoke(this, args)!;
+        }
+
+        public Task<T> InvokeCoreAsync<T>(string method, object?[] args, CancellationToken cancellationToken)
+        {
+            return (Task<T>)GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public)!.Invoke(this, args)!;
         }
 
         public async Task DisconnectRequested()
