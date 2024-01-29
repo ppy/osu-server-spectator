@@ -3,8 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
+using Microsoft.IdentityModel.JsonWebTokens;
 using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Scoring;
@@ -18,7 +18,7 @@ namespace osu.Server.Spectator.Database
         /// Returns the database ID of the user to whom the supplied <paramref name="jwtToken"/> belongs.
         /// Will be <c>null</c> if the token does not exist, has expired or has been revoked.
         /// </summary>
-        Task<int?> GetUserIdFromTokenAsync(JwtSecurityToken jwtToken);
+        Task<int?> GetUserIdFromTokenAsync(JsonWebToken jwtToken);
 
         /// <summary>
         /// Whether the user with the given <paramref name="userId"/> is currently restricted.
