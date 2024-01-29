@@ -48,7 +48,7 @@ namespace osu.Server.Spectator.Database
             }) != 0;
         }
 
-        public async Task<multiplayer_room> GetRoomAsync(long roomId)
+        public async Task<multiplayer_room?> GetRoomAsync(long roomId)
         {
             var connection = await getConnectionAsync();
 

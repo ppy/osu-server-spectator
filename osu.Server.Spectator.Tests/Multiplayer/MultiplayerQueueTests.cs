@@ -150,7 +150,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(1, room.Playlist.Count);
+                Assert.Single(room.Playlist);
                 Database.Verify(db => db.RemovePlaylistItemAsync(ROOM_ID, 2), Times.Once);
                 Receiver.Verify(client => client.PlaylistItemRemoved(2), Times.Once);
             }
@@ -201,7 +201,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(1, room.Playlist.Count);
+                Assert.Single(room.Playlist);
                 Database.Verify(db => db.RemovePlaylistItemAsync(ROOM_ID, 2), Times.Once);
                 Receiver.Verify(client => client.PlaylistItemRemoved(2), Times.Once);
             }
@@ -256,7 +256,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(1, room.Playlist.Count);
+                Assert.Single(room.Playlist);
                 Assert.Equal(2, room.Settings.PlaylistItemId);
                 Database.Verify(db => db.RemovePlaylistItemAsync(ROOM_ID, 1), Times.Once);
                 Receiver.Verify(client => client.PlaylistItemRemoved(1), Times.Once);
