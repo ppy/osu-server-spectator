@@ -4,10 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using Microsoft.IdentityModel.JsonWebTokens;
 using MySqlConnector;
 using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
@@ -20,7 +20,7 @@ namespace osu.Server.Spectator.Database
     {
         private MySqlConnection? openConnection;
 
-        public async Task<int?> GetUserIdFromTokenAsync(JwtSecurityToken jwtToken)
+        public async Task<int?> GetUserIdFromTokenAsync(JsonWebToken jwtToken)
         {
             var connection = await getConnectionAsync();
 
