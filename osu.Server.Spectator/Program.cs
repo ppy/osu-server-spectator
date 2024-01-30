@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
@@ -41,7 +42,7 @@ namespace osu.Server.Spectator
                        {
                            webBuilder.UseSentry(o =>
                            {
-                               o.AddExceptionFilterForType<ServerShuttingDownException>();
+                               o.AddExceptionFilterForType<HubException>();
                                o.TracesSampleRate = 0.01;
 #if !DEBUG
                                o.Dsn = "https://775dc89c1c3142e8a8fa5fd10590f443@sentry.ppy.sh/8";
