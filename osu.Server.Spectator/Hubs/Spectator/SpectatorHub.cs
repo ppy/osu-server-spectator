@@ -60,8 +60,11 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 clientState.State = state;
                 clientState.ScoreToken = scoreToken;
 
-                if (state.RulesetID == null) throw new ArgumentNullException(nameof(state.RulesetID));
-                if (state.BeatmapID == null) throw new ArgumentNullException(nameof(state.BeatmapID));
+                if (state.RulesetID == null)
+                    return;
+
+                if (state.BeatmapID == null)
+                    return;
 
                 using (var db = databaseFactory.GetInstance())
                 {
@@ -72,7 +75,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                         throw new ArgumentException(nameof(username));
 
                     if (string.IsNullOrEmpty(beatmap?.checksum))
-                        throw new ArgumentException(nameof(state.BeatmapID));
+                        return;
 
                     clientState.Score = new Score
                     {
