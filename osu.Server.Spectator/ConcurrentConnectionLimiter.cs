@@ -103,7 +103,7 @@ namespace osu.Server.Spectator
                 bool connectionIsValid = tokenIdMatches && hubRegistered && connectionIdMatches;
 
                 if (!connectionIsValid)
-                    throw new InvalidStateException("State is not valid for this connection");
+                    throw new InvalidStateException($"State is not valid for this connection, context: {LoggingHubFilter.GetMethodCallDisplayString(invocationContext)})");
             }
 
             return await next(invocationContext);

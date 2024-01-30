@@ -25,13 +25,13 @@ namespace osu.Server.Spectator
             try
             {
                 if (DebugUtils.IsDebugBuild)
-                    logTarget.Log($"Invoking hub method: {getMethodCallDisplayString(invocationContext)}", LogLevel.Debug);
+                    logTarget.Log($"Invoking hub method: {GetMethodCallDisplayString(invocationContext)}", LogLevel.Debug);
 
                 return await next(invocationContext);
             }
             catch (Exception e)
             {
-                logTarget.Error($"Failed to invoke hub method: {getMethodCallDisplayString(invocationContext)}", e);
+                logTarget.Error($"Failed to invoke hub method: {GetMethodCallDisplayString(invocationContext)}", e);
                 throw;
             }
         }
@@ -68,7 +68,7 @@ namespace osu.Server.Spectator
             }
         }
 
-        private static string getMethodCallDisplayString(HubInvocationContext invocationContext)
+        public static string GetMethodCallDisplayString(HubInvocationContext invocationContext)
         {
             var methodCall = $"{invocationContext.HubMethodName}({string.Join(", ", invocationContext.HubMethodArguments.Select(getReadableString))})";
             return methodCall;
