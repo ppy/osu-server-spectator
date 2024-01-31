@@ -36,52 +36,51 @@ namespace osu.Server.Spectator
 
         public async Task OnConnectedAsync(HubLifetimeContext context, Func<HubLifetimeContext, Task> next)
         {
-            try
-            {
-                int userId = context.Context.GetUserId();
+            await registerConnection(context);
+            await next(context);
+        }
 
-                using (var userState = await connectionStates.GetForUse(userId, true))
+        private async Task registerConnection(HubLifetimeContext context)
+        {
+            int userId = context.Context.GetUserId();
+
+            using (var userState = await connectionStates.GetForUse(userId, true))
+            {
+                if (userState.Item == null)
                 {
-                    if (userState.Item == null)
-                    {
-                        log(context, "connection from first client instance");
-                        userState.Item = new ConnectionState(context);
-                        return;
-                    }
-
-                    if (context.Context.GetTokenId() == userState.Item.TokenId)
-                    {
-                        // The assumption is that the client has already dropped the old connection,
-                        // so we don't bother to ask for a disconnection.
-
-                        log(context, "subsequent connection from same client instance, registering");
-                        // Importantly, this will replace the old connection, ensuring it cannot be
-                        // used to communicate on anymore.
-                        userState.Item.RegisterConnectionId(context);
-                        return;
-                    }
-
-                    log(context, "connection from new client instance, dropping existing state");
-
-                    foreach (var hubType in stateful_user_hubs)
-                    {
-                        var hubContextType = typeof(IHubContext<>).MakeGenericType(hubType);
-                        var hubContext = serviceProvider.GetRequiredService(hubContextType) as IHubContext;
-
-                        if (userState.Item.ConnectionIds.TryGetValue(hubType, out string? connectionId))
-                        {
-                            hubContext?.Clients.Client(connectionId)
-                                      .SendCoreAsync(nameof(IStatefulUserHubClient.DisconnectRequested), Array.Empty<object>());
-                        }
-                    }
-
-                    log(context, "existing state dropped");
+                    log(context, "connection from first client instance");
                     userState.Item = new ConnectionState(context);
+                    return;
                 }
-            }
-            finally
-            {
-                await next(context);
+
+                if (context.Context.GetTokenId() == userState.Item.TokenId)
+                {
+                    // The assumption is that the client has already dropped the old connection,
+                    // so we don't bother to ask for a disconnection.
+
+                    log(context, "subsequent connection from same client instance, registering");
+                    // Importantly, this will replace the old connection, ensuring it cannot be
+                    // used to communicate on anymore.
+                    userState.Item.RegisterConnectionId(context);
+                    return;
+                }
+
+                log(context, "connection from new client instance, dropping existing state");
+
+                foreach (var hubType in stateful_user_hubs)
+                {
+                    var hubContextType = typeof(IHubContext<>).MakeGenericType(hubType);
+                    var hubContext = serviceProvider.GetRequiredService(hubContextType) as IHubContext;
+
+                    if (userState.Item.ConnectionIds.TryGetValue(hubType, out string? connectionId))
+                    {
+                        hubContext?.Clients.Client(connectionId)
+                                  .SendCoreAsync(nameof(IStatefulUserHubClient.DisconnectRequested), Array.Empty<object>());
+                    }
+                }
+
+                log(context, "existing state dropped");
+                userState.Item = new ConnectionState(context);
             }
         }
 
@@ -111,40 +110,38 @@ namespace osu.Server.Spectator
 
         public async Task OnDisconnectedAsync(HubLifetimeContext context, Exception? exception, Func<HubLifetimeContext, Exception?, Task> next)
         {
-            try
+            // if `exception` isn't null then the disconnection is not clean,
+            // so don't unregister yet in hopes that the user will return after a transient network failure or similar.
+            if (exception == null)
+                await unregisterConnection(context, exception);
+            await next(context, exception);
+        }
+
+        private async Task unregisterConnection(HubLifetimeContext context, Exception? exception)
+        {
+            int userId = context.Context.GetUserId();
+
+            using (var userState = await connectionStates.GetForUse(userId, true))
             {
-                if (exception != null)
-                    // network disconnection. wait for user to return.
-                    return;
+                string? registeredConnectionId = null;
 
-                int userId = context.Context.GetUserId();
+                bool tokenIdMatches = context.Context.GetTokenId() == userState.Item?.TokenId;
+                bool hubRegistered = userState.Item?.ConnectionIds.TryGetValue(context.Hub.GetType(), out registeredConnectionId) == true;
+                bool connectionIdMatches = registeredConnectionId == context.Context.ConnectionId;
 
-                using (var userState = await connectionStates.GetForUse(userId, true))
+                bool connectionCanBeCleanedUp = tokenIdMatches && hubRegistered && connectionIdMatches;
+
+                if (connectionCanBeCleanedUp)
                 {
-                    string? registeredConnectionId = null;
-
-                    bool tokenIdMatches = context.Context.GetTokenId() == userState.Item?.TokenId;
-                    bool hubRegistered = userState.Item?.ConnectionIds.TryGetValue(context.Hub.GetType(), out registeredConnectionId) == true;
-                    bool connectionIdMatches = registeredConnectionId == context.Context.ConnectionId;
-
-                    bool connectionCanBeCleanedUp = tokenIdMatches && hubRegistered && connectionIdMatches;
-
-                    if (connectionCanBeCleanedUp)
-                    {
-                        log(context, "disconnected from hub");
-                        userState.Item!.ConnectionIds.Remove(context.Hub.GetType());
-                    }
-
-                    if (userState.Item?.ConnectionIds.Count == 0)
-                    {
-                        log(context, "all connections closed, destroying state");
-                        userState.Destroy();
-                    }
+                    log(context, "disconnected from hub");
+                    userState.Item!.ConnectionIds.Remove(context.Hub.GetType());
                 }
-            }
-            finally
-            {
-                await next(context, exception);
+
+                if (userState.Item?.ConnectionIds.Count == 0)
+                {
+                    log(context, "all connections closed, destroying state");
+                    userState.Destroy();
+                }
             }
         }
     }
