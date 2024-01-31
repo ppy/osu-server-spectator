@@ -1,1 +1,2 @@
 T:osu.Framework.Logging.Logger;Don't use osu!framework logger. Use Microsoft.Extensions.Logging.ILogger instead through DI.
+T:System.Console;Don't use Console for logging. Use Microsoft.Extensions.Logging.ILogger instead through DI.
