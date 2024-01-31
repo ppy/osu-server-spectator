@@ -83,7 +83,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 if (buildsByHash.TryGetValue(versionHash, out var build))
                     newUserCounts[build] += userCount;
                 else
-                    logger.LogInformation($"Unrecognised version hash {versionHash} reported by {userCount} clients. Skipping update.");
+                    logger.LogInformation("Unrecognised version hash {versionHash} reported by {userCount} clients. Skipping update.", versionHash, userCount);
             }
 
             foreach (var (build, newUserCount) in newUserCounts)
@@ -108,13 +108,13 @@ namespace osu.Server.Spectator.Hubs.Metadata
             {
                 if (platformBuild.hash == null)
                 {
-                    logger.LogInformation($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has no hash");
+                    logger.LogInformation("Data anomaly during creation of hash-to-build mapping: Platform build {buildId} has no hash", platformBuild.build_id);
                     continue;
                 }
 
                 if (string.IsNullOrEmpty(platformBuild.version))
                 {
-                    logger.LogInformation($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has empty version");
+                    logger.LogInformation("Data anomaly during creation of hash-to-build mapping: Platform build {buildId} has empty version", platformBuild.build_id);
                     continue;
                 }
 
@@ -122,7 +122,9 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 if (!match.Success)
                 {
-                    logger.LogInformation($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has non-conformant version {platformBuild.version}");
+                    logger.LogInformation("Data anomaly during creation of hash-to-build mapping: Platform build {buildId} has non-conformant version {version}",
+                        platformBuild.build_id,
+                        platformBuild.version);
                     continue;
                 }
 
@@ -130,7 +132,9 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 if (!mainBuildsByVersion.TryGetValue(mainVersion, out var mainBuild))
                 {
-                    logger.LogInformation($"Data anomaly during creation of hash-to-build mapping: No parent build found for platform build {platformBuild.build_id} with version {platformBuild.version}");
+                    logger.LogInformation("Data anomaly during creation of hash-to-build mapping: No parent build found for platform build {buildId} with version {version}",
+                        platformBuild.build_id,
+                        platformBuild.version);
                     continue;
                 }
 

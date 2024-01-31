@@ -24,7 +24,9 @@ namespace osu.Server.Spectator.Storage
 
             string filename = score.ScoreInfo.OnlineID.ToString();
 
-            logger.LogInformation($"Writing replay for score {score.ScoreInfo.OnlineID} to {filename}");
+            logger.LogInformation("Writing replay for score {scoreId} to {filename}",
+                score.ScoreInfo.OnlineID,
+                filename);
 
             using (var outStream = File.Create(Path.Combine(AppSettings.ReplaysPath, filename)))
                 legacyEncoder.Encode(outStream);

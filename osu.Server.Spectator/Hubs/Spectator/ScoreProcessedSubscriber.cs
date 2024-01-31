@@ -111,7 +111,10 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Failed to register connection {receiverConnectionId} for info about score {userId}:{scoreToken}");
+                logger.LogError(ex, "Failed to register connection {receiverConnectionId} for info about score {userId}:{scoreToken}",
+                    receiverConnectionId,
+                    userId,
+                    scoreToken);
                 DogStatsd.Increment($"{statsd_prefix}.subscriptions.failed");
             }
         }

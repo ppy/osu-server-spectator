@@ -56,11 +56,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
                     var updates = await db.GetUpdatedBeatmapSets(lastQueueId);
 
                     lastQueueId = updates.LastProcessedQueueID;
-                    logger.LogInformation($"Polled beatmap changes up to last queue id {updates.LastProcessedQueueID}");
+                    logger.LogInformation("Polled beatmap changes up to last queue id {lastProcessedQueueID}", updates.LastProcessedQueueID);
 
                     if (updates.BeatmapSetIDs.Any())
                     {
-                        logger.LogInformation($"Broadcasting new beatmaps to client: {string.Join(',', updates.BeatmapSetIDs.Select(i => i.ToString()))}");
+                        logger.LogInformation("Broadcasting new beatmaps to client: {beatmapIds}", string.Join(',', updates.BeatmapSetIDs.Select(i => i.ToString())));
                         await metadataHubContext.Clients.All.SendAsync(nameof(IMetadataClient.BeatmapSetsUpdated), updates, cancellationToken: timerCancellationToken);
                     }
                 }

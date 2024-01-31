@@ -88,7 +88,11 @@ namespace osu.Server.Spectator
         }
 
         private void log(HubLifetimeContext context, string message)
-            => logger.LogInformation($"[user:{context.Context.GetUserId()}] [connection:{context.Context.ConnectionId}] [hub:{context.Hub.GetType().ReadableName()}] {message}");
+            => logger.LogInformation("[user:{user}] [connection:{connection}] [hub:{hub}] {message}",
+                context.Context.GetUserId(),
+                context.Context.ConnectionId,
+                context.Hub.GetType().ReadableName(),
+                message);
 
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {

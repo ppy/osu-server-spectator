@@ -234,12 +234,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)
         {
-            logger.Log(logLevel, $"[user:{getLoggableUserIdentifier(user)}] [room:{room.RoomID}] {message.Trim()}");
+            logger.Log(logLevel, "[user:{userId}] [room:{roomID}] {message}",
+                getLoggableUserIdentifier(user),
+                room.RoomID,
+                message.Trim());
         }
 
         private void error(MultiplayerRoomUser? user, string message, Exception exception)
         {
-            logger.LogError(exception, $"[user:{getLoggableUserIdentifier(user)}] {message.Trim()}");
+            logger.LogError(exception, "[user:{userId}] {message}",
+                getLoggableUserIdentifier(user),
+                message.Trim());
         }
 
         private string getLoggableUserIdentifier(MultiplayerRoomUser? user)

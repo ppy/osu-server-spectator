@@ -107,7 +107,7 @@ namespace osu.Server.Spectator.Hubs
                         {
                             if (dbScore == null)
                             {
-                                logger.LogInformation($"Score upload timed out for token: {item.Token}");
+                                logger.LogInformation("Score upload timed out for token: {tokenId}", item.Token);
                                 return;
                             }
 

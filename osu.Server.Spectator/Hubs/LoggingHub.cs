@@ -43,9 +43,13 @@ namespace osu.Server.Spectator.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        protected void Log(string message, LogLevel logLevel = LogLevel.Information) => logger.Log(logLevel, $"[user:{getLoggableUserIdentifier()}] {message.Trim()}");
+        protected void Log(string message, LogLevel logLevel = LogLevel.Information) => logger.Log(logLevel, "[user:{userId}] {message}",
+            getLoggableUserIdentifier(),
+            message.Trim());
 
-        protected void Error(string message, Exception exception) => logger.LogError(exception, $"[user:{getLoggableUserIdentifier()}] {message.Trim()}");
+        protected void Error(string message, Exception exception) => logger.LogError(exception, "[user:{userId}] {message)}",
+            getLoggableUserIdentifier(),
+            message.Trim());
 
         private string getLoggableUserIdentifier() => Context.UserIdentifier ?? "???";
 

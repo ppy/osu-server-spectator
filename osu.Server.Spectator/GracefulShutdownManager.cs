@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -81,6 +82,8 @@ namespace osu.Server.Spectator
             TimeSpan timeWaited = new TimeSpan();
             TimeSpan timeBetweenChecks = TimeSpan.FromSeconds(10);
 
+            var stringBuilder = new StringBuilder();
+
             while (timeWaited < TIME_BEFORE_FORCEFUL_SHUTDOWN)
             {
                 var remaining = dependentStores.Select(store => (store.EntityName, store.RemainingUsages));
@@ -88,9 +91,11 @@ namespace osu.Server.Spectator
                 if (remaining.Sum(s => s.RemainingUsages) == 0)
                     break;
 
-                logger.LogInformation("Waiting for usages of existing entities to finish...");
+                stringBuilder.Clear();
+                stringBuilder.AppendLine("Waiting for usages of existing entities to finish...");
                 foreach (var r in remaining)
-                    logger.LogInformation($"{r.EntityName,10}: {r.RemainingUsages}");
+                    stringBuilder.AppendLine($"{r.EntityName,10}: {r.RemainingUsages}");
+                logger.LogInformation(stringBuilder.ToString());
 
                 Thread.Sleep(timeBetweenChecks);
                 timeWaited = timeWaited.Add(timeBetweenChecks);
