@@ -22,7 +22,7 @@ namespace osu.Server.Spectator
 
             DogStatsd.Configure(new StatsdConfig
             {
-                StatsdServerName = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? "localhost",
+                StatsdServerName = AppSettings.DataDogAgentHost,
                 Prefix = "osu.server.spectator",
                 ConstantTags = new[]
                 {
@@ -55,7 +55,7 @@ namespace osu.Server.Spectator
                            webBuilder.UseStartup<Startup>();
 #endif
 
-                           webBuilder.UseUrls(urls: new[] { "http://*:80" });
+                           webBuilder.UseUrls(urls: [$"http://*:{AppSettings.ServerPort}"]);
                        });
         }
     }
