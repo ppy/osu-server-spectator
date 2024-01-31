@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using osu.Framework.Logging;
+using Microsoft.Extensions.Logging;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -23,19 +23,20 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         private readonly EntityStore<MetadataClientState> clientStates;
         private readonly IDatabaseFactory databaseFactory;
-        private readonly Logger logger;
+        private readonly ILogger logger;
 
         private CancellationTokenSource? cancellationSource;
 
         public BuildUserCountUpdater(
             EntityStore<MetadataClientState> clientStates,
-            IDatabaseFactory databaseFactory)
+            IDatabaseFactory databaseFactory,
+            ILoggerFactory loggerFactory)
         {
             this.clientStates = clientStates;
             this.databaseFactory = databaseFactory;
 
             cancellationSource = new CancellationTokenSource();
-            logger = Logger.GetLogger(nameof(BuildUserCountUpdater));
+            logger = loggerFactory.CreateLogger(nameof(BuildUserCountUpdater));
 
             Task.Factory.StartNew(runUpdateLoop, TaskCreationOptions.LongRunning);
         }
@@ -50,7 +51,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 }
                 catch (Exception ex)
                 {
-                    logger.Add("Failed to update build user counts", LogLevel.Error, ex);
+                    logger.LogError(ex, "Failed to update build user counts");
                 }
 
                 Thread.Sleep(UpdateInterval);
@@ -82,7 +83,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 if (buildsByHash.TryGetValue(versionHash, out var build))
                     newUserCounts[build] += userCount;
                 else
-                    logger.Add($"Unrecognised version hash {versionHash} reported by {userCount} clients. Skipping update.");
+                    logger.LogInformation($"Unrecognised version hash {versionHash} reported by {userCount} clients. Skipping update.");
             }
 
             foreach (var (build, newUserCount) in newUserCounts)
@@ -107,13 +108,13 @@ namespace osu.Server.Spectator.Hubs.Metadata
             {
                 if (platformBuild.hash == null)
                 {
-                    logger.Add($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has no hash");
+                    logger.LogInformation($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has no hash");
                     continue;
                 }
 
                 if (string.IsNullOrEmpty(platformBuild.version))
                 {
-                    logger.Add($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has empty version");
+                    logger.LogInformation($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has empty version");
                     continue;
                 }
 
@@ -121,7 +122,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 if (!match.Success)
                 {
-                    logger.Add($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has non-conformant version {platformBuild.version}");
+                    logger.LogInformation($"Data anomaly during creation of hash-to-build mapping: Platform build {platformBuild.build_id} has non-conformant version {platformBuild.version}");
                     continue;
                 }
 
@@ -129,7 +130,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 if (!mainBuildsByVersion.TryGetValue(mainVersion, out var mainBuild))
                 {
-                    logger.Add($"Data anomaly during creation of hash-to-build mapping: No parent build found for platform build {platformBuild.build_id} with version {platformBuild.version}");
+                    logger.LogInformation($"Data anomaly during creation of hash-to-build mapping: No parent build found for platform build {platformBuild.build_id} with version {platformBuild.version}");
                     continue;
                 }
 

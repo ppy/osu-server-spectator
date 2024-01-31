@@ -7,8 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using osu.Framework.Logging;
 using osu.Game.Online.Spectator;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -32,13 +32,14 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         private readonly ConcurrentDictionary<long, ScoreProcessedSubscription> subscriptions = new ConcurrentDictionary<long, ScoreProcessedSubscription>();
         private readonly Timer timer;
-        private readonly Logger logger;
+        private readonly ILogger logger;
         private readonly IHubContext<SpectatorHub> spectatorHubContext;
 
         public ScoreProcessedSubscriber(
             IDatabaseFactory databaseFactory,
             IConnectionMultiplexer redis,
-            IHubContext<SpectatorHub> spectatorHubContext)
+            IHubContext<SpectatorHub> spectatorHubContext,
+            ILoggerFactory loggerFactory)
         {
             this.databaseFactory = databaseFactory;
             this.spectatorHubContext = spectatorHubContext;
@@ -51,7 +52,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             subscriber = redis.GetSubscriber();
             subscriber.Subscribe("osu-channel:score:processed", (_, message) => onMessageReceived(message));
 
-            logger = Logger.GetLogger(nameof(ScoreProcessedSubscriber));
+            logger = loggerFactory.CreateLogger(nameof(ScoreProcessedSubscriber));
         }
 
         private void onMessageReceived(string message)
@@ -73,7 +74,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
             catch (Exception ex)
             {
-                logger.Add($"Failed to process message {message}", LogLevel.Error, ex);
+                logger.LogError(ex, "Failed to process message");
                 DogStatsd.Increment($"{statsd_prefix}.messages.dropped");
             }
         }
@@ -110,7 +111,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
             catch (Exception ex)
             {
-                logger.Add($"Failed to register connection {receiverConnectionId} for info about score {userId}:{scoreToken}", LogLevel.Error, ex);
+                logger.LogError(ex, $"Failed to register connection {receiverConnectionId} for info about score {userId}:{scoreToken}");
                 DogStatsd.Increment($"{statsd_prefix}.subscriptions.failed");
             }
         }

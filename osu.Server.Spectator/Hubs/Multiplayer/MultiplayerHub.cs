@@ -7,8 +7,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
@@ -26,13 +26,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected readonly MultiplayerHubContext HubContext;
         private readonly IDatabaseFactory databaseFactory;
 
-        public MultiplayerHub(IDistributedCache cache, EntityStore<ServerMultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users, IDatabaseFactory databaseFactory,
-                              IHubContext<MultiplayerHub> hubContext)
-            : base(cache, users)
+        public MultiplayerHub(
+            ILoggerFactory loggerFactory,
+            IDistributedCache cache,
+            EntityStore<ServerMultiplayerRoom> rooms,
+            EntityStore<MultiplayerClientState> users,
+            IDatabaseFactory databaseFactory,
+            IHubContext<MultiplayerHub> hubContext)
+            : base(loggerFactory, cache, users)
         {
             Rooms = rooms;
             this.databaseFactory = databaseFactory;
-            HubContext = new MultiplayerHubContext(hubContext, rooms, users);
+            HubContext = new MultiplayerHubContext( hubContext, rooms, users, loggerFactory);
         }
 
         public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);
@@ -932,6 +937,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
 
-        protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Verbose) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
+        protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Information) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
     }
 }

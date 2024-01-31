@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
@@ -33,12 +34,13 @@ namespace osu.Server.Spectator.Hubs.Spectator
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
 
         public SpectatorHub(
+            ILoggerFactory loggerFactory,
             IDistributedCache cache,
             EntityStore<SpectatorClientState> users,
             IDatabaseFactory databaseFactory,
             ScoreUploader scoreUploader,
             IScoreProcessedSubscriber scoreProcessedSubscriber)
-            : base(cache, users)
+            : base(loggerFactory, cache, users)
         {
             this.databaseFactory = databaseFactory;
             this.scoreUploader = scoreUploader;

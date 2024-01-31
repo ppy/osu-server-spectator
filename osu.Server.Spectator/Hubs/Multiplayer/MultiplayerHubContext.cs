@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using osu.Framework.Logging;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
@@ -30,15 +30,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly IHubContext<MultiplayerHub> context;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly EntityStore<MultiplayerClientState> users;
-        private readonly Logger logger;
+        private readonly ILogger logger;
 
-        public MultiplayerHubContext(IHubContext<MultiplayerHub> context, EntityStore<ServerMultiplayerRoom> rooms, EntityStore<MultiplayerClientState> users)
+        public MultiplayerHubContext(
+            IHubContext<MultiplayerHub> context,
+            EntityStore<ServerMultiplayerRoom> rooms,
+            EntityStore<MultiplayerClientState> users,
+            ILoggerFactory loggerFactory)
         {
             this.context = context;
             this.rooms = rooms;
             this.users = users;
 
-            logger = Logger.GetLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
+            logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
         }
 
         public Task NotifyNewMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
@@ -228,14 +232,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await ChangeRoomState(room, anyUserPlaying ? MultiplayerRoomState.Playing : MultiplayerRoomState.Open);
         }
 
-        private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Verbose)
+        private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)
         {
-            logger.Add($"[user:{getLoggableUserIdentifier(user)}] [room:{room.RoomID}] {message.Trim()}", logLevel);
+            logger.Log(logLevel, $"[user:{getLoggableUserIdentifier(user)}] [room:{room.RoomID}] {message.Trim()}");
         }
 
         private void error(MultiplayerRoomUser? user, string message, Exception exception)
         {
-            logger.Add($"[user:{getLoggableUserIdentifier(user)}] {message.Trim()}", LogLevel.Error, exception);
+            logger.LogError(exception, $"[user:{getLoggableUserIdentifier(user)}] {message.Trim()}");
         }
 
         private string getLoggableUserIdentifier(MultiplayerRoomUser? user)

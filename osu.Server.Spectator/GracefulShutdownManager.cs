@@ -7,7 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
-using osu.Framework.Logging;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
@@ -30,6 +30,7 @@ namespace osu.Server.Spectator
         private readonly List<IEntityStore> dependentStores = new List<IEntityStore>();
         private readonly EntityStore<ServerMultiplayerRoom> roomStore;
         private readonly BuildUserCountUpdater buildUserCountUpdater;
+        private readonly ILogger logger;
 
         public GracefulShutdownManager(
             EntityStore<ServerMultiplayerRoom> roomStore,
@@ -38,10 +39,12 @@ namespace osu.Server.Spectator
             ScoreUploader scoreUploader,
             EntityStore<ConnectionState> connectionStateStore,
             EntityStore<MetadataClientState> metadataClientStore,
-            BuildUserCountUpdater buildUserCountUpdater)
+            BuildUserCountUpdater buildUserCountUpdater,
+            ILoggerFactory loggerFactory)
         {
             this.roomStore = roomStore;
             this.buildUserCountUpdater = buildUserCountUpdater;
+            logger = loggerFactory.CreateLogger(nameof(GracefulShutdownManager));
 
             dependentStores.Add(roomStore);
             dependentStores.Add(clientStateStore);
@@ -58,7 +61,7 @@ namespace osu.Server.Spectator
 
         private void shutdownSafely()
         {
-            Logger.Log("Server shutdown triggered");
+            logger.LogInformation("Server shutdown triggered");
 
             // stop tracking user counts.
             // it is presumed that another instance will take over doing so.
@@ -85,15 +88,15 @@ namespace osu.Server.Spectator
                 if (remaining.Sum(s => s.RemainingUsages) == 0)
                     break;
 
-                Logger.Log("Waiting for usages of existing entities to finish...");
+                logger.LogInformation("Waiting for usages of existing entities to finish...");
                 foreach (var r in remaining)
-                    Logger.Log($"{r.EntityName,10}: {r.RemainingUsages}");
+                    logger.LogInformation($"{r.EntityName,10}: {r.RemainingUsages}");
 
                 Thread.Sleep(timeBetweenChecks);
                 timeWaited = timeWaited.Add(timeBetweenChecks);
             }
 
-            Logger.Log("All entities cleaned up. Server shutdown unblocking.");
+            logger.LogInformation("All entities cleaned up. Server shutdown unblocking.");
         }
 
         private async Task performOnAllRooms(Func<ServerMultiplayerRoom, Task> action)

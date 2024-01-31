@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
@@ -36,8 +37,11 @@ namespace osu.Server.Spectator.Tests
             var mockDatabase = new Mock<IDatabaseAccess>();
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
+            var loggerFactoryMock = new Mock<ILoggerFactory>();
+            loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                             .Returns(new Mock<ILogger>().Object);
 
-            hub = new MetadataHub(cache, userStates, databaseFactory.Object);
+            hub = new MetadataHub(loggerFactoryMock.Object, cache, userStates, databaseFactory.Object);
 
             var mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(ctx => ctx.UserIdentifier).Returns(user_id.ToString());

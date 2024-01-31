@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -17,6 +18,7 @@ namespace osu.Server.Spectator.Tests
         private readonly EntityStore<MetadataClientState> clientStates;
         private readonly Mock<IDatabaseFactory> databaseFactoryMock;
         private readonly Mock<IDatabaseAccess> databaseAccessMock;
+        private readonly Mock<ILoggerFactory> loggerFactoryMock;
 
         public BuildUserCountUpdaterTest()
         {
@@ -24,6 +26,9 @@ namespace osu.Server.Spectator.Tests
 
             databaseFactoryMock = new Mock<IDatabaseFactory>();
             databaseAccessMock = new Mock<IDatabaseAccess>();
+            loggerFactoryMock = new Mock<ILoggerFactory>();
+            loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                             .Returns(new Mock<ILogger>().Object);
             databaseFactoryMock.Setup(df => df.GetInstance()).Returns(databaseAccessMock.Object);
         }
 
@@ -53,7 +58,7 @@ namespace osu.Server.Spectator.Tests
             await trackUser(6, "unknown");
 
             AppSettings.TrackBuildUserCounts = true;
-            var updater = new BuildUserCountUpdater(clientStates, databaseFactoryMock.Object)
+            var updater = new BuildUserCountUpdater(clientStates, databaseFactoryMock.Object, loggerFactoryMock.Object)
             {
                 UpdateInterval = 50
             };
