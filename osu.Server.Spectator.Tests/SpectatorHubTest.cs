@@ -67,7 +67,7 @@ namespace osu.Server.Spectator.Tests
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
 
             mockScoreStorage = new Mock<IScoreStorage>();
-            scoreUploader = new ScoreUploader(databaseFactory.Object, mockScoreStorage.Object);
+            scoreUploader = new ScoreUploader(loggerFactoryMock.Object, databaseFactory.Object, mockScoreStorage.Object);
 
             var mockScoreProcessedSubscriber = new Mock<IScoreProcessedSubscriber>();
 

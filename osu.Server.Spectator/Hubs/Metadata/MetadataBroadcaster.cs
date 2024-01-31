@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Timers;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online.Metadata;
 using osu.Server.Spectator.Database;
 using Timer = System.Timers.Timer;
@@ -23,13 +24,18 @@ namespace osu.Server.Spectator.Hubs.Metadata
         private readonly Timer timer;
         private readonly CancellationTokenSource timerCancellationSource;
         private readonly CancellationToken timerCancellationToken;
+        private readonly ILogger logger;
 
         private int? lastQueueId;
 
-        public MetadataBroadcaster(IDatabaseFactory databaseFactory, IHubContext<MetadataHub> metadataHubContext)
+        public MetadataBroadcaster(
+            ILoggerFactory loggerFactory,
+            IDatabaseFactory databaseFactory,
+            IHubContext<MetadataHub> metadataHubContext)
         {
             this.databaseFactory = databaseFactory;
             this.metadataHubContext = metadataHubContext;
+            this.logger = loggerFactory.CreateLogger(nameof(MetadataBroadcaster));
 
             timerCancellationSource = new CancellationTokenSource();
             timerCancellationToken = timerCancellationSource.Token;
@@ -50,18 +56,18 @@ namespace osu.Server.Spectator.Hubs.Metadata
                     var updates = await db.GetUpdatedBeatmapSets(lastQueueId);
 
                     lastQueueId = updates.LastProcessedQueueID;
-                    Console.WriteLine($"Polled beatmap changes up to last queue id {updates.LastProcessedQueueID}");
+                    logger.LogInformation($"Polled beatmap changes up to last queue id {updates.LastProcessedQueueID}");
 
                     if (updates.BeatmapSetIDs.Any())
                     {
-                        Console.WriteLine($"Broadcasting new beatmaps to client: {string.Join(',', updates.BeatmapSetIDs.Select(i => i.ToString()))}");
+                        logger.LogInformation($"Broadcasting new beatmaps to client: {string.Join(',', updates.BeatmapSetIDs.Select(i => i.ToString()))}");
                         await metadataHubContext.Clients.All.SendAsync(nameof(IMetadataClient.BeatmapSetsUpdated), updates, cancellationToken: timerCancellationToken);
                     }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error during beatmap update polling: {e}");
+                logger.LogError(e, $"Error during beatmap update polling");
             }
             finally
             {

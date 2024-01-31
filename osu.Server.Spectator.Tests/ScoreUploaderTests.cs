@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Scoring;
@@ -33,8 +34,12 @@ namespace osu.Server.Spectator.Tests
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
 
+            var loggerFactoryMock = new Mock<ILoggerFactory>();
+            loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                             .Returns(new Mock<ILogger>().Object);
+
             mockStorage = new Mock<IScoreStorage>();
-            uploader = new ScoreUploader(databaseFactory.Object, mockStorage.Object);
+            uploader = new ScoreUploader(loggerFactoryMock.Object, databaseFactory.Object, mockStorage.Object);
             uploader.UploadInterval = 1000; // Set a high timer interval for testing purposes.
         }
 
