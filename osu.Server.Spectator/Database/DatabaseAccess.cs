@@ -373,13 +373,10 @@ namespace osu.Server.Spectator.Database
             if (openConnection != null)
                 return openConnection;
 
-            string host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-            string user = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
-            string port = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
-
             DapperExtensions.InstallDateTimeOffsetMapper();
 
-            openConnection = new MySqlConnection($"Server={host};Port={port};Database=osu;User ID={user};ConnectionTimeout=5;ConnectionReset=false;Pooling=true;");
+            openConnection = new MySqlConnection(
+                $"Server={AppSettings.DatabaseHost};Port={AppSettings.DatabasePort};Database=osu;User ID={AppSettings.DatabaseUser};ConnectionTimeout=5;ConnectionReset=false;Pooling=true;");
 
             await openConnection.OpenAsync();
 

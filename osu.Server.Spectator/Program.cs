@@ -22,7 +22,7 @@ namespace osu.Server.Spectator
 
             DogStatsd.Configure(new StatsdConfig
             {
-                StatsdServerName = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? "localhost",
+                StatsdServerName = AppSettings.DataDogAgentHost,
                 Prefix = "osu.server.spectator",
                 ConstantTags = new[]
                 {

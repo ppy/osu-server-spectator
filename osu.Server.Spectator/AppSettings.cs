@@ -23,11 +23,15 @@ namespace osu.Server.Spectator
 
         #endregion
 
-        public static string RedisHost { get; }
-
         public static bool TrackBuildUserCounts { get; set; }
 
         public static string ServerPort { get; set; }
+        public static string RedisHost { get; }
+        public static string DataDogAgentHost { get; set; }
+
+        public static string DatabaseHost { get; }
+        public static string DatabaseUser { get; }
+        public static string DatabasePort { get; }
 
         static AppSettings()
         {
@@ -36,9 +40,15 @@ namespace osu.Server.Spectator
             S3Key = Environment.GetEnvironmentVariable("S3_KEY") ?? string.Empty;
             S3Secret = Environment.GetEnvironmentVariable("S3_SECRET") ?? string.Empty;
             ReplaysBucket = Environment.GetEnvironmentVariable("REPLAYS_BUCKET") ?? string.Empty;
-            RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "localhost";
             TrackBuildUserCounts = Environment.GetEnvironmentVariable("TRACK_BUILD_USER_COUNTS") == "1";
+
             ServerPort = Environment.GetEnvironmentVariable("SERVER_PORT") ?? "80";
+            RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "localhost";
+            DataDogAgentHost = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? "localhost";
+
+            DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+            DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
+            DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
         }
     }
 }
