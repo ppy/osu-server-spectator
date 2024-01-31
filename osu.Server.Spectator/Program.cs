@@ -55,8 +55,7 @@ namespace osu.Server.Spectator
                            webBuilder.UseStartup<Startup>();
 #endif
 
-                           string port = Environment.GetEnvironmentVariable("SERVER_PORT") ?? "80";
-                           webBuilder.UseUrls(urls: [$"http://*:{port}"]);
+                           webBuilder.UseUrls(urls: [$"http://*:{AppSettings.ServerPort}"]);
                        });
         }
     }
