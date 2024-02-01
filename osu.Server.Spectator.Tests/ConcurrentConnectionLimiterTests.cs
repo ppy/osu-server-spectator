@@ -7,7 +7,6 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
-using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs.Spectator;
 using Xunit;
@@ -120,7 +119,7 @@ namespace osu.Server.Spectator.Tests
             var firstInvocationContext = new HubInvocationContext(firstContextMock.Object, serviceProviderMock.Object, hubMock.Object,
                 typeof(SpectatorHub).GetMethod(nameof(SpectatorHub.StartWatchingUser))!, new object[] { 1234 });
             // should throw.
-            await Assert.ThrowsAsync<InvalidStateException>(() => filter.InvokeMethodAsync(firstInvocationContext, _ => new ValueTask<object?>(new object())).AsTask());
+            await Assert.ThrowsAsync<InvalidOperationException>(() => filter.InvokeMethodAsync(firstInvocationContext, _ => new ValueTask<object?>(new object())).AsTask());
         }
 
         [Fact]

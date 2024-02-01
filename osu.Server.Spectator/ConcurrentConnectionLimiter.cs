@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using osu.Framework.Extensions.TypeExtensions;
 using osu.Framework.Logging;
 using osu.Game.Online;
-using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs;
@@ -102,7 +101,7 @@ namespace osu.Server.Spectator
                 bool connectionIsValid = tokenIdMatches && hubRegistered && connectionIdMatches;
 
                 if (!connectionIsValid)
-                    throw new InvalidStateException($"State is not valid for this connection, context: {LoggingHubFilter.GetMethodCallDisplayString(invocationContext)})");
+                    throw new InvalidOperationException($"State is not valid for this connection, context: {LoggingHubFilter.GetMethodCallDisplayString(invocationContext)})");
             }
 
             return await next(invocationContext);
