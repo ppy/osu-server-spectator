@@ -179,7 +179,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Specified match does not exist.");
 
                 if (databaseRoom.ends_at != null && databaseRoom.ends_at < DateTimeOffset.Now)
-                    throw new InvalidOperationException("Match has already ended.");
+                    throw new InvalidStateException("Match has already ended.");
 
                 if (databaseRoom.user_id != Context.GetUserId())
                     throw new InvalidOperationException("Non-host is attempting to join match before host");
