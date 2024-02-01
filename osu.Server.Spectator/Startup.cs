@@ -67,6 +67,7 @@ namespace osu.Server.Spectator
 
                 logging.ClearProviders();
                 logging.AddConsole();
+                logging.AddSentry();
 
                 // IdentityModelEventSource.ShowPII = true;
             });

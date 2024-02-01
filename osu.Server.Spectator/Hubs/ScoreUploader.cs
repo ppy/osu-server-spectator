@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -31,11 +32,16 @@ namespace osu.Server.Spectator.Hubs
         private readonly IScoreStorage scoreStorage;
         private readonly CancellationTokenSource cancellationSource;
         private readonly CancellationToken cancellationToken;
+        private readonly ILogger logger;
 
-        public ScoreUploader(IDatabaseFactory databaseFactory, IScoreStorage scoreStorage)
+        public ScoreUploader(
+            ILoggerFactory loggerFactory,
+            IDatabaseFactory databaseFactory,
+            IScoreStorage scoreStorage)
         {
             this.databaseFactory = databaseFactory;
             this.scoreStorage = scoreStorage;
+            logger = loggerFactory.CreateLogger(nameof(ScoreUploader));
 
             cancellationSource = new CancellationTokenSource();
             cancellationToken = cancellationSource.Token;
@@ -104,7 +110,7 @@ namespace osu.Server.Spectator.Hubs
                         {
                             if (dbScore == null)
                             {
-                                Console.WriteLine($"Score upload timed out for token: {item.Token}");
+                                logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
                                 return;
                             }
 
@@ -127,7 +133,7 @@ namespace osu.Server.Spectator.Hubs
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error during score upload: {e}");
+                logger.LogError(e, "Error during score upload");
             }
         }
 
