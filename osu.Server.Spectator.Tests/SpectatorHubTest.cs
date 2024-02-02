@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Beatmaps;
@@ -61,8 +62,12 @@ namespace osu.Server.Spectator.Tests
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
 
+            var loggerFactory = new Mock<ILoggerFactory>();
+            loggerFactory.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                         .Returns(new Mock<ILogger>().Object);
+
             mockScoreStorage = new Mock<IScoreStorage>();
-            scoreUploader = new ScoreUploader(databaseFactory.Object, mockScoreStorage.Object);
+            scoreUploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockScoreStorage.Object);
 
             var mockScoreProcessedSubscriber = new Mock<IScoreProcessedSubscriber>();
 
