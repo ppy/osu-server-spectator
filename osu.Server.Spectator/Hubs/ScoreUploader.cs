@@ -11,6 +11,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Storage;
+using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -26,6 +27,8 @@ namespace osu.Server.Spectator.Hubs
         /// This can happen if the user forcefully terminated the game before the API score submission request is sent, but after EndPlaySession() has been invoked.
         /// </summary>
         public double TimeoutInterval = 30000;
+
+        private const string statsd_prefix = "score_uploads";
 
         private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
@@ -91,6 +94,7 @@ namespace osu.Server.Spectator.Hubs
                 using (var db = databaseFactory.GetInstance())
                 {
                     int countToTry = queue.Count;
+                    DogStatsd.Gauge($"{statsd_prefix}.total_in_queue", countToTry);
 
                     for (int i = 0; i < countToTry; i++)
                     {
@@ -111,6 +115,7 @@ namespace osu.Server.Spectator.Hubs
                             if (dbScore == null)
                             {
                                 logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
+                                DogStatsd.Increment($"{statsd_prefix}.timed_out");
                                 return;
                             }
 
@@ -122,6 +127,7 @@ namespace osu.Server.Spectator.Hubs
 
                             await scoreStorage.WriteAsync(item.Score);
                             await db.MarkScoreHasReplay(item.Score);
+                            DogStatsd.Increment($"{statsd_prefix}.uploaded");
                         }
                         finally
                         {
@@ -134,6 +140,7 @@ namespace osu.Server.Spectator.Hubs
             catch (Exception e)
             {
                 logger.LogError(e, "Error during score upload");
+                DogStatsd.Increment($"{statsd_prefix}.failed");
             }
         }
 
