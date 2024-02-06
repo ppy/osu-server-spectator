@@ -167,7 +167,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// It should only be called by the room's host, before any other user has joined (and will throw if not).
         /// </summary>
         /// <param name="roomId">The proposed room ID.</param>
-        /// <exception cref="InvalidStateException">If anything is wrong with this request.</exception>
+        /// <exception cref="InvalidOperationException">If anything is wrong with this request.</exception>
         private async Task<ServerMultiplayerRoom> retrieveRoom(long roomId)
         {
             Log($"Retrieving room {roomId} from database");
@@ -181,13 +181,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 var databaseRoom = await db.GetRoomAsync(roomId);
 
                 if (databaseRoom == null)
-                    throw new InvalidStateException("Specified match does not exist.");
+                    throw new InvalidOperationException("Specified match does not exist.");
 
                 if (databaseRoom.ends_at != null && databaseRoom.ends_at < DateTimeOffset.Now)
                     throw new InvalidStateException("Match has already ended.");
 
                 if (databaseRoom.user_id != Context.GetUserId())
-                    throw new InvalidStateException("Non-host is attempting to join match before host");
+                    throw new InvalidOperationException("Non-host is attempting to join match before host");
 
                 var room = new ServerMultiplayerRoom(roomId, HubContext)
                 {

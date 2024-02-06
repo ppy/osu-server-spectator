@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online;
-using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 
@@ -118,7 +117,7 @@ namespace osu.Server.Spectator.Hubs
             if (usage.Item != null && usage.Item.ConnectionId != Context.ConnectionId)
             {
                 usage.Dispose();
-                throw new InvalidStateException("State is not valid for this connection");
+                throw new InvalidOperationException("State is not valid for this connection");
             }
 
             return usage;

@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Spectator;
@@ -44,10 +44,6 @@ namespace osu.Server.Spectator.Tests
 
         public SpectatorHubTest()
         {
-            var loggerFactoryMock = new Mock<ILoggerFactory>();
-            loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
-                             .Returns(new Mock<ILogger>().Object);
-
             // not used for now, but left here for potential future usage.
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
@@ -66,12 +62,16 @@ namespace osu.Server.Spectator.Tests
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
 
+            var loggerFactory = new Mock<ILoggerFactory>();
+            loggerFactory.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                         .Returns(new Mock<ILogger>().Object);
+
             mockScoreStorage = new Mock<IScoreStorage>();
-            scoreUploader = new ScoreUploader(loggerFactoryMock.Object, databaseFactory.Object, mockScoreStorage.Object);
+            scoreUploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockScoreStorage.Object);
 
             var mockScoreProcessedSubscriber = new Mock<IScoreProcessedSubscriber>();
 
-            hub = new SpectatorHub(loggerFactoryMock.Object, cache, clientStates, databaseFactory.Object, scoreUploader, mockScoreProcessedSubscriber.Object);
+            hub = new SpectatorHub(loggerFactory.Object, cache, clientStates, databaseFactory.Object, scoreUploader, mockScoreProcessedSubscriber.Object);
         }
 
         [Fact]

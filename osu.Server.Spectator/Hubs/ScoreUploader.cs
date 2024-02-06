@@ -11,6 +11,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Storage;
+using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -27,18 +28,23 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public double TimeoutInterval = 30000;
 
-        private readonly ILogger logger;
+        private const string statsd_prefix = "score_uploads";
+
         private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
         private readonly IDatabaseFactory databaseFactory;
         private readonly IScoreStorage scoreStorage;
         private readonly CancellationTokenSource cancellationSource;
         private readonly CancellationToken cancellationToken;
+        private readonly ILogger logger;
 
-        public ScoreUploader(ILoggerFactory loggerFactory, IDatabaseFactory databaseFactory, IScoreStorage scoreStorage)
+        public ScoreUploader(
+            ILoggerFactory loggerFactory,
+            IDatabaseFactory databaseFactory,
+            IScoreStorage scoreStorage)
         {
-            logger = loggerFactory.CreateLogger(nameof(ScoreUploader));
             this.databaseFactory = databaseFactory;
             this.scoreStorage = scoreStorage;
+            logger = loggerFactory.CreateLogger(nameof(ScoreUploader));
 
             cancellationSource = new CancellationTokenSource();
             cancellationToken = cancellationSource.Token;
@@ -88,6 +94,7 @@ namespace osu.Server.Spectator.Hubs
                 using (var db = databaseFactory.GetInstance())
                 {
                     int countToTry = queue.Count;
+                    DogStatsd.Gauge($"{statsd_prefix}.total_in_queue", countToTry);
 
                     for (int i = 0; i < countToTry; i++)
                     {
@@ -107,7 +114,8 @@ namespace osu.Server.Spectator.Hubs
                         {
                             if (dbScore == null)
                             {
-                                logger.LogInformation("Score upload timed out for token: {tokenId}", item.Token);
+                                logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
+                                DogStatsd.Increment($"{statsd_prefix}.timed_out");
                                 return;
                             }
 
@@ -119,6 +127,7 @@ namespace osu.Server.Spectator.Hubs
 
                             await scoreStorage.WriteAsync(item.Score);
                             await db.MarkScoreHasReplay(item.Score);
+                            DogStatsd.Increment($"{statsd_prefix}.uploaded");
                         }
                         finally
                         {
@@ -130,7 +139,8 @@ namespace osu.Server.Spectator.Hubs
             }
             catch (Exception e)
             {
-                logger.LogError(e, $"Error during score upload");
+                logger.LogError(e, "Error during score upload");
+                DogStatsd.Increment($"{statsd_prefix}.failed");
             }
         }
 
