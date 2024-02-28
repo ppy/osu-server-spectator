@@ -40,15 +40,15 @@ namespace osu.Server.Spectator
             return Host.CreateDefaultBuilder(args)
                        .ConfigureWebHostDefaults(webBuilder =>
                        {
+#if !DEBUG
                            webBuilder.UseSentry(o =>
                            {
                                o.AddExceptionFilterForType<HubException>();
                                o.TracesSampleRate = 0.01;
-#if !DEBUG
                                o.Dsn = "https://775dc89c1c3142e8a8fa5fd10590f443@sentry.ppy.sh/8";
-#endif
                                // TODO: set release name
                            });
+#endif
 
 #if DEBUG
                            webBuilder.UseStartup<StartupDevelopment>();
