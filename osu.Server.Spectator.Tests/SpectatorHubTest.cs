@@ -133,7 +133,13 @@ namespace osu.Server.Spectator.Tests
 
             await hub.BeginPlaySession(1234, state);
             await hub.SendFrameData(new FrameDataBundle(
-                new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
+                new FrameHeader(new ScoreInfo
+                {
+                    Statistics =
+                    {
+                        [HitResult.Great] = 1
+                    }
+                }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
             await hub.EndPlaySession(state);
 
@@ -143,6 +149,39 @@ namespace osu.Server.Spectator.Tests
                 mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Once);
             else
                 mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task ReplaysWithoutAnyHitsAreDiscarded()
+        {
+            AppSettings.SaveReplays = true;
+
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockReceiver.Object);
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            {
+                id = 456,
+                passed = true
+            }));
+
+            await hub.BeginPlaySession(1234, state);
+            await hub.SendFrameData(new FrameDataBundle(
+                new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+            await hub.EndPlaySession(state);
+
+            await scoreUploader.Flush();
+
+            mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
         }
 
         [Theory]
@@ -287,7 +326,13 @@ namespace osu.Server.Spectator.Tests
 
             await hub.BeginPlaySession(1234, state);
             await hub.SendFrameData(new FrameDataBundle(
-                new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
+                new FrameHeader(new ScoreInfo
+                {
+                    Statistics =
+                    {
+                        [HitResult.Great] = 10
+                    }
+                }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
             await hub.EndPlaySession(state);
 
