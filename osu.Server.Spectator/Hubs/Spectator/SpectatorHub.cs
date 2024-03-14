@@ -138,6 +138,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                     // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
                     // For now it's safe to drop these frames.
+                    // Note that this *intentionally* skips the `endPlaySession()` call at the end of method.
                     if (score == null || scoreToken == null)
                         return;
 
