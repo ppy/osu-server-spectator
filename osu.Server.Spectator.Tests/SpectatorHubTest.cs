@@ -86,6 +86,7 @@ namespace osu.Server.Spectator.Tests
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
+                State = SpectatedUserState.Playing,
             });
 
             // check all other users were informed that streaming began
@@ -94,6 +95,7 @@ namespace osu.Server.Spectator.Tests
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
+                State = SpectatedUserState.Playing,
             }))), Times.Once());
 
             var data = new FrameDataBundle(
@@ -129,12 +131,13 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            var state1 = new SpectatorState
+            await hub.BeginPlaySession(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
-            };
-            await hub.BeginPlaySession(1234, state1);
+                State = SpectatedUserState.Playing,
+            });
+
             await hub.SendFrameData(new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
@@ -144,7 +147,13 @@ namespace osu.Server.Spectator.Tests
                     }
                 }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
-            await hub.EndPlaySession(state1);
+
+            await hub.EndPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Passed,
+            });
 
             await scoreUploader.Flush();
 
@@ -176,16 +185,23 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            var state1 = new SpectatorState
+            await hub.BeginPlaySession(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
-            };
-            await hub.BeginPlaySession(1234, state1);
+                State = SpectatedUserState.Playing,
+            });
+
             await hub.SendFrameData(new FrameDataBundle(
                 new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
-            await hub.EndPlaySession(state1);
+
+            await hub.EndPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Quit,
+            });
 
             await scoreUploader.Flush();
 
@@ -217,7 +233,7 @@ namespace osu.Server.Spectator.Tests
             hub.Clients = mockClients.Object;
             hub.Groups = mockGroups.Object;
 
-            var state1 = new SpectatorState
+            var state = new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -226,9 +242,9 @@ namespace osu.Server.Spectator.Tests
             if (ongoing)
             {
                 hub.Context = streamerContext.Object;
-                await hub.BeginPlaySession(0, state1);
+                await hub.BeginPlaySession(0, state);
 
-                mockCaller.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state1))), Times.Once);
+                mockCaller.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state))), Times.Once);
             }
 
             hub.Context = watcherContext.Object;
@@ -237,7 +253,7 @@ namespace osu.Server.Spectator.Tests
 
             mockGroups.Verify(groups => groups.AddToGroupAsync(connectionId, SpectatorHub.GetGroupId(streamer_id), default));
 
-            mockCaller.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state1))), Times.Exactly(ongoing ? 2 : 0));
+            mockCaller.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state))), Times.Exactly(ongoing ? 2 : 0));
         }
 
         [Fact]
@@ -338,12 +354,13 @@ namespace osu.Server.Spectator.Tests
                 checksum = "checksum"
             })!);
 
-            var state1 = new SpectatorState
+            await hub.BeginPlaySession(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
-            };
-            await hub.BeginPlaySession(1234, state1);
+                State = SpectatedUserState.Playing,
+            });
+
             await hub.SendFrameData(new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
@@ -353,7 +370,13 @@ namespace osu.Server.Spectator.Tests
                     }
                 }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
-            await hub.EndPlaySession(state1);
+
+            await hub.EndPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Passed,
+            });
 
             await scoreUploader.Flush();
 
@@ -385,16 +408,23 @@ namespace osu.Server.Spectator.Tests
                 passed = false
             }));
 
-            var state1 = new SpectatorState
+            await hub.BeginPlaySession(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
-            };
-            await hub.BeginPlaySession(1234, state1);
+                State = SpectatedUserState.Playing,
+            });
+
             await hub.SendFrameData(new FrameDataBundle(
                 new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
-            await hub.EndPlaySession(state1);
+
+            await hub.EndPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Failed,
+            });
 
             await scoreUploader.Flush();
 
