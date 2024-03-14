@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Spectator;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -145,10 +146,16 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
                         return;
 
-                    score.ScoreInfo.Date = DateTimeOffset.UtcNow;
+                    // if the user never hit anything, further processing that depends on the score existing can be waived because the client won't have submitted the score anyway.
+                    // note that this isn't an early return as we still want to end the play session.
+                    // see: https://github.com/ppy/osu/blob/a47ccb8edd2392258b6b7e176b222a9ecd511fc0/osu.Game/Screens/Play/SubmittingPlayer.cs#L281
+                    if (score.ScoreInfo.Statistics.Any(s => s.Key.IsHit() && s.Value > 0))
+                    {
+                        score.ScoreInfo.Date = DateTimeOffset.UtcNow;
 
-                    scoreUploader.Enqueue(scoreToken.Value, score);
-                    await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, Context.GetUserId(), scoreToken.Value);
+                        scoreUploader.Enqueue(scoreToken.Value, score);
+                        await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, Context.GetUserId(), scoreToken.Value);
+                    }
                 }
                 finally
                 {
