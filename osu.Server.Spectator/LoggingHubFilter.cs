@@ -6,8 +6,8 @@ using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using osu.Framework.Development;
-using osu.Framework.Logging;
 using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator

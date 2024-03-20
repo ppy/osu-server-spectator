@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Multiplayer;
@@ -128,7 +129,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2))).Returns(Receiver2.Object);
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
-            Hub = new TestMultiplayerHub(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
+            var loggerFactoryMock = new Mock<ILoggerFactory>();
+            loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                             .Returns(new Mock<ILogger>().Object);
+
+            Hub = new TestMultiplayerHub(loggerFactoryMock.Object, new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 

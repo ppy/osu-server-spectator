@@ -31,5 +31,9 @@
         </Content>
     </ItemGroup>
 
+    <ItemGroup Label="Code Analysis">
+        <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="All" />
+        <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeAnalysis\BannedSymbols.txt" />
+    </ItemGroup>
 
 </Project>

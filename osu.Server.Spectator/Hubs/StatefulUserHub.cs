@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
@@ -21,7 +22,11 @@ namespace osu.Server.Spectator.Hubs
     {
         protected readonly EntityStore<TUserState> UserStates;
 
-        protected StatefulUserHub(IDistributedCache cache, EntityStore<TUserState> userStates)
+        protected StatefulUserHub(
+            ILoggerFactory loggerFactory,
+            IDistributedCache cache,
+            EntityStore<TUserState> userStates)
+            : base(loggerFactory)
         {
             UserStates = userStates;
         }

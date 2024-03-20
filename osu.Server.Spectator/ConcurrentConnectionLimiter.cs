@@ -7,8 +7,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using osu.Framework.Extensions.TypeExtensions;
-using osu.Framework.Logging;
 using osu.Game.Online;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
@@ -21,16 +21,19 @@ namespace osu.Server.Spectator
         private readonly EntityStore<ConnectionState> connectionStates;
 
         private readonly IServiceProvider serviceProvider;
+        private readonly ILogger logger;
 
         private static readonly IEnumerable<Type> stateful_user_hubs
             = typeof(IStatefulUserHub).Assembly.GetTypes().Where(type => typeof(IStatefulUserHub).IsAssignableFrom(type) && typeof(Hub).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract).ToArray();
 
         public ConcurrentConnectionLimiter(
             EntityStore<ConnectionState> connectionStates,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            ILoggerFactory loggerFactory)
         {
             this.connectionStates = connectionStates;
             this.serviceProvider = serviceProvider;
+            logger = loggerFactory.CreateLogger(nameof(ConcurrentConnectionLimiter));
         }
 
         public async Task OnConnectedAsync(HubLifetimeContext context, Func<HubLifetimeContext, Task> next)
@@ -83,8 +86,12 @@ namespace osu.Server.Spectator
             }
         }
 
-        private static void log(HubLifetimeContext context, string message)
-            => Logger.Log($"[user:{context.Context.GetUserId()}] [connection:{context.Context.ConnectionId}] [hub:{context.Hub.GetType().ReadableName()}] {message}");
+        private void log(HubLifetimeContext context, string message)
+            => logger.LogInformation("[user:{user}] [connection:{connection}] [hub:{hub}] {message}",
+                context.Context.GetUserId(),
+                context.Context.ConnectionId,
+                context.Hub.GetType().ReadableName(),
+                message);
 
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
