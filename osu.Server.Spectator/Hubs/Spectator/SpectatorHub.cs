@@ -9,6 +9,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Spectator;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -139,18 +140,11 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                     // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
                     // For now it's safe to drop these frames.
+                    // Note that this *intentionally* skips the `endPlaySession()` call at the end of method.
                     if (score == null || scoreToken == null)
                         return;
 
-                    // Do nothing with scores on unranked beatmaps.
-                    var status = score.ScoreInfo.BeatmapInfo!.Status;
-                    if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
-                        return;
-
-                    score.ScoreInfo.Date = DateTimeOffset.UtcNow;
-
-                    scoreUploader.Enqueue(scoreToken.Value, score);
-                    await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, Context.GetUserId(), scoreToken.Value);
+                    await processScore(score, scoreToken.Value);
                 }
                 finally
                 {
@@ -159,6 +153,24 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
 
             await endPlaySession(Context.GetUserId(), state);
+        }
+
+        private async Task processScore(Score score, long scoreToken)
+        {
+            // Do nothing with scores on unranked beatmaps.
+            var status = score.ScoreInfo.BeatmapInfo!.Status;
+            if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
+                return;
+
+            // if the user never hit anything, further processing that depends on the score existing can be waived because the client won't have submitted the score anyway.
+            // see: https://github.com/ppy/osu/blob/a47ccb8edd2392258b6b7e176b222a9ecd511fc0/osu.Game/Screens/Play/SubmittingPlayer.cs#L281
+            if (!score.ScoreInfo.Statistics.Any(s => s.Key.IsHit() && s.Value > 0))
+                return;
+
+            score.ScoreInfo.Date = DateTimeOffset.UtcNow;
+
+            scoreUploader.Enqueue(scoreToken, score);
+            await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
         }
 
         public async Task StartWatchingUser(int userId)

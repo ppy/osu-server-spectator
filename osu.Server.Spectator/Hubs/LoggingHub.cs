@@ -61,7 +61,7 @@ namespace osu.Server.Spectator.Hubs
 
             SentrySdk.CaptureException(exception, scope =>
             {
-                scope.User = new User
+                scope.User = new SentryUser
                 {
                     Id = Context.UserIdentifier
                 };

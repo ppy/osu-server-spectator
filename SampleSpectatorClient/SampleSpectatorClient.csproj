@@ -7,11 +7,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="8.0.1" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.2" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.2" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="8.0.2" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
-        <PackageReference Include="ppy.osu.Game" Version="2024.124.0" />
+        <PackageReference Include="ppy.osu.Game" Version="2024.219.0" />
     </ItemGroup>
 
 </Project>
