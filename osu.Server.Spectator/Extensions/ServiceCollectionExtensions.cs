@@ -27,7 +27,8 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<IScoreStorage, S3ScoreStorage>()
                                     .AddSingleton<ScoreUploader>()
                                     .AddSingleton<IScoreProcessedSubscriber, ScoreProcessedSubscriber>()
-                                    .AddSingleton<BuildUserCountUpdater>();
+                                    .AddSingleton<BuildUserCountUpdater>()
+                                    .AddSingleton<ChatFilters>();
         }
 
         /// <summary>
