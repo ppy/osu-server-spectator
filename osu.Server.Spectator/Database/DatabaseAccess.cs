@@ -363,6 +363,13 @@ namespace osu.Server.Spectator.Database
             await connection.ExecuteAsync("UPDATE `osu_builds` SET `users` = @users WHERE `build_id` = @build_id", build);
         }
 
+        public async Task<IEnumerable<chat_filter>> GetAllChatFiltersAsync()
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QueryAsync<chat_filter>("SELECT * FROM `chat_filters`");
+        }
+
         public void Dispose()
         {
             openConnection?.Dispose();
