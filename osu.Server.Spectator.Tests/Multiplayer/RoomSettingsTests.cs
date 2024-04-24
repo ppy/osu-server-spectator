@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Database.Models;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -160,6 +161,30 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Debug.Assert(room != null);
                 Assert.Equal(QueueMode.AllPlayers, room.Settings.QueueMode);
+            }
+        }
+
+        [Fact]
+        public async Task RoomNameIsFiltered()
+        {
+            Database.Setup(db => db.GetAllChatFiltersAsync())
+                    .ReturnsAsync(new[] { new chat_filter { id = 1, match = "bad", replacement = "good" } });
+
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                Name = "bad word",
+                MatchType = MatchType.HeadToHead
+            };
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(testSettings);
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+
+                Debug.Assert(room != null);
+                Assert.Equal("good word", room.Settings.Name);
             }
         }
     }
