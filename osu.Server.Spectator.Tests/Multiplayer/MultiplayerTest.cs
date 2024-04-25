@@ -128,7 +128,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2))).Returns(Receiver2.Object);
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
-            Hub = new TestMultiplayerHub(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
+            Hub = new TestMultiplayerHub(
+                new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())),
+                Rooms,
+                UserStates,
+                DatabaseFactory.Object,
+                new ChatFilters(DatabaseFactory.Object),
+                hubContext.Object);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 
