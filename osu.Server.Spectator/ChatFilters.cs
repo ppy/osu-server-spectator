@@ -18,8 +18,9 @@ namespace osu.Server.Spectator
 
         private bool filtersInitialised;
         private Regex? blockRegex;
-        private List<(string match, string replacement)> nonWhitespaceDelimitedReplaces = new List<(string, string)>();
-        private List<(Regex match, string replacement)> whitespaceDelimitedReplaces = new List<(Regex, string)>();
+
+        private readonly List<(string match, string replacement)> nonWhitespaceDelimitedReplaces = new List<(string, string)>();
+        private readonly List<(Regex match, string replacement)> whitespaceDelimitedReplaces = new List<(Regex, string)>();
 
         public ChatFilters(IDatabaseFactory factory)
         {
