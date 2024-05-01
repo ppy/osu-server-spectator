@@ -33,7 +33,7 @@ namespace osu.Server.Spectator
                 await initialiseFilters();
 
             if (blockRegex?.Match(input).Success == true)
-                throw new InvalidStateException(string.Empty);
+                throw new InvalidStateException("You can't say that.");
 
             // this is a touch inefficient due to string allocs,
             // but there's no way for `StringBuilder` to do case-insensitive replaces on strings
