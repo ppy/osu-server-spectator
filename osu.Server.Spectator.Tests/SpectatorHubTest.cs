@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Beatmaps;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Rulesets.Scoring;
@@ -30,6 +31,7 @@ namespace osu.Server.Spectator.Tests
         private readonly SpectatorHub hub;
 
         private const int streamer_id = 1234;
+        private const string streamer_username = "user";
         private const int beatmap_id = 88;
         private const int watcher_id = 8000;
 
@@ -45,7 +47,7 @@ namespace osu.Server.Spectator.Tests
             var clientStates = new EntityStore<SpectatorClientState>();
 
             mockDatabase = new Mock<IDatabaseAccess>();
-            mockDatabase.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => "user");
+            mockDatabase.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => streamer_username);
 
             mockDatabase.Setup(db => db.GetBeatmapAsync(It.IsAny<int>()))
                         .ReturnsAsync((int id) => new database_beatmap
@@ -388,6 +390,93 @@ namespace osu.Server.Spectator.Tests
                 mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Once);
             else
                 mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Never);
+
+            mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
+        }
+
+        /// <summary>
+        /// This test is very stupid.
+        /// It is very stupid because <see cref="ScoreInfo"/> is playing very stupid games,
+        /// and thus the goal of this test is to be stupid to prevent other people from doing stupid things accidentally.
+        /// To expound on the above: <see cref="ScoreInfo"/> has two user-like properties: <see cref="ScoreInfo.User"/> and <see cref="ScoreInfo.RealmUser"/>.
+        /// If you looked at their source, you'd say that they're supposed to be kept in sync, right?
+        /// Well, not necessarily, because nested object initialiser syntax exists, and therefore you can write something like
+        /// <code>
+        /// new ScoreInfo
+        /// {
+        ///     User =
+        ///     {
+        ///         OnlineID = 1234,
+        ///         Username = "test",
+        ///     }
+        /// }
+        /// </code>
+        /// and it does <b>not</b> call the setter of <see cref="ScoreInfo.User"/>.
+        /// It accesses the <b>underlying <see cref="APIUser"/> instance under <see cref="ScoreInfo.User"/></b> and sets things on it directly.
+        /// An additional badness is that <see cref="ScoreInfo.UserID"/> looks innocuous but in fact goes through <see cref="ScoreInfo.RealmUser"/>,
+        /// which means that if anything (like the replay encoder) uses it, it will silently read broken garbage.
+        /// Until this is sorted, this test attempts to exercise at least a modicum of sanity,
+        /// so that at least red lights show up if anything funny is going on with these accursed models.
+        /// </summary>
+        [Fact]
+        public async Task ScoresHaveAllUserRelatedMetadataFilledOutConsistently()
+        {
+            AppSettings.SaveReplays = true;
+
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockReceiver.Object);
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            {
+                id = 456,
+                passed = true
+            }));
+
+            mockDatabase.Setup(db => db.GetBeatmapAsync(beatmap_id)).Returns(Task.FromResult(new database_beatmap
+            {
+                approved = BeatmapOnlineStatus.Ranked,
+                checksum = "checksum"
+            })!);
+
+            await hub.BeginPlaySession(1234, new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Playing,
+            });
+
+            await hub.SendFrameData(new FrameDataBundle(
+                new FrameHeader(new ScoreInfo
+                {
+                    Statistics =
+                    {
+                        [HitResult.Great] = 10
+                    }
+                }, new ScoreProcessorStatistics()),
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+
+            await hub.EndPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Passed,
+            });
+
+            await scoreUploader.Flush();
+
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.UserID == streamer_id
+                                                                            && score.ScoreInfo.User.OnlineID == streamer_id
+                                                                            && score.ScoreInfo.User.Username == streamer_username
+                                                                            && score.ScoreInfo.RealmUser.OnlineID == streamer_id
+                                                                            && score.ScoreInfo.RealmUser.Username == streamer_username)), Times.Once);
 
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }

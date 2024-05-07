@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Beatmaps;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Database;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Scoring;
@@ -84,7 +85,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                         ScoreInfo =
                         {
                             APIMods = state.Mods.ToArray(),
-                            User =
+                            User = new APIUser
                             {
                                 Id = Context.GetUserId(),
                                 Username = username,
