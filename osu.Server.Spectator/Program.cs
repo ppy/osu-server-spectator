@@ -5,11 +5,9 @@ using System;
 using System.IO;
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
-using Sentry;
 using StatsdClient;
 
 namespace osu.Server.Spectator

@@ -13,5 +13,7 @@ namespace osu.Server.Spectator.Database.Models
         public long id { get; set; }
         public string match { get; set; } = string.Empty;
         public string replacement { get; set; } = string.Empty;
+        public bool block { get; set; }
+        public bool whitespace_delimited { get; set; }
     }
 }

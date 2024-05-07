@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using osu.Game.Beatmaps;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Database;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
@@ -117,6 +118,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 if (score == null)
                     return;
 
+                score.ScoreInfo.Accuracy = data.Header.Accuracy;
                 score.ScoreInfo.Statistics = data.Header.Statistics;
                 score.ScoreInfo.MaxCombo = data.Header.MaxCombo;
                 score.ScoreInfo.Combo = data.Header.Combo;
@@ -167,6 +169,9 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 return;
 
             score.ScoreInfo.Date = DateTimeOffset.UtcNow;
+            // this call is a little expensive due to reflection usage, so only run it at the end of score processing
+            // even though in theory the rank could be recomputed after every replay frame.
+            score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(score.ScoreInfo);
 
             scoreUploader.Enqueue(scoreToken, score);
             await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
