@@ -5,6 +5,9 @@ using System;
 using System.IO;
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
+#if !DEBUG
+using Microsoft.AspNetCore.SignalR;
+#endif
 using Microsoft.Extensions.Hosting;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
