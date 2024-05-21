@@ -45,7 +45,9 @@ namespace osu.Server.Spectator.Hubs
             cancellationSource = new CancellationTokenSource();
             cancellationToken = cancellationSource.Token;
 
-            Task.Factory.StartNew(readLoop, TaskCreationOptions.LongRunning);
+            for (int i = 0; i < AppSettings.ReplayUploaderConcurrency; ++i)
+                Task.Factory.StartNew(readLoop, TaskCreationOptions.LongRunning);
+
             Task.Factory.StartNew(monitorLoop, TaskCreationOptions.LongRunning);
         }
 

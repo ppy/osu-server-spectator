@@ -18,9 +18,10 @@ namespace osu.Server.Spectator.Tests
 {
     public class ScoreUploaderTests
     {
-        private readonly ScoreUploader uploader;
         private readonly Mock<IDatabaseAccess> mockDatabase;
         private readonly Mock<IScoreStorage> mockStorage;
+        private readonly Mock<IDatabaseFactory> databaseFactory;
+        private readonly Mock<ILoggerFactory> loggerFactory;
 
         public ScoreUploaderTests()
         {
@@ -31,15 +32,14 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            var databaseFactory = new Mock<IDatabaseFactory>();
+            databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
 
-            var loggerFactory = new Mock<ILoggerFactory>();
+            loggerFactory = new Mock<ILoggerFactory>();
             loggerFactory.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                          .Returns(new Mock<ILogger>().Object);
 
             mockStorage = new Mock<IScoreStorage>();
-            uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
         }
 
         /// <summary>
@@ -55,6 +55,7 @@ namespace osu.Server.Spectator.Tests
         public async Task ScoreDataMergedCorrectly()
         {
             enableUpload();
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
 
             await uploader.EnqueueAsync(1, new Score
             {
@@ -69,7 +70,7 @@ namespace osu.Server.Spectator.Tests
                 }
             });
 
-            await uploadsCompleteAsync();
+            await uploadsCompleteAsync(uploader);
 
             mockStorage.Verify(s => s.WriteAsync(
                 It.Is<Score>(score => score.ScoreInfo.OnlineID == 2
@@ -81,13 +82,14 @@ namespace osu.Server.Spectator.Tests
         public async Task ScoreUploads()
         {
             enableUpload();
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
 
             await uploader.EnqueueAsync(1, new Score());
-            await uploadsCompleteAsync();
+            await uploadsCompleteAsync(uploader);
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Once);
 
             await uploader.EnqueueAsync(1, new Score());
-            await uploadsCompleteAsync();
+            await uploadsCompleteAsync(uploader);
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Exactly(2));
         }
 
@@ -95,6 +97,7 @@ namespace osu.Server.Spectator.Tests
         public async Task ScoreDoesNotUploadIfDisabled()
         {
             disableUpload();
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
 
             await uploader.EnqueueAsync(1, new Score());
             await Task.Delay(1000);
@@ -105,6 +108,7 @@ namespace osu.Server.Spectator.Tests
         public async Task ScoreUploadsWithDelayedScoreToken()
         {
             enableUpload();
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
 
             // Score with no token.
             await uploader.EnqueueAsync(2, new Score());
@@ -118,7 +122,7 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            await uploadsCompleteAsync();
+            await uploadsCompleteAsync(uploader);
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 3)), Times.Once);
         }
 
@@ -126,6 +130,7 @@ namespace osu.Server.Spectator.Tests
         public async Task TimedOutScoreDoesNotUpload()
         {
             enableUpload();
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
 
             uploader.TimeoutInterval = 0;
 
@@ -149,7 +154,7 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
             await uploader.EnqueueAsync(3, new Score());
-            await uploadsCompleteAsync();
+            await uploadsCompleteAsync(uploader);
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Once);
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 4)), Times.Once);
         }
@@ -158,6 +163,7 @@ namespace osu.Server.Spectator.Tests
         public async Task FailedScoreHandledGracefully()
         {
             enableUpload();
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
 
             bool shouldThrow = true;
             int uploadCount = 0;
@@ -174,7 +180,7 @@ namespace osu.Server.Spectator.Tests
 
             // Throwing score.
             await uploader.EnqueueAsync(1, new Score());
-            await uploadsCompleteAsync();
+            await uploadsCompleteAsync(uploader);
             Assert.Equal(0, uploadCount);
 
             shouldThrow = false;
@@ -184,14 +190,29 @@ namespace osu.Server.Spectator.Tests
             Assert.Equal(0, uploadCount);
 
             await uploader.EnqueueAsync(1, new Score());
-            await uploadsCompleteAsync();
+            await uploadsCompleteAsync(uploader);
             Assert.Equal(1, uploadCount);
+        }
+
+        [Fact]
+        public async Task TestMassUploads()
+        {
+            enableUpload();
+            AppSettings.ReplayUploaderConcurrency = 4;
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
+
+            for (int i = 0; i < 1000; ++i)
+                await uploader.EnqueueAsync(1, new Score());
+
+            await uploadsCompleteAsync(uploader);
+            mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Exactly(1000));
+            AppSettings.ReplayUploaderConcurrency = 1;
         }
 
         private void enableUpload() => AppSettings.SaveReplays = true;
         private void disableUpload() => AppSettings.SaveReplays = false;
 
-        private async Task uploadsCompleteAsync(int attempts = 5)
+        private async Task uploadsCompleteAsync(ScoreUploader uploader, int attempts = 5)
         {
             while (uploader.RemainingUsages > 0)
             {
