@@ -2,8 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using osu.Game.Scoring;
@@ -18,11 +18,6 @@ namespace osu.Server.Spectator.Hubs
     public class ScoreUploader : IEntityStore, IDisposable
     {
         /// <summary>
-        /// Amount of time (in milliseconds) between checks for pending score uploads.
-        /// </summary>
-        public int UploadInterval { get; set; } = 50;
-
-        /// <summary>
         /// Amount of time (in milliseconds) before any individual score times out if a score ID hasn't been set.
         /// This can happen if the user forcefully terminated the game before the API score submission request is sent, but after EndPlaySession() has been invoked.
         /// </summary>
@@ -30,7 +25,8 @@ namespace osu.Server.Spectator.Hubs
 
         private const string statsd_prefix = "score_uploads";
 
-        private readonly ConcurrentQueue<UploadItem> queue = new ConcurrentQueue<UploadItem>();
+        private readonly Channel<UploadItem> channel = Channel.CreateUnbounded<UploadItem>();
+
         private readonly IDatabaseFactory databaseFactory;
         private readonly IScoreStorage scoreStorage;
         private readonly CancellationTokenSource cancellationSource;
@@ -49,18 +45,9 @@ namespace osu.Server.Spectator.Hubs
             cancellationSource = new CancellationTokenSource();
             cancellationToken = cancellationSource.Token;
 
-            Task.Factory.StartNew(runFlushLoop, TaskCreationOptions.LongRunning);
-        }
-
-        private void runFlushLoop()
-        {
-            while (!queue.IsEmpty || !cancellationToken.IsCancellationRequested)
-            {
-                // ReSharper disable once MethodSupportsCancellation
-                // We don't want flush to be cancelled as it needs to finish uploading.
-                Flush().Wait();
-                Thread.Sleep(UploadInterval);
-            }
+            Task.Factory.StartNew(readLoop, TaskCreationOptions.LongRunning);
+            // TODO: move off to separate monitoring thread
+            //DogStatsd.Gauge($"{statsd_prefix}.total_in_queue", countToTry);
         }
 
         /// <summary>
@@ -68,7 +55,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="token">The score's token.</param>
         /// <param name="score">The score.</param>
-        public void Enqueue(long token, Score score)
+        public async Task EnqueueAsync(long token, Score score)
         {
             if (!AppSettings.SaveReplays)
                 return;
@@ -78,69 +65,58 @@ namespace osu.Server.Spectator.Hubs
             var cancellation = new CancellationTokenSource();
             cancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
 
-            queue.Enqueue(new UploadItem(token, score, cancellation));
+            await channel.Writer.WriteAsync(new UploadItem(token, score, cancellation), cancellationToken);
         }
 
-        /// <summary>
-        /// Flushes all pending uploads.
-        /// </summary>
-        public async Task Flush()
+        private async Task readLoop()
         {
-            try
+            while (!cancellationToken.IsCancellationRequested)
             {
-                if (queue.IsEmpty)
-                    return;
+                using var db = databaseFactory.GetInstance();
 
-                using (var db = databaseFactory.GetInstance())
+                var item = await channel.Reader.ReadAsync(cancellationToken);
+
+                try
                 {
-                    int countToTry = queue.Count;
-                    DogStatsd.Gauge($"{statsd_prefix}.total_in_queue", countToTry);
+                    SoloScore? dbScore = await db.GetScoreFromToken(item.Token);
 
-                    for (int i = 0; i < countToTry; i++)
+                    if (dbScore == null && !item.Cancellation.IsCancellationRequested)
                     {
-                        if (!queue.TryDequeue(out var item))
+                        // Score is not ready yet - enqueue for the next attempt.
+                        await channel.Writer.WriteAsync(item, cancellationToken);
+                        continue;
+                    }
+
+                    try
+                    {
+                        if (dbScore == null)
+                        {
+                            logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
+                            DogStatsd.Increment($"{statsd_prefix}.timed_out");
+                            continue;
+                        }
+
+                        if (!dbScore.passed)
                             continue;
 
-                        SoloScore? dbScore = await db.GetScoreFromToken(item.Token);
+                        item.Score.ScoreInfo.OnlineID = (long)dbScore.id;
+                        item.Score.ScoreInfo.Passed = dbScore.passed;
 
-                        if (dbScore == null && !item.Cancellation.IsCancellationRequested)
-                        {
-                            // Score is not ready yet - enqueue for the next attempt.
-                            queue.Enqueue(item);
-                            continue;
-                        }
-
-                        try
-                        {
-                            if (dbScore == null)
-                            {
-                                logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
-                                DogStatsd.Increment($"{statsd_prefix}.timed_out");
-                                return;
-                            }
-
-                            if (!dbScore.passed)
-                                return;
-
-                            item.Score.ScoreInfo.OnlineID = (long)dbScore.id;
-                            item.Score.ScoreInfo.Passed = dbScore.passed;
-
-                            await scoreStorage.WriteAsync(item.Score);
-                            await db.MarkScoreHasReplay(item.Score);
-                            DogStatsd.Increment($"{statsd_prefix}.uploaded");
-                        }
-                        finally
-                        {
-                            item.Dispose();
-                            Interlocked.Decrement(ref remainingUsages);
-                        }
+                        await scoreStorage.WriteAsync(item.Score);
+                        await db.MarkScoreHasReplay(item.Score);
+                        DogStatsd.Increment($"{statsd_prefix}.uploaded");
+                    }
+                    finally
+                    {
+                        item.Dispose();
+                        Interlocked.Decrement(ref remainingUsages);
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Error during score upload");
-                DogStatsd.Increment($"{statsd_prefix}.failed");
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Error during score upload");
+                    DogStatsd.Increment($"{statsd_prefix}.failed");
+                }
             }
         }
 
