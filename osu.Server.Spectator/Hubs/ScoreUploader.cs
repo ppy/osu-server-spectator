@@ -46,8 +46,7 @@ namespace osu.Server.Spectator.Hubs
             cancellationToken = cancellationSource.Token;
 
             Task.Factory.StartNew(readLoop, TaskCreationOptions.LongRunning);
-            // TODO: move off to separate monitoring thread
-            //DogStatsd.Gauge($"{statsd_prefix}.total_in_queue", countToTry);
+            Task.Factory.StartNew(monitorLoop, TaskCreationOptions.LongRunning);
         }
 
         /// <summary>
@@ -117,6 +116,15 @@ namespace osu.Server.Spectator.Hubs
                     logger.LogError(e, "Error during score upload");
                     DogStatsd.Increment($"{statsd_prefix}.failed");
                 }
+            }
+        }
+
+        private async Task monitorLoop()
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                DogStatsd.Gauge($"{statsd_prefix}.total_in_queue", remainingUsages);
+                await Task.Delay(1000, cancellationToken);
             }
         }
 
