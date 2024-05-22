@@ -173,7 +173,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             // even though in theory the rank could be recomputed after every replay frame.
             score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(score.ScoreInfo);
 
-            scoreUploader.Enqueue(scoreToken, score);
+            await scoreUploader.EnqueueAsync(scoreToken, score);
             await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
         }
 

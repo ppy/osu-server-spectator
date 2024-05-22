@@ -158,7 +158,7 @@ namespace osu.Server.Spectator.Tests
                 State = SpectatedUserState.Passed,
             });
 
-            await scoreUploader.Flush();
+            await uploadsCompleteAsync();
 
             if (savingEnabled)
                 mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Once);
@@ -208,7 +208,7 @@ namespace osu.Server.Spectator.Tests
                 State = SpectatedUserState.Quit,
             });
 
-            await scoreUploader.Flush();
+            await uploadsCompleteAsync();
 
             mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Quit)), Times.Once());
@@ -384,7 +384,7 @@ namespace osu.Server.Spectator.Tests
                 State = SpectatedUserState.Passed,
             });
 
-            await scoreUploader.Flush();
+            await uploadsCompleteAsync();
 
             if (saved)
                 mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Once);
@@ -470,7 +470,7 @@ namespace osu.Server.Spectator.Tests
                 State = SpectatedUserState.Passed,
             });
 
-            await scoreUploader.Flush();
+            await uploadsCompleteAsync();
 
             mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.UserID == streamer_id
                                                                             && score.ScoreInfo.User.OnlineID == streamer_id
@@ -521,7 +521,7 @@ namespace osu.Server.Spectator.Tests
                 State = SpectatedUserState.Failed,
             });
 
-            await scoreUploader.Flush();
+            await uploadsCompleteAsync();
 
             mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Never);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Failed)), Times.Once());
@@ -575,10 +575,22 @@ namespace osu.Server.Spectator.Tests
                 State = SpectatedUserState.Passed,
             });
 
-            await scoreUploader.Flush();
+            await uploadsCompleteAsync();
 
             mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.Rank == ScoreRank.A)), Times.Once);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
+        }
+
+        private async Task uploadsCompleteAsync(int attempts = 5)
+        {
+            while (scoreUploader.RemainingUsages > 0)
+            {
+                if (attempts <= 0)
+                    Assert.Fail("Waiting for score upload to proceed timed out");
+
+                attempts -= 1;
+                await Task.Delay(1000);
+            }
         }
     }
 }
