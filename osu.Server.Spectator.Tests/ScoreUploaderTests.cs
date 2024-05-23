@@ -54,8 +54,10 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoreDataMergedCorrectly()
         {
-            enableUpload();
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            {
+                SaveReplays = true
+            };
 
             await uploader.EnqueueAsync(1, new Score
             {
@@ -81,8 +83,10 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoreUploads()
         {
-            enableUpload();
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            {
+                SaveReplays = true
+            };
 
             await uploader.EnqueueAsync(1, new Score());
             await uploadsCompleteAsync(uploader);
@@ -96,8 +100,10 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoreDoesNotUploadIfDisabled()
         {
-            disableUpload();
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            {
+                SaveReplays = false
+            };
 
             await uploader.EnqueueAsync(1, new Score());
             await Task.Delay(1000);
@@ -107,8 +113,10 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoreUploadsWithDelayedScoreToken()
         {
-            enableUpload();
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            {
+                SaveReplays = true
+            };
 
             // Score with no token.
             await uploader.EnqueueAsync(2, new Score());
@@ -129,8 +137,10 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task TimedOutScoreDoesNotUpload()
         {
-            enableUpload();
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            {
+                SaveReplays = true
+            };
 
             uploader.TimeoutInterval = 0;
 
@@ -162,8 +172,10 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task FailedScoreHandledGracefully()
         {
-            enableUpload();
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            {
+                SaveReplays = true
+            };
 
             bool shouldThrow = true;
             int uploadCount = 0;
@@ -197,9 +209,11 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task TestMassUploads()
         {
-            enableUpload();
             AppSettings.ReplayUploaderConcurrency = 4;
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object);
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            {
+                SaveReplays = true
+            };
 
             for (int i = 0; i < 1000; ++i)
                 await uploader.EnqueueAsync(1, new Score());
@@ -208,9 +222,6 @@ namespace osu.Server.Spectator.Tests
             mockStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 2)), Times.Exactly(1000));
             AppSettings.ReplayUploaderConcurrency = 1;
         }
-
-        private void enableUpload() => AppSettings.SaveReplays = true;
-        private void disableUpload() => AppSettings.SaveReplays = false;
 
         private async Task uploadsCompleteAsync(ScoreUploader uploader, int attempts = 5)
         {
