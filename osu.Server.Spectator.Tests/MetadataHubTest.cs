@@ -37,7 +37,7 @@ namespace osu.Server.Spectator.Tests
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
 
-            hub = new MetadataHub(cache, userStates, databaseFactory.Object);
+            hub = new MetadataHub(cache, userStates, databaseFactory.Object, new Mock<IDailyChallengeUpdater>().Object);
 
             var mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(ctx => ctx.UserIdentifier).Returns(user_id.ToString());

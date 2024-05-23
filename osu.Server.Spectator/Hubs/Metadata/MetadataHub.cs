@@ -17,16 +17,19 @@ namespace osu.Server.Spectator.Hubs.Metadata
     public class MetadataHub : StatefulUserHub<IMetadataClient, MetadataClientState>, IMetadataServer
     {
         private readonly IDatabaseFactory databaseFactory;
+        private readonly IDailyChallengeUpdater dailyChallengeUpdater;
 
         internal const string ONLINE_PRESENCE_WATCHERS_GROUP = "metadata:online-presence-watchers";
 
         public MetadataHub(
             IDistributedCache cache,
             EntityStore<MetadataClientState> userStates,
-            IDatabaseFactory databaseFactory)
+            IDatabaseFactory databaseFactory,
+            IDailyChallengeUpdater dailyChallengeUpdater)
             : base(cache, userStates)
         {
             this.databaseFactory = databaseFactory;
+            this.dailyChallengeUpdater = dailyChallengeUpdater;
         }
 
         public override async Task OnConnectedAsync()
@@ -49,6 +52,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
                 await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
+                await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);
             }
         }
 
