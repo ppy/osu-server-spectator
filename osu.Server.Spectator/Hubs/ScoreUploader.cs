@@ -23,6 +23,8 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         public double TimeoutInterval = 30000;
 
+        public bool SaveReplays = AppSettings.SaveReplays;
+
         private const string statsd_prefix = "score_uploads";
 
         private readonly Channel<UploadItem> channel = Channel.CreateUnbounded<UploadItem>();
@@ -58,7 +60,7 @@ namespace osu.Server.Spectator.Hubs
         /// <param name="score">The score.</param>
         public async Task EnqueueAsync(long token, Score score)
         {
-            if (!AppSettings.SaveReplays)
+            if (!SaveReplays)
                 return;
 
             Interlocked.Increment(ref remainingUsages);

@@ -115,7 +115,7 @@ namespace osu.Server.Spectator.Tests
         [InlineData(true)]
         public async Task ReplayDataIsSaved(bool savingEnabled)
         {
-            AppSettings.SaveReplays = savingEnabled;
+            scoreUploader.SaveReplays = savingEnabled;
 
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
@@ -171,7 +171,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ReplaysWithoutAnyHitsAreDiscarded()
         {
-            AppSettings.SaveReplays = true;
+            scoreUploader.SaveReplays = true;
 
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
@@ -335,7 +335,7 @@ namespace osu.Server.Spectator.Tests
         [InlineData(BeatmapOnlineStatus.Loved, true)]
         public async Task ScoresAreOnlySavedOnRankedBeatmaps(BeatmapOnlineStatus status, bool saved)
         {
-            AppSettings.SaveReplays = true;
+            scoreUploader.SaveReplays = true;
 
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
@@ -421,7 +421,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoresHaveAllUserRelatedMetadataFilledOutConsistently()
         {
-            AppSettings.SaveReplays = true;
+            scoreUploader.SaveReplays = true;
 
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
@@ -484,7 +484,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task FailedScoresAreNotSaved()
         {
-            AppSettings.SaveReplays = true;
+            scoreUploader.SaveReplays = true;
 
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
@@ -530,7 +530,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoreRankPopulatedCorrectly()
         {
-            AppSettings.SaveReplays = true;
+            scoreUploader.SaveReplays = true;
 
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
