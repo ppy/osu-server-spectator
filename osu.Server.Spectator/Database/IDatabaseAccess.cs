@@ -157,5 +157,15 @@ namespace osu.Server.Spectator.Database
         /// Updates the <see cref="osu_build.users"/> count of a given <paramref name="build"/>.
         /// </summary>
         Task UpdateBuildUserCountAsync(osu_build build);
+
+        /// <summary>
+        /// Retrieves all <see cref="chat_filter"/>s from the database.
+        /// </summary>
+        Task<IEnumerable<chat_filter>> GetAllChatFiltersAsync();
+
+        /// <summary>
+        /// Retrieves all active rooms from the <see cref="room_category.daily_challenge"/> category.
+        /// </summary>
+        Task<IEnumerable<multiplayer_room>> GetActiveDailyChallengeRoomsAsync();
     }
 }

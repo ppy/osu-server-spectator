@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using osu.Game.Online.Rooms;
 
 // ReSharper disable InconsistentNaming (matches database table)
 
@@ -23,7 +22,7 @@ namespace osu.Server.Spectator.Database.Models
         public DateTimeOffset? created_at { get; set; }
         public DateTimeOffset? updated_at { get; set; }
         public DateTimeOffset? deleted_at { get; set; }
-        public RoomCategory category { get; set; }
+        public room_category category { get; set; }
         public database_match_type type { get; set; }
         public database_queue_mode queue_mode { get; set; }
         public ushort auto_start_duration { get; set; }

@@ -41,7 +41,7 @@ namespace osu.Server.Spectator.Tests
             loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                              .Returns(new Mock<ILogger>().Object);
 
-            hub = new MetadataHub(loggerFactoryMock.Object, cache, userStates, databaseFactory.Object);
+            hub = new MetadataHub(loggerFactoryMock.Object, cache, userStates, databaseFactory.Object, new Mock<IDailyChallengeUpdater>().Object);
 
             var mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(ctx => ctx.UserIdentifier).Returns(user_id.ToString());

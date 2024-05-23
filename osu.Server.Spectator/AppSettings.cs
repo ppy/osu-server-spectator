@@ -8,6 +8,7 @@ namespace osu.Server.Spectator
     public static class AppSettings
     {
         public static bool SaveReplays { get; set; }
+        public static int ReplayUploaderConcurrency { get; set; }
 
         #region For use with FileScoreStorage
 
@@ -36,6 +37,9 @@ namespace osu.Server.Spectator
         static AppSettings()
         {
             SaveReplays = Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
+            ReplayUploaderConcurrency = int.Parse(Environment.GetEnvironmentVariable("REPLAY_UPLOAD_THREADS") ?? "1");
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ReplayUploaderConcurrency);
+
             ReplaysPath = Environment.GetEnvironmentVariable("REPLAYS_PATH") ?? "replays";
             S3Key = Environment.GetEnvironmentVariable("S3_KEY") ?? string.Empty;
             S3Secret = Environment.GetEnvironmentVariable("S3_SECRET") ?? string.Empty;

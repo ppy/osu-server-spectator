@@ -4,9 +4,10 @@
 using System;
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
+#if !DEBUG
 using Microsoft.AspNetCore.SignalR;
+#endif
 using Microsoft.Extensions.Hosting;
-using Sentry;
 using StatsdClient;
 
 namespace osu.Server.Spectator

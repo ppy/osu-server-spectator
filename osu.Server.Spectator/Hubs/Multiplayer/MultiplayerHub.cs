@@ -25,6 +25,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
         protected readonly MultiplayerHubContext HubContext;
         private readonly IDatabaseFactory databaseFactory;
+        private readonly ChatFilters chatFilters;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -32,12 +33,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
+            ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext)
             : base(loggerFactory, cache, users)
         {
             Rooms = rooms;
             this.databaseFactory = databaseFactory;
-            HubContext = new MultiplayerHubContext( hubContext, rooms, users, loggerFactory);
+            this.chatFilters = chatFilters;
+            HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory);
         }
 
         public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);
@@ -631,6 +634,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 ensureIsHost(room);
 
                 Log(room, "Settings updating");
+
+                settings.Name = await chatFilters.FilterAsync(settings.Name);
 
                 // Server is authoritative over the playlist item ID.
                 // Todo: This needs to change for tournament mode.

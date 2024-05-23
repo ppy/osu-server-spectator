@@ -20,8 +20,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
+            ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext)
-            : base(loggerFactory, cache, rooms, users, databaseFactory, hubContext)
+            : base(loggerFactory, cache, rooms, users, databaseFactory, chatFilters, hubContext)
         {
         }
 

@@ -50,16 +50,19 @@ namespace osu.Server.Spectator.Hubs.Spectator
             timer.Start();
 
             subscriber = redis.GetSubscriber();
-            subscriber.Subscribe("osu-channel:score:processed", (_, message) => onMessageReceived(message));
+            subscriber.Subscribe(new RedisChannel("osu-channel:score:processed", RedisChannel.PatternMode.Literal), (_, message) => onMessageReceived(message));
 
             logger = loggerFactory.CreateLogger(nameof(ScoreProcessedSubscriber));
         }
 
-        private void onMessageReceived(string message)
+        private void onMessageReceived(string? message)
         {
             try
             {
-                var scoreProcessed = JsonConvert.DeserializeObject<ScoreProcessed>(message);
+                if (string.IsNullOrEmpty(message))
+                    return;
+
+                ScoreProcessed? scoreProcessed = JsonConvert.DeserializeObject<ScoreProcessed>(message);
 
                 if (scoreProcessed == null)
                     return;

@@ -133,7 +133,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                              .Returns(new Mock<ILogger>().Object);
 
-            Hub = new TestMultiplayerHub(loggerFactoryMock.Object, new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), Rooms, UserStates, DatabaseFactory.Object, hubContext.Object);
+            Hub = new TestMultiplayerHub(
+                loggerFactoryMock.Object,
+                new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())),
+                Rooms,
+                UserStates,
+                DatabaseFactory.Object,
+                new ChatFilters(DatabaseFactory.Object),
+                hubContext.Object);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 
