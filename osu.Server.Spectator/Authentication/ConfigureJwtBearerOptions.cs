@@ -6,6 +6,7 @@ using System.IO;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Org.BouncyCastle.Crypto.Parameters;
@@ -17,10 +18,12 @@ namespace osu.Server.Spectator.Authentication
     public class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearerOptions>
     {
         private readonly IDatabaseFactory databaseFactory;
+        private readonly ILoggerFactory loggerFactory;
 
-        public ConfigureJwtBearerOptions(IDatabaseFactory databaseFactory)
+        public ConfigureJwtBearerOptions(IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory)
         {
             this.databaseFactory = databaseFactory;
+            this.loggerFactory = loggerFactory;
         }
 
         public void Configure(JwtBearerOptions options)
@@ -50,7 +53,7 @@ namespace osu.Server.Spectator.Authentication
 
                         if (userId != tokenUserId)
                         {
-                            Console.WriteLine("Token revoked or expired");
+                            loggerFactory.CreateLogger("JsonWebToken").LogInformation("Token revoked or expired");
                             context.Fail("Token has expired or been revoked");
                         }
                     }

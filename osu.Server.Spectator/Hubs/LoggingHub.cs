@@ -5,7 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using osu.Framework.Logging;
+using Microsoft.Extensions.Logging;
 using Sentry;
 using StatsdClient;
 
@@ -16,16 +16,16 @@ namespace osu.Server.Spectator.Hubs
     {
         protected string Name;
 
-        private readonly Logger logger;
+        private readonly ILogger logger;
 
         // ReSharper disable once StaticMemberInGenericType
         private static int totalConnected;
 
-        public LoggingHub()
+        public LoggingHub(ILoggerFactory loggerFactory)
         {
             Name = GetType().Name.Replace("Hub", string.Empty);
 
-            logger = Logger.GetLogger(Name);
+            logger = loggerFactory.CreateLogger(Name);
         }
 
         public override async Task OnConnectedAsync()
@@ -43,9 +43,13 @@ namespace osu.Server.Spectator.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        protected void Log(string message, LogLevel logLevel = LogLevel.Verbose) => logger.Add($"[user:{getLoggableUserIdentifier()}] {message.Trim()}", logLevel);
+        protected void Log(string message, LogLevel logLevel = LogLevel.Information) => logger.Log(logLevel, "[user:{userId}] {message}",
+            getLoggableUserIdentifier(),
+            message.Trim());
 
-        protected void Error(string message, Exception exception) => logger.Add($"[user:{getLoggableUserIdentifier()}] {message.Trim()}", LogLevel.Error, exception);
+        protected void Error(string message, Exception exception) => logger.LogError(exception, "[user:{userId}] {message)}",
+            getLoggableUserIdentifier(),
+            message.Trim());
 
         private string getLoggableUserIdentifier() => Context.UserIdentifier ?? "???";
 

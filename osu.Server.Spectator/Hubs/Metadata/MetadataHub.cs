@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
 using osu.Server.Spectator.Database;
@@ -22,11 +23,12 @@ namespace osu.Server.Spectator.Hubs.Metadata
         internal const string ONLINE_PRESENCE_WATCHERS_GROUP = "metadata:online-presence-watchers";
 
         public MetadataHub(
+            ILoggerFactory loggerFactory,
             IDistributedCache cache,
             EntityStore<MetadataClientState> userStates,
             IDatabaseFactory databaseFactory,
             IDailyChallengeUpdater dailyChallengeUpdater)
-            : base(cache, userStates)
+            : base(loggerFactory, cache, userStates)
         {
             this.databaseFactory = databaseFactory;
             this.dailyChallengeUpdater = dailyChallengeUpdater;

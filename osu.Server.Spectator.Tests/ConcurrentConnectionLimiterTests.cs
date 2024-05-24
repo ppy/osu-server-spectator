@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs.Spectator;
@@ -17,6 +18,7 @@ namespace osu.Server.Spectator.Tests
     {
         private readonly EntityStore<ConnectionState> connectionStates;
         private readonly Mock<IServiceProvider> serviceProviderMock;
+        private readonly Mock<ILoggerFactory> loggerFactoryMock;
         private readonly Mock<Hub> hubMock;
 
         public ConcurrentConnectionLimiterTests()
@@ -27,6 +29,10 @@ namespace osu.Server.Spectator.Tests
             var hubContextMock = new Mock<IHubContext>();
             serviceProviderMock.Setup(sp => sp.GetService(It.IsAny<Type>()))
                                .Returns(hubContextMock.Object);
+
+            loggerFactoryMock = new Mock<ILoggerFactory>();
+            loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                             .Returns(new Mock<ILogger>().Object);
 
             hubMock = new Mock<Hub>();
         }
@@ -44,7 +50,7 @@ namespace osu.Server.Spectator.Tests
                 })
             }));
 
-            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object);
+            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object, loggerFactoryMock.Object);
             var lifetimeContext = new HubLifetimeContext(hubCallerContextMock.Object, serviceProviderMock.Object, hubMock.Object);
 
             bool connected = false;
@@ -103,7 +109,7 @@ namespace osu.Server.Spectator.Tests
                 })
             }));
 
-            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object);
+            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object, loggerFactoryMock.Object);
 
             var firstLifetimeContext = new HubLifetimeContext(firstContextMock.Object, serviceProviderMock.Object, hubMock.Object);
             await filter.OnConnectedAsync(firstLifetimeContext, _ => Task.CompletedTask);
@@ -149,7 +155,7 @@ namespace osu.Server.Spectator.Tests
                 })
             }));
 
-            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object);
+            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object, loggerFactoryMock.Object);
 
             var firstLifetimeContext = new HubLifetimeContext(firstContextMock.Object, serviceProviderMock.Object, hubMock.Object);
             await filter.OnConnectedAsync(firstLifetimeContext, _ => Task.CompletedTask);
@@ -189,7 +195,7 @@ namespace osu.Server.Spectator.Tests
                 })
             }));
 
-            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object);
+            var filter = new ConcurrentConnectionLimiter(connectionStates, serviceProviderMock.Object, loggerFactoryMock.Object);
 
             var firstLifetimeContext = new HubLifetimeContext(firstContextMock.Object, serviceProviderMock.Object, new FirstHub());
             await filter.OnConnectedAsync(firstLifetimeContext, _ => Task.CompletedTask);

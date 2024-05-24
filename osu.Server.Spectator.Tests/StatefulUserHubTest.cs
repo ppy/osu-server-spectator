@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Online;
@@ -29,10 +30,14 @@ namespace osu.Server.Spectator.Tests
 
         public StatefulUserHubTest()
         {
+            var loggerFactoryMock = new Mock<ILoggerFactory>();
+            loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                             .Returns(new Mock<ILogger>().Object);
+
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
             userStates = new EntityStore<ClientState>();
-            hub = new TestStatefulHub(cache, userStates);
+            hub = new TestStatefulHub(loggerFactoryMock.Object, cache, userStates);
 
             mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(context => context.UserIdentifier).Returns(user_id.ToString());
@@ -108,8 +113,8 @@ namespace osu.Server.Spectator.Tests
 
         private class TestStatefulHub : StatefulUserHub<IStatefulUserHubClient, ClientState>
         {
-            public TestStatefulHub(IDistributedCache cache, EntityStore<ClientState> userStates)
-                : base(cache, userStates)
+            public TestStatefulHub(ILoggerFactory loggerFactory, IDistributedCache cache, EntityStore<ClientState> userStates)
+                : base(loggerFactory, cache, userStates)
             {
             }
 

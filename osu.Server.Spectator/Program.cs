@@ -2,15 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.IO;
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
 #if !DEBUG
 using Microsoft.AspNetCore.SignalR;
 #endif
 using Microsoft.Extensions.Hosting;
-using osu.Framework.Logging;
-using osu.Framework.Platform;
 using StatsdClient;
 
 namespace osu.Server.Spectator
@@ -19,9 +16,6 @@ namespace osu.Server.Spectator
     {
         public static void Main(string[] args)
         {
-            Logger.GameIdentifier = "osu-server-spectator";
-            Logger.Storage = new NativeStorage(Path.Combine(Environment.CurrentDirectory, "Logs"));
-
             DogStatsd.Configure(new StatsdConfig
             {
                 StatsdServerName = AppSettings.DataDogAgentHost,
