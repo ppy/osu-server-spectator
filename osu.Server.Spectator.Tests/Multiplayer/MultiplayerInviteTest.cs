@@ -127,7 +127,7 @@ public class MultiplayerInviteTest : MultiplayerTest
     {
         const string password = "password";
 
-        Database.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+        Database.Setup(db => db.GetRealtimeRoomAsync(It.IsAny<long>()))
                 .Callback<long>(InitialiseRoom)
                 .ReturnsAsync(new multiplayer_room
                 {

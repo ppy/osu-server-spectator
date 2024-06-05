@@ -181,7 +181,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 // This will allow for other instances to know not to reinitialise the room if the host arrives there.
                 // Alternatively, we can move lobby retrieval away from osu-web and not require this in the first place.
                 // Needs further discussion and consideration either way.
-                var databaseRoom = await db.GetRoomAsync(roomId);
+                var databaseRoom = await db.GetRealtimeRoomAsync(roomId);
 
                 if (databaseRoom == null)
                     throw new InvalidOperationException("Specified match does not exist.");

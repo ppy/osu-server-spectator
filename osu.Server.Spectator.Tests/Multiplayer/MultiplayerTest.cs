@@ -214,7 +214,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             DatabaseFactory.Setup(factory => factory.GetInstance()).Returns(Database.Object);
 
-            Database.Setup(db => db.GetRoomAsync(ROOM_ID))
+            Database.Setup(db => db.GetRealtimeRoomAsync(ROOM_ID))
                     .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(() => new multiplayer_room
                     {
@@ -223,7 +223,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         user_id = int.Parse(Hub.Context.UserIdentifier!),
                     });
 
-            Database.Setup(db => db.GetRoomAsync(ROOM_ID_2))
+            Database.Setup(db => db.GetRealtimeRoomAsync(ROOM_ID_2))
                     .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(() => new multiplayer_room
                     {

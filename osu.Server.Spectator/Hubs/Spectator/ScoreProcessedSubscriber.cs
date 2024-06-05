@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
         private readonly IDatabaseFactory databaseFactory;
         private readonly ISubscriber? subscriber;
 
-        private readonly ConcurrentDictionary<long, ScoreProcessedSubscription> subscriptions = new ConcurrentDictionary<long, ScoreProcessedSubscription>();
+        private readonly ConcurrentDictionary<long, SingleScoreSubscription> singleScoreSubscriptions = new ConcurrentDictionary<long, SingleScoreSubscription>();
         private readonly Timer timer;
         private readonly ILogger logger;
         private readonly IHubContext<SpectatorHub> spectatorHubContext;
@@ -67,22 +67,22 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 if (scoreProcessed == null)
                     return;
 
-                if (subscriptions.TryRemove(scoreProcessed.ScoreId, out var subscription))
+                if (singleScoreSubscriptions.TryRemove(scoreProcessed.ScoreId, out var subscription))
                 {
                     using (subscription)
                         subscription.InvokeAsync().Wait();
                 }
 
-                DogStatsd.Increment($"{statsd_prefix}.messages.delivered");
+                DogStatsd.Increment($"{statsd_prefix}.messages.single-score.delivered");
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to process message");
-                DogStatsd.Increment($"{statsd_prefix}.messages.dropped");
+                DogStatsd.Increment($"{statsd_prefix}.messages.single-score.dropped");
             }
         }
 
-        public async Task RegisterForNotificationAsync(string receiverConnectionId, int userId, long scoreToken)
+        public async Task RegisterForSingleScoreAsync(string receiverConnectionId, int userId, long scoreToken)
         {
             try
             {
@@ -92,11 +92,11 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                 if (score == null)
                 {
-                    DogStatsd.Increment($"{statsd_prefix}.subscriptions.dropped");
+                    DogStatsd.Increment($"{statsd_prefix}.subscriptions.single-score.dropped");
                     return;
                 }
 
-                var subscription = new ScoreProcessedSubscription(receiverConnectionId, userId, (long)score.id, spectatorHubContext);
+                var subscription = new SingleScoreSubscription(receiverConnectionId, userId, (long)score.id, spectatorHubContext);
 
                 // because the score submission flow happens concurrently with the spectator play finished flow,
                 // it is theoretically possible for the score processing to complete before the spectator hub had a chance to register for notifications.
@@ -105,12 +105,12 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 {
                     using (subscription)
                         await subscription.InvokeAsync();
-                    DogStatsd.Increment($"{statsd_prefix}.messages.delivered-immediately");
+                    DogStatsd.Increment($"{statsd_prefix}.messages.single-score.delivered-immediately");
                     return;
                 }
 
-                subscriptions.TryAdd((long)score.id, subscription);
-                DogStatsd.Gauge($"{statsd_prefix}.subscriptions.total", subscriptions.Count);
+                singleScoreSubscriptions.TryAdd((long)score.id, subscription);
+                DogStatsd.Gauge($"{statsd_prefix}.subscriptions.single-score.total", singleScoreSubscriptions.Count);
             }
             catch (Exception ex)
             {
@@ -118,30 +118,30 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     receiverConnectionId,
                     userId,
                     scoreToken);
-                DogStatsd.Increment($"{statsd_prefix}.subscriptions.failed");
+                DogStatsd.Increment($"{statsd_prefix}.subscriptions.single-score.failed");
             }
         }
 
         private void purgeTimedOutSubscriptions()
         {
-            var scoreIds = subscriptions.Keys.ToArray();
+            var scoreIds = singleScoreSubscriptions.Keys.ToArray();
             int purgedCount = 0;
 
             foreach (var scoreId in scoreIds)
             {
-                if (subscriptions.TryGetValue(scoreId, out var subscription) && subscription.TimedOut)
+                if (singleScoreSubscriptions.TryGetValue(scoreId, out var subscription) && subscription.TimedOut)
                 {
                     subscription.Dispose();
 
-                    if (subscriptions.TryRemove(scoreId, out _))
+                    if (singleScoreSubscriptions.TryRemove(scoreId, out _))
                         purgedCount += 1;
                 }
             }
 
             if (purgedCount > 0)
             {
-                DogStatsd.Gauge($"{statsd_prefix}.subscriptions.total", subscriptions.Count);
-                DogStatsd.Increment($"{statsd_prefix}.subscriptions.timed-out", purgedCount);
+                DogStatsd.Gauge($"{statsd_prefix}.subscriptions.single-score.total", singleScoreSubscriptions.Count);
+                DogStatsd.Increment($"{statsd_prefix}.subscriptions.single-score.timed-out", purgedCount);
             }
 
             if (!disposed)
@@ -162,7 +162,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         private record ScoreProcessed(long ScoreId);
 
-        private class ScoreProcessedSubscription : IDisposable
+        private class SingleScoreSubscription : IDisposable
         {
             private readonly string receiverConnectionId;
             private readonly int userId;
@@ -172,7 +172,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             private readonly CancellationTokenSource cancellationTokenSource;
             public bool TimedOut => cancellationTokenSource.IsCancellationRequested;
 
-            public ScoreProcessedSubscription(string receiverConnectionId, int userId, long scoreId, IHubContext<SpectatorHub> spectatorHubContext)
+            public SingleScoreSubscription(string receiverConnectionId, int userId, long scoreId, IHubContext<SpectatorHub> spectatorHubContext)
             {
                 this.receiverConnectionId = receiverConnectionId;
                 this.userId = userId;

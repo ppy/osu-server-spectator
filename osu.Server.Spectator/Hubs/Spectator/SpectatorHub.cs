@@ -176,7 +176,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(score.ScoreInfo);
 
             await scoreUploader.EnqueueAsync(scoreToken, score);
-            await scoreProcessedSubscriber.RegisterForNotificationAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
+            await scoreProcessedSubscriber.RegisterForSingleScoreAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
         }
 
         public async Task StartWatchingUser(int userId)

@@ -16,12 +16,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
         /// <param name="receiverConnectionId">The ID of the connection that should receive the notifications.</param>
         /// <param name="userId">The ID of the user who set the score.</param>
         /// <param name="scoreId">The ID of the score which is being processed.</param>
-        Task RegisterForNotificationAsync(string receiverConnectionId, int userId, long scoreId);
+        Task RegisterForSingleScoreAsync(string receiverConnectionId, int userId, long scoreId);
     }
-
-    /// <summary>
-    /// Callback delegate that will be invoked when a score has been successfully processed.
-    /// </summary>
-    /// <param name="scoreId">The ID of the score that was processed.</param>
-    public delegate Task ScoreProcessedAsyncCallback(string receiverConnectionId, int userId, long scoreId);
 }
