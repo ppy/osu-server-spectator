@@ -81,7 +81,7 @@ namespace osu.Server.Spectator.Hubs
 
                 try
                 {
-                    SoloScore? dbScore = await db.GetScoreFromToken(item.Token);
+                    SoloScore? dbScore = await db.GetScoreFromTokenAsync(item.Token);
 
                     if (dbScore == null && !item.Cancellation.IsCancellationRequested)
                     {

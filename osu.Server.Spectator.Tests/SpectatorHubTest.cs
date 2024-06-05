@@ -128,7 +128,7 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
                 id = 456,
                 passed = true
@@ -184,7 +184,7 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
                 id = 456,
                 passed = true
@@ -348,7 +348,7 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
                 id = 456,
                 passed = true
@@ -434,7 +434,7 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
                 id = 456,
                 passed = true
@@ -497,7 +497,7 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
                 id = 456,
                 passed = false
@@ -543,7 +543,7 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            mockDatabase.Setup(db => db.GetScoreFromToken(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
             {
                 id = 456,
                 passed = true

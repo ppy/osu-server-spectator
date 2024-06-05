@@ -12,6 +12,7 @@ using osu.Game.Users;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Hubs.Spectator;
 
 namespace osu.Server.Spectator.Hubs.Metadata
 {
@@ -19,19 +20,24 @@ namespace osu.Server.Spectator.Hubs.Metadata
     {
         private readonly IDatabaseFactory databaseFactory;
         private readonly IDailyChallengeUpdater dailyChallengeUpdater;
+        private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
 
         internal const string ONLINE_PRESENCE_WATCHERS_GROUP = "metadata:online-presence-watchers";
+
+        internal static string MultiplayerRoomWatchersGroup(long roomId) => $"metadata:multiplayer-room-watchers:{roomId}";
 
         public MetadataHub(
             ILoggerFactory loggerFactory,
             IDistributedCache cache,
             EntityStore<MetadataClientState> userStates,
             IDatabaseFactory databaseFactory,
-            IDailyChallengeUpdater dailyChallengeUpdater)
+            IDailyChallengeUpdater dailyChallengeUpdater,
+            IScoreProcessedSubscriber scoreProcessedSubscriber)
             : base(loggerFactory, cache, userStates)
         {
             this.databaseFactory = databaseFactory;
             this.dailyChallengeUpdater = dailyChallengeUpdater;
+            this.scoreProcessedSubscriber = scoreProcessedSubscriber;
         }
 
         public override async Task OnConnectedAsync()
@@ -100,10 +106,26 @@ namespace osu.Server.Spectator.Hubs.Metadata
             }
         }
 
+        public async Task<MultiplayerPlaylistItemStats[]> BeginWatchingMultiplayerRoom(long id)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, MultiplayerRoomWatchersGroup(id));
+            await scoreProcessedSubscriber.RegisterForMultiplayerRoomAsync(Context.GetUserId(), id);
+
+            using var db = databaseFactory.GetInstance();
+            return await db.GetMultiplayerRoomStatsAsync(id);
+        }
+
+        public async Task EndWatchingMultiplayerRoom(long id)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, MultiplayerRoomWatchersGroup(id));
+            await scoreProcessedSubscriber.UnregisterFromMultiplayerRoomAsync(Context.GetUserId(), id);
+        }
+
         protected override async Task CleanUpState(MetadataClientState state)
         {
             await base.CleanUpState(state);
             await broadcastUserPresenceUpdate(state.UserId, null);
+            await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);
         }
 
         private Task broadcastUserPresenceUpdate(int userId, UserPresence? userPresence)

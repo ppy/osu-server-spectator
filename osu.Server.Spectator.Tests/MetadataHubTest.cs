@@ -15,6 +15,7 @@ using osu.Game.Users;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs.Metadata;
+using osu.Server.Spectator.Hubs.Spectator;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests
@@ -41,7 +42,13 @@ namespace osu.Server.Spectator.Tests
             loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                              .Returns(new Mock<ILogger>().Object);
 
-            hub = new MetadataHub(loggerFactoryMock.Object, cache, userStates, databaseFactory.Object, new Mock<IDailyChallengeUpdater>().Object);
+            hub = new MetadataHub(
+                loggerFactoryMock.Object,
+                cache,
+                userStates,
+                databaseFactory.Object,
+                new Mock<IDailyChallengeUpdater>().Object,
+                new Mock<IScoreProcessedSubscriber>().Object);
 
             var mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(ctx => ctx.UserIdentifier).Returns(user_id.ToString());
