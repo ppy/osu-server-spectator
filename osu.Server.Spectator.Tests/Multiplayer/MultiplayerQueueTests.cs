@@ -74,7 +74,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task RoomStartsWithCorrectQueueingMode()
         {
             Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
-            Database.Setup(db => db.GetRoomAsync(ROOM_ID))
+            Database.Setup(db => db.GetRealtimeRoomAsync(ROOM_ID))
                     .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(() => new multiplayer_room
                     {

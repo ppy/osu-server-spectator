@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task UserCanJoinWithCorrectPassword()
         {
-            Database.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+            Database.Setup(db => db.GetRealtimeRoomAsync(It.IsAny<long>()))
                     .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(new multiplayer_room
                     {
@@ -36,7 +36,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task UserCantJoinWithIncorrectPassword()
         {
-            Database.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+            Database.Setup(db => db.GetRealtimeRoomAsync(It.IsAny<long>()))
                     .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(new multiplayer_room
                     {
@@ -61,7 +61,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task UserCantJoinAlreadyEnded()
         {
-            Database.Setup(db => db.GetRoomAsync(It.IsAny<long>()))
+            Database.Setup(db => db.GetRealtimeRoomAsync(It.IsAny<long>()))
                     .ReturnsAsync(new multiplayer_room
                     {
                         ends_at = DateTimeOffset.Now.AddMinutes(-5),
@@ -159,7 +159,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task UserJoinPreRetrievalFailureCleansUpRoom()
         {
-            Database.Setup(db => db.GetRoomAsync(ROOM_ID))
+            Database.Setup(db => db.GetRealtimeRoomAsync(ROOM_ID))
                     .Callback<long>(InitialiseRoom)
                     .ReturnsAsync(() => new multiplayer_room
                     {

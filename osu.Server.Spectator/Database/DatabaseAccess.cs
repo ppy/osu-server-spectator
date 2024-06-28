@@ -52,6 +52,16 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
+            return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE id = @RoomID", new
+            {
+                RoomID = roomId
+            });
+        }
+
+        public async Task<multiplayer_room?> GetRealtimeRoomAsync(long roomId)
+        {
+            var connection = await getConnectionAsync();
+
             return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE type != 'playlists' AND id = @RoomID", new
             {
                 RoomID = roomId
@@ -294,7 +304,7 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<SoloScore?> GetScoreFromToken(long token)
+        public async Task<SoloScore?> GetScoreFromTokenAsync(long token)
         {
             var connection = await getConnectionAsync();
 
@@ -303,6 +313,16 @@ namespace osu.Server.Spectator.Database
                 {
                     Id = token
                 });
+        }
+
+        public async Task<SoloScore?> GetScoreAsync(long id)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<SoloScore?>("SELECT * FROM `scores` WHERE `id` = @Id", new
+            {
+                Id = id
+            });
         }
 
         public async Task<bool> IsScoreProcessedAsync(long scoreId)
@@ -380,6 +400,78 @@ namespace osu.Server.Spectator.Database
                 + "AND `type` = 'playlists' "
                 + "AND `starts_at` <= NOW() "
                 + "AND `ends_at` > NOW()");
+        }
+
+        public async Task<(long roomID, long playlistItemID)?> GetMultiplayerRoomIdForScoreAsync(long scoreId)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<(long, long)?>(
+                "SELECT `multiplayer_playlist_items`.`room_id`, `multiplayer_playlist_items`.`id` "
+                + "FROM `multiplayer_score_links` "
+                + "JOIN `multiplayer_playlist_items` "
+                + "ON `multiplayer_score_links`.`playlist_item_id` = `multiplayer_playlist_items`.`id` "
+                + "WHERE `multiplayer_score_links`.`score_id` = @scoreId",
+                new { scoreId = scoreId });
+        }
+
+        public async Task<MultiplayerPlaylistItemStats[]> GetMultiplayerRoomStatsAsync(long roomId)
+        {
+            var connection = await getConnectionAsync();
+
+            long[] playlistItemIds = (await GetAllPlaylistItemsAsync(roomId)).Select(item => item.id).ToArray();
+            var result = new MultiplayerPlaylistItemStats[playlistItemIds.Length];
+
+            for (int i = 0; i < playlistItemIds.Length; ++i)
+            {
+                long[] totalScores = (await connection.QueryAsync<long>(
+                    "SELECT `scores`.`total_score` FROM `scores` "
+                    + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
+                    + "WHERE `multiplayer_score_links`.`playlist_item_id` = @playlistItemId", new
+                    {
+                        playlistItemId = playlistItemIds[i]
+                    })).ToArray();
+
+                var totals = totalScores.GroupBy(score => (int)Math.Clamp(Math.Floor((float)score / 100000), 0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS - 1))
+                                        .OrderBy(grp => grp.Key)
+                                        .ToDictionary(grp => grp.Key, grp => grp.LongCount());
+
+                var stats = new MultiplayerPlaylistItemStats
+                {
+                    PlaylistItemID = playlistItemIds[i],
+                    TotalScoreDistribution = Enumerable.Range(0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS).Select(i => totals.GetValueOrDefault(i)).ToArray(),
+                };
+
+                result[i] = stats;
+            }
+
+            return result;
+        }
+
+        public async Task<multiplayer_scores_high?> GetUserBestScoreAsync(long playlistItemId, int userId)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<multiplayer_scores_high>(
+                "SELECT * FROM `multiplayer_scores_high` WHERE `playlist_item_id` = @playlistItemId AND `user_id` = @userId", new
+                {
+                    playlistItemId = playlistItemId,
+                    userId = userId
+                });
+        }
+
+        public async Task<int> GetUserRankInRoomAsync(long roomId, int userId)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleAsync<int>(
+                "SELECT COUNT(1) + 1 FROM `multiplayer_rooms_high` WHERE `room_id` = @roomId AND `user_id` != @userId "
+                + "AND `total_score` > (SELECT `total_score` FROM `multiplayer_rooms_high` WHERE `room_id` = @roomId AND `user_id` = @userId)",
+                new
+                {
+                    roomId = roomId,
+                    userId = userId,
+                });
         }
 
         public void Dispose()

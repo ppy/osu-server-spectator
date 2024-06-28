@@ -36,6 +36,12 @@ namespace osu.Server.Spectator.Database
         Task<multiplayer_room?> GetRoomAsync(long roomId);
 
         /// <summary>
+        /// Returns the <see cref="multiplayer_room"/> with the given <paramref name="roomId"/>.
+        /// Rooms of type <see cref="database_match_type.playlists"/> are not returned by this method.
+        /// </summary>
+        Task<multiplayer_room?> GetRealtimeRoomAsync(long roomId);
+
+        /// <summary>
         /// Retrieves a beatmap corresponding to the given <paramref name="beatmapId"/>.
         /// </summary>
         Task<database_beatmap?> GetBeatmapAsync(int beatmapId);
@@ -126,7 +132,12 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         /// <param name="token">The score token.</param>
         /// <returns>The <see cref="SoloScore"/>.</returns>
-        Task<SoloScore?> GetScoreFromToken(long token);
+        Task<SoloScore?> GetScoreFromTokenAsync(long token);
+
+        /// <summary>
+        /// Returns the <see cref="SoloScore"/> for the given ID.
+        /// </summary>
+        Task<SoloScore?> GetScoreAsync(long scoreId);
 
         /// <summary>
         /// Returns <see langword="true"/> if the score with the supplied <paramref name="scoreId"/> has been successfully processed.
@@ -167,5 +178,26 @@ namespace osu.Server.Spectator.Database
         /// Retrieves all active rooms from the <see cref="room_category.daily_challenge"/> category.
         /// </summary>
         Task<IEnumerable<multiplayer_room>> GetActiveDailyChallengeRoomsAsync();
+
+        /// <summary>
+        /// If <paramref name="scoreId"/> is associated with a multiplayer score, returns the room ID and playlist item ID which the score was set on.
+        /// Otherwise, returns <see langword="null"/>.
+        /// </summary>
+        Task<(long roomID, long playlistItemID)?> GetMultiplayerRoomIdForScoreAsync(long scoreId);
+
+        /// <summary>
+        /// Returns <see cref="MultiplayerPlaylistItemStats"/> for all playlist items in the room with the given <paramref name="roomId"/>.
+        /// </summary>
+        Task<MultiplayerPlaylistItemStats[]> GetMultiplayerRoomStatsAsync(long roomId);
+
+        /// <summary>
+        /// Returns the best score of user with <paramref name="userId"/> on the playlist item with <paramref name="playlistItemId"/>.
+        /// </summary>
+        Task<multiplayer_scores_high?> GetUserBestScoreAsync(long playlistItemId, int userId);
+
+        /// <summary>
+        /// Gets the overall rank of user <paramref name="userId"/> in the room with <paramref name="roomId"/>.
+        /// </summary>
+        Task<int> GetUserRankInRoomAsync(long roomId, int userId);
     }
 }
