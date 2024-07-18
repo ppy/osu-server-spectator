@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.Logging;
+using osu.Game.Online;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
 using osu.Server.Spectator.Database;
@@ -48,7 +49,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             {
                 string? versionHash = null;
 
-                if (Context.GetHttpContext()?.Request.Headers.TryGetValue("OsuVersionHash", out StringValues headerValue) == true)
+                if (Context.GetHttpContext()?.Request.Headers.TryGetValue(HubClientConnector.VERSION_HASH_HEADER, out StringValues headerValue) == true)
                 {
                     versionHash = headerValue;
 

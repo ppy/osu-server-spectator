@@ -55,7 +55,7 @@ namespace osu.Server.Spectator
                     return;
                 }
 
-                if (context.Context.GetTokenId() == userState.Item.TokenId)
+                if (userState.Item.IsConnectionFromSameClient(context))
                 {
                     // The assumption is that the client has already dropped the old connection,
                     // so we don't bother to ask for a disconnection.
@@ -99,15 +99,7 @@ namespace osu.Server.Spectator
 
             using (var userState = await connectionStates.GetForUse(userId))
             {
-                string? registeredConnectionId = null;
-
-                bool tokenIdMatches = invocationContext.Context.GetTokenId() == userState.Item?.TokenId;
-                bool hubRegistered = userState.Item?.ConnectionIds.TryGetValue(invocationContext.Hub.GetType(), out registeredConnectionId) == true;
-                bool connectionIdMatches = registeredConnectionId == invocationContext.Context.ConnectionId;
-
-                bool connectionIsValid = tokenIdMatches && hubRegistered && connectionIdMatches;
-
-                if (!connectionIsValid)
+                if (userState.Item?.ExistingConnectionMatches(invocationContext) != true)
                     throw new InvalidOperationException($"State is not valid for this connection, context: {LoggingHubFilter.GetMethodCallDisplayString(invocationContext)})");
             }
 
@@ -129,15 +121,7 @@ namespace osu.Server.Spectator
 
             using (var userState = await connectionStates.GetForUse(userId, true))
             {
-                string? registeredConnectionId = null;
-
-                bool tokenIdMatches = context.Context.GetTokenId() == userState.Item?.TokenId;
-                bool hubRegistered = userState.Item?.ConnectionIds.TryGetValue(context.Hub.GetType(), out registeredConnectionId) == true;
-                bool connectionIdMatches = registeredConnectionId == context.Context.ConnectionId;
-
-                bool connectionCanBeCleanedUp = tokenIdMatches && hubRegistered && connectionIdMatches;
-
-                if (connectionCanBeCleanedUp)
+                if (userState.Item?.ExistingConnectionMatches(context) == true)
                 {
                     log(context, "disconnected from hub");
                     userState.Item!.ConnectionIds.Remove(context.Hub.GetType());
