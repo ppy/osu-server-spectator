@@ -68,7 +68,7 @@ namespace osu.Server.Spectator.Entities
             return TokenId == context.Context.GetTokenId();
         }
 
-        public bool IsInvocationPermitted(HubInvocationContext context)
+        public bool ExistingConnectionMatches(HubInvocationContext context)
         {
             bool hubRegistered = ConnectionIds.TryGetValue(context.Hub.GetType(), out string? registeredConnectionId);
             bool connectionIdMatches = registeredConnectionId == context.Context.ConnectionId;
@@ -76,7 +76,7 @@ namespace osu.Server.Spectator.Entities
             return hubRegistered && connectionIdMatches;
         }
 
-        public bool CanCleanUpConnection(HubLifetimeContext context)
+        public bool ExistingConnectionMatches(HubLifetimeContext context)
         {
             bool hubRegistered = ConnectionIds.TryGetValue(context.Hub.GetType(), out string? registeredConnectionId);
             bool connectionIdMatches = registeredConnectionId == context.Context.ConnectionId;

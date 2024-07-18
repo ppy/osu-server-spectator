@@ -99,7 +99,7 @@ namespace osu.Server.Spectator
 
             using (var userState = await connectionStates.GetForUse(userId))
             {
-                if (userState.Item?.IsInvocationPermitted(invocationContext) != true)
+                if (userState.Item?.ExistingConnectionMatches(invocationContext) != true)
                     throw new InvalidOperationException($"State is not valid for this connection, context: {LoggingHubFilter.GetMethodCallDisplayString(invocationContext)})");
             }
 
@@ -121,7 +121,7 @@ namespace osu.Server.Spectator
 
             using (var userState = await connectionStates.GetForUse(userId, true))
             {
-                if (userState.Item?.CanCleanUpConnection(context) == true)
+                if (userState.Item?.ExistingConnectionMatches(context) == true)
                 {
                     log(context, "disconnected from hub");
                     userState.Item!.ConnectionIds.Remove(context.Hub.GetType());
