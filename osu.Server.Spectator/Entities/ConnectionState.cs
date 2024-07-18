@@ -59,13 +59,6 @@ namespace osu.Server.Spectator.Entities
         public void RegisterConnectionId(HubLifetimeContext context)
             => ConnectionIds[context.Hub.GetType()] = context.Context.ConnectionId;
 
-        private bool tryGetClientSessionID(HubLifetimeContext context, out Guid clientSessionId)
-        {
-            clientSessionId = Guid.Empty;
-            return context.Context.GetHttpContext()?.Request.Headers.TryGetValue(HubClientConnector.CLIENT_SESSION_ID_HEADER, out var value) == true
-                   && Guid.TryParse(value, out clientSessionId);
-        }
-
         public bool IsConnectionFromSameClient(HubLifetimeContext context)
         {
             if (tryGetClientSessionID(context, out var clientSessionId))
@@ -88,6 +81,13 @@ namespace osu.Server.Spectator.Entities
             bool connectionIdMatches = registeredConnectionId == context.Context.ConnectionId;
 
             return hubRegistered && connectionIdMatches;
+        }
+
+        private static bool tryGetClientSessionID(HubLifetimeContext context, out Guid clientSessionId)
+        {
+            clientSessionId = Guid.Empty;
+            return context.Context.GetHttpContext()?.Request.Headers.TryGetValue(HubClientConnector.CLIENT_SESSION_ID_HEADER, out var value) == true
+                   && Guid.TryParse(value, out clientSessionId);
         }
     }
 }
