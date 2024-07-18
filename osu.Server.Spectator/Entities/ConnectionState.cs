@@ -29,7 +29,7 @@ namespace osu.Server.Spectator.Entities
         /// This was previously used as a method of controlling user uniqueness / limiting concurrency,
         /// but it turned out to be a bad fit for the purpose (see https://github.com/ppy/osu/issues/26338#issuecomment-2222935517).
         /// </remarks>
-        [Obsolete("Use ClientSessionId instead.")]
+        [Obsolete("Use ClientSessionId instead.")] // Can be removed 2024-08-18
         public readonly string TokenId;
 
         /// <summary>
@@ -64,6 +64,7 @@ namespace osu.Server.Spectator.Entities
             if (tryGetClientSessionID(context, out var clientSessionId))
                 return ClientSessionId == clientSessionId;
 
+            // Legacy pathway using JTI claim left for compatibility with older clients – can be removed 2024-08-18
             return TokenId == context.Context.GetTokenId();
         }
 
