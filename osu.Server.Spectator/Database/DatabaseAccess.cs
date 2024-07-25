@@ -427,7 +427,7 @@ namespace osu.Server.Spectator.Database
                 long[] totalScores = (await connection.QueryAsync<long>(
                     "SELECT `scores`.`total_score` FROM `scores` "
                     + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
-                    + "WHERE `multiplayer_score_links`.`playlist_item_id` = @playlistItemId", new
+                    + "WHERE passed = 1 AND `multiplayer_score_links`.`playlist_item_id` = @playlistItemId", new
                     {
                         playlistItemId = playlistItemIds[i]
                     })).ToArray();
