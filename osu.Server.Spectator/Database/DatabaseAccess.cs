@@ -465,8 +465,10 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QuerySingleAsync<int>(
-                "SELECT COUNT(1) + 1 FROM `multiplayer_rooms_high` WHERE `room_id` = @roomId AND `user_id` != @userId "
-                + "AND `total_score` > (SELECT `total_score` FROM `multiplayer_rooms_high` WHERE `room_id` = @roomId AND `user_id` = @userId)",
+                "WITH `user_score` AS (SELECT `total_score`, `last_score_id` FROM `multiplayer_rooms_high` WHERE `room_id` = @roomId AND `user_id` = @userId) "
+                + "SELECT COUNT(1) + 1 FROM `multiplayer_rooms_high` WHERE `room_id` = @roomId AND `user_id` != @userId "
+                + "AND (`total_score` > (SELECT `total_score` FROM `user_score`) OR "
+                + "(`total_score` = (SELECT `total_score` FROM `user_score`) AND `last_score_id` < (SELECT `last_score_id` FROM `user_score`)))",
                 new
                 {
                     roomId = roomId,
