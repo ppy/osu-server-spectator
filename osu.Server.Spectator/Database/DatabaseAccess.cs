@@ -440,6 +440,7 @@ namespace osu.Server.Spectator.Database
                 {
                     PlaylistItemID = playlistItemIds[i],
                     TotalScoreDistribution = Enumerable.Range(0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS).Select(i => totals.GetValueOrDefault(i)).ToArray(),
+                    TotalPlaylistScore = totalScores.Sum(),
                 };
 
                 result[i] = stats;
