@@ -160,7 +160,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                                                    .OrderBy(grp => grp.Key)
                                                    .ToDictionary(grp => grp.Key, grp => grp.LongCount());
 
-                    itemStats.TotalPlaylistScore += scores.Sum(s => s.total_score);
+                    itemStats.CumulativeScore += scores.Sum(s => s.total_score);
                     for (int j = 0; j < MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS; j++)
                         itemStats.TotalScoreDistribution[j] += totals.GetValueOrDefault(j);
                     itemStats.LastProcessedScoreID = scores.Max(s => s.id);
