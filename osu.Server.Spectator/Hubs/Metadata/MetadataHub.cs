@@ -145,6 +145,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 if (!stats.PlaylistItemStats.TryGetValue(itemId, out var itemStats))
                     stats.PlaylistItemStats[itemId] = itemStats = new MultiplayerPlaylistItemStats { PlaylistItemID = itemId, };
 
+                ulong lastProcessed = itemStats.LastProcessedScoreID;
+
                 SoloScore[] scores = (await db.GetPassingScoresForPlaylistItem(itemId, itemStats.LastProcessedScoreID)).ToArray();
 
                 if (scores.Length == 0)
@@ -154,16 +156,21 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 // If it ever becomes an issue we can move to per-item locking or something more complex.
                 lock (update_stats_lock)
                 {
-                    Dictionary<int, long> totals = scores
-                                                   .Select(s => s.total_score)
-                                                   .GroupBy(score => (int)Math.Clamp(Math.Floor((float)score / 100000), 0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS - 1))
-                                                   .OrderBy(grp => grp.Key)
-                                                   .ToDictionary(grp => grp.Key, grp => grp.LongCount());
+                    // check whether last id has changed since database query completed. if it did, this means another run would have updated the stats.
+                    // for simplicity, just skip the update and wait for the next.
+                    if (lastProcessed == itemStats.LastProcessedScoreID)
+                    {
+                        Dictionary<int, long> totals = scores
+                                                       .Select(s => s.total_score)
+                                                       .GroupBy(score => (int)Math.Clamp(Math.Floor((float)score / 100000), 0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS - 1))
+                                                       .OrderBy(grp => grp.Key)
+                                                       .ToDictionary(grp => grp.Key, grp => grp.LongCount());
 
-                    itemStats.CumulativeScore += scores.Sum(s => s.total_score);
-                    for (int j = 0; j < MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS; j++)
-                        itemStats.TotalScoreDistribution[j] += totals.GetValueOrDefault(j);
-                    itemStats.LastProcessedScoreID = scores.Max(s => s.id);
+                        itemStats.CumulativeScore += scores.Sum(s => s.total_score);
+                        for (int j = 0; j < MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS; j++)
+                            itemStats.TotalScoreDistribution[j] += totals.GetValueOrDefault(j);
+                        itemStats.LastProcessedScoreID = scores.Max(s => s.id);
+                    }
                 }
             }
         }
