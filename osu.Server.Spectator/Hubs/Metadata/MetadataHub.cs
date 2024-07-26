@@ -122,10 +122,15 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             using var db = databaseFactory.GetInstance();
 
-            var stats = cache.Get<MultiplayerRoomStats>(id.ToString()) ?? new MultiplayerRoomStats { RoomID = id };
+            MultiplayerRoomStats stats = (await cache.GetOrCreateAsync<MultiplayerRoomStats>(id.ToString(), e =>
+            {
+                e.SlidingExpiration = TimeSpan.FromMinutes(30);
+                return Task.FromResult(new MultiplayerRoomStats { RoomID = id });
+            }))!;
 
             await updateMultiplayerRoomStatsAsync(db, stats);
 
+            // Outside of locking so may be mid-update, but that's fine we don't need perfectly accurate for client-side.
             return stats.PlaylistItemStats.Values.ToArray();
         }
 
