@@ -37,7 +37,7 @@ namespace osu.Server.Spectator.Tests
             MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
             userStates = new EntityStore<ClientState>();
-            hub = new TestStatefulHub(loggerFactoryMock.Object, cache, userStates);
+            hub = new TestStatefulHub(loggerFactoryMock.Object, userStates);
 
             mockContext = new Mock<HubCallerContext>();
             mockContext.Setup(context => context.UserIdentifier).Returns(user_id.ToString());
@@ -113,8 +113,8 @@ namespace osu.Server.Spectator.Tests
 
         private class TestStatefulHub : StatefulUserHub<IStatefulUserHubClient, ClientState>
         {
-            public TestStatefulHub(ILoggerFactory loggerFactory, IDistributedCache cache, EntityStore<ClientState> userStates)
-                : base(loggerFactory, cache, userStates)
+            public TestStatefulHub(ILoggerFactory loggerFactory, EntityStore<ClientState> userStates)
+                : base(loggerFactory, userStates)
             {
             }
 

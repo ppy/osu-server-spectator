@@ -5,10 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using osu.Game.Beatmaps;
 using osu.Game.Online.API.Requests.Responses;
@@ -41,9 +38,6 @@ namespace osu.Server.Spectator.Tests
 
         public SpectatorHubTest()
         {
-            // not used for now, but left here for potential future usage.
-            MemoryDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-
             var clientStates = new EntityStore<SpectatorClientState>();
 
             mockDatabase = new Mock<IDatabaseAccess>();
@@ -68,7 +62,7 @@ namespace osu.Server.Spectator.Tests
 
             var mockScoreProcessedSubscriber = new Mock<IScoreProcessedSubscriber>();
 
-            hub = new SpectatorHub(loggerFactory.Object, cache, clientStates, databaseFactory.Object, scoreUploader, mockScoreProcessedSubscriber.Object);
+            hub = new SpectatorHub(loggerFactory.Object, clientStates, databaseFactory.Object, scoreUploader, mockScoreProcessedSubscriber.Object);
         }
 
         [Fact]

@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
@@ -16,13 +15,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
         public TestMultiplayerHub(
             ILoggerFactory loggerFactory,
-            IDistributedCache cache,
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext)
-            : base(loggerFactory, cache, rooms, users, databaseFactory, chatFilters, hubContext)
+            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext)
         {
         }
 

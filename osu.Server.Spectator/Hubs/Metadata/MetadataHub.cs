@@ -4,7 +4,6 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online;
@@ -29,12 +28,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         public MetadataHub(
             ILoggerFactory loggerFactory,
-            IDistributedCache cache,
             EntityStore<MetadataClientState> userStates,
             IDatabaseFactory databaseFactory,
             IDailyChallengeUpdater dailyChallengeUpdater,
             IScoreProcessedSubscriber scoreProcessedSubscriber)
-            : base(loggerFactory, cache, userStates)
+            : base(loggerFactory, userStates)
         {
             this.databaseFactory = databaseFactory;
             this.dailyChallengeUpdater = dailyChallengeUpdater;

@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
@@ -29,13 +28,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
-            IDistributedCache cache,
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext)
-            : base(loggerFactory, cache, users)
+            : base(loggerFactory, users)
         {
             Rooms = rooms;
             this.databaseFactory = databaseFactory;
