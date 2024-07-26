@@ -424,28 +424,31 @@ namespace osu.Server.Spectator.Database
 
             for (int i = 0; i < playlistItemIds.Length; ++i)
             {
-                if (!stats.PlaylistItemStats.TryGetValue(playlistItemIds[i], out var itemStats))
-                {
-                    stats.PlaylistItemStats[playlistItemIds[i]] = itemStats = new MultiplayerPlaylistItemStats
-                    {
-                        PlaylistItemID = playlistItemIds[i],
-                    };
-                }
+                long itemId = playlistItemIds[i];
 
-                long[] totalScores = (await connection.QueryAsync<long>(
-                    "SELECT `scores`.`total_score` FROM `scores` "
+                if (!stats.PlaylistItemStats.TryGetValue(itemId, out var itemStats))
+                    stats.PlaylistItemStats[itemId] = itemStats = new MultiplayerPlaylistItemStats { PlaylistItemID = itemId, };
+
+                var scores = (await connection.QueryAsync<SoloScore>(
+                    "SELECT `scores`.`id`, `scores`.`total_score` FROM `scores` "
                     + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
-                    + "WHERE `passed` = 1 AND `multiplayer_score_links`.`playlist_item_id` = @playlistItemId", new
+                    + "WHERE `passed` = 1 AND `multiplayer_score_links`.`playlist_item_id` = @playlistItemId "
+                    + "AND `multiplayer_score_links`.`score_id` > @lastScoreId", new
                     {
-                        playlistItemId = playlistItemIds[i]
+                        playlistItemId = itemId,
+                        lastScoreId = itemStats.LastProcessedScoreID,
                     })).ToArray();
 
-                var totals = totalScores.GroupBy(score => (int)Math.Clamp(Math.Floor((float)score / 100000), 0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS - 1))
-                                        .OrderBy(grp => grp.Key)
-                                        .ToDictionary(grp => grp.Key, grp => grp.LongCount());
+                var totals = scores
+                             .Select(s => s.total_score)
+                             .GroupBy(score => (int)Math.Clamp(Math.Floor((float)score / 100000), 0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS - 1))
+                             .OrderBy(grp => grp.Key)
+                             .ToDictionary(grp => grp.Key, grp => grp.LongCount());
 
-                itemStats.TotalPlaylistScore += totalScores.Sum();
-                itemStats.TotalScoreDistribution = Enumerable.Range(0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS).Select(i => totals.GetValueOrDefault(i)).ToArray();
+                itemStats.TotalPlaylistScore += scores.Sum(s => s.total_score);
+                for (int j = 0; j < MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS; j++)
+                    itemStats.TotalScoreDistribution[j] += totals.GetValueOrDefault(j);
+                itemStats.LastProcessedScoreID = scores.Max(s => s.id);
             }
         }
 
