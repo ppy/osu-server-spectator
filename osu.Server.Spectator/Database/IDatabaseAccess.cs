@@ -9,7 +9,6 @@ using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database.Models;
-using osu.Server.Spectator.Hubs.Metadata;
 
 namespace osu.Server.Spectator.Database
 {
@@ -187,9 +186,12 @@ namespace osu.Server.Spectator.Database
         Task<(long roomID, long playlistItemID)?> GetMultiplayerRoomIdForScoreAsync(long scoreId);
 
         /// <summary>
-        /// Populates statistics, bringing the provided statistics model up-to-date with any new scores.
+        /// Retrieve all passing scores for a specified playlist item.
         /// </summary>
-        Task UpdateMultiplayerRoomStatsAsync(MultiplayerRoomStats stats);
+        /// <param name="playlistItemId">The playlist item.</param>
+        /// <param name="afterScoreId">An optional score ID to only fetch newer scores.</param>
+        /// <returns></returns>
+        Task<IEnumerable<SoloScore>> GetScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0);
 
         /// <summary>
         /// Returns the best score of user with <paramref name="userId"/> on the playlist item with <paramref name="playlistItemId"/>.

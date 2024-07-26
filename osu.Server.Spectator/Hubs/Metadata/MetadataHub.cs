@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,6 +14,7 @@ using osu.Game.Online;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Spectator;
@@ -121,11 +124,40 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             var stats = cache.Get<MultiplayerRoomStats>(id.ToString()) ?? new MultiplayerRoomStats { RoomID = id };
 
-            // just for simplicity
-            lock (update_stats_lock)
-                await db.UpdateMultiplayerRoomStatsAsync(stats);
+            await updateMultiplayerRoomStatsAsync(db, stats);
 
             return stats.PlaylistItemStats.Values.ToArray();
+        }
+
+        private async Task updateMultiplayerRoomStatsAsync(IDatabaseAccess db, MultiplayerRoomStats stats)
+        {
+            long[] playlistItemIds = (await db.GetAllPlaylistItemsAsync(stats.RoomID)).Select(item => item.id).ToArray();
+
+            for (int i = 0; i < playlistItemIds.Length; ++i)
+            {
+                long itemId = playlistItemIds[i];
+
+                if (!stats.PlaylistItemStats.TryGetValue(itemId, out var itemStats))
+                    stats.PlaylistItemStats[itemId] = itemStats = new MultiplayerPlaylistItemStats { PlaylistItemID = itemId, };
+
+                SoloScore[] scores = (await db.GetScoresForPlaylistItem(itemId, itemStats.LastProcessedScoreID)).ToArray();
+
+                // Lock globally for simplicity.
+                // If it ever becomes an issue we can move to per-item locking or something more complex.
+                lock (update_stats_lock)
+                {
+                    Dictionary<int, long> totals = scores
+                                                   .Select(s => s.total_score)
+                                                   .GroupBy(score => (int)Math.Clamp(Math.Floor((float)score / 100000), 0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS - 1))
+                                                   .OrderBy(grp => grp.Key)
+                                                   .ToDictionary(grp => grp.Key, grp => grp.LongCount());
+
+                    itemStats.TotalPlaylistScore += scores.Sum(s => s.total_score);
+                    for (int j = 0; j < MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS; j++)
+                        itemStats.TotalScoreDistribution[j] += totals.GetValueOrDefault(j);
+                    itemStats.LastProcessedScoreID = scores.Max(s => s.id);
+                }
+            }
         }
 
         public async Task EndWatchingMultiplayerRoom(long id)
