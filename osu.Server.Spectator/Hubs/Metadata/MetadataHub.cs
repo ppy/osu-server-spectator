@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Primitives;
@@ -111,7 +112,13 @@ namespace osu.Server.Spectator.Hubs.Metadata
             await scoreProcessedSubscriber.RegisterForMultiplayerRoomAsync(Context.GetUserId(), id);
 
             using var db = databaseFactory.GetInstance();
-            return await db.GetMultiplayerRoomStatsAsync(id);
+
+            // TODO: cache and reuse.
+            var stats = new MultiplayerRoomStats { RoomID = id };
+
+            await db.UpdateMultiplayerRoomStatsAsync(stats);
+
+            return stats.PlaylistItemStats.Values.ToArray();
         }
 
         public async Task EndWatchingMultiplayerRoom(long id)

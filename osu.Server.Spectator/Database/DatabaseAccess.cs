@@ -13,6 +13,7 @@ using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs.Metadata;
 
 namespace osu.Server.Spectator.Database
 {
@@ -415,15 +416,22 @@ namespace osu.Server.Spectator.Database
                 new { scoreId = scoreId });
         }
 
-        public async Task<MultiplayerPlaylistItemStats[]> GetMultiplayerRoomStatsAsync(long roomId)
+        public async Task UpdateMultiplayerRoomStatsAsync(MultiplayerRoomStats stats)
         {
             var connection = await getConnectionAsync();
 
-            long[] playlistItemIds = (await GetAllPlaylistItemsAsync(roomId)).Select(item => item.id).ToArray();
-            var result = new MultiplayerPlaylistItemStats[playlistItemIds.Length];
+            long[] playlistItemIds = (await GetAllPlaylistItemsAsync(stats.RoomID)).Select(item => item.id).ToArray();
 
             for (int i = 0; i < playlistItemIds.Length; ++i)
             {
+                if (!stats.PlaylistItemStats.TryGetValue(playlistItemIds[i], out var itemStats))
+                {
+                    stats.PlaylistItemStats[playlistItemIds[i]] = itemStats = new MultiplayerPlaylistItemStats
+                    {
+                        PlaylistItemID = playlistItemIds[i],
+                    };
+                }
+
                 long[] totalScores = (await connection.QueryAsync<long>(
                     "SELECT `scores`.`total_score` FROM `scores` "
                     + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
@@ -436,17 +444,9 @@ namespace osu.Server.Spectator.Database
                                         .OrderBy(grp => grp.Key)
                                         .ToDictionary(grp => grp.Key, grp => grp.LongCount());
 
-                var stats = new MultiplayerPlaylistItemStats
-                {
-                    PlaylistItemID = playlistItemIds[i],
-                    TotalScoreDistribution = Enumerable.Range(0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS).Select(i => totals.GetValueOrDefault(i)).ToArray(),
-                    TotalPlaylistScore = totalScores.Sum(),
-                };
-
-                result[i] = stats;
+                itemStats.TotalPlaylistScore += totalScores.Sum();
+                itemStats.TotalScoreDistribution = Enumerable.Range(0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS).Select(i => totals.GetValueOrDefault(i)).ToArray();
             }
-
-            return result;
         }
 
         public async Task<multiplayer_scores_high?> GetUserBestScoreAsync(long playlistItemId, int userId)
