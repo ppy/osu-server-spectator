@@ -10,6 +10,6 @@ namespace osu.Server.Spectator.Hubs.Metadata
     {
         public long RoomID { get; init; }
 
-        public ConcurrentDictionary<long, MultiplayerPlaylistItemStats> PlaylistItemStats = new ConcurrentDictionary<long, MultiplayerPlaylistItemStats>();
+        public readonly ConcurrentDictionary<long, MultiplayerPlaylistItemStats> PlaylistItemStats = new ConcurrentDictionary<long, MultiplayerPlaylistItemStats>();
     }
 }

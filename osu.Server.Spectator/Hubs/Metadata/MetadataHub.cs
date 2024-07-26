@@ -145,7 +145,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 if (!stats.PlaylistItemStats.TryGetValue(itemId, out var itemStats))
                     stats.PlaylistItemStats[itemId] = itemStats = new MultiplayerPlaylistItemStats { PlaylistItemID = itemId, };
 
-                SoloScore[] scores = (await db.GetScoresForPlaylistItem(itemId, itemStats.LastProcessedScoreID)).ToArray();
+                SoloScore[] scores = (await db.GetPassingScoresForPlaylistItem(itemId, itemStats.LastProcessedScoreID)).ToArray();
 
                 if (scores.Length == 0)
                     return;

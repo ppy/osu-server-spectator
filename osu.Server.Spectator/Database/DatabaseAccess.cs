@@ -415,7 +415,7 @@ namespace osu.Server.Spectator.Database
                 new { scoreId = scoreId });
         }
 
-        public async Task<IEnumerable<SoloScore>> GetScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0)
+        public async Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0)
         {
             var connection = await getConnectionAsync();
 
