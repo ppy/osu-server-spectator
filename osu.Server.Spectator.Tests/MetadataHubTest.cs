@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Online.Metadata;
@@ -40,6 +41,7 @@ namespace osu.Server.Spectator.Tests
 
             hub = new MetadataHub(
                 loggerFactoryMock.Object,
+                new MemoryCache(new MemoryCacheOptions()),
                 userStates,
                 databaseFactory.Object,
                 new Mock<IDailyChallengeUpdater>().Object,

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online;
@@ -19,6 +20,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 {
     public class MetadataHub : StatefulUserHub<IMetadataClient, MetadataClientState>, IMetadataServer
     {
+        private readonly IMemoryCache cache;
         private readonly IDatabaseFactory databaseFactory;
         private readonly IDailyChallengeUpdater dailyChallengeUpdater;
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
@@ -29,12 +31,14 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         public MetadataHub(
             ILoggerFactory loggerFactory,
+            IMemoryCache cache,
             EntityStore<MetadataClientState> userStates,
             IDatabaseFactory databaseFactory,
             IDailyChallengeUpdater dailyChallengeUpdater,
             IScoreProcessedSubscriber scoreProcessedSubscriber)
             : base(loggerFactory, userStates)
         {
+            this.cache = cache;
             this.databaseFactory = databaseFactory;
             this.dailyChallengeUpdater = dailyChallengeUpdater;
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
@@ -106,6 +110,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
             }
         }
 
+        private static readonly object update_stats_lock = new object();
+
         public async Task<MultiplayerPlaylistItemStats[]> BeginWatchingMultiplayerRoom(long id)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, MultiplayerRoomWatchersGroup(id));
@@ -113,10 +119,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             using var db = databaseFactory.GetInstance();
 
-            // TODO: cache and reuse.
-            var stats = new MultiplayerRoomStats { RoomID = id };
+            var stats = cache.Get<MultiplayerRoomStats>(id.ToString()) ?? new MultiplayerRoomStats { RoomID = id };
 
-            await db.UpdateMultiplayerRoomStatsAsync(stats);
+            // just for simplicity
+            lock (update_stats_lock)
+                await db.UpdateMultiplayerRoomStatsAsync(stats);
 
             return stats.PlaylistItemStats.Values.ToArray();
         }
