@@ -124,7 +124,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             MultiplayerRoomStats stats = (await cache.GetOrCreateAsync<MultiplayerRoomStats>(id.ToString(), e =>
             {
-                e.SlidingExpiration = TimeSpan.FromMinutes(30);
+                e.SlidingExpiration = TimeSpan.FromHours(24);
                 return Task.FromResult(new MultiplayerRoomStats { RoomID = id });
             }))!;
 
