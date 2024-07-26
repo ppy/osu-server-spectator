@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Server.Spectator.Entities;
@@ -24,7 +23,6 @@ namespace osu.Server.Spectator.Hubs
 
         protected StatefulUserHub(
             ILoggerFactory loggerFactory,
-            IDistributedCache cache,
             EntityStore<TUserState> userStates)
             : base(loggerFactory)
         {

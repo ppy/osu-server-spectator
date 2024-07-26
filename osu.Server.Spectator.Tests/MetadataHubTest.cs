@@ -5,9 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Online.Metadata;
@@ -32,7 +30,6 @@ namespace osu.Server.Spectator.Tests
 
         public MetadataHubTest()
         {
-            var cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
             userStates = new EntityStore<MetadataClientState>();
 
             var mockDatabase = new Mock<IDatabaseAccess>();
@@ -44,7 +41,7 @@ namespace osu.Server.Spectator.Tests
 
             hub = new MetadataHub(
                 loggerFactoryMock.Object,
-                cache,
+                new MemoryCache(new MemoryCacheOptions()),
                 userStates,
                 databaseFactory.Object,
                 new Mock<IDailyChallengeUpdater>().Object,

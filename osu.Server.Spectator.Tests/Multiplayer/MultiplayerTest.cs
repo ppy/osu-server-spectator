@@ -7,9 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Beatmaps;
@@ -135,7 +132,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,
-                new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())),
                 Rooms,
                 UserStates,
                 DatabaseFactory.Object,

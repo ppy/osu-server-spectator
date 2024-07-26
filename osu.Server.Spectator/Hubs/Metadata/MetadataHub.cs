@@ -1,16 +1,20 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Spectator;
@@ -19,6 +23,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 {
     public class MetadataHub : StatefulUserHub<IMetadataClient, MetadataClientState>, IMetadataServer
     {
+        private readonly IMemoryCache cache;
         private readonly IDatabaseFactory databaseFactory;
         private readonly IDailyChallengeUpdater dailyChallengeUpdater;
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
@@ -29,13 +34,14 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         public MetadataHub(
             ILoggerFactory loggerFactory,
-            IDistributedCache cache,
+            IMemoryCache cache,
             EntityStore<MetadataClientState> userStates,
             IDatabaseFactory databaseFactory,
             IDailyChallengeUpdater dailyChallengeUpdater,
             IScoreProcessedSubscriber scoreProcessedSubscriber)
-            : base(loggerFactory, cache, userStates)
+            : base(loggerFactory, userStates)
         {
+            this.cache = cache;
             this.databaseFactory = databaseFactory;
             this.dailyChallengeUpdater = dailyChallengeUpdater;
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
@@ -107,13 +113,66 @@ namespace osu.Server.Spectator.Hubs.Metadata
             }
         }
 
+        private static readonly object update_stats_lock = new object();
+
         public async Task<MultiplayerPlaylistItemStats[]> BeginWatchingMultiplayerRoom(long id)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, MultiplayerRoomWatchersGroup(id));
             await scoreProcessedSubscriber.RegisterForMultiplayerRoomAsync(Context.GetUserId(), id);
 
             using var db = databaseFactory.GetInstance();
-            return await db.GetMultiplayerRoomStatsAsync(id);
+
+            MultiplayerRoomStats stats = (await cache.GetOrCreateAsync<MultiplayerRoomStats>(id.ToString(), e =>
+            {
+                e.SlidingExpiration = TimeSpan.FromHours(24);
+                return Task.FromResult(new MultiplayerRoomStats { RoomID = id });
+            }))!;
+
+            await updateMultiplayerRoomStatsAsync(db, stats);
+
+            // Outside of locking so may be mid-update, but that's fine we don't need perfectly accurate for client-side.
+            return stats.PlaylistItemStats.Values.ToArray();
+        }
+
+        private async Task updateMultiplayerRoomStatsAsync(IDatabaseAccess db, MultiplayerRoomStats stats)
+        {
+            long[] playlistItemIds = (await db.GetAllPlaylistItemsAsync(stats.RoomID)).Select(item => item.id).ToArray();
+
+            for (int i = 0; i < playlistItemIds.Length; ++i)
+            {
+                long itemId = playlistItemIds[i];
+
+                if (!stats.PlaylistItemStats.TryGetValue(itemId, out var itemStats))
+                    stats.PlaylistItemStats[itemId] = itemStats = new MultiplayerPlaylistItemStats { PlaylistItemID = itemId, };
+
+                ulong lastProcessed = itemStats.LastProcessedScoreID;
+
+                SoloScore[] scores = (await db.GetPassingScoresForPlaylistItem(itemId, itemStats.LastProcessedScoreID)).ToArray();
+
+                if (scores.Length == 0)
+                    return;
+
+                // Lock globally for simplicity.
+                // If it ever becomes an issue we can move to per-item locking or something more complex.
+                lock (update_stats_lock)
+                {
+                    // check whether last id has changed since database query completed. if it did, this means another run would have updated the stats.
+                    // for simplicity, just skip the update and wait for the next.
+                    if (lastProcessed == itemStats.LastProcessedScoreID)
+                    {
+                        Dictionary<int, long> totals = scores
+                                                       .Select(s => s.total_score)
+                                                       .GroupBy(score => (int)Math.Clamp(Math.Floor((float)score / 100000), 0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS - 1))
+                                                       .OrderBy(grp => grp.Key)
+                                                       .ToDictionary(grp => grp.Key, grp => grp.LongCount());
+
+                        itemStats.CumulativeScore += scores.Sum(s => s.total_score);
+                        for (int j = 0; j < MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS; j++)
+                            itemStats.TotalScoreDistribution[j] += totals.GetValueOrDefault(j);
+                        itemStats.LastProcessedScoreID = scores.Max(s => s.id);
+                    }
+                }
+            }
         }
 
         public async Task EndWatchingMultiplayerRoom(long id)

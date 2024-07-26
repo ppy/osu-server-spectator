@@ -56,7 +56,8 @@ namespace osu.Server.Spectator
                     });
 
             services.AddHubEntities()
-                    .AddDatabaseServices();
+                    .AddDatabaseServices()
+                    .AddMemoryCache();
 
             services.AddDistributedMemoryCache(); // replace with redis
 
