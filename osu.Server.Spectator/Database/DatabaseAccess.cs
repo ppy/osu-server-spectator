@@ -429,7 +429,7 @@ namespace osu.Server.Spectator.Database
                 if (!stats.PlaylistItemStats.TryGetValue(itemId, out var itemStats))
                     stats.PlaylistItemStats[itemId] = itemStats = new MultiplayerPlaylistItemStats { PlaylistItemID = itemId, };
 
-                var scores = (await connection.QueryAsync<SoloScore>(
+                SoloScore[] scores = (await connection.QueryAsync<SoloScore>(
                     "SELECT `scores`.`id`, `scores`.`total_score` FROM `scores` "
                     + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
                     + "WHERE `passed` = 1 AND `multiplayer_score_links`.`playlist_item_id` = @playlistItemId "
@@ -439,11 +439,11 @@ namespace osu.Server.Spectator.Database
                         lastScoreId = itemStats.LastProcessedScoreID,
                     })).ToArray();
 
-                var totals = scores
-                             .Select(s => s.total_score)
-                             .GroupBy(score => (int)Math.Clamp(Math.Floor((float)score / 100000), 0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS - 1))
-                             .OrderBy(grp => grp.Key)
-                             .ToDictionary(grp => grp.Key, grp => grp.LongCount());
+                Dictionary<int, long> totals = scores
+                                               .Select(s => s.total_score)
+                                               .GroupBy(score => (int)Math.Clamp(Math.Floor((float)score / 100000), 0, MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS - 1))
+                                               .OrderBy(grp => grp.Key)
+                                               .ToDictionary(grp => grp.Key, grp => grp.LongCount());
 
                 itemStats.TotalPlaylistScore += scores.Sum(s => s.total_score);
                 for (int j = 0; j < MultiplayerPlaylistItemStats.TOTAL_SCORE_DISTRIBUTION_BINS; j++)
