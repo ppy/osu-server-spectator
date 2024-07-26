@@ -147,6 +147,9 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 SoloScore[] scores = (await db.GetScoresForPlaylistItem(itemId, itemStats.LastProcessedScoreID)).ToArray();
 
+                if (scores.Length == 0)
+                    return;
+
                 // Lock globally for simplicity.
                 // If it ever becomes an issue we can move to per-item locking or something more complex.
                 lock (update_stats_lock)
