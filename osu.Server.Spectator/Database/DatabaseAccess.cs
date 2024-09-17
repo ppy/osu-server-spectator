@@ -422,8 +422,12 @@ namespace osu.Server.Spectator.Database
             return (await connection.QueryAsync<SoloScore>(
                 "SELECT `scores`.`id`, `scores`.`total_score` FROM `scores` "
                 + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
-                + "WHERE `passed` = 1 AND `multiplayer_score_links`.`playlist_item_id` = @playlistItemId "
-                + "AND `multiplayer_score_links`.`score_id` > @afterScoreId", new
+                + "JOIN `phpbb_users` ON `phpbb_users`.`user_id` = `multiplayer_score_links`.`user_id` "
+                + "WHERE `scores`.`passed` = 1 "
+                + "AND `multiplayer_score_links`.`playlist_item_id` = @playlistItemId "
+                + "AND `multiplayer_score_links`.`score_id` > @afterScoreId "
+                + "AND `phpbb_users`.`user_type` = 0 "
+                + "AND `phpbb_users`.`user_warnings` = 0", new
                 {
                     playlistItemId = playlistItemId,
                     afterScoreId = afterScoreId,
@@ -448,9 +452,14 @@ namespace osu.Server.Spectator.Database
 
             return await connection.QuerySingleAsync<int>(
                 "WITH `user_score` AS (SELECT `total_score`, `last_score_id` FROM `multiplayer_rooms_high` WHERE `room_id` = @roomId AND `user_id` = @userId) "
-                + "SELECT COUNT(1) + 1 FROM `multiplayer_rooms_high` WHERE `room_id` = @roomId AND `user_id` != @userId "
-                + "AND (`total_score` > (SELECT `total_score` FROM `user_score`) OR "
-                + "(`total_score` = (SELECT `total_score` FROM `user_score`) AND `last_score_id` < (SELECT `last_score_id` FROM `user_score`)))",
+                + "SELECT COUNT(1) + 1 FROM `multiplayer_rooms_high` "
+                + "JOIN `phpbb_users` ON `phpbb_users`.`user_id` = `multiplayer_rooms_high`.`user_id` "
+                + "WHERE `multiplayer_rooms_high`.`room_id` = @roomId "
+                + "AND `multiplayer_rooms_high`.`user_id` != @userId "
+                + "AND `phpbb_users`.`user_type` = 0 "
+                + "AND `phpbb_users`.`user_warnings` = 0 "
+                + "AND (`multiplayer_rooms_high`.`total_score` > (SELECT `total_score` FROM `user_score`) OR "
+                + "(`multiplayer_rooms_high`.`total_score` = (SELECT `total_score` FROM `user_score`) AND `multiplayer_rooms_high`.`last_score_id` < (SELECT `last_score_id` FROM `user_score`)))",
                 new
                 {
                     roomId = roomId,
