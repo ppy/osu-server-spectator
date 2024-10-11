@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Amazon;
@@ -20,7 +21,10 @@ namespace osu.Server.Spectator
                 HttpClientCacheSize = 32,
                 RegionEndpoint = endpoint ?? RegionEndpoint.USWest1,
                 UseHttp = true,
-                ForcePathStyle = true
+                ForcePathStyle = true,
+                RetryMode = RequestRetryMode.Legacy,
+                MaxErrorRetry = 5,
+                Timeout = TimeSpan.FromSeconds(10),
             });
         }
 
