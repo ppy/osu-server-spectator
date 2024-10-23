@@ -124,6 +124,11 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 score.ScoreInfo.Combo = data.Header.Combo;
                 score.ScoreInfo.TotalScore = data.Header.TotalScore;
 
+                // null here means the frame bundle is from an old client that can't send mod data
+                // can be removed (along with making property non-nullable on `FrameDataBundle`) 20250407
+                if (data.Header.Mods != null)
+                    score.ScoreInfo.APIMods = data.Header.Mods;
+
                 score.Replay.Frames.AddRange(data.Frames);
 
                 await Clients.Group(GetGroupId(Context.GetUserId())).UserSentFrames(Context.GetUserId(), data);
