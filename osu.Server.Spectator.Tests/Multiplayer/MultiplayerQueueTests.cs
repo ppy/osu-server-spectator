@@ -74,6 +74,33 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }));
         }
 
+        [Theory]
+        [InlineData(0, 0)]
+        [InlineData(0, 1)]
+        [InlineData(0, 2)]
+        [InlineData(0, 3)]
+        [InlineData(1, 1)]
+        [InlineData(2, 2)]
+        [InlineData(3, 3)]
+        public async Task AddingItemWithRulesetCompatibleWithBeatmapSucceeds(ushort beatmapRulesetId, ushort scoreRulesetId)
+        {
+            Database.Setup(d => d.GetBeatmapAsync(9999)).ReturnsAsync(new database_beatmap
+            {
+                checksum = "checksum",
+                playmode = beatmapRulesetId,
+            });
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 9999,
+                BeatmapChecksum = "checksum",
+                RulesetID = scoreRulesetId,
+            });
+
+            Database.Verify(d => d.AddPlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()), Times.Once);
+        }
+
         [Fact]
         public async Task RoomStartsWithCurrentPlaylistItem()
         {
@@ -383,6 +410,44 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "4444",
                 RulesetID = 1,
             }));
+        }
+
+        [Theory]
+        [InlineData(0, 0)]
+        [InlineData(0, 1)]
+        [InlineData(0, 2)]
+        [InlineData(0, 3)]
+        [InlineData(1, 1)]
+        [InlineData(2, 2)]
+        [InlineData(3, 3)]
+        public async Task EditingItemWithRulesetCompatibleWithBeatmapSucceeds(ushort beatmapRulesetId, ushort scoreRulesetId)
+        {
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333", });
+            Database.Setup(d => d.GetBeatmapAsync(4444)).ReturnsAsync(new database_beatmap
+            {
+                checksum = "4444",
+                playmode = beatmapRulesetId,
+            });
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 3333,
+                BeatmapChecksum = "3333",
+            });
+
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 2,
+                BeatmapID = 4444,
+                BeatmapChecksum = "4444",
+                RulesetID = scoreRulesetId,
+            });
+            Database.Verify(d => d.UpdatePlaylistItemAsync(It.IsAny<multiplayer_playlist_item>()), Times.AtLeastOnce);
         }
 
         [Fact]
