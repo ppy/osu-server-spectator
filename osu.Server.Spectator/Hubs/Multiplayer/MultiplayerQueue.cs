@@ -130,6 +130,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
                     throw new InvalidStateException("Attempted to select an unsupported ruleset.");
 
+                if (beatmap.playmode != 0 && item.RulesetID != beatmap.playmode)
+                    throw new InvalidStateException("Attempted to select an invalid beatmap and ruleset combination.");
+
                 item.EnsureModsValid();
                 item.OwnerID = user.UserID;
                 item.StarRating = beatmap.difficultyrating;
@@ -155,6 +158,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 if (item.RulesetID < 0 || item.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
                     throw new InvalidStateException("Attempted to select an unsupported ruleset.");
+
+                if (beatmap.playmode != 0 && item.RulesetID != beatmap.playmode)
+                    throw new InvalidStateException("Attempted to select an invalid beatmap and ruleset combination.");
 
                 item.EnsureModsValid();
                 item.OwnerID = user.UserID;
