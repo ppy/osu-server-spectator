@@ -103,6 +103,18 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task UpdateRoomStatusAsync(MultiplayerRoom room)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET status = @Status WHERE id = @RoomID", new
+            {
+                RoomID = room.RoomID,
+                // needs ToString() to store as enums correctly, see https://github.com/DapperLib/Dapper/issues/813.
+                Status = room.State.ToDatabaseRoomStatus().ToString(),
+            });
+        }
+
         public async Task UpdateRoomHostAsync(MultiplayerRoom room)
         {
             var connection = await getConnectionAsync();

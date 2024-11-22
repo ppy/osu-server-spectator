@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             Rooms = rooms;
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
-            HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory);
+            HubContext = new MultiplayerHubContext(hubContext, rooms, users, databaseFactory, loggerFactory);
         }
 
         public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);

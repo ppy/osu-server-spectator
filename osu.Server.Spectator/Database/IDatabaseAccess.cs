@@ -57,6 +57,11 @@ namespace osu.Server.Spectator.Database
         Task UpdateRoomSettingsAsync(MultiplayerRoom room);
 
         /// <summary>
+        /// Updates the current status of <paramref name="room"/> in the database.
+        /// </summary>
+        Task UpdateRoomStatusAsync(MultiplayerRoom room);
+
+        /// <summary>
         /// Updates the current host of <paramref name="room"/> in the database.
         /// </summary>
         Task UpdateRoomHostAsync(MultiplayerRoom room);

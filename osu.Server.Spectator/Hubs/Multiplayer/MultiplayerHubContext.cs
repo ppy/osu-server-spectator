@@ -12,6 +12,7 @@ using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 
@@ -30,17 +31,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly IHubContext<MultiplayerHub> context;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly EntityStore<MultiplayerClientState> users;
+        private readonly IDatabaseFactory databaseFactory;
         private readonly ILogger logger;
 
         public MultiplayerHubContext(
             IHubContext<MultiplayerHub> context,
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
+            IDatabaseFactory databaseFactory,
             ILoggerFactory loggerFactory)
         {
             this.context = context;
             this.rooms = rooms;
             this.users = users;
+            this.databaseFactory = databaseFactory;
 
             logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
         }
@@ -161,7 +165,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
         {
             log(room, null, $"Room state changing from {room.State} to {newState}");
+
             room.State = newState;
+            using (var db = databaseFactory.GetInstance())
+                await db.UpdateRoomStatusAsync(room);
+
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
         }
 
