@@ -12,6 +12,9 @@ using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets;
+using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 
@@ -30,17 +33,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly IHubContext<MultiplayerHub> context;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly EntityStore<MultiplayerClientState> users;
+        private readonly IDatabaseFactory databaseFactory;
         private readonly ILogger logger;
 
         public MultiplayerHubContext(
             IHubContext<MultiplayerHub> context,
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            IDatabaseFactory databaseFactory)
         {
             this.context = context;
             this.rooms = rooms;
             this.users = users;
+            this.databaseFactory = databaseFactory;
 
             logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
         }
@@ -73,6 +79,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged)
         {
             await EnsureAllUsersValidMods(room);
+            await EnsureAllUsersValidStyle(room);
 
             if (item.ID == room.Settings.PlaylistItemId)
                 await UnreadyAllUsers(room, beatmapChanged);
@@ -83,6 +90,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task NotifySettingsChanged(ServerMultiplayerRoom room, bool playlistItemChanged)
         {
             await EnsureAllUsersValidMods(room);
+            await EnsureAllUsersValidStyle(room);
 
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
             await UnreadyAllUsers(room, playlistItemChanged);
@@ -122,6 +130,83 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (!room.Queue.CurrentItem.ValidateUserMods(user.Mods, out var validMods))
                     await ChangeUserMods(validMods, room, user);
             }
+        }
+
+        public async Task EnsureAllUsersValidStyle(ServerMultiplayerRoom room)
+        {
+            using (var db = databaseFactory.GetInstance())
+            {
+                foreach (var user in room.Users)
+                {
+                    int? userBeatmapId = user.BeatmapId;
+                    int? userRulesetId = user.RulesetId;
+
+                    // Reset entire style when freestyle is disabled.
+                    if (room.Queue.CurrentItem.BeatmapSetID == null)
+                    {
+                        userBeatmapId = null;
+                        userRulesetId = null;
+                    }
+
+                    // Reset beatmap style when the beatmap set changes.
+                    if (userBeatmapId != null)
+                    {
+                        database_beatmap beatmap = (await db.GetBeatmapAsync(userBeatmapId.Value))!;
+                        if (beatmap.beatmapset_id != room.Queue.CurrentItem.BeatmapSetID)
+                            userBeatmapId = null;
+                    }
+
+                    // Reset ruleset style if incompatible with the current beatmap.
+                    if (userBeatmapId == null && userRulesetId != null)
+                    {
+                        database_beatmap beatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
+                        if (beatmap.playmode != 0 && userRulesetId != beatmap.playmode)
+                            userRulesetId = null;
+                    }
+
+                    await ChangeUserStyle(userBeatmapId, userRulesetId, room, user);
+                }
+            }
+        }
+
+        public async Task ChangeUserStyle(int? beatmapId, int? rulesetId, ServerMultiplayerRoom room, MultiplayerRoomUser user)
+        {
+            if (user.BeatmapId == beatmapId && user.RulesetId == rulesetId)
+                return;
+
+            if ((beatmapId != null || rulesetId != null) && room.Queue.CurrentItem.BeatmapSetID == null)
+                throw new InvalidStateException("Current item does not allow free user styles.");
+
+            database_beatmap? beatmap;
+
+            using (var db = databaseFactory.GetInstance())
+            {
+                if (beatmapId != null)
+                {
+                    beatmap = await db.GetBeatmapAsync(beatmapId.Value);
+
+                    if (beatmap == null)
+                        throw new InvalidStateException("Invalid beatmap selected.");
+
+                    if (beatmap.beatmapset_id != room.Queue.CurrentItem.BeatmapSetID)
+                        throw new InvalidStateException("Selected beatmap is not from the same beatmap set.");
+                }
+                else
+                    beatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
+            }
+
+            if (rulesetId != null)
+            {
+                if (rulesetId < 0 || rulesetId > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                    throw new InvalidStateException("Attempted to select an unsupported ruleset.");
+
+                if (beatmap.playmode != 0 && rulesetId != beatmap.playmode)
+                    throw new InvalidStateException("Selected ruleset is not supported for the given beatmap.");
+            }
+
+            user.BeatmapId = beatmapId;
+            user.RulesetId = rulesetId;
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStyleChanged), user.UserID, beatmapId, rulesetId);
         }
 
         public async Task ChangeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user)

@@ -11,6 +11,7 @@ namespace osu.Server.Spectator.Database.Models
     [Serializable]
     public class database_beatmap
     {
+        public int beatmapset_id { get; set; }
         public string? checksum { get; set; }
         public BeatmapOnlineStatus approved { get; set; }
         public double difficultyrating { get; set; }

@@ -124,6 +124,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (beatmap == null)
                     throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
 
+                if (item.BeatmapSetID != null && item.BeatmapSetID != beatmap.beatmapset_id)
+                    throw new InvalidStateException("Attempted to add a beatmap with a non-matching beatmap set id.");
+
                 if (item.BeatmapChecksum != beatmap.checksum)
                     throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
 
@@ -152,6 +155,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 if (beatmap == null)
                     throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
+
+                if (item.BeatmapSetID != null && item.BeatmapSetID != beatmap.beatmapset_id)
+                    throw new InvalidStateException("Attempted to add a beatmap with a non-matching beatmap set id.");
 
                 if (item.BeatmapChecksum != beatmap.checksum)
                     throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
