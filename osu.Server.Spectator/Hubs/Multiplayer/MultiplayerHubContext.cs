@@ -172,6 +172,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeUserStyle(int? beatmapId, int? rulesetId, ServerMultiplayerRoom room, MultiplayerRoomUser user)
         {
+            log(room, user, $"User style changing from (b:{user.BeatmapId}, r:{user.RulesetId}) to (b:{beatmapId}, r:{rulesetId})");
+
             if (user.BeatmapId == beatmapId && user.RulesetId == rulesetId)
                 return;
 
