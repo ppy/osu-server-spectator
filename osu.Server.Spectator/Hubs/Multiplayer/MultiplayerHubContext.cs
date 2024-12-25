@@ -78,11 +78,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged)
         {
-            await EnsureAllUsersValidMods(room);
-            await EnsureAllUsersValidStyle(room);
-
             if (item.ID == room.Settings.PlaylistItemId)
+            {
+                await EnsureAllUsersValidMods(room);
+                await EnsureAllUsersValidStyle(room);
                 await UnreadyAllUsers(room, beatmapChanged);
+            }
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemChanged), item);
         }
