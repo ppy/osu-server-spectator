@@ -21,7 +21,7 @@ using osu.Server.Spectator.Hubs.Spectator;
 
 namespace osu.Server.Spectator.Hubs.Metadata
 {
-    public class MetadataHub : StatefulUserHub<IMetadataClient, MetadataClientState>, IMetadataServer
+    public partial class MetadataHub : StatefulUserHub<IMetadataClient, MetadataClientState>, IMetadataServer
     {
         private readonly IMemoryCache cache;
         private readonly IDatabaseFactory databaseFactory;
@@ -68,6 +68,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
                 await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
                 await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);
+                await registerFriends(usage.Item);
             }
         }
 
@@ -186,6 +187,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             await base.CleanUpState(state);
             await broadcastUserPresenceUpdate(state.UserId, null);
             await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);
+            await unregisterFriends(state);
         }
 
         private Task broadcastUserPresenceUpdate(int userId, UserPresence? userPresence)
