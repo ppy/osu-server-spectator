@@ -75,15 +75,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         private async Task logLogin(ItemUsage<MetadataClientState> usage)
         {
-            string? userIp;
-
-            if (Context.GetHttpContext()?.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues forwardedForIp) == true)
-                userIp = forwardedForIp;
-            else
-            {
+            string? userIp = Context.GetHttpContext()?.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues forwardedForIp) == true
+                // header may contain multiple IPs by spec, first is usually what we care for.
+                ? forwardedForIp.ToString().Split(',').First()
                 // fallback to getting the raw IP.
-                userIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
-            }
+                : Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
 
             using (var db = databaseFactory.GetInstance())
                 await db.AddLoginForUserAsync(usage.Item!.UserId, userIp);
