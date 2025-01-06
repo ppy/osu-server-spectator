@@ -165,6 +165,30 @@ namespace osu.Server.Spectator.Database
             }
         }
 
+        public async Task AddLoginForUserAsync(int userId, string? userIp)
+        {
+            if (string.IsNullOrEmpty(userIp))
+                return;
+
+            var connection = await getConnectionAsync();
+
+            try
+            {
+                await connection.ExecuteAsync("INSERT INTO osu_logins (user_id, ip) VALUES (@UserID, @IP)", new
+                {
+                    UserID = userId,
+                    IP = userIp
+                });
+            }
+            catch (MySqlException)
+            {
+                // we really don't care about failures in this as it's throwaway logging.
+                //
+                // although arguably we should at least be logging failures somewhere because this kind of thing could stop working
+                // without anyone noticing. same goes for other try-catch methods in this class..
+            }
+        }
+
         public async Task RemoveRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user)
         {
             var connection = await getConnectionAsync();

@@ -66,9 +66,27 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 }
 
                 usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
+
+                await logLogin(usage);
                 await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
                 await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);
             }
+        }
+
+        private async Task logLogin(ItemUsage<MetadataClientState> usage)
+        {
+            string? userIp;
+
+            if (Context.GetHttpContext()?.Request.Headers.TryGetValue("X-Forwarded-For", out StringValues forwardedForIp) == true)
+                userIp = forwardedForIp;
+            else
+            {
+                // fallback to getting the raw IP.
+                userIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
+            }
+
+            using (var db = databaseFactory.GetInstance())
+                await db.AddLoginForUserAsync(usage.Item!.UserId, userIp);
         }
 
         public async Task<BeatmapUpdates> GetChangesSince(int queueId)

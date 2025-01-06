@@ -27,12 +27,13 @@ namespace osu.Server.Spectator.Tests
         private readonly Mock<IMetadataClient> mockCaller;
         private readonly Mock<IMetadataClient> mockWatchersGroup;
         private readonly Mock<IGroupManager> mockGroupManager;
+        private readonly Mock<IDatabaseAccess> mockDatabase;
 
         public MetadataHubTest()
         {
             userStates = new EntityStore<MetadataClientState>();
 
-            var mockDatabase = new Mock<IDatabaseAccess>();
+            mockDatabase = new Mock<IDatabaseAccess>();
             var databaseFactory = new Mock<IDatabaseFactory>();
             databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
             var loggerFactoryMock = new Mock<ILoggerFactory>();
@@ -132,6 +133,15 @@ namespace osu.Server.Spectator.Tests
             }
 
             mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task UserLoginLogging()
+        {
+            await hub.OnConnectedAsync();
+
+            // verify that the caller got the initial data update.
+            mockDatabase.Verify(caller => caller.AddLoginForUserAsync(user_id, It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
