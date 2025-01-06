@@ -309,7 +309,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Single(room.Playlist.Where(p => p.Expired));
+                Assert.Single(room.Playlist, p => p.Expired);
                 Receiver.Verify(r => r.LoadRequested(), Times.Never);
             }
         }
