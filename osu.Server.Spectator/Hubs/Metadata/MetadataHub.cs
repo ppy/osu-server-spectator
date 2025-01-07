@@ -72,8 +72,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 using (var db = databaseFactory.GetInstance())
                 {
-                    foreach (var friend in await db.GetUserFriendsAsync(usage.Item.UserId))
-                        await Groups.AddToGroupAsync(Context.ConnectionId, friend_presence_watchers(friend.zebra_id));
+                    foreach (int friendId in await db.GetUserFriendsAsync(usage.Item.UserId))
+                        await Groups.AddToGroupAsync(Context.ConnectionId, friend_presence_watchers(friendId));
                 }
             }
         }
@@ -196,8 +196,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             using (var db = databaseFactory.GetInstance())
             {
-                foreach (var friend in await db.GetUserFriendsAsync(state.UserId))
-                    await Groups.RemoveFromGroupAsync(state.ConnectionId, friend_presence_watchers(friend.zebra_id));
+                foreach (int friendId in await db.GetUserFriendsAsync(state.UserId))
+                    await Groups.RemoveFromGroupAsync(state.ConnectionId, friend_presence_watchers(friendId));
             }
         }
 
