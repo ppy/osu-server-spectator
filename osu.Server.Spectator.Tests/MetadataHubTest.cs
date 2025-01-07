@@ -30,9 +30,7 @@ namespace osu.Server.Spectator.Tests
         private readonly Mock<IMetadataClient> mockCaller;
         private readonly Mock<IMetadataClient> mockWatchersGroup;
         private readonly Mock<IGroupManager> mockGroupManager;
-
         private readonly Mock<IHubCallerClients<IMetadataClient>> mockClients;
-        private readonly Mock<HubCallerContext> mockUserContext;
 
         public MetadataHubTest()
         {
@@ -55,6 +53,7 @@ namespace osu.Server.Spectator.Tests
 
             mockWatchersGroup = new Mock<IMetadataClient>();
             mockCaller = new Mock<IMetadataClient>();
+            mockGroupManager = new Mock<IGroupManager>();
 
             mockClients = new Mock<IHubCallerClients<IMetadataClient>>();
             mockClients.Setup(clients => clients.Group(MetadataHub.ONLINE_PRESENCE_WATCHERS_GROUP))
@@ -64,10 +63,7 @@ namespace osu.Server.Spectator.Tests
             mockClients.Setup(clients => clients.Caller)
                        .Returns(mockCaller.Object);
 
-            mockGroupManager = new Mock<IGroupManager>();
-            mockUserContext = createUserContext(user_id);
-
-            hub.Context = mockUserContext.Object;
+            hub.Context = createUserContext(user_id).Object;
             hub.Clients = mockClients.Object;
             hub.Groups = mockGroupManager.Object;
         }
