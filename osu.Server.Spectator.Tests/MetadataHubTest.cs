@@ -31,27 +31,19 @@ namespace osu.Server.Spectator.Tests
         public MetadataHubTest()
         {
             userStates = new EntityStore<MetadataClientState>();
+            mockGroupManager = new Mock<IGroupManager>();
+            mockWatchersGroup = new Mock<IMetadataClient>();
+            mockCaller = new Mock<IMetadataClient>();
 
             var mockDatabase = new Mock<IDatabaseAccess>();
+
             var databaseFactory = new Mock<IDatabaseFactory>();
-            databaseFactory.Setup(factory => factory.GetInstance()).Returns(mockDatabase.Object);
+            databaseFactory.Setup(factory => factory.GetInstance())
+                           .Returns(mockDatabase.Object);
+
             var loggerFactoryMock = new Mock<ILoggerFactory>();
             loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                              .Returns(new Mock<ILogger>().Object);
-
-            hub = new MetadataHub(
-                loggerFactoryMock.Object,
-                new MemoryCache(new MemoryCacheOptions()),
-                userStates,
-                databaseFactory.Object,
-                new Mock<IDailyChallengeUpdater>().Object,
-                new Mock<IScoreProcessedSubscriber>().Object);
-
-            var mockContext = new Mock<HubCallerContext>();
-            mockContext.Setup(ctx => ctx.UserIdentifier).Returns(user_id.ToString());
-
-            mockWatchersGroup = new Mock<IMetadataClient>();
-            mockCaller = new Mock<IMetadataClient>();
 
             var mockClients = new Mock<IHubCallerClients<IMetadataClient>>();
             mockClients.Setup(clients => clients.Group(MetadataHub.ONLINE_PRESENCE_WATCHERS_GROUP))
@@ -59,15 +51,33 @@ namespace osu.Server.Spectator.Tests
             mockClients.Setup(clients => clients.Caller)
                        .Returns(mockCaller.Object);
 
-            mockGroupManager = new Mock<IGroupManager>();
+            var mockHubContext = new Mock<IHubContext<MetadataHub>>();
+            mockHubContext.Setup(ctx => ctx.Groups)
+                          .Returns(mockGroupManager.Object);
+            mockHubContext.Setup(ctx => ctx.Clients)
+                          .Returns(new AnonymousClientProxy<IMetadataClient>(mockClients.Object));
 
+            var mockContext = new Mock<HubCallerContext>();
+            mockContext.Setup(ctx => ctx.UserIdentifier)
+                       .Returns(user_id.ToString());
             // this is to ensure that the `Context.GetHttpContext()` call in `MetadataHub.OnConnectedAsync()` doesn't nullref
             // (the method in question is an extension, and it accesses `Features`; mocking further is not required).
-            mockContext.Setup(ctx => ctx.Features).Returns(new Mock<IFeatureCollection>().Object);
+            mockContext.Setup(ctx => ctx.Features)
+                       .Returns(new Mock<IFeatureCollection>().Object);
 
-            hub.Context = mockContext.Object;
-            hub.Clients = mockClients.Object;
-            hub.Groups = mockGroupManager.Object;
+            hub = new MetadataHub(
+                loggerFactoryMock.Object,
+                new MemoryCache(new MemoryCacheOptions()),
+                userStates,
+                databaseFactory.Object,
+                new Mock<IDailyChallengeUpdater>().Object,
+                new Mock<IScoreProcessedSubscriber>().Object,
+                mockHubContext.Object)
+            {
+                Context = mockContext.Object,
+                Clients = mockClients.Object,
+                Groups = mockGroupManager.Object
+            };
         }
 
         [Fact]

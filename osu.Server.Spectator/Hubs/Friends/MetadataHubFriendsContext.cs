@@ -5,15 +5,16 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.Friends;
 using osu.Server.Spectator.Database;
-using osu.Server.Spectator.Hubs.Metadata;
 
 namespace osu.Server.Spectator.Hubs.Friends
 {
-    public class MetadataHubFriendsContext
+    public class MetadataHubFriendsContext<THub, T>
+        where THub : Hub<T>
+        where T : class, IFriendsClient
     {
         private readonly IDatabaseFactory databaseFactory;
 
-        public MetadataHubFriendsContext(IHubContext<MetadataHub> context, IDatabaseFactory databaseFactory)
+        public MetadataHubFriendsContext(IHubContext<THub> context, IDatabaseFactory databaseFactory)
         {
             this.databaseFactory = databaseFactory;
 
