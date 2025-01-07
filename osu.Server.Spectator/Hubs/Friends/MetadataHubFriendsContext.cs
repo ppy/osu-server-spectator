@@ -5,21 +5,20 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.Friends;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Hubs.Metadata;
 
 namespace osu.Server.Spectator.Hubs.Friends
 {
-    public class HubFriendsContext<T>
-        where T : class, IFriendsClient
+    public class MetadataHubFriendsContext
     {
         private readonly IDatabaseFactory databaseFactory;
 
-        public HubFriendsContext(Hub<T> hub, IDatabaseFactory databaseFactory)
+        public MetadataHubFriendsContext(IHubContext<MetadataHub> context, IDatabaseFactory databaseFactory)
         {
             this.databaseFactory = databaseFactory;
 
-            Clients = hub.Clients;
-            Groups = hub.Groups;
-            Context = hub.Context;
+            Clients = context.Clients;
+            Groups = context.Groups;
         }
 
         public async Task OnConnectedAsync(ClientState state)
@@ -27,10 +26,10 @@ namespace osu.Server.Spectator.Hubs.Friends
             using (var db = databaseFactory.GetInstance())
             {
                 foreach (var friend in await db.GetUserFriendsAsync(state.UserId))
-                    await Groups.AddToGroupAsync(Context.ConnectionId, friend_presence_watchers(friend.zebra_id));
+                    await Groups.AddToGroupAsync(state.ConnectionId, friend_presence_watchers(friend.zebra_id));
             }
 
-            await Clients.Group(friend_presence_watchers(state.UserId)).FriendConnected(state.UserId);
+            await Clients.Group(friend_presence_watchers(state.UserId)).SendAsync(nameof(IFriendsClient.FriendConnected), state.UserId);
         }
 
         public async Task OnDisconnectedAsync(ClientState state)
@@ -38,16 +37,15 @@ namespace osu.Server.Spectator.Hubs.Friends
             using (var db = databaseFactory.GetInstance())
             {
                 foreach (var friend in await db.GetUserFriendsAsync(state.UserId))
-                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, friend_presence_watchers(friend.zebra_id));
+                    await Groups.RemoveFromGroupAsync(state.ConnectionId, friend_presence_watchers(friend.zebra_id));
             }
 
-            await Clients.Group(friend_presence_watchers(state.UserId)).FriendDisconnected(state.UserId);
+            await Clients.Group(friend_presence_watchers(state.UserId)).SendAsync(nameof(IFriendsClient.FriendDisconnected), state.UserId);
         }
 
         private static string friend_presence_watchers(int userId) => $"friends:online-presence-watchers:{userId}";
 
-        public IHubCallerClients<T> Clients { get; }
+        public IHubClients Clients { get; }
         public IGroupManager Groups { get; }
-        public HubCallerContext Context { get; }
     }
 }

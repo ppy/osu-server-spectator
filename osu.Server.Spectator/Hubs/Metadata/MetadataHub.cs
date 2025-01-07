@@ -24,7 +24,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 {
     public partial class MetadataHub : StatefulUserHub<IMetadataClient, MetadataClientState>, IMetadataServer
     {
-        private readonly HubFriendsContext<IMetadataClient> friends;
+        private readonly MetadataHubFriendsContext friends;
 
         private readonly IMemoryCache cache;
         private readonly IDatabaseFactory databaseFactory;
@@ -41,7 +41,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
             EntityStore<MetadataClientState> userStates,
             IDatabaseFactory databaseFactory,
             IDailyChallengeUpdater dailyChallengeUpdater,
-            IScoreProcessedSubscriber scoreProcessedSubscriber)
+            IScoreProcessedSubscriber scoreProcessedSubscriber,
+            IHubContext<MetadataHub> context)
             : base(loggerFactory, userStates)
         {
             this.cache = cache;
@@ -49,7 +50,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             this.dailyChallengeUpdater = dailyChallengeUpdater;
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
 
-            friends = new HubFriendsContext<IMetadataClient>(this, databaseFactory);
+            friends = new MetadataHubFriendsContext(context, databaseFactory);
         }
 
         public override async Task OnConnectedAsync()
