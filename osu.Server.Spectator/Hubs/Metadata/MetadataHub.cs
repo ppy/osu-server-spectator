@@ -66,7 +66,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
                         versionHash = versionHash.Substring(versionHash.Length - 82, 32);
                 }
 
-                usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
+                usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash)
+                {
+                    UserStatus = UserStatus.Online
+                };
+
                 await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
                 await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);
 
