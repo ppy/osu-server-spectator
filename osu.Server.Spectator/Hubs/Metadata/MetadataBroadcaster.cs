@@ -53,7 +53,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             {
                 using (var db = databaseFactory.GetInstance())
                 {
-                    var updates = await db.GetUpdatedBeatmapSets(lastQueueId);
+                    var updates = await db.GetUpdatedBeatmapSetsAsync(lastQueueId);
 
                     lastQueueId = updates.LastProcessedQueueID;
                     logger.LogInformation("Polled beatmap changes up to last queue id {lastProcessedQueueID}", updates.LastProcessedQueueID);

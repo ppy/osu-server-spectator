@@ -75,7 +75,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
         public async Task<BeatmapUpdates> GetChangesSince(int queueId)
         {
             using (var db = databaseFactory.GetInstance())
-                return await db.GetUpdatedBeatmapSets(queueId);
+                return await db.GetUpdatedBeatmapSetsAsync(queueId);
         }
 
         public async Task BeginWatchingUserPresence()
@@ -148,7 +148,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 ulong lastProcessed = itemStats.LastProcessedScoreID;
 
-                SoloScore[] scores = (await db.GetPassingScoresForPlaylistItem(itemId, itemStats.LastProcessedScoreID)).ToArray();
+                SoloScore[] scores = (await db.GetPassingScoresForPlaylistItemAsync(itemId, itemStats.LastProcessedScoreID)).ToArray();
 
                 if (scores.Length == 0)
                     return;

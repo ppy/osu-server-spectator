@@ -106,7 +106,7 @@ namespace osu.Server.Spectator.Hubs
                         item.Score.ScoreInfo.Passed = dbScore.passed;
 
                         await scoreStorage.WriteAsync(item.Score);
-                        await db.MarkScoreHasReplay(item.Score);
+                        await db.MarkScoreHasReplayAsync(item.Score);
                         DogStatsd.Increment($"{statsd_prefix}.uploaded");
                     }
                     finally

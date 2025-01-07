@@ -124,13 +124,13 @@ namespace osu.Server.Spectator.Database
         /// <param name="lastQueueId">A queue ID to fetch updated items since</param>
         /// <param name="limit">Maximum number of entries to return. Defaults to 50.</param>
         /// <returns>Update metadata.</returns>
-        Task<BeatmapUpdates> GetUpdatedBeatmapSets(int? lastQueueId, int limit = 50);
+        Task<BeatmapUpdates> GetUpdatedBeatmapSetsAsync(int? lastQueueId, int limit = 50);
 
         /// <summary>
         /// Mark a score as having a replay available.
         /// </summary>
         /// <param name="score">The score to mark.</param>
-        Task MarkScoreHasReplay(Score score);
+        Task MarkScoreHasReplayAsync(Score score);
 
         /// <summary>
         /// Retrieves the <see cref="SoloScore"/> for a given score token. Will return null while the score has not yet been submitted.
@@ -152,14 +152,14 @@ namespace osu.Server.Spectator.Database
         /// <summary>
         /// Returns information about if the user with the supplied <paramref name="zebraId"/> has been added as a friend or blocked by the user with the supplied <paramref name="userId"/>.
         /// </summary>
-        Task<phpbb_zebra?> GetUserRelation(int userId, int zebraId);
+        Task<phpbb_zebra?> GetUserRelationAsync(int userId, int zebraId);
 
-        Task<IEnumerable<phpbb_zebra>> GetUserFriends(int userId);
+        Task<IEnumerable<phpbb_zebra>> GetUserFriendsAsync(int userId);
 
         /// <summary>
         /// Returns <see langword="true"/> if the user with the supplied <paramref name="userId"/> allows private messages from people not on their friends list.
         /// </summary>
-        Task<bool> GetUserAllowsPMs(int userId);
+        Task<bool> GetUserAllowsPMsAsync(int userId);
 
         /// <summary>
         /// Returns all available main builds from the lazer release stream.
@@ -167,7 +167,7 @@ namespace osu.Server.Spectator.Database
         Task<IEnumerable<osu_build>> GetAllMainLazerBuildsAsync();
 
         /// <summary>
-        /// Returns all known platform-specifc lazer builds.
+        /// Returns all known platform-specific lazer builds.
         /// </summary>
         Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync();
 
@@ -198,7 +198,7 @@ namespace osu.Server.Spectator.Database
         /// <param name="playlistItemId">The playlist item.</param>
         /// <param name="afterScoreId">An optional score ID to only fetch newer scores.</param>
         /// <returns></returns>
-        Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0);
+        Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItemAsync(long playlistItemId, ulong afterScoreId = 0);
 
         /// <summary>
         /// Returns the best score of user with <paramref name="userId"/> on the playlist item with <paramref name="playlistItemId"/>.

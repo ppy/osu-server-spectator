@@ -248,20 +248,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (isRestricted)
                     throw new InvalidStateException("Can't invite a restricted user to a room.");
 
-                var relation = await db.GetUserRelation(Context.GetUserId(), userId);
+                var relation = await db.GetUserRelationAsync(Context.GetUserId(), userId);
 
                 // The local user has the player they are trying to invite blocked.
                 if (relation?.foe == true)
                     throw new UserBlockedException();
 
-                var inverseRelation = await db.GetUserRelation(userId, Context.GetUserId());
+                var inverseRelation = await db.GetUserRelationAsync(userId, Context.GetUserId());
 
                 // The player being invited has the local user blocked.
                 if (inverseRelation?.foe == true)
                     throw new UserBlockedException();
 
                 // The player being invited disallows unsolicited PMs and the local user is not their friend.
-                if (inverseRelation?.friend != true && !await db.GetUserAllowsPMs(userId))
+                if (inverseRelation?.friend != true && !await db.GetUserAllowsPMsAsync(userId))
                     throw new UserBlocksPMsException();
             }
 

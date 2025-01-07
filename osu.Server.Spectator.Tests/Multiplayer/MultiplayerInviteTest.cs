@@ -17,7 +17,7 @@ public class MultiplayerInviteTest : MultiplayerTest
         SetUserContext(ContextUser);
         await Hub.JoinRoom(ROOM_ID);
 
-        Database.Setup(d => d.GetUserRelation(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new phpbb_zebra { friend = true });
+        Database.Setup(d => d.GetUserRelationAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new phpbb_zebra { friend = true });
 
         SetUserContext(ContextUser);
         await Hub.InvitePlayer(USER_ID_2);
@@ -35,8 +35,8 @@ public class MultiplayerInviteTest : MultiplayerTest
         SetUserContext(ContextUser);
         await Hub.JoinRoom(ROOM_ID);
 
-        Database.Setup(d => d.GetUserRelation(USER_ID, USER_ID_2)).ReturnsAsync(new phpbb_zebra { foe = true });
-        Database.Setup(d => d.GetUserRelation(USER_ID_2, USER_ID)).ReturnsAsync(new phpbb_zebra { friend = true });
+        Database.Setup(d => d.GetUserRelationAsync(USER_ID, USER_ID_2)).ReturnsAsync(new phpbb_zebra { foe = true });
+        Database.Setup(d => d.GetUserRelationAsync(USER_ID_2, USER_ID)).ReturnsAsync(new phpbb_zebra { friend = true });
 
         SetUserContext(ContextUser);
         await Assert.ThrowsAsync<UserBlockedException>(() => Hub.InvitePlayer(USER_ID_2));
@@ -54,8 +54,8 @@ public class MultiplayerInviteTest : MultiplayerTest
         SetUserContext(ContextUser);
         await Hub.JoinRoom(ROOM_ID);
 
-        Database.Setup(d => d.GetUserRelation(USER_ID, USER_ID_2)).ReturnsAsync(new phpbb_zebra { friend = true });
-        Database.Setup(d => d.GetUserRelation(USER_ID_2, USER_ID)).ReturnsAsync(new phpbb_zebra { foe = true });
+        Database.Setup(d => d.GetUserRelationAsync(USER_ID, USER_ID_2)).ReturnsAsync(new phpbb_zebra { friend = true });
+        Database.Setup(d => d.GetUserRelationAsync(USER_ID_2, USER_ID)).ReturnsAsync(new phpbb_zebra { foe = true });
 
         SetUserContext(ContextUser);
         await Assert.ThrowsAsync<UserBlockedException>(() => Hub.InvitePlayer(USER_ID_2));
@@ -73,7 +73,7 @@ public class MultiplayerInviteTest : MultiplayerTest
         SetUserContext(ContextUser);
         await Hub.JoinRoom(ROOM_ID);
 
-        Database.Setup(d => d.GetUserAllowsPMs(USER_ID_2)).ReturnsAsync(false);
+        Database.Setup(d => d.GetUserAllowsPMsAsync(USER_ID_2)).ReturnsAsync(false);
 
         SetUserContext(ContextUser);
         await Assert.ThrowsAsync<UserBlocksPMsException>(() => Hub.InvitePlayer(USER_ID_2));
@@ -91,7 +91,7 @@ public class MultiplayerInviteTest : MultiplayerTest
         SetUserContext(ContextUser);
         await Hub.JoinRoom(ROOM_ID);
 
-        Database.Setup(d => d.GetUserRelation(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new phpbb_zebra { friend = true });
+        Database.Setup(d => d.GetUserRelationAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new phpbb_zebra { friend = true });
         Database.Setup(d => d.IsUserRestrictedAsync(It.IsAny<int>())).ReturnsAsync(true);
 
         SetUserContext(ContextUser);
@@ -110,7 +110,7 @@ public class MultiplayerInviteTest : MultiplayerTest
         SetUserContext(ContextUser);
         await Hub.JoinRoom(ROOM_ID);
 
-        Database.Setup(d => d.GetUserAllowsPMs(USER_ID_2)).ReturnsAsync(true);
+        Database.Setup(d => d.GetUserAllowsPMsAsync(USER_ID_2)).ReturnsAsync(true);
 
         SetUserContext(ContextUser);
         await Hub.InvitePlayer(USER_ID_2);
@@ -138,7 +138,7 @@ public class MultiplayerInviteTest : MultiplayerTest
         SetUserContext(ContextUser);
         await Hub.JoinRoomWithPassword(ROOM_ID, password);
 
-        Database.Setup(d => d.GetUserAllowsPMs(USER_ID_2)).ReturnsAsync(true);
+        Database.Setup(d => d.GetUserAllowsPMsAsync(USER_ID_2)).ReturnsAsync(true);
 
         SetUserContext(ContextUser);
         await Hub.InvitePlayer(USER_ID_2);

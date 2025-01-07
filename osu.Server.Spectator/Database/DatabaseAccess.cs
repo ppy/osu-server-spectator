@@ -286,7 +286,7 @@ namespace osu.Server.Spectator.Database
             return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
         }
 
-        public async Task<BeatmapUpdates> GetUpdatedBeatmapSets(int? lastQueueId, int limit = 50)
+        public async Task<BeatmapUpdates> GetUpdatedBeatmapSetsAsync(int? lastQueueId, int limit = 50)
         {
             var connection = await getConnectionAsync();
 
@@ -306,7 +306,7 @@ namespace osu.Server.Spectator.Database
             return new BeatmapUpdates(Array.Empty<int>(), lastEntry?.queue_id ?? 0);
         }
 
-        public async Task MarkScoreHasReplay(Score score)
+        public async Task MarkScoreHasReplayAsync(Score score)
         {
             var connection = await getConnectionAsync();
 
@@ -347,7 +347,7 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<phpbb_zebra?> GetUserRelation(int userId, int zebraId)
+        public async Task<phpbb_zebra?> GetUserRelationAsync(int userId, int zebraId)
         {
             var connection = await getConnectionAsync();
 
@@ -358,7 +358,7 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<IEnumerable<phpbb_zebra>> GetUserFriends(int userId)
+        public async Task<IEnumerable<phpbb_zebra>> GetUserFriendsAsync(int userId)
         {
             var connection = await getConnectionAsync();
 
@@ -368,7 +368,7 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<bool> GetUserAllowsPMs(int userId)
+        public async Task<bool> GetUserAllowsPMsAsync(int userId)
         {
             var connection = await getConnectionAsync();
 
@@ -437,7 +437,7 @@ namespace osu.Server.Spectator.Database
                 new { scoreId = scoreId });
         }
 
-        public async Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0)
+        public async Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItemAsync(long playlistItemId, ulong afterScoreId = 0)
         {
             var connection = await getConnectionAsync();
 
