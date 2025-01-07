@@ -29,7 +29,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
 
         internal const string ONLINE_PRESENCE_WATCHERS_GROUP = "metadata:online-presence-watchers";
-        private static string friend_presence_watchers(int userId) => $"metadata:online-presence-watchers:{userId}";
+        internal static string FRIEND_PRESENCE_WATCHERS_GROUP(int userId) => $"metadata:online-presence-watchers:{userId}";
 
         internal static string MultiplayerRoomWatchersGroup(long roomId) => $"metadata:multiplayer-room-watchers:{roomId}";
 
@@ -77,7 +77,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 using (var db = databaseFactory.GetInstance())
                 {
                     foreach (int friendId in await db.GetUserFriendsAsync(usage.Item.UserId))
-                        await Groups.AddToGroupAsync(Context.ConnectionId, friend_presence_watchers(friendId));
+                        await Groups.AddToGroupAsync(Context.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
                 }
             }
         }
@@ -201,7 +201,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             using (var db = databaseFactory.GetInstance())
             {
                 foreach (int friendId in await db.GetUserFriendsAsync(state.UserId))
-                    await Groups.RemoveFromGroupAsync(state.ConnectionId, friend_presence_watchers(friendId));
+                    await Groups.RemoveFromGroupAsync(state.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
             }
         }
 
@@ -210,7 +210,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             if (userPresence?.Status == UserStatus.Offline)
                 userPresence = null;
 
-            return Clients.Groups(friend_presence_watchers(userId), ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence);
+            return Clients.Groups(FRIEND_PRESENCE_WATCHERS_GROUP(userId), ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence);
         }
     }
 }
