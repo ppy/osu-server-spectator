@@ -17,12 +17,15 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Hubs.Friends;
 using osu.Server.Spectator.Hubs.Spectator;
 
 namespace osu.Server.Spectator.Hubs.Metadata
 {
     public partial class MetadataHub : StatefulUserHub<IMetadataClient, MetadataClientState>, IMetadataServer
     {
+        private readonly HubFriendsContext<IMetadataClient> friends;
+
         private readonly IMemoryCache cache;
         private readonly IDatabaseFactory databaseFactory;
         private readonly IDailyChallengeUpdater dailyChallengeUpdater;
@@ -45,6 +48,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
             this.databaseFactory = databaseFactory;
             this.dailyChallengeUpdater = dailyChallengeUpdater;
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
+
+            friends = new HubFriendsContext<IMetadataClient>(this, databaseFactory);
         }
 
         public override async Task OnConnectedAsync()
@@ -68,7 +73,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
                 await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
                 await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);
-                await registerFriends(usage.Item);
+
+                await friends.OnConnectedAsync(usage.Item);
             }
         }
 
@@ -187,7 +193,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
             await base.CleanUpState(state);
             await broadcastUserPresenceUpdate(state.UserId, null);
             await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);
-            await unregisterFriends(state);
+
+            await friends.OnDisconnectedAsync(state);
         }
 
         private Task broadcastUserPresenceUpdate(int userId, UserPresence? userPresence)

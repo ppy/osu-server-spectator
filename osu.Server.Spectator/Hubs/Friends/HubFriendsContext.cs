@@ -2,12 +2,27 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
+using osu.Game.Online.Friends;
+using osu.Server.Spectator.Database;
 
-namespace osu.Server.Spectator.Hubs.Metadata
+namespace osu.Server.Spectator.Hubs.Friends
 {
-    public partial class MetadataHub
+    public class HubFriendsContext<T>
+        where T : class, IFriendsClient
     {
-        private async Task registerFriends(MetadataClientState state)
+        private readonly IDatabaseFactory databaseFactory;
+
+        public HubFriendsContext(Hub<T> hub, IDatabaseFactory databaseFactory)
+        {
+            this.databaseFactory = databaseFactory;
+
+            Clients = hub.Clients;
+            Groups = hub.Groups;
+            Context = hub.Context;
+        }
+
+        public async Task OnConnectedAsync(ClientState state)
         {
             using (var db = databaseFactory.GetInstance())
             {
@@ -18,7 +33,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             await Clients.Group(friend_presence_watchers(state.UserId)).FriendConnected(state.UserId);
         }
 
-        private async Task unregisterFriends(MetadataClientState state)
+        public async Task OnDisconnectedAsync(ClientState state)
         {
             using (var db = databaseFactory.GetInstance())
             {
@@ -29,6 +44,10 @@ namespace osu.Server.Spectator.Hubs.Metadata
             await Clients.Group(friend_presence_watchers(state.UserId)).FriendDisconnected(state.UserId);
         }
 
-        private static string friend_presence_watchers(int userId) => $"metadata:online-presence-watchers:{userId}";
+        private static string friend_presence_watchers(int userId) => $"friends:online-presence-watchers:{userId}";
+
+        public IHubCallerClients<T> Clients { get; }
+        public IGroupManager Groups { get; }
+        public HubCallerContext Context { get; }
     }
 }
