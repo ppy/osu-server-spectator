@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
@@ -55,6 +57,8 @@ namespace osu.Server.Spectator.Tests
 
             var mockClients = new Mock<IHubCallerClients<IMetadataClient>>();
             mockClients.Setup(clients => clients.Group(MetadataHub.ONLINE_PRESENCE_WATCHERS_GROUP))
+                       .Returns(mockWatchersGroup.Object);
+            mockClients.Setup(clients => clients.Groups(It.Is<IReadOnlyList<string>>(list => list.Contains(MetadataHub.ONLINE_PRESENCE_WATCHERS_GROUP))))
                        .Returns(mockWatchersGroup.Object);
             mockClients.Setup(clients => clients.Caller)
                        .Returns(mockCaller.Object);
