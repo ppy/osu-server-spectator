@@ -358,6 +358,16 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task<IEnumerable<phpbb_zebra>> GetUserFriendsAsync(int userId)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QueryAsync<phpbb_zebra>("SELECT * FROM `phpbb_zebra` WHERE `user_id` = @UserId AND `friend` = 1", new
+            {
+                UserId = userId
+            });
+        }
+
         public async Task<bool> GetUserAllowsPMs(int userId)
         {
             var connection = await getConnectionAsync();

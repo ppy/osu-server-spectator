@@ -29,6 +29,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
 
         internal const string ONLINE_PRESENCE_WATCHERS_GROUP = "metadata:online-presence-watchers";
+        private static string friend_presence_watchers(int userId) => $"metadata:online-presence-watchers:{userId}";
 
         internal static string MultiplayerRoomWatchersGroup(long roomId) => $"metadata:multiplayer-room-watchers:{roomId}";
 
@@ -68,6 +69,12 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
                 await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
                 await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);
+
+                using (var db = databaseFactory.GetInstance())
+                {
+                    foreach (var friend in await db.GetUserFriendsAsync(usage.Item.UserId))
+                        await Groups.AddToGroupAsync(Context.ConnectionId, friend_presence_watchers(friend.zebra_id));
+                }
             }
         }
 
@@ -186,6 +193,12 @@ namespace osu.Server.Spectator.Hubs.Metadata
             await base.CleanUpState(state);
             await broadcastUserPresenceUpdate(state.UserId, null);
             await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);
+
+            using (var db = databaseFactory.GetInstance())
+            {
+                foreach (var friend in await db.GetUserFriendsAsync(state.UserId))
+                    await Groups.RemoveFromGroupAsync(state.ConnectionId, friend_presence_watchers(friend.zebra_id));
+            }
         }
 
         private Task broadcastUserPresenceUpdate(int userId, UserPresence? userPresence)
@@ -193,7 +206,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             if (userPresence?.Status == UserStatus.Offline)
                 userPresence = null;
 
-            return Clients.Group(ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence);
+            return Clients.Groups(friend_presence_watchers(userId), ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence);
         }
     }
 }
