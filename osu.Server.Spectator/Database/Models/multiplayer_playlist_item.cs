@@ -18,11 +18,11 @@ namespace osu.Server.Spectator.Database.Models
         public int owner_id { get; set; }
         public long room_id { get; set; }
         public int beatmap_id { get; set; }
-        public int? beatmapset_id { get; set; }
         public short ruleset_id { get; set; }
         public ushort? playlist_order { get; set; }
         public string? allowed_mods { get; set; }
         public string? required_mods { get; set; }
+        public bool freestyle { get; set; }
 
         /// <summary>
         /// Changes to this property will not be persisted to the database.
@@ -57,10 +57,10 @@ namespace osu.Server.Spectator.Database.Models
             owner_id = item.OwnerID;
             room_id = roomId;
             beatmap_id = item.BeatmapID;
-            beatmapset_id = item.BeatmapSetID;
             ruleset_id = (short)item.RulesetID;
             required_mods = JsonConvert.SerializeObject(item.RequiredMods);
             allowed_mods = JsonConvert.SerializeObject(item.AllowedMods);
+            freestyle = item.FreeStyle;
             updated_at = DateTimeOffset.Now;
             expired = item.Expired;
             playlist_order = item.PlaylistOrder;
@@ -75,11 +75,11 @@ namespace osu.Server.Spectator.Database.Models
                 ID = id,
                 OwnerID = owner_id,
                 BeatmapID = beatmap_id,
-                BeatmapSetID = beatmapset_id,
                 BeatmapChecksum = beatmap?.checksum ?? string.Empty,
                 RulesetID = ruleset_id,
                 RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(required_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
                 AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
+                FreeStyle = freestyle,
                 Expired = expired,
                 PlaylistOrder = playlist_order ?? 0,
                 PlayedAt = played_at,

@@ -137,74 +137,70 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             using (var db = databaseFactory.GetInstance())
             {
+                database_beatmap itemBeatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
+
                 foreach (var user in room.Users)
                 {
                     int? userBeatmapId = user.BeatmapId;
                     int? userRulesetId = user.RulesetId;
 
-                    // Reset entire style when freestyle is disabled.
-                    if (room.Queue.CurrentItem.BeatmapSetID == null)
+                    if (room.Queue.CurrentItem.FreeStyle)
                     {
+                        database_beatmap userBeatmap = userBeatmapId == null ? itemBeatmap : (await db.GetBeatmapAsync(userBeatmapId.Value))!;
+
+                        // Reset beatmap style when the beatmap set changes.
+                        if (userBeatmap.beatmapset_id != itemBeatmap.beatmapset_id)
+                        {
+                            userBeatmapId = null;
+                            userBeatmap = itemBeatmap;
+                        }
+
+                        // Reset ruleset style when it's no longer valid for the selected beatmap.
+                        if (userRulesetId != null && userBeatmap.playmode != 0 && userRulesetId != userBeatmap.playmode)
+                            userRulesetId = null;
+                    }
+                    else
+                    {
+                        // Reset entire style when freestyle is disabled.
                         userBeatmapId = null;
                         userRulesetId = null;
                     }
 
-                    // Reset beatmap style when the beatmap set changes.
-                    if (userBeatmapId != null)
-                    {
-                        database_beatmap beatmap = (await db.GetBeatmapAsync(userBeatmapId.Value))!;
-                        if (beatmap.beatmapset_id != room.Queue.CurrentItem.BeatmapSetID)
-                            userBeatmapId = null;
-                    }
-
-                    // Reset ruleset style if incompatible with the current beatmap.
-                    if (userBeatmapId == null && userRulesetId != null)
-                    {
-                        database_beatmap beatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
-                        if (beatmap.playmode != 0 && userRulesetId != beatmap.playmode)
-                            userRulesetId = null;
-                    }
-
-                    await ChangeUserStyle(userBeatmapId, userRulesetId, room, user);
+                    if (userBeatmapId != user.BeatmapId || userRulesetId != user.RulesetId)
+                        await ChangeUserStyle(userBeatmapId, userRulesetId, room, user);
                 }
             }
         }
 
         public async Task ChangeUserStyle(int? beatmapId, int? rulesetId, ServerMultiplayerRoom room, MultiplayerRoomUser user)
         {
-            log(room, user, $"User style changing from (b:{user.BeatmapId}, r:{user.RulesetId}) to (b:{beatmapId}, r:{rulesetId})");
-
             if (user.BeatmapId == beatmapId && user.RulesetId == rulesetId)
                 return;
 
-            if ((beatmapId != null || rulesetId != null) && room.Queue.CurrentItem.BeatmapSetID == null)
-                throw new InvalidStateException("Current item does not allow free user styles.");
+            log(room, user, $"User style changing from (b:{user.BeatmapId}, r:{user.RulesetId}) to (b:{beatmapId}, r:{rulesetId})");
 
-            database_beatmap? beatmap;
+            if (rulesetId < 0 || rulesetId > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                throw new InvalidStateException("Attempted to select an unsupported ruleset.");
 
-            using (var db = databaseFactory.GetInstance())
+            if (beatmapId != null || rulesetId != null)
             {
-                if (beatmapId != null)
-                {
-                    beatmap = await db.GetBeatmapAsync(beatmapId.Value);
+                if (!room.Queue.CurrentItem.FreeStyle)
+                    throw new InvalidStateException("Current item does not allow free user styles.");
 
-                    if (beatmap == null)
+                using (var db = databaseFactory.GetInstance())
+                {
+                    database_beatmap itemBeatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
+                    database_beatmap? userBeatmap = beatmapId == null ? itemBeatmap : await db.GetBeatmapAsync(beatmapId.Value);
+
+                    if (userBeatmap == null)
                         throw new InvalidStateException("Invalid beatmap selected.");
 
-                    if (beatmap.beatmapset_id != room.Queue.CurrentItem.BeatmapSetID)
+                    if (userBeatmap.beatmapset_id != itemBeatmap.beatmapset_id)
                         throw new InvalidStateException("Selected beatmap is not from the same beatmap set.");
+
+                    if (rulesetId != null && userBeatmap.playmode != 0 && rulesetId != userBeatmap.playmode)
+                        throw new InvalidStateException("Selected ruleset is not supported for the given beatmap.");
                 }
-                else
-                    beatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
-            }
-
-            if (rulesetId != null)
-            {
-                if (rulesetId < 0 || rulesetId > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
-                    throw new InvalidStateException("Attempted to select an unsupported ruleset.");
-
-                if (beatmap.playmode != 0 && rulesetId != beatmap.playmode)
-                    throw new InvalidStateException("Selected ruleset is not supported for the given beatmap.");
             }
 
             user.BeatmapId = beatmapId;

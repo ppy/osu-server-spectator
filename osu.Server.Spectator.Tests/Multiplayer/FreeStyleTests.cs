@@ -13,8 +13,13 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class UserStyleTests : MultiplayerTest
+    public class FreeStyleTests : MultiplayerTest
     {
+        #region AddItem
+
+        /// <summary>
+        /// Asserts that a freestyle playlist item can be added.
+        /// </summary>
         [Fact]
         public async Task AddItem()
         {
@@ -26,28 +31,19 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                BeatmapSetID = 1
+                FreeStyle = true
             });
         }
 
-        [Fact]
-        public async Task EditItem()
-        {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+        #endregion
 
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
-            {
-                ID = 1,
-                BeatmapChecksum = "checksum",
-                BeatmapID = 1234,
-                BeatmapSetID = 1
-            });
-        }
+        #region SetUserStyle
 
+        /// <summary>
+        /// Asserts that the user can set their own style.
+        /// </summary>
         [Fact]
-        public async Task SetStyle()
+        public async Task SetUserStyle()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -61,9 +57,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                BeatmapSetID = 1
+                FreeStyle = true
             });
 
+            // Set beatmap style.
             await Hub.ChangeUserStyle(12345, null);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
@@ -76,59 +73,38 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Receiver.Verify(client => client.UserStyleChanged(USER_ID, 12345, null), Times.Once);
             }
 
-            await Hub.ChangeUserStyle(1234, 3);
+            // Set ruleset style.
+            await Hub.ChangeUserStyle(null, 3);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, 1234);
+                Assert.Equal(room.Users.First().BeatmapId, null);
                 Assert.Equal(room.Users.First().RulesetId, 3);
-                Receiver.Verify(client => client.UserStyleChanged(USER_ID, 1234, 3), Times.Once);
+                Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, 3), Times.Once);
+            }
+
+            // Set beatmap and ruleset style.
+            await Hub.ChangeUserStyle(12345, 2);
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(room.Users.First().BeatmapId, 12345);
+                Assert.Equal(room.Users.First().RulesetId, 2);
+                Receiver.Verify(client => client.UserStyleChanged(USER_ID, 12345, 2), Times.Once);
             }
         }
 
+        /// <summary>
+        /// Asserts that the user can not set a beatmap from another set.
+        /// </summary>
         [Fact]
-        public async Task CanNotAddItem_DifferentBeatmapIdAndSet()
-        {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapChecksum = "checksum",
-                BeatmapID = 1234,
-                BeatmapSetID = 2
-            }));
-        }
-
-        [Fact]
-        public async Task CanNotEditItem_DifferentBeatmapIdAndSet()
-        {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
-            {
-                ID = 1,
-                BeatmapChecksum = "checksum",
-                BeatmapID = 1234,
-                BeatmapSetID = 2
-            }));
-        }
-
-        [Fact]
-        public async Task CanNotSetStyle_FreeStyleNotAllowed()
-        {
-            await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(null, 1));
-        }
-
-        [Fact]
-        public async Task CanNotSetStyle_DifferentBeatmapSet()
+        public async Task SetUserStyle_InvalidBeatmapSetFails()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -142,15 +118,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                BeatmapSetID = 1
+                FreeStyle = true
             });
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(12345, null));
             Receiver.Verify(client => client.UserStyleChanged(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
         }
 
+        /// <summary>
+        /// Asserts that the user can not set a beatmap that doesn't exist.
+        /// </summary>
         [Fact]
-        public async Task CanNotSetStyle_UnknownBeatmap()
+        public async Task SetUserStyle_UnknownBeatmapFails()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -164,15 +143,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                BeatmapSetID = 1
+                FreeStyle = true
             });
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(12345, null));
             Receiver.Verify(client => client.UserStyleChanged(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
         }
 
+        /// <summary>
+        /// Asserts that the user can only set a ruleset allowed by the beatmap, given by whether the beatmap can be converted or not.
+        /// </summary>
         [Fact]
-        public async Task CanNotSetStyle_InvalidRulesetId()
+        public async Task SetUserStyle_InvalidRulesetIdFails()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -186,32 +168,194 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                BeatmapSetID = 1,
+                FreeStyle = true,
             });
 
+            // Out of range
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(null, -1));
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(null, 4));
+
+            // Convertible
             await Hub.ChangeUserStyle(null, 0);
-            await Hub.ChangeUserStyle(null, 1);
-            await Hub.ChangeUserStyle(null, 2);
-            await Hub.ChangeUserStyle(null, 3);
             Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, 0), Times.Once);
+            await Hub.ChangeUserStyle(null, 1);
             Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, 1), Times.Once);
+            await Hub.ChangeUserStyle(null, 2);
             Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, 2), Times.Once);
+            await Hub.ChangeUserStyle(null, 3);
             Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, 3), Times.Once);
 
+            // Inconvertible
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(12345, 0));
-            await Hub.ChangeUserStyle(12345, 1);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(12345, 2));
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(12345, 3));
             Receiver.Verify(client => client.UserStyleChanged(USER_ID, 12345, 0), Times.Never);
+            await Hub.ChangeUserStyle(12345, 1);
             Receiver.Verify(client => client.UserStyleChanged(USER_ID, 12345, 1), Times.Once);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(12345, 2));
             Receiver.Verify(client => client.UserStyleChanged(USER_ID, 12345, 2), Times.Never);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(12345, 3));
             Receiver.Verify(client => client.UserStyleChanged(USER_ID, 12345, 3), Times.Never);
         }
 
+        #endregion
+
+        #region EditItem
+
+        /// <summary>
+        /// Asserts that a playlist item can be edited to become freestyle.
+        /// </summary>
         [Fact]
-        public async Task StyleNotReset_OnSameBeatmapSet()
+        public async Task EditItem()
+        {
+            Database.Setup(db => db.GetBeatmapAsync(1234))
+                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                FreeStyle = true
+            });
+        }
+
+        /// <summary>
+        /// Asserts that user style is preserved when the host selects another beatmap from the same beatmap set.
+        /// </summary>
+        [Fact]
+        public async Task EditItem_SameBeatmapSetPreservesUserStyle()
+        {
+            Database.Setup(db => db.GetBeatmapAsync(1234))
+                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+
+            Database.Setup(db => db.GetBeatmapAsync(12345))
+                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+
+            Database.Setup(db => db.GetBeatmapAsync(123456))
+                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                FreeStyle = true
+            });
+
+            // Set beatmap and ruleset style.
+            await Hub.ChangeUserStyle(123456, 1);
+
+            // Select another beatmap from the same set.
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                BeatmapID = 12345,
+                FreeStyle = true
+            });
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(room.Users.First().BeatmapId, 123456);
+                Assert.Equal(room.Users.First().RulesetId, 1);
+            }
+        }
+
+        /// <summary>
+        /// Asserts that the user's ruleset style is preserved when a beatmap from a different set is selected and the ruleset remains valid.
+        /// </summary>
+        [Fact]
+        public async Task EditItem_DifferentBeatmapSetPreservesRulesetStyle()
+        {
+            Database.Setup(db => db.GetBeatmapAsync(1234))
+                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+
+            Database.Setup(db => db.GetBeatmapAsync(12345))
+                    .ReturnsAsync(new database_beatmap { beatmapset_id = 2, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" });
+
+            Database.Setup(db => db.GetBeatmapAsync(123456))
+                    .ReturnsAsync(new database_beatmap { beatmapset_id = 3, playmode = 3, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum3" });
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                FreeStyle = true
+            });
+
+            // Set beatmap + ruleset style.
+            await Hub.ChangeUserStyle(1234, 1);
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(room.Users.First().BeatmapId, 1234);
+                Assert.Equal(room.Users.First().RulesetId, 1);
+            }
+
+            // Select a beatmap from a different set that is still convertible.
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum2",
+                BeatmapID = 12345,
+                FreeStyle = true
+            });
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(room.Users.First().BeatmapId, null);
+                Assert.Equal(room.Users.First().RulesetId, 1);
+            }
+
+            // Set beatmap + ruleset style.
+            await Hub.ChangeUserStyle(12345, 1);
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(room.Users.First().BeatmapId, 12345);
+                Assert.Equal(room.Users.First().RulesetId, 1);
+            }
+
+            // Select a beatmap from a different set that is inconvertible.
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum3",
+                BeatmapID = 123456,
+                RulesetID = 3,
+                FreeStyle = true
+            });
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.Equal(room.Users.First().BeatmapId, null);
+                Assert.Equal(room.Users.First().RulesetId, null);
+            }
+        }
+
+        /// <summary>
+        /// Asserts that user styles are reset when freestyle is disabled.
+        /// </summary>
+        [Fact]
+        public async Task EditItem_DisableFreeStyleResetsUserStyle()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -225,45 +369,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                BeatmapSetID = 1
+                FreeStyle = true
             });
 
-            await Hub.ChangeUserStyle(null, 1);
-            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
-            {
-                ID = 1,
-                BeatmapChecksum = "checksum",
-                BeatmapID = 12345,
-                BeatmapSetID = 1
-            });
+            // Set beatmap and ruleset style.
+            await Hub.ChangeUserStyle(12345, 1);
 
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, 1);
-                Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, null), Times.Never);
-            }
-        }
-
-        [Fact]
-        public async Task StyleReset_OnNullBeatmapSet()
-        {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
-            {
-                ID = 1,
-                BeatmapChecksum = "checksum",
-                BeatmapID = 1234,
-                BeatmapSetID = 1
-            });
-
-            await Hub.ChangeUserStyle(null, 1);
+            // Disable freestyle.
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
                 ID = 1,
@@ -282,84 +394,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
         }
 
-        [Fact]
-        public async Task RulesetStyleNotReset_OnDifferentBeatmapSet()
-        {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+        #endregion
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 2, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" });
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
-            {
-                ID = 1,
-                BeatmapChecksum = "checksum",
-                BeatmapID = 1234,
-                BeatmapSetID = 1
-            });
-
-            await Hub.ChangeUserStyle(null, 1);
-            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
-            {
-                ID = 1,
-                BeatmapChecksum = "checksum2",
-                BeatmapID = 12345,
-                BeatmapSetID = 2
-            });
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, 1);
-            }
-        }
+        #region CurrentItemChanged
 
         [Fact]
-        public async Task RulesetStyleReset_OnInvalidRuleset()
-        {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
-
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, playmode = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" });
-
-            await Hub.JoinRoom(ROOM_ID);
-            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
-            {
-                ID = 1,
-                BeatmapChecksum = "checksum",
-                BeatmapID = 1234,
-                BeatmapSetID = 1
-            });
-
-            await Hub.ChangeUserStyle(null, 2);
-            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
-            {
-                ID = 1,
-                BeatmapChecksum = "checksum2",
-                BeatmapID = 12345,
-                BeatmapSetID = 1,
-                RulesetID = 1
-            });
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, null);
-                Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, null), Times.Once);
-            }
-        }
-
-        [Fact]
-        public async Task StyleNotReset_AfterGameplay_WithSameBeatmapSet()
+        public async Task CurrentItemChanged_SameBeatmapSetPreservesUserStyle()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -377,14 +417,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                BeatmapSetID = 1
+                FreeStyle = true
             });
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
                 BeatmapID = 12345,
-                BeatmapSetID = 1
+                FreeStyle = true
             });
 
             await Hub.ChangeUserStyle(123456, 1);
@@ -405,13 +445,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task BeatmapStyleReset_AfterGameplay_WithDifferentBeatmapSet()
+        public async Task CurrentItemChanged_DifferentBeatmapSetResetsUserStyle()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
 
             Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 2, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+                    .ReturnsAsync(new database_beatmap { beatmapset_id = 2, playmode = 3, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
 
             Database.Setup(db => db.GetBeatmapAsync(123456))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -423,61 +463,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                BeatmapSetID = 1
+                FreeStyle = true
             });
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
                 BeatmapID = 12345,
-                BeatmapSetID = 2
+                RulesetID = 3,
+                FreeStyle = true
             });
 
             await Hub.ChangeUserStyle(123456, 1);
-
-            await MarkCurrentUserReadyAndAvailable();
-            await Hub.StartMatch();
-            await LoadAndFinishGameplay(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Idle);
-
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-            {
-                var room = usage.Item;
-                Debug.Assert(room != null);
-
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, 1);
-            }
-        }
-
-        [Fact]
-        public async Task RulesetStyleReset_AfterGameplay_WithInvalidRuleset()
-        {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
-
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, playmode = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
-
-            await Hub.JoinRoom(ROOM_ID);
-
-            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
-            {
-                ID = 1,
-                BeatmapChecksum = "checksum",
-                BeatmapID = 1234,
-                BeatmapSetID = 1
-            });
-
-            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
-            {
-                BeatmapChecksum = "checksum",
-                BeatmapID = 12345,
-                RulesetID = 1,
-                BeatmapSetID = 1
-            });
-
-            await Hub.ChangeUserStyle(null, 2);
 
             await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
@@ -495,7 +492,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task StyleReset_AfterGameplay_WithNullBeatmapSet()
+        public async Task CurrentItemChanged_FreeStyleDisabledResetsUserStyle()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -510,7 +507,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                BeatmapSetID = 1
+                FreeStyle = true
             });
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -535,5 +532,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(room.Users.First().RulesetId, null);
             }
         }
+
+        #endregion
     }
 }
