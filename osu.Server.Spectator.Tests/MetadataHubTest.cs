@@ -136,6 +136,17 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task FreshUserClientOnlyTriggersSinglePresence()
+        {
+            await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.DoNotDisturb);
+            await hub.UpdateActivity(null);
+
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Never);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.Is<UserPresence>(p => p.Status == UserStatus.DoNotDisturb)), Times.Exactly(1));
+        }
+
+        [Fact]
         public async Task UserLoginLogging()
         {
             await hub.OnConnectedAsync();
