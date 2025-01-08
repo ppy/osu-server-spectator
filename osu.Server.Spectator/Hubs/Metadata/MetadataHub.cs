@@ -115,7 +115,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 usage.Item.UserActivity = activity;
 
-                if (shouldBroadcastPresentToOtherUsers(usage.Item))
+                if (shouldBroadcastPresenceToOtherUsers(usage.Item))
                     await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
             }
         }
@@ -212,7 +212,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
         protected override async Task CleanUpState(MetadataClientState state)
         {
             await base.CleanUpState(state);
-            if (shouldBroadcastPresentToOtherUsers(state))
+            if (shouldBroadcastPresenceToOtherUsers(state))
                 await broadcastUserPresenceUpdate(state.UserId, null);
             await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);
         }
@@ -225,7 +225,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             return Clients.Group(ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence);
         }
 
-        private bool shouldBroadcastPresentToOtherUsers(MetadataClientState state)
+        private bool shouldBroadcastPresenceToOtherUsers(MetadataClientState state)
         {
             if (state.UserStatus == null)
                 return false;
