@@ -68,7 +68,6 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
 
                 await logLogin(usage);
-                await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
                 await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);
             }
         }
@@ -116,7 +115,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 usage.Item.UserActivity = activity;
 
-                await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
+                if (shouldBroadcastPresentToOtherUsers(usage.Item))
+                    await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
             }
         }
 
@@ -129,7 +129,14 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 if (usage.Item.UserStatus != status)
                 {
                     usage.Item.UserStatus = status;
-                    await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
+
+                    if (status == UserStatus.Offline)
+                    {
+                        // special case of users that already broadcast that they are online switching to "appear offline".
+                        await broadcastUserPresenceUpdate(usage.Item.UserId, null);
+                    }
+                    else
+                        await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
                 }
             }
         }
@@ -205,16 +212,36 @@ namespace osu.Server.Spectator.Hubs.Metadata
         protected override async Task CleanUpState(MetadataClientState state)
         {
             await base.CleanUpState(state);
-            await broadcastUserPresenceUpdate(state.UserId, null);
+            if (shouldBroadcastPresentToOtherUsers(state))
+                await broadcastUserPresenceUpdate(state.UserId, null);
             await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);
         }
 
         private Task broadcastUserPresenceUpdate(int userId, UserPresence? userPresence)
         {
-            if (userPresence?.Status == UserStatus.Offline)
-                userPresence = null;
+            // we never want appearing offline users to have their status broadcast to other clients.
+            Debug.Assert(userPresence?.Status != UserStatus.Offline);
 
             return Clients.Group(ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence);
+        }
+
+        private bool shouldBroadcastPresentToOtherUsers(MetadataClientState state)
+        {
+            if (state.UserStatus == null)
+                return false;
+
+            switch (state.UserStatus.Value)
+            {
+                case UserStatus.Offline:
+                    return false;
+
+                case UserStatus.DoNotDisturb:
+                case UserStatus.Online:
+                    return true;
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
     }
 }
