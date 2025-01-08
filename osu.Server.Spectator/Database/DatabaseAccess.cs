@@ -320,7 +320,7 @@ namespace osu.Server.Spectator.Database
 
             if (lastQueueId.HasValue)
             {
-                var items = (await connection.QueryAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 AND queue_id > @lastQueueId LIMIT @limit", new
+                var items = (await connection.QueryAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE queue_id > @lastQueueId LIMIT @limit", new
                 {
                     lastQueueId,
                     limit
@@ -329,7 +329,7 @@ namespace osu.Server.Spectator.Database
                 return new BeatmapUpdates(items.Select(i => i.beatmapset_id).ToArray(), items.LastOrDefault()?.queue_id ?? lastQueueId.Value);
             }
 
-            var lastEntry = await connection.QueryFirstOrDefaultAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 ORDER BY queue_id DESC LIMIT 1");
+            var lastEntry = await connection.QueryFirstOrDefaultAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue ORDER BY queue_id DESC LIMIT 1");
 
             return new BeatmapUpdates(Array.Empty<int>(), lastEntry?.queue_id ?? 0);
         }
