@@ -69,7 +69,7 @@ namespace osu.Server.Spectator
                 logging.ClearProviders();
                 logging.AddConsole();
 #if !DEBUG
-                logging.AddSentry();
+                logging.AddSentry(options => options.MinimumEventLevel = LogLevel.Warning);
 #endif
 
                 // IdentityModelEventSource.ShowPII = true;
