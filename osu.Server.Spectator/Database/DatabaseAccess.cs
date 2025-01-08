@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using MySqlConnector;
 using osu.Game.Online.Metadata;
@@ -19,6 +20,12 @@ namespace osu.Server.Spectator.Database
     public class DatabaseAccess : IDatabaseAccess
     {
         private MySqlConnection? openConnection;
+        private readonly ILogger<DatabaseAccess> logger;
+
+        public DatabaseAccess(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger<DatabaseAccess>();
+        }
 
         public async Task<int?> GetUserIdFromTokenAsync(JsonWebToken jwtToken)
         {
@@ -180,12 +187,9 @@ namespace osu.Server.Spectator.Database
                     IP = userIp
                 });
             }
-            catch (MySqlException)
+            catch (MySqlException ex)
             {
-                // we really don't care about failures in this as it's throwaway logging.
-                //
-                // although arguably we should at least be logging failures somewhere because this kind of thing could stop working
-                // without anyone noticing. same goes for other try-catch methods in this class..
+                logger.LogWarning(ex, "Could not log login for user {UserId}", userId);
             }
         }
 
