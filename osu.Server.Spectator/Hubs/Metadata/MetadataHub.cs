@@ -110,6 +110,10 @@ namespace osu.Server.Spectator.Hubs.Metadata
             using (var usage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(usage.Item != null);
+
+                if (usage.Item.UserActivity == null && activity == null)
+                    return;
+
                 usage.Item.UserActivity = activity;
 
                 await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
@@ -121,9 +125,12 @@ namespace osu.Server.Spectator.Hubs.Metadata
             using (var usage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(usage.Item != null);
-                usage.Item.UserStatus = status;
 
-                await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
+                if (usage.Item.UserStatus != status)
+                {
+                    usage.Item.UserStatus = status;
+                    await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
+                }
             }
         }
 
