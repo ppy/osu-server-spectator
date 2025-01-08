@@ -105,6 +105,8 @@ namespace osu.Server.Spectator.Tests
 
             using (var usage = await userStates.GetForUse(user_id, true))
                 Assert.Null(usage.Item);
+
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Once);
         }
 
         [Fact]
