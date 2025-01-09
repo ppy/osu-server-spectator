@@ -72,6 +72,11 @@ namespace osu.Server.Spectator.Database
         Task AddRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user);
 
         /// <summary>
+        /// Adds a login entry for the specified user.
+        /// </summary>
+        Task AddLoginForUserAsync(int userId, string? userIp);
+
+        /// <summary>
         /// Remove a new participant for the specified <paramref name="room"/> in the database.
         /// </summary>
         Task RemoveRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user);

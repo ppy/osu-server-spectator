@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using MySqlConnector;
 using osu.Game.Online.Metadata;
@@ -19,6 +20,12 @@ namespace osu.Server.Spectator.Database
     public class DatabaseAccess : IDatabaseAccess
     {
         private MySqlConnection? openConnection;
+        private readonly ILogger<DatabaseAccess> logger;
+
+        public DatabaseAccess(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger<DatabaseAccess>();
+        }
 
         public async Task<int?> GetUserIdFromTokenAsync(JsonWebToken jwtToken)
         {
@@ -162,6 +169,27 @@ namespace osu.Server.Spectator.Database
             catch (MySqlException)
             {
                 // for now we really don't care about failures in this. it's updating display information each time a user joins/quits and doesn't need to be perfect.
+            }
+        }
+
+        public async Task AddLoginForUserAsync(int userId, string? userIp)
+        {
+            if (string.IsNullOrEmpty(userIp))
+                return;
+
+            var connection = await getConnectionAsync();
+
+            try
+            {
+                await connection.ExecuteAsync("INSERT INTO osu_logins (user_id, ip) VALUES (@UserID, @IP)", new
+                {
+                    UserID = userId,
+                    IP = userIp
+                });
+            }
+            catch (MySqlException ex)
+            {
+                logger.LogWarning(ex, "Could not log login for user {UserId}", userId);
             }
         }
 

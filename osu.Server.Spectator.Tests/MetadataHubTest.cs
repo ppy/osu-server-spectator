@@ -26,10 +26,10 @@ namespace osu.Server.Spectator.Tests
 
         private readonly MetadataHub hub;
         private readonly EntityStore<MetadataClientState> userStates;
-        private readonly Mock<IDatabaseAccess> mockDatabase;
         private readonly Mock<IMetadataClient> mockCaller;
         private readonly Mock<IMetadataClient> mockWatchersGroup;
         private readonly Mock<IGroupManager> mockGroupManager;
+        private readonly Mock<IDatabaseAccess> mockDatabase;
         private readonly Mock<IHubCallerClients<IMetadataClient>> mockClients;
 
         public MetadataHubTest()
@@ -76,8 +76,9 @@ namespace osu.Server.Spectator.Tests
             using (var usage = await userStates.GetForUse(user_id))
                 Assert.NotNull(usage.Item);
 
-            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Once);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Never);
 
+            await hub.UpdateStatus(UserStatus.Online);
             await hub.UpdateActivity(new UserActivity.ChoosingBeatmap());
 
             using (var usage = await userStates.GetForUse(user_id))
@@ -102,16 +103,24 @@ namespace osu.Server.Spectator.Tests
 
             using (var usage = await userStates.GetForUse(user_id, true))
                 Assert.Null(usage.Item);
+
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Once);
         }
 
         [Fact]
-        public async Task OfflineUserUpdatesAreNotBroadcast()
+        public async Task UserSwitchingToAppearOfflineHandledCorrectly()
         {
             await hub.OnConnectedAsync();
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Never);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Never);
 
+            await hub.UpdateStatus(UserStatus.Online);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Never);
             mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Once);
 
             await hub.UpdateStatus(UserStatus.Offline);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Once);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Once);
 
             using (var usage = await userStates.GetForUse(user_id))
             {
@@ -119,9 +128,9 @@ namespace osu.Server.Spectator.Tests
                 Assert.Equal(UserStatus.Offline, usage.Item!.UserStatus);
             }
 
-            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Once);
-
             await hub.UpdateActivity(new UserActivity.ChoosingBeatmap());
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Once);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Once);
 
             using (var usage = await userStates.GetForUse(user_id))
             {
@@ -129,7 +138,57 @@ namespace osu.Server.Spectator.Tests
                 Assert.IsType<UserActivity.ChoosingBeatmap>(usage.Item!.UserActivity);
             }
 
-            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Exactly(2));
+            await hub.OnDisconnectedAsync(null);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Once);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task AppearOfflineUserUpdatesAreNeverBroadcast()
+        {
+            await hub.OnConnectedAsync();
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Never);
+
+            await hub.UpdateStatus(UserStatus.Offline);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Never);
+
+            using (var usage = await userStates.GetForUse(user_id))
+            {
+                Assert.NotNull(usage.Item!.UserStatus);
+                Assert.Equal(UserStatus.Offline, usage.Item!.UserStatus);
+            }
+
+            await hub.UpdateActivity(new UserActivity.ChoosingBeatmap());
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Never);
+
+            using (var usage = await userStates.GetForUse(user_id))
+            {
+                Assert.NotNull(usage.Item!.UserActivity);
+                Assert.IsType<UserActivity.ChoosingBeatmap>(usage.Item!.UserActivity);
+            }
+
+            await hub.OnDisconnectedAsync(null);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.IsAny<UserPresence>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task FreshUserClientOnlyTriggersSinglePresence()
+        {
+            await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.DoNotDisturb);
+            await hub.UpdateActivity(null);
+
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, null), Times.Never);
+            mockWatchersGroup.Verify(client => client.UserPresenceUpdated(user_id, It.Is<UserPresence>(p => p.Status == UserStatus.DoNotDisturb)), Times.Exactly(1));
+        }
+
+        [Fact]
+        public async Task UserLoginLogging()
+        {
+            await hub.OnConnectedAsync();
+
+            // verify that the caller got the initial data update.
+            mockDatabase.Verify(caller => caller.AddLoginForUserAsync(user_id, It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
