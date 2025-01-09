@@ -197,12 +197,6 @@ namespace osu.Server.Spectator.Hubs.Metadata
             await base.CleanUpState(state);
             await broadcastUserPresenceUpdate(state.UserId, null);
             await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);
-
-            using (var db = databaseFactory.GetInstance())
-            {
-                foreach (int friendId in await db.GetUserFriendsAsync(state.UserId))
-                    await Groups.RemoveFromGroupAsync(state.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
-            }
         }
 
         private Task broadcastUserPresenceUpdate(int userId, UserPresence? userPresence)
