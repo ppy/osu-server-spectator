@@ -74,7 +74,16 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 using (var db = databaseFactory.GetInstance())
                 {
                     foreach (int friendId in await db.GetUserFriendsAsync(usage.Item.UserId))
+                    {
                         await Groups.AddToGroupAsync(Context.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
+
+                        // Check if the friend is online, and if they are, broadcast to the connected user.
+                        using (var friendUsage = await GetStateFromUser(friendId))
+                        {
+                            if (friendUsage.Item != null && shouldBroadcastPresenceToOtherUsers(friendUsage.Item))
+                                await Clients.Caller.UserPresenceUpdated(friendId, friendUsage.Item.ToUserPresence());
+                        }
+                    }
                 }
             }
         }

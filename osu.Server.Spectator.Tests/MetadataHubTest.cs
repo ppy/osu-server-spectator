@@ -26,6 +26,7 @@ namespace osu.Server.Spectator.Tests
 
         private readonly MetadataHub hub;
         private readonly EntityStore<MetadataClientState> userStates;
+        private readonly Mock<HubCallerContext> mockUserContext;
         private readonly Mock<IMetadataClient> mockCaller;
         private readonly Mock<IMetadataClient> mockWatchersGroup;
         private readonly Mock<IGroupManager> mockGroupManager;
@@ -63,7 +64,9 @@ namespace osu.Server.Spectator.Tests
             mockClients.Setup(clients => clients.Caller)
                        .Returns(mockCaller.Object);
 
-            hub.Context = createUserContext(user_id).Object;
+            mockUserContext = createUserContext(user_id);
+
+            hub.Context = mockUserContext.Object;
             hub.Clients = mockClients.Object;
             hub.Groups = mockGroupManager.Object;
         }
@@ -260,6 +263,37 @@ namespace osu.Server.Spectator.Tests
             // Non-friend disconnects...
             hub.Context = nonFriendContext.Object;
             await hub.OnDisconnectedAsync(null);
+            mockCaller.Verify(c => c.UserPresenceUpdated(non_friend_id, It.IsAny<UserPresence>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task FriendPresenceBroadcastWhenConnected()
+        {
+            const int friend_id = 56;
+            const int non_friend_id = 57;
+
+            Mock<HubCallerContext> friendContext = createUserContext(friend_id);
+            Mock<HubCallerContext> nonFriendContext = createUserContext(non_friend_id);
+
+            mockDatabase.Setup(d => d.GetUserFriendsAsync(user_id)).ReturnsAsync([friend_id]);
+            mockClients.Setup(clients => clients.Groups(It.Is<IReadOnlyList<string>>(list => list.Contains(MetadataHub.FRIEND_PRESENCE_WATCHERS_GROUP(friend_id)))))
+                       .Returns(() => mockCaller.Object);
+
+            // Friend connects...
+            hub.Context = friendContext.Object;
+            await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.Online);
+
+            // Non-friend connects...
+            hub.Context = nonFriendContext.Object;
+            await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.Online);
+
+            // We connect...
+            mockCaller.Invocations.Clear();
+            hub.Context = mockUserContext.Object;
+            await hub.OnConnectedAsync();
+            mockCaller.Verify(c => c.UserPresenceUpdated(friend_id, It.IsAny<UserPresence>()), Times.Once);
             mockCaller.Verify(c => c.UserPresenceUpdated(non_friend_id, It.IsAny<UserPresence>()), Times.Never);
         }
 
