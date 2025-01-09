@@ -78,9 +78,9 @@ namespace osu.Server.Spectator.Hubs.Metadata
                         await Groups.AddToGroupAsync(Context.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
 
                         // Check if the friend is online, and if they are, broadcast to the connected user.
-                        using (var friendUsage = await GetStateFromUser(friendId))
+                        using (var friendUsage = await TryGetStateFromUser(friendId))
                         {
-                            if (friendUsage.Item != null && shouldBroadcastPresenceToOtherUsers(friendUsage.Item))
+                            if (friendUsage?.Item != null && shouldBroadcastPresenceToOtherUsers(friendUsage.Item))
                                 await Clients.Caller.UserPresenceUpdated(friendId, friendUsage.Item.ToUserPresence());
                         }
                     }
