@@ -184,11 +184,13 @@ namespace osu.Server.Spectator.Tests
             // Friend connects...
             hub.Context = friendContext.Object;
             await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.Online);
             mockCaller.Verify(c => c.UserPresenceUpdated(friend_id, It.Is<UserPresence>(p => p.Status == UserStatus.Online)), Times.Once);
 
             // Non-friend connects...
             hub.Context = nonFriendContext.Object;
             await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.Online);
             mockCaller.Verify(c => c.UserPresenceUpdated(non_friend_id, It.IsAny<UserPresence>()), Times.Never);
 
             // Friend disconnects...
