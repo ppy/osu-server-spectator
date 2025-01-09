@@ -81,7 +81,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                         using (var friendUsage = await TryGetStateFromUser(friendId))
                         {
                             if (friendUsage?.Item != null && shouldBroadcastPresenceToOtherUsers(friendUsage.Item))
-                                await Clients.Caller.UserPresenceUpdated(friendId, friendUsage.Item.ToUserPresence());
+                                await Clients.Caller.FriendPresenceUpdated(friendId, friendUsage.Item.ToUserPresence());
                         }
                     }
                 }
@@ -238,7 +238,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
             // we never want appearing offline users to have their status broadcast to other clients.
             Debug.Assert(userPresence?.Status != UserStatus.Offline);
 
-            return Clients.Groups(FRIEND_PRESENCE_WATCHERS_GROUP(userId), ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence);
+            return Task.WhenAll
+            (
+                Clients.Group(ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence),
+                Clients.Group(FRIEND_PRESENCE_WATCHERS_GROUP(userId)).FriendPresenceUpdated(userId, userPresence)
+            );
         }
 
         private bool shouldBroadcastPresenceToOtherUsers(MetadataClientState state)
