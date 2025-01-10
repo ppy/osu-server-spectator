@@ -16,6 +16,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
@@ -130,13 +131,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                              .Returns(new Mock<ILogger>().Object);
 
+            var legacyIOMock = new Mock<ILegacyIO>();
+
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,
                 Rooms,
                 UserStates,
                 DatabaseFactory.Object,
                 new ChatFilters(DatabaseFactory.Object),
-                hubContext.Object);
+                hubContext.Object,
+                legacyIOMock.Object);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 

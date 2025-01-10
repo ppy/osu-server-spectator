@@ -16,6 +16,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -25,6 +26,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected readonly MultiplayerHubContext HubContext;
         private readonly IDatabaseFactory databaseFactory;
         private readonly ChatFilters chatFilters;
+        private readonly ILegacyIO legacyIO;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -32,12 +34,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
-            IHubContext<MultiplayerHub> hubContext)
+            IHubContext<MultiplayerHub> hubContext,
+            ILegacyIO legacyIO)
             : base(loggerFactory, users)
         {
             Rooms = rooms;
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
+            this.legacyIO = legacyIO;
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, databaseFactory, loggerFactory);
         }
 
