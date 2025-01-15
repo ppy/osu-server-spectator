@@ -160,6 +160,11 @@ namespace osu.Server.Spectator.Database
         Task<phpbb_zebra?> GetUserRelation(int userId, int zebraId);
 
         /// <summary>
+        /// Lists the specified user's friends.
+        /// </summary>
+        Task<IEnumerable<int>> GetUserFriendsAsync(int userId);
+
+        /// <summary>
         /// Returns <see langword="true"/> if the user with the supplied <paramref name="userId"/> allows private messages from people not on their friends list.
         /// </summary>
         Task<bool> GetUserAllowsPMs(int userId);

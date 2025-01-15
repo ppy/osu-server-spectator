@@ -386,6 +386,22 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task<IEnumerable<int>> GetUserFriendsAsync(int userId)
+        {
+            var connection = await getConnectionAsync();
+
+            // Query pulled from osu!bancho.
+            return await connection.QueryAsync<int>(
+                "SELECT zebra_id FROM phpbb_zebra z "
+                + "JOIN phpbb_users u ON z.zebra_id = u.user_id "
+                + "WHERE z.user_id = @UserId "
+                + "AND friend = 1 "
+                + "AND (`user_warnings` = '0' and `user_type` = '0')", new
+                {
+                    UserId = userId
+                });
+        }
+
         public async Task<bool> GetUserAllowsPMs(int userId)
         {
             var connection = await getConnectionAsync();

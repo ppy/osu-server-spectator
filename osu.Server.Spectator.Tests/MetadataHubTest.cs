@@ -24,10 +24,12 @@ namespace osu.Server.Spectator.Tests
 
         private readonly MetadataHub hub;
         private readonly EntityStore<MetadataClientState> userStates;
+        private readonly Mock<HubCallerContext> mockUserContext;
         private readonly Mock<IMetadataClient> mockCaller;
         private readonly Mock<IMetadataClient> mockWatchersGroup;
         private readonly Mock<IGroupManager> mockGroupManager;
         private readonly Mock<IDatabaseAccess> mockDatabase;
+        private readonly Mock<IHubCallerClients<IMetadataClient>> mockClients;
 
         public MetadataHubTest()
         {
@@ -48,25 +50,21 @@ namespace osu.Server.Spectator.Tests
                 new Mock<IDailyChallengeUpdater>().Object,
                 new Mock<IScoreProcessedSubscriber>().Object);
 
-            var mockContext = new Mock<HubCallerContext>();
-            mockContext.Setup(ctx => ctx.UserIdentifier).Returns(user_id.ToString());
-
             mockWatchersGroup = new Mock<IMetadataClient>();
             mockCaller = new Mock<IMetadataClient>();
+            mockGroupManager = new Mock<IGroupManager>();
 
-            var mockClients = new Mock<IHubCallerClients<IMetadataClient>>();
+            mockClients = new Mock<IHubCallerClients<IMetadataClient>>();
+            mockClients.Setup(clients => clients.Group(It.IsAny<string>()))
+                       .Returns(new Mock<IMetadataClient>().Object);
             mockClients.Setup(clients => clients.Group(MetadataHub.ONLINE_PRESENCE_WATCHERS_GROUP))
                        .Returns(mockWatchersGroup.Object);
             mockClients.Setup(clients => clients.Caller)
                        .Returns(mockCaller.Object);
 
-            mockGroupManager = new Mock<IGroupManager>();
+            mockUserContext = createUserContext(user_id);
 
-            // this is to ensure that the `Context.GetHttpContext()` call in `MetadataHub.OnConnectedAsync()` doesn't nullref
-            // (the method in question is an extension, and it accesses `Features`; mocking further is not required).
-            mockContext.Setup(ctx => ctx.Features).Returns(new Mock<IFeatureCollection>().Object);
-
-            hub.Context = mockContext.Object;
+            hub.Context = mockUserContext.Object;
             hub.Clients = mockClients.Object;
             hub.Groups = mockGroupManager.Object;
         }
@@ -226,6 +224,86 @@ namespace osu.Server.Spectator.Tests
             mockGroupManager.Verify(
                 mgr => mgr.RemoveFromGroupAsync(It.IsAny<string>(), MetadataHub.ONLINE_PRESENCE_WATCHERS_GROUP, It.IsAny<CancellationToken>()),
                 Times.Once);
+        }
+
+        [Fact]
+        public async Task UserFriendsAlwaysNotified()
+        {
+            const int friend_id = 56;
+            const int non_friend_id = 57;
+
+            Mock<HubCallerContext> friendContext = createUserContext(friend_id);
+            Mock<HubCallerContext> nonFriendContext = createUserContext(non_friend_id);
+
+            mockDatabase.Setup(d => d.GetUserFriendsAsync(user_id)).ReturnsAsync([friend_id]);
+            mockClients.Setup(clients => clients.Group(MetadataHub.FRIEND_PRESENCE_WATCHERS_GROUP(friend_id)))
+                       .Returns(() => mockCaller.Object);
+
+            await hub.OnConnectedAsync();
+
+            // Friend connects...
+            hub.Context = friendContext.Object;
+            await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.Online);
+            mockCaller.Verify(c => c.FriendPresenceUpdated(friend_id, It.Is<UserPresence>(p => p.Status == UserStatus.Online)), Times.Once);
+
+            // Non-friend connects...
+            hub.Context = nonFriendContext.Object;
+            await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.Online);
+            mockCaller.Verify(c => c.FriendPresenceUpdated(non_friend_id, It.IsAny<UserPresence>()), Times.Never);
+
+            // Friend disconnects...
+            hub.Context = friendContext.Object;
+            await hub.OnDisconnectedAsync(null);
+            mockCaller.Verify(c => c.FriendPresenceUpdated(friend_id, null), Times.Once);
+
+            // Non-friend disconnects...
+            hub.Context = nonFriendContext.Object;
+            await hub.OnDisconnectedAsync(null);
+            mockCaller.Verify(c => c.FriendPresenceUpdated(non_friend_id, It.IsAny<UserPresence>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task FriendPresenceBroadcastWhenConnected()
+        {
+            const int friend_id = 56;
+            const int non_friend_id = 57;
+
+            Mock<HubCallerContext> friendContext = createUserContext(friend_id);
+            Mock<HubCallerContext> nonFriendContext = createUserContext(non_friend_id);
+
+            mockDatabase.Setup(d => d.GetUserFriendsAsync(user_id)).ReturnsAsync([friend_id]);
+            mockClients.Setup(clients => clients.Group(MetadataHub.FRIEND_PRESENCE_WATCHERS_GROUP(friend_id)))
+                       .Returns(() => mockCaller.Object);
+
+            // Friend connects...
+            hub.Context = friendContext.Object;
+            await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.Online);
+
+            // Non-friend connects...
+            hub.Context = nonFriendContext.Object;
+            await hub.OnConnectedAsync();
+            await hub.UpdateStatus(UserStatus.Online);
+
+            // We connect...
+            mockCaller.Invocations.Clear();
+            hub.Context = mockUserContext.Object;
+            await hub.OnConnectedAsync();
+            mockCaller.Verify(c => c.FriendPresenceUpdated(friend_id, It.IsAny<UserPresence>()), Times.Once);
+            mockCaller.Verify(c => c.FriendPresenceUpdated(non_friend_id, It.IsAny<UserPresence>()), Times.Never);
+        }
+
+        private Mock<HubCallerContext> createUserContext(int userId)
+        {
+            var mockContext = new Mock<HubCallerContext>();
+            mockContext.Setup(ctx => ctx.ConnectionId).Returns(userId.ToString());
+            mockContext.Setup(ctx => ctx.UserIdentifier).Returns(userId.ToString());
+            // this is to ensure that the `Context.GetHttpContext()` call in `MetadataHub.OnConnectedAsync()` doesn't nullref
+            // (the method in question is an extension, and it accesses `Features`; mocking further is not required).
+            mockContext.Setup(ctx => ctx.Features).Returns(new Mock<IFeatureCollection>().Object);
+            return mockContext;
         }
     }
 }

@@ -29,6 +29,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
 
         internal const string ONLINE_PRESENCE_WATCHERS_GROUP = "metadata:online-presence-watchers";
+        internal static string FRIEND_PRESENCE_WATCHERS_GROUP(int userId) => $"metadata:online-presence-watchers:{userId}";
 
         internal static string MultiplayerRoomWatchersGroup(long roomId) => $"metadata:multiplayer-room-watchers:{roomId}";
 
@@ -69,6 +70,21 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 await logLogin(usage);
                 await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);
+
+                using (var db = databaseFactory.GetInstance())
+                {
+                    foreach (int friendId in await db.GetUserFriendsAsync(usage.Item.UserId))
+                    {
+                        await Groups.AddToGroupAsync(Context.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
+
+                        // Check if the friend is online, and if they are, broadcast to the connected user.
+                        using (var friendUsage = await TryGetStateFromUser(friendId))
+                        {
+                            if (friendUsage?.Item != null && shouldBroadcastPresenceToOtherUsers(friendUsage.Item))
+                                await Clients.Caller.FriendPresenceUpdated(friendId, friendUsage.Item.ToUserPresence());
+                        }
+                    }
+                }
             }
         }
 
@@ -222,7 +238,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
             // we never want appearing offline users to have their status broadcast to other clients.
             Debug.Assert(userPresence?.Status != UserStatus.Offline);
 
-            return Clients.Group(ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence);
+            return Task.WhenAll
+            (
+                Clients.Group(ONLINE_PRESENCE_WATCHERS_GROUP).UserPresenceUpdated(userId, userPresence),
+                Clients.Group(FRIEND_PRESENCE_WATCHERS_GROUP(userId)).FriendPresenceUpdated(userId, userPresence)
+            );
         }
 
         private bool shouldBroadcastPresenceToOtherUsers(MetadataClientState state)

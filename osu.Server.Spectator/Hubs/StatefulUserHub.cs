@@ -122,5 +122,7 @@ namespace osu.Server.Spectator.Hubs
         }
 
         protected Task<ItemUsage<TUserState>> GetStateFromUser(int userId) => UserStates.GetForUse(userId);
+
+        protected Task<ItemUsage<TUserState>?> TryGetStateFromUser(int userId) => UserStates.TryGetForUse(userId);
     }
 }
