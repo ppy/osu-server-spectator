@@ -75,6 +75,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 {
                     foreach (int friendId in await db.GetUserFriendsAsync(usage.Item.UserId))
                     {
+                        // Once upon a time users were able to add themselves as friends.
+                        // This errors during the state retrieval below, so let's not support it.
+                        if (friendId == usage.Item.UserId)
+                            continue;
+
                         await Groups.AddToGroupAsync(Context.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
 
                         // Check if the friend is online, and if they are, broadcast to the connected user.
