@@ -103,7 +103,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
         public async Task AddItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
-            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
+            if (dbFactory == null)
+                throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
 
             bool isHostOnly = room.Settings.QueueMode == QueueMode.HostOnly;
 
@@ -116,6 +117,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= limit)
                 throw new InvalidStateException($"Can't enqueue more than {limit} items at once.");
+
+            if (item.FreeStyle && (item.AllowedMods.Any() || item.RequiredMods.Any()))
+                throw new InvalidStateException("Cannot enqueue freestyle item with mods.");
 
             using (var db = dbFactory.GetInstance())
             {
@@ -144,7 +148,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task EditItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
-            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
+            if (dbFactory == null)
+                throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
+
+            if (item.FreeStyle && (item.AllowedMods.Any() || item.RequiredMods.Any()))
+                throw new InvalidStateException("Cannot edit freestyle item with mods.");
 
             using (var db = dbFactory.GetInstance())
             {

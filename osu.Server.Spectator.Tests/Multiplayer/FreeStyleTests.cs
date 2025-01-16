@@ -6,8 +6,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Beatmaps;
+using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets.Osu.Mods;
 using osu.Server.Spectator.Database.Models;
 using Xunit;
 
@@ -33,6 +35,32 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapID = 1234,
                 FreeStyle = true
             });
+        }
+
+        [Fact]
+        public async Task AddItem_WithRequiredModsFails()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                FreeStyle = true,
+                RequiredMods = [new APIMod(new OsuModHidden())]
+            }));
+        }
+
+        [Fact]
+        public async Task AddItem_WithAllowedModsFails()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                FreeStyle = true,
+                AllowedMods = [new APIMod(new OsuModHidden())]
+            }));
         }
 
         #endregion
@@ -392,6 +420,32 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(room.Users.First().RulesetId, null);
                 Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, null), Times.Once);
             }
+        }
+
+        [Fact]
+        public async Task EditItem_WithRequiredModsFails()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                FreeStyle = true,
+                RequiredMods = [new APIMod(new OsuModHidden())]
+            }));
+        }
+
+        [Fact]
+        public async Task EditItem_WithAllowedModsFails()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                FreeStyle = true,
+                AllowedMods = [new APIMod(new OsuModHidden())]
+            }));
         }
 
         #endregion
