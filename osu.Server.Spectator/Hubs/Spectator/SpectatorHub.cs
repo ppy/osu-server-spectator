@@ -31,7 +31,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
         /// </summary>
         private const BeatmapOnlineStatus max_beatmap_status_for_replays = BeatmapOnlineStatus.Loved;
 
-        private readonly EntityStore<SpectatorList> spectatorLists;
         private readonly IDatabaseFactory databaseFactory;
         private readonly ScoreUploader scoreUploader;
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
@@ -39,13 +38,11 @@ namespace osu.Server.Spectator.Hubs.Spectator
         public SpectatorHub(
             ILoggerFactory loggerFactory,
             EntityStore<SpectatorClientState> users,
-            EntityStore<SpectatorList> spectatorLists,
             IDatabaseFactory databaseFactory,
             ScoreUploader scoreUploader,
             IScoreProcessedSubscriber scoreProcessedSubscriber)
             : base(loggerFactory, users)
         {
-            this.spectatorLists = spectatorLists;
             this.databaseFactory = databaseFactory;
             this.scoreUploader = scoreUploader;
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
@@ -221,12 +218,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 Username = watcherUsername,
             };
 
-            using (var usage = await spectatorLists.GetForUse(userId, createOnMissing: true))
-            {
-                usage.Item ??= new SpectatorList();
-                usage.Item.Spectators[watcherId] = watcher;
-            }
-
             await Clients.User(userId.ToString()).UserStartedWatching([watcher]);
         }
 
@@ -235,16 +226,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(userId));
 
             int watcherId = Context.GetUserId();
-
-            using (var usage = await spectatorLists.TryGetForUse(userId))
-            {
-                if (usage?.Item == null)
-                    return;
-
-                usage.Item.Spectators.Remove(watcherId);
-                if (usage.Item.Spectators.Count == 0)
-                    usage.Destroy();
-            }
 
             await Clients.User(userId.ToString()).UserEndedWatching(watcherId);
         }
@@ -255,17 +236,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
             // we don't want this for long, but while the lazer user base is small it should be okay.
             foreach (var kvp in GetAllStates())
                 await Clients.Caller.UserBeganPlaying((int)kvp.Key, kvp.Value.State!);
-
-            SpectatorUser[]? watchers = null;
-
-            using (var usage = await spectatorLists.TryGetForUse(Context.GetUserId()))
-            {
-                if (usage?.Item != null)
-                    watchers = usage.Item.Spectators.Values.ToArray();
-            }
-
-            if (watchers != null)
-                await Clients.Caller.UserStartedWatching(watchers);
 
             await base.OnConnectedAsync();
         }
