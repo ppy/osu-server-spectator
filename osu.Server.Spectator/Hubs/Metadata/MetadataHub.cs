@@ -154,7 +154,10 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 await Task.WhenAll
                 (
-                    // special case of users that already broadcast that they are online switching to "appear offline".
+                    // Of note, we always send status updates to other users.
+                    //
+                    // This is a single special case where we don't check against `shouldBroadcastPresentToOtherUsers` because
+                    // it is required to tell other clients that "we went offline" in the "appears offline" scenario.
                     broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence()),
                     Clients.Caller.UserPresenceUpdated(usage.Item.UserId, usage.Item.ToUserPresence())
                 );
