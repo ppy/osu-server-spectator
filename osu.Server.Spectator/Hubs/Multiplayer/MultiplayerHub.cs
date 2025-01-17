@@ -45,6 +45,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, databaseFactory, loggerFactory);
         }
 
+        public async Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
+        {
+            Log($"{Context.GetUserId()} creating room");
+
+            try
+            {
+                return await JoinRoomWithPassword(await legacyIO.CreateRoom(Context.GetUserId(), room), room.Settings.Password);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidStateException($"Failed to create the multiplayer room ({ex.Message}).");
+            }
+        }
+
         public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);
 
         public async Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string password)

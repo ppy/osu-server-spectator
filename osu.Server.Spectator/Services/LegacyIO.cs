@@ -11,6 +11,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Services
 {
@@ -34,7 +36,13 @@ namespace osu.Server.Spectator.Services
             long time = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             string url = $"{AppSettings.LegacyIODomain}/_lio/{command}{(command.Contains('?') ? "&" : "?")}timestamp={time}";
 
-            string? serialisedPostObject = postObject == null ? null : JsonSerializer.Serialize(postObject);
+            string? serialisedPostObject = postObject switch
+            {
+                null => null,
+                string => postObject,
+                _ => JsonSerializer.Serialize(postObject)
+            };
+
             logger.LogDebug("Performing LIO request to {method} {url} (params: {params})", method, url, serialisedPostObject);
 
             try
@@ -94,5 +102,36 @@ namespace osu.Server.Spectator.Services
 
         // Methods below purposefully async-await on `runLegacyIO()` calls rather than directly returning the underlying calls.
         // This is done for better readability of exception stacks. Directly returning the tasks elides the name of the proxying method.
+
+        public async Task<long> CreateRoom(int userId, MultiplayerRoom room)
+        {
+            return long.Parse(await runLegacyIO(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new CreateRoomRequest(room)
+            {
+                UserId = userId
+            })));
+        }
+
+        private class CreateRoomRequest : Room
+        {
+            [Newtonsoft.Json.JsonProperty("user_id")]
+            public required int UserId { get; init; }
+
+            /// <summary>
+            /// Creates a <see cref="Room"/> from a <see cref="MultiplayerRoom"/>.
+            /// </summary>
+            public CreateRoomRequest(MultiplayerRoom room)
+            {
+                RoomID = room.RoomID;
+                Host = room.Host?.User;
+                Name = room.Settings.Name;
+                Password = room.Settings.Password;
+                Type = room.Settings.MatchType;
+                QueueMode = room.Settings.QueueMode;
+                AutoStartDuration = room.Settings.AutoStartDuration;
+                AutoSkip = room.Settings.AutoSkip;
+                Playlist = room.Playlist.Select(item => new PlaylistItem(item)).ToArray();
+                CurrentPlaylistItem = Playlist.FirstOrDefault(item => item.ID == room.Settings.PlaylistItemId);
+            }
+        }
     }
 }
