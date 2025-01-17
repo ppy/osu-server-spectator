@@ -136,8 +136,13 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 usage.Item.UserActivity = activity;
 
-                if (shouldBroadcastPresenceToOtherUsers(usage.Item))
-                    await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
+                await Task.WhenAll
+                (
+                    shouldBroadcastPresenceToOtherUsers(usage.Item)
+                        ? broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence())
+                        : Task.CompletedTask,
+                    Clients.Caller.UserPresenceUpdated(usage.Item.UserId, usage.Item.ToUserPresence())
+                );
             }
         }
 
@@ -147,18 +152,20 @@ namespace osu.Server.Spectator.Hubs.Metadata
             {
                 Debug.Assert(usage.Item != null);
 
-                if (usage.Item.UserStatus != status)
-                {
-                    usage.Item.UserStatus = status;
+                if (usage.Item.UserStatus == status)
+                    return;
 
-                    if (status == UserStatus.Offline)
-                    {
-                        // special case of users that already broadcast that they are online switching to "appear offline".
-                        await broadcastUserPresenceUpdate(usage.Item.UserId, null);
-                    }
-                    else
-                        await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
-                }
+                usage.Item.UserStatus = status;
+
+                await Task.WhenAll
+                (
+                    // Of note, we always send status updates to other users.
+                    //
+                    // This is a single special case where we don't check against `shouldBroadcastPresentToOtherUsers` because
+                    // it is required to tell other clients that "we went offline" in the "appears offline" scenario.
+                    broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence()),
+                    Clients.Caller.UserPresenceUpdated(usage.Item.UserId, usage.Item.ToUserPresence())
+                );
             }
         }
 
