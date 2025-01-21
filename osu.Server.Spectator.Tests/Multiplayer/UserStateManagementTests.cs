@@ -283,8 +283,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.Idle));
-                Assert.Single(room.Item.Users.Where(u => u.State == MultiplayerUserState.Ready));
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Ready);
 
                 Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
             }

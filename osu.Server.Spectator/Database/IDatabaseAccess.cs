@@ -57,6 +57,11 @@ namespace osu.Server.Spectator.Database
         Task UpdateRoomSettingsAsync(MultiplayerRoom room);
 
         /// <summary>
+        /// Updates the current status of <paramref name="room"/> in the database.
+        /// </summary>
+        Task UpdateRoomStatusAsync(MultiplayerRoom room);
+
+        /// <summary>
         /// Updates the current host of <paramref name="room"/> in the database.
         /// </summary>
         Task UpdateRoomHostAsync(MultiplayerRoom room);
@@ -65,6 +70,11 @@ namespace osu.Server.Spectator.Database
         /// Add a new participant for the specified <paramref name="room"/> in the database.
         /// </summary>
         Task AddRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user);
+
+        /// <summary>
+        /// Adds a login entry for the specified user.
+        /// </summary>
+        Task AddLoginForUserAsync(int userId, string? userIp);
 
         /// <summary>
         /// Remove a new participant for the specified <paramref name="room"/> in the database.
@@ -148,6 +158,11 @@ namespace osu.Server.Spectator.Database
         /// Returns information about if the user with the supplied <paramref name="zebraId"/> has been added as a friend or blocked by the user with the supplied <paramref name="userId"/>.
         /// </summary>
         Task<phpbb_zebra?> GetUserRelation(int userId, int zebraId);
+
+        /// <summary>
+        /// Lists the specified user's friends.
+        /// </summary>
+        Task<IEnumerable<int>> GetUserFriendsAsync(int userId);
 
         /// <summary>
         /// Returns <see langword="true"/> if the user with the supplied <paramref name="userId"/> allows private messages from people not on their friends list.

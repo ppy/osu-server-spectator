@@ -13,10 +13,10 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
-using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using IDatabaseFactory = osu.Server.Spectator.Database.IDatabaseFactory;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -245,7 +245,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
         {
             log(room, null, $"Room state changing from {room.State} to {newState}");
+
             room.State = newState;
+            using (var db = databaseFactory.GetInstance())
+                await db.UpdateRoomStatusAsync(room);
+
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
         }
 

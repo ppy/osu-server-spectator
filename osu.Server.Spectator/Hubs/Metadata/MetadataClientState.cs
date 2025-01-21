@@ -19,10 +19,25 @@ namespace osu.Server.Spectator.Hubs.Metadata
             VersionHash = versionHash;
         }
 
-        public UserPresence ToUserPresence() => new UserPresence
+        /// <summary>
+        /// Creates a <see cref="UserPresence"/> which represents this user's state as it should be broadcast to other users.
+        /// </summary>
+        /// <returns>The representative user presence, or <c>null</c> if the user should appear offline.</returns>
+        public UserPresence? ToUserPresence()
         {
-            Activity = UserActivity,
-            Status = UserStatus,
-        };
+            switch (UserStatus)
+            {
+                case null:
+                case Game.Users.UserStatus.Offline:
+                    return null;
+
+                default:
+                    return new UserPresence
+                    {
+                        Activity = UserActivity,
+                        Status = UserStatus,
+                    };
+            }
+        }
     }
 }

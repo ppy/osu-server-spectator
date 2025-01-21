@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using MySqlConnector;
 using osu.Game.Online.Metadata;
@@ -19,6 +20,12 @@ namespace osu.Server.Spectator.Database
     public class DatabaseAccess : IDatabaseAccess
     {
         private MySqlConnection? openConnection;
+        private readonly ILogger<DatabaseAccess> logger;
+
+        public DatabaseAccess(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger<DatabaseAccess>();
+        }
 
         public async Task<int?> GetUserIdFromTokenAsync(JsonWebToken jwtToken)
         {
@@ -103,6 +110,18 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task UpdateRoomStatusAsync(MultiplayerRoom room)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET status = @Status WHERE id = @RoomID", new
+            {
+                RoomID = room.RoomID,
+                // needs ToString() to store as enums correctly, see https://github.com/DapperLib/Dapper/issues/813.
+                Status = room.State.ToDatabaseRoomStatus().ToString(),
+            });
+        }
+
         public async Task UpdateRoomHostAsync(MultiplayerRoom room)
         {
             var connection = await getConnectionAsync();
@@ -150,6 +169,27 @@ namespace osu.Server.Spectator.Database
             catch (MySqlException)
             {
                 // for now we really don't care about failures in this. it's updating display information each time a user joins/quits and doesn't need to be perfect.
+            }
+        }
+
+        public async Task AddLoginForUserAsync(int userId, string? userIp)
+        {
+            if (string.IsNullOrEmpty(userIp))
+                return;
+
+            var connection = await getConnectionAsync();
+
+            try
+            {
+                await connection.ExecuteAsync("INSERT INTO osu_logins (user_id, ip) VALUES (@UserID, @IP)", new
+                {
+                    UserID = userId,
+                    IP = userIp
+                });
+            }
+            catch (MySqlException ex)
+            {
+                logger.LogWarning(ex, "Could not log login for user {UserId}", userId);
             }
         }
 
@@ -281,7 +321,7 @@ namespace osu.Server.Spectator.Database
 
             if (lastQueueId.HasValue)
             {
-                var items = (await connection.QueryAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 AND queue_id > @lastQueueId LIMIT @limit", new
+                var items = (await connection.QueryAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE queue_id > @lastQueueId LIMIT @limit", new
                 {
                     lastQueueId,
                     limit
@@ -290,7 +330,7 @@ namespace osu.Server.Spectator.Database
                 return new BeatmapUpdates(items.Select(i => i.beatmapset_id).ToArray(), items.LastOrDefault()?.queue_id ?? lastQueueId.Value);
             }
 
-            var lastEntry = await connection.QueryFirstOrDefaultAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue WHERE status = 2 ORDER BY queue_id DESC LIMIT 1");
+            var lastEntry = await connection.QueryFirstOrDefaultAsync<bss_process_queue_item>("SELECT * FROM bss_process_queue ORDER BY queue_id DESC LIMIT 1");
 
             return new BeatmapUpdates(Array.Empty<int>(), lastEntry?.queue_id ?? 0);
         }
@@ -345,6 +385,22 @@ namespace osu.Server.Spectator.Database
                 UserId = userId,
                 ZebraId = zebraId
             });
+        }
+
+        public async Task<IEnumerable<int>> GetUserFriendsAsync(int userId)
+        {
+            var connection = await getConnectionAsync();
+
+            // Query pulled from osu!bancho.
+            return await connection.QueryAsync<int>(
+                "SELECT zebra_id FROM phpbb_zebra z "
+                + "JOIN phpbb_users u ON z.zebra_id = u.user_id "
+                + "WHERE z.user_id = @UserId "
+                + "AND friend = 1 "
+                + "AND (`user_warnings` = '0' and `user_type` = '0')", new
+                {
+                    UserId = userId
+                });
         }
 
         public async Task<bool> GetUserAllowsPMs(int userId)

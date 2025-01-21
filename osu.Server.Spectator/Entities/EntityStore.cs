@@ -110,6 +110,39 @@ namespace osu.Server.Spectator.Entities
             throw new TimeoutException("Could not allocate new entity after multiple retries. Something very bad has happened");
         }
 
+        /// <summary>
+        /// Attempts to retrieve an existing entity with a lock for use.
+        /// </summary>
+        /// <param name="id">The ID of the requested entity.</param>
+        /// <returns>An existing <see cref="ItemUsage{T}"/> which allows reading or writing the item, or <c>null</c> if no entity exists. This should be disposed after usage.</returns>
+        public async Task<ItemUsage<T>?> TryGetForUse(long id)
+        {
+            TrackedEntity? item;
+
+            lock (entityMapping)
+            {
+                if (!entityMapping.TryGetValue(id, out item))
+                {
+                    DogStatsd.Increment($"{statsDPrefix}.get-notfound");
+                    return null;
+                }
+            }
+
+            try
+            {
+                await item.ObtainLockAsync();
+            }
+            // this may be thrown if the item was destroyed between when we retrieved the item usage and took the lock.
+            catch (InvalidOperationException)
+            {
+                DogStatsd.Increment($"{statsDPrefix}.get-notfound");
+                return null;
+            }
+
+            DogStatsd.Increment($"{statsDPrefix}.get");
+            return new ItemUsage<T>(item);
+        }
+
         public async Task Destroy(long id)
         {
             TrackedEntity? item;

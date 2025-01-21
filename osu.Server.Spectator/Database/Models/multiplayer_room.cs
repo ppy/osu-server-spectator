@@ -23,6 +23,7 @@ namespace osu.Server.Spectator.Database.Models
         public DateTimeOffset? updated_at { get; set; }
         public DateTimeOffset? deleted_at { get; set; }
         public room_category category { get; set; }
+        public database_room_status status { get; set; }
         public database_match_type type { get; set; }
         public database_queue_mode queue_mode { get; set; }
         public ushort auto_start_duration { get; set; }
