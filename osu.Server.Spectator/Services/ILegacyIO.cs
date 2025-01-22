@@ -9,5 +9,9 @@ namespace osu.Server.Spectator.Services
     public interface ILegacyIO
     {
         Task<long> CreateRoom(int userId, MultiplayerRoom room);
+
+        Task JoinRoom(long roomId, int userId);
+
+        Task PartRoom(long roomId, int userId);
     }
 }

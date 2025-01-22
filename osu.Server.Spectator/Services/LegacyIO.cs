@@ -111,6 +111,16 @@ namespace osu.Server.Spectator.Services
             })));
         }
 
+        public async Task JoinRoom(long roomId, int userId)
+        {
+            await runLegacyIO(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}");
+        }
+
+        public async Task PartRoom(long roomId, int userId)
+        {
+            await runLegacyIO(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
+        }
+
         private class CreateRoomRequest : Room
         {
             [Newtonsoft.Json.JsonProperty("user_id")]
