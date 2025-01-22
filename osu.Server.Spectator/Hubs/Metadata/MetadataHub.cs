@@ -75,6 +75,11 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 {
                     foreach (int friendId in await db.GetUserFriendsAsync(usage.Item.UserId))
                     {
+                        // Once upon a time users were able to add themselves as friends.
+                        // This errors during the state retrieval below, so let's not support it.
+                        if (friendId == usage.Item.UserId)
+                            continue;
+
                         await Groups.AddToGroupAsync(Context.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
 
                         // Check if the friend is online, and if they are, broadcast to the connected user.
@@ -131,8 +136,13 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 usage.Item.UserActivity = activity;
 
-                if (shouldBroadcastPresenceToOtherUsers(usage.Item))
-                    await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
+                await Task.WhenAll
+                (
+                    shouldBroadcastPresenceToOtherUsers(usage.Item)
+                        ? broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence())
+                        : Task.CompletedTask,
+                    Clients.Caller.UserPresenceUpdated(usage.Item.UserId, usage.Item.ToUserPresence())
+                );
             }
         }
 
@@ -142,18 +152,20 @@ namespace osu.Server.Spectator.Hubs.Metadata
             {
                 Debug.Assert(usage.Item != null);
 
-                if (usage.Item.UserStatus != status)
-                {
-                    usage.Item.UserStatus = status;
+                if (usage.Item.UserStatus == status)
+                    return;
 
-                    if (status == UserStatus.Offline)
-                    {
-                        // special case of users that already broadcast that they are online switching to "appear offline".
-                        await broadcastUserPresenceUpdate(usage.Item.UserId, null);
-                    }
-                    else
-                        await broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence());
-                }
+                usage.Item.UserStatus = status;
+
+                await Task.WhenAll
+                (
+                    // Of note, we always send status updates to other users.
+                    //
+                    // This is a single special case where we don't check against `shouldBroadcastPresentToOtherUsers` because
+                    // it is required to tell other clients that "we went offline" in the "appears offline" scenario.
+                    broadcastUserPresenceUpdate(usage.Item.UserId, usage.Item.ToUserPresence()),
+                    Clients.Caller.UserPresenceUpdated(usage.Item.UserId, usage.Item.ToUserPresence())
+                );
             }
         }
 
