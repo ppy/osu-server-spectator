@@ -41,7 +41,6 @@ namespace osu.Server.Spectator.Tests
         public SpectatorHubTest()
         {
             var clientStates = new EntityStore<SpectatorClientState>();
-            var spectatorLists = new EntityStore<SpectatorList>();
 
             mockDatabase = new Mock<IDatabaseAccess>();
             mockDatabase.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => streamer_username);
@@ -65,7 +64,7 @@ namespace osu.Server.Spectator.Tests
 
             var mockScoreProcessedSubscriber = new Mock<IScoreProcessedSubscriber>();
 
-            hub = new SpectatorHub(loggerFactory.Object, clientStates, spectatorLists, databaseFactory.Object, scoreUploader, mockScoreProcessedSubscriber.Object);
+            hub = new SpectatorHub(loggerFactory.Object, clientStates, databaseFactory.Object, scoreUploader, mockScoreProcessedSubscriber.Object);
         }
 
         [Fact]
