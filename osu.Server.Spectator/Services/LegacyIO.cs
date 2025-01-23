@@ -8,8 +8,10 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -68,13 +70,10 @@ namespace osu.Server.Spectator.Services
 
                 var response = await httpClient.SendAsync(httpRequestMessage);
 
-                if (!response.IsSuccessStatusCode)
-                    throw new InvalidOperationException($"Legacy IO request to {url} failed with {response.StatusCode} ({response.Content.ReadAsStringAsync().Result})");
+                if (response.IsSuccessStatusCode)
+                    return await response.Content.ReadAsStringAsync();
 
-                if ((int)response.StatusCode >= 300)
-                    throw new Exception($"Legacy IO request to {url} returned unexpected response {response.StatusCode} ({response.ReasonPhrase})");
-
-                return await response.Content.ReadAsStringAsync();
+                throw await LegacyIORequestFailedException.Create(url, response);
             }
             catch (Exception e)
             {
@@ -141,6 +140,40 @@ namespace osu.Server.Spectator.Services
                 AutoSkip = room.Settings.AutoSkip;
                 Playlist = room.Playlist.Select(item => new PlaylistItem(item)).ToArray();
                 CurrentPlaylistItem = Playlist.FirstOrDefault(item => item.ID == room.Settings.PlaylistItemId);
+            }
+        }
+
+        [Serializable]
+        private class LegacyIORequestFailedException : HubException
+        {
+            private LegacyIORequestFailedException(string message, Exception innerException)
+                : base(message, innerException)
+            {
+            }
+
+            public static async Task<LegacyIORequestFailedException> Create(string url, HttpResponseMessage response)
+            {
+                string errorMessage = $"{(int)response.StatusCode}: {response.ReasonPhrase}";
+
+                try
+                {
+                    APIErrorMessage? apiError = await JsonSerializer.DeserializeAsync<APIErrorMessage>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+                    if (!string.IsNullOrEmpty(apiError?.Error))
+                        errorMessage = apiError.Error;
+                }
+                catch
+                {
+                }
+
+                // Outer exception message is serialised to clients, inner exception is logged to the server and NOT serialised to the client.
+                return new LegacyIORequestFailedException(errorMessage, new Exception($"Legacy IO request to {url} failed with {response.StatusCode} ({response.ReasonPhrase})."));
+            }
+
+            [Serializable]
+            private class APIErrorMessage
+            {
+                [JsonPropertyName("error")]
+                public string Error { get; set; } = string.Empty;
             }
         }
     }

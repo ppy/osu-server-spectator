@@ -48,15 +48,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
         {
             Log($"{Context.GetUserId()} creating room");
-
-            try
-            {
-                return await JoinRoomWithPassword(await legacyIO.CreateRoom(Context.GetUserId(), room), room.Settings.Password);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidStateException($"Failed to create the multiplayer room ({ex.Message}).");
-            }
+            return await JoinRoomWithPassword(await legacyIO.CreateRoom(Context.GetUserId(), room), room.Settings.Password);
         }
 
         public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);
@@ -739,8 +731,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
-            await leaveRoom(state, true);
             await base.CleanUpState(state);
+            await leaveRoom(state, true);
         }
 
         private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
