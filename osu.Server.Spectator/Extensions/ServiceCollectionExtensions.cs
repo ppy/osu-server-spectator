@@ -18,23 +18,22 @@ namespace osu.Server.Spectator.Extensions
     {
         public static IServiceCollection AddHubEntities(this IServiceCollection serviceCollection)
         {
-            return serviceCollection
-                   .AddHttpClient()
-                   .AddTransient<ILegacyIO, LegacyIO>()
-                   .AddSingleton<EntityStore<SpectatorClientState>>()
-                   .AddSingleton<EntityStore<MultiplayerClientState>>()
-                   .AddSingleton<EntityStore<ServerMultiplayerRoom>>()
-                   .AddSingleton<EntityStore<ConnectionState>>()
-                   .AddSingleton<EntityStore<MetadataClientState>>()
-                   .AddSingleton<GracefulShutdownManager>()
-                   .AddSingleton<MetadataBroadcaster>()
-                   .AddSingleton<IScoreStorage, S3ScoreStorage>()
-                   .AddSingleton<ScoreUploader>()
-                   .AddSingleton<IScoreProcessedSubscriber, ScoreProcessedSubscriber>()
-                   .AddSingleton<BuildUserCountUpdater>()
-                   .AddSingleton<ChatFilters>()
-                   .AddSingleton<IDailyChallengeUpdater, DailyChallengeUpdater>()
-                   .AddHostedService<IDailyChallengeUpdater>(ctx => ctx.GetRequiredService<IDailyChallengeUpdater>());
+            return serviceCollection.AddHttpClient()
+                                    .AddTransient<ILegacyIO, LegacyIO>()
+                                    .AddSingleton<EntityStore<SpectatorClientState>>()
+                                    .AddSingleton<EntityStore<MultiplayerClientState>>()
+                                    .AddSingleton<EntityStore<ServerMultiplayerRoom>>()
+                                    .AddSingleton<EntityStore<ConnectionState>>()
+                                    .AddSingleton<EntityStore<MetadataClientState>>()
+                                    .AddSingleton<GracefulShutdownManager>()
+                                    .AddSingleton<MetadataBroadcaster>()
+                                    .AddSingleton<IScoreStorage, S3ScoreStorage>()
+                                    .AddSingleton<ScoreUploader>()
+                                    .AddSingleton<IScoreProcessedSubscriber, ScoreProcessedSubscriber>()
+                                    .AddSingleton<BuildUserCountUpdater>()
+                                    .AddSingleton<ChatFilters>()
+                                    .AddSingleton<IDailyChallengeUpdater, DailyChallengeUpdater>()
+                                    .AddHostedService<IDailyChallengeUpdater>(ctx => ctx.GetRequiredService<IDailyChallengeUpdater>());
         }
 
         /// <summary>
