@@ -154,7 +154,12 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 }
                 finally
                 {
-                    usage.Destroy();
+                    if (usage.Item != null)
+                    {
+                        usage.Item.State = null;
+                        usage.Item.Score = null;
+                        usage.Item.ScoreToken = null;
+                    }
                 }
             }
 
@@ -202,12 +207,44 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 // user isn't tracked.
             }
 
+            using (var state = await GetOrCreateLocalUserState())
+            {
+                var clientState = state.Item ??= new SpectatorClientState(Context.ConnectionId, Context.GetUserId());
+                clientState.WatchedUsers.Add(userId);
+            }
+
             await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(userId));
+
+            int watcherId = Context.GetUserId();
+            string? watcherUsername;
+            using (var db = databaseFactory.GetInstance())
+                watcherUsername = await db.GetUsernameAsync(watcherId);
+
+            if (watcherUsername == null)
+                return;
+
+            var watcher = new SpectatorUser
+            {
+                OnlineID = watcherId,
+                Username = watcherUsername,
+            };
+
+            await Clients.User(userId.ToString()).UserStartedWatching([watcher]);
         }
 
         public async Task EndWatchingUser(int userId)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupId(userId));
+
+            using (var state = await GetOrCreateLocalUserState())
+            {
+                var clientState = state.Item ??= new SpectatorClientState(Context.ConnectionId, Context.GetUserId());
+                clientState.WatchedUsers.Remove(userId);
+            }
+
+            int watcherId = Context.GetUserId();
+
+            await Clients.User(userId.ToString()).UserEndedWatching(watcherId);
         }
 
         public override async Task OnConnectedAsync()
@@ -224,6 +261,9 @@ namespace osu.Server.Spectator.Hubs.Spectator
         {
             if (state.State != null)
                 await endPlaySession(state.UserId, state.State);
+
+            foreach (int watchedUserId in state.WatchedUsers)
+                await Clients.User(watchedUserId.ToString()).UserEndedWatching(state.UserId);
 
             await base.CleanUpState(state);
         }
