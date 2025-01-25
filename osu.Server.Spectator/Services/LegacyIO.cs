@@ -102,7 +102,7 @@ namespace osu.Server.Spectator.Services
         // Methods below purposefully async-await on `runLegacyIO()` calls rather than directly returning the underlying calls.
         // This is done for better readability of exception stacks. Directly returning the tasks elides the name of the proxying method.
 
-        public async Task<long> CreateRoom(int userId, MultiplayerRoom room)
+        public async Task<long> CreateRoomAsync(int userId, MultiplayerRoom room)
         {
             return long.Parse(await runLegacyIO(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new CreateRoomRequest(room)
             {
@@ -110,12 +110,12 @@ namespace osu.Server.Spectator.Services
             })));
         }
 
-        public async Task JoinRoom(long roomId, int userId)
+        public async Task JoinRoomAsync(long roomId, int userId)
         {
             await runLegacyIO(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}");
         }
 
-        public async Task PartRoom(long roomId, int userId)
+        public async Task PartRoomAsync(long roomId, int userId)
         {
             await runLegacyIO(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
         }
