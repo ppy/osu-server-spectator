@@ -23,10 +23,20 @@ namespace osu.Server.Spectator.Services
         private readonly HttpClient httpClient;
         private readonly ILogger logger;
 
+        private readonly string interopDomain;
+        private readonly string interopSecret;
+
         public LegacyIO(HttpClient httpClient, ILoggerFactory loggerFactory)
         {
             this.httpClient = httpClient;
             logger = loggerFactory.CreateLogger("LIO");
+
+            interopDomain = AppSettings.LegacyIODomain
+                            ?? throw new InvalidOperationException("LEGACY_IO_DOMAIN environment variable not set. "
+                                                                   + "Please set the value of this variable to the root URL of the osu-web instance to which legacy IO call should be submitted.");
+            interopSecret = AppSettings.SharedInteropSecret
+                            ?? throw new InvalidOperationException("SHARED_INTEROP_SECRET environment variable not set. "
+                                                                   + "Please set the value of this variable to the value of the same environment variable that the target osu-web instance specifies in `.env`.");
         }
 
         private async Task<string> runLegacyIO(HttpMethod method, string command, dynamic? postObject = null)
@@ -36,7 +46,7 @@ namespace osu.Server.Spectator.Services
             retry:
 
             long time = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            string url = $"{AppSettings.LegacyIODomain}/_lio/{command}{(command.Contains('?') ? "&" : "?")}timestamp={time}";
+            string url = $"{interopDomain}/_lio/{command}{(command.Contains('?') ? "&" : "?")}timestamp={time}";
 
             string? serialisedPostObject = postObject switch
             {
@@ -49,7 +59,7 @@ namespace osu.Server.Spectator.Services
 
             try
             {
-                string signature = hmacEncode(url, Encoding.UTF8.GetBytes(AppSettings.SharedInteropSecret));
+                string signature = hmacEncode(url, Encoding.UTF8.GetBytes(interopSecret));
 
                 var httpRequestMessage = new HttpRequestMessage
                 {

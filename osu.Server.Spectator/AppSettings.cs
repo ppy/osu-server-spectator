@@ -57,13 +57,8 @@ namespace osu.Server.Spectator
             DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
             DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
-            LegacyIODomain = Environment.GetEnvironmentVariable("LEGACY_IO_DOMAIN")
-                             ?? throw new InvalidOperationException("LEGACY_IO_DOMAIN environment variable not set. "
-                                                                    + "Please set the value of this variable to the root URL of the osu-web instance to which legacy IO call should be submitted.");
-
-            SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET")
-                                  ?? throw new InvalidOperationException("SHARED_INTEROP_SECRET environment variable not set. "
-                                                                         + "Please set the value of this variable to the value of the same environment variable that the target osu-web instance specifies in `.env`.");
+            LegacyIODomain = Environment.GetEnvironmentVariable("LEGACY_IO_DOMAIN") ?? string.Empty;
+            SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;
         }
     }
 }
