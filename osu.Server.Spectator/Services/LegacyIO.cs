@@ -92,11 +92,8 @@ namespace osu.Server.Spectator.Services
         {
             byte[] byteArray = Encoding.ASCII.GetBytes(input);
 
-            using (var hmac = new HMACSHA1(key))
-            {
-                byte[] hashArray = hmac.ComputeHash(byteArray);
-                return hashArray.Aggregate(string.Empty, (s, e) => s + $"{e:x2}", s => s);
-            }
+            byte[] hashArray = HMACSHA1.HashData(key, byteArray);
+            return hashArray.Aggregate(string.Empty, (s, e) => s + $"{e:x2}", s => s);
         }
 
         // Methods below purposefully async-await on `runLegacyIO()` calls rather than directly returning the underlying calls.
