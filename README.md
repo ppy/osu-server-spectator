@@ -25,3 +25,4 @@ For advanced testing purposes.
 | `DB_HOST` | Hostname under which the `osu-web` MySQL instance can be found. | `localhost` |
 | `DB_PORT` | Port under which the `osu-web` MySQL instance can be found. | `3306` |
 | `DB_USER` | Username to use when logging into the `osu-web` MySQL instance. | `osuweb` |
+| `SENTRY_DSN` | A valid Sentry DSN to use for logging application events. | `null` (required in production) |

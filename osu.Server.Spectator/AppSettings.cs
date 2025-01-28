@@ -34,6 +34,8 @@ namespace osu.Server.Spectator
         public static string DatabaseUser { get; }
         public static string DatabasePort { get; }
 
+        public static string? SentryDsn { get; }
+
         static AppSettings()
         {
             SaveReplays = Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
@@ -53,6 +55,8 @@ namespace osu.Server.Spectator
             DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
             DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
             DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
+
+            SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
         }
     }
 }
