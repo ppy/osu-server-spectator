@@ -48,12 +48,22 @@ namespace osu.Server.Spectator.Services
             long time = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             string url = $"{interopDomain}/_lio/{command}{(command.Contains('?') ? "&" : "?")}timestamp={time}";
 
-            string? serialisedPostObject = postObject switch
+            string? serialisedPostObject;
+
+            switch (postObject)
             {
-                null => null,
-                string => postObject,
-                _ => JsonSerializer.Serialize(postObject)
-            };
+                case null:
+                    serialisedPostObject = null;
+                    break;
+
+                case string:
+                    serialisedPostObject = postObject;
+                    break;
+
+                default:
+                    serialisedPostObject = JsonSerializer.Serialize(postObject);
+                    break;
+            }
 
             logger.LogDebug("Performing LIO request to {method} {url} (params: {params})", method, url, serialisedPostObject);
 
