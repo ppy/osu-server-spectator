@@ -144,7 +144,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     int? userBeatmapId = user.BeatmapId;
                     int? userRulesetId = user.RulesetId;
 
-                    if (room.Queue.CurrentItem.FreeStyle)
+                    if (room.Queue.CurrentItem.Freestyle)
                     {
                         database_beatmap userBeatmap = userBeatmapId == null ? itemBeatmap : (await db.GetBeatmapAsync(userBeatmapId.Value))!;
 
@@ -184,7 +184,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             if (beatmapId != null || rulesetId != null)
             {
-                if (!room.Queue.CurrentItem.FreeStyle)
+                if (!room.Queue.CurrentItem.Freestyle)
                     throw new InvalidStateException("Current item does not allow free user styles.");
 
                 using (var db = databaseFactory.GetInstance())

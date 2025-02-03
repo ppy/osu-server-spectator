@@ -15,7 +15,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class FreeStyleTests : MultiplayerTest
+    public class FreestyleTests : MultiplayerTest
     {
         #region AddItem
 
@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
         }
 
@@ -45,7 +45,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true,
+                Freestyle = true,
                 RequiredMods = [new APIMod(new OsuModHidden())]
             }));
         }
@@ -58,7 +58,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true,
+                Freestyle = true,
                 AllowedMods = [new APIMod(new OsuModHidden())]
             }));
         }
@@ -85,7 +85,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
 
             // Set beatmap style.
@@ -146,7 +146,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(12345, null));
@@ -171,7 +171,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserStyle(12345, null));
@@ -196,7 +196,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true,
+                Freestyle = true,
             });
 
             // Out of range
@@ -243,7 +243,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
         }
 
@@ -268,7 +268,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
 
             // Set beatmap and ruleset style.
@@ -280,7 +280,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 12345,
-                FreeStyle = true
+                Freestyle = true
             });
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
@@ -314,7 +314,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
 
             // Set beatmap + ruleset style.
@@ -335,7 +335,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum2",
                 BeatmapID = 12345,
-                FreeStyle = true
+                Freestyle = true
             });
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
@@ -366,7 +366,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "checksum3",
                 BeatmapID = 123456,
                 RulesetID = 3,
-                FreeStyle = true
+                Freestyle = true
             });
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
@@ -383,7 +383,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         /// Asserts that user styles are reset when freestyle is disabled.
         /// </summary>
         [Fact]
-        public async Task EditItem_DisableFreeStyleResetsUserStyle()
+        public async Task EditItem_DisableFreestyleResetsUserStyle()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -397,7 +397,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
 
             // Set beatmap and ruleset style.
@@ -430,7 +430,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true,
+                Freestyle = true,
                 RequiredMods = [new APIMod(new OsuModHidden())]
             }));
         }
@@ -443,7 +443,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true,
+                Freestyle = true,
                 AllowedMods = [new APIMod(new OsuModHidden())]
             }));
         }
@@ -471,14 +471,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapChecksum = "checksum",
                 BeatmapID = 12345,
-                FreeStyle = true
+                Freestyle = true
             });
 
             await Hub.ChangeUserStyle(123456, 1);
@@ -517,7 +517,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -525,7 +525,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "checksum",
                 BeatmapID = 12345,
                 RulesetID = 3,
-                FreeStyle = true
+                Freestyle = true
             });
 
             await Hub.ChangeUserStyle(123456, 1);
@@ -546,7 +546,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task CurrentItemChanged_FreeStyleDisabledResetsUserStyle()
+        public async Task CurrentItemChanged_FreestyleDisabledResetsUserStyle()
         {
             Database.Setup(db => db.GetBeatmapAsync(1234))
                     .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
@@ -561,7 +561,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 ID = 1,
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
-                FreeStyle = true
+                Freestyle = true
             });
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
