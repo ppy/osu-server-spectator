@@ -39,8 +39,9 @@ namespace osu.Server.Spectator
                            webBuilder.UseSentry(o =>
                            {
                                o.AddExceptionFilterForType<HubException>();
-                               o.TracesSampleRate = 0.01;
-                               o.Dsn = "https://775dc89c1c3142e8a8fa5fd10590f443@sentry.ppy.sh/8";
+                               o.TracesSampleRate = 0;
+                               o.Dsn = AppSettings.SentryDsn ?? throw new InvalidOperationException("SENTRY_DSN environment variable not set. "
+                                                                                                    + "Please set the value of this variable to a valid Sentry DSN to use for logging events.");
                                // TODO: set release name
                            });
 #endif
