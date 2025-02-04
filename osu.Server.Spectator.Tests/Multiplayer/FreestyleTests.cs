@@ -96,8 +96,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, 12345);
-                Assert.Equal(room.Users.First().RulesetId, null);
+                Assert.Equal(12345, room.Users.First().BeatmapId);
+                Assert.Null(room.Users.First().RulesetId);
                 Receiver.Verify(client => client.UserStyleChanged(USER_ID, 12345, null), Times.Once);
             }
 
@@ -109,8 +109,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, 3);
+                Assert.Null(room.Users.First().BeatmapId);
+                Assert.Equal(3, room.Users.First().RulesetId);
                 Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, 3), Times.Once);
             }
 
@@ -122,8 +122,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, 12345);
-                Assert.Equal(room.Users.First().RulesetId, 2);
+                Assert.Equal(12345, room.Users.First().BeatmapId);
+                Assert.Equal(2, room.Users.First().RulesetId);
                 Receiver.Verify(client => client.UserStyleChanged(USER_ID, 12345, 2), Times.Once);
             }
         }
@@ -288,8 +288,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, 123456);
-                Assert.Equal(room.Users.First().RulesetId, 1);
+                Assert.Equal(123456, room.Users.First().BeatmapId);
+                Assert.Equal(1, room.Users.First().RulesetId);
             }
         }
 
@@ -325,8 +325,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, 1234);
-                Assert.Equal(room.Users.First().RulesetId, 1);
+                Assert.Equal(1234, room.Users.First().BeatmapId);
+                Assert.Equal(1, room.Users.First().RulesetId);
             }
 
             // Select a beatmap from a different set that is still convertible.
@@ -343,8 +343,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, 1);
+                Assert.Null(room.Users.First().BeatmapId);
+                Assert.Equal(1, room.Users.First().RulesetId);
             }
 
             // Set beatmap + ruleset style.
@@ -355,8 +355,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, 12345);
-                Assert.Equal(room.Users.First().RulesetId, 1);
+                Assert.Equal(12345, room.Users.First().BeatmapId);
+                Assert.Equal(1, room.Users.First().RulesetId);
             }
 
             // Select a beatmap from a different set that is inconvertible.
@@ -374,8 +374,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, null);
+                Assert.Null(room.Users.First().BeatmapId);
+                Assert.Null(room.Users.First().RulesetId);
             }
         }
 
@@ -416,8 +416,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, null);
+                Assert.Null(room.Users.First().BeatmapId);
+                Assert.Null(room.Users.First().RulesetId);
                 Receiver.Verify(client => client.UserStyleChanged(USER_ID, null, null), Times.Once);
             }
         }
@@ -493,8 +493,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, 123456);
-                Assert.Equal(room.Users.First().RulesetId, 1);
+                Assert.Equal(123456, room.Users.First().BeatmapId);
+                Assert.Equal(1, room.Users.First().RulesetId);
             }
         }
 
@@ -540,8 +540,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, null);
+                Assert.Null(room.Users.First().BeatmapId);
+                Assert.Null(room.Users.First().RulesetId);
             }
         }
 
@@ -582,8 +582,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(room.Users.First().BeatmapId, null);
-                Assert.Equal(room.Users.First().RulesetId, null);
+                Assert.Null(room.Users.First().BeatmapId);
+                Assert.Null(room.Users.First().RulesetId);
             }
         }
 
