@@ -135,6 +135,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task EnsureAllUsersValidStyle(ServerMultiplayerRoom room)
         {
+            if (!room.Queue.CurrentItem.Freestyle)
+            {
+                // Reset entire style when freestyle is disabled.
+                foreach (var user in room.Users)
+                    await ChangeUserStyle(null, null, room, user);
+
+                return;
+            }
+
             using (var db = databaseFactory.GetInstance())
             {
                 database_beatmap itemBeatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
@@ -144,27 +153,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     int? userBeatmapId = user.BeatmapId;
                     int? userRulesetId = user.RulesetId;
 
-                    if (room.Queue.CurrentItem.Freestyle)
-                    {
-                        database_beatmap userBeatmap = userBeatmapId == null ? itemBeatmap : (await db.GetBeatmapAsync(userBeatmapId.Value))!;
+                    database_beatmap userBeatmap = userBeatmapId == null ? itemBeatmap : (await db.GetBeatmapAsync(userBeatmapId.Value))!;
 
-                        // Reset beatmap style when the beatmap set changes.
-                        if (userBeatmap.beatmapset_id != itemBeatmap.beatmapset_id)
-                        {
-                            userBeatmapId = null;
-                            userBeatmap = itemBeatmap;
-                        }
-
-                        // Reset ruleset style when it's no longer valid for the selected beatmap.
-                        if (userRulesetId != null && userBeatmap.playmode != 0 && userRulesetId != userBeatmap.playmode)
-                            userRulesetId = null;
-                    }
-                    else
+                    // Reset beatmap style when the beatmap set changes.
+                    if (userBeatmap.beatmapset_id != itemBeatmap.beatmapset_id)
                     {
-                        // Reset entire style when freestyle is disabled.
                         userBeatmapId = null;
-                        userRulesetId = null;
+                        userBeatmap = itemBeatmap;
                     }
+
+                    // Reset ruleset style when it's no longer valid for the selected beatmap.
+                    if (userRulesetId != null && userBeatmap.playmode != 0 && userRulesetId != userBeatmap.playmode)
+                        userRulesetId = null;
 
                     if (userBeatmapId != user.BeatmapId || userRulesetId != user.RulesetId)
                         await ChangeUserStyle(userBeatmapId, userRulesetId, room, user);
