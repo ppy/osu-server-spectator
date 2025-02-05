@@ -22,6 +22,7 @@ namespace osu.Server.Spectator.Database.Models
         public ushort? playlist_order { get; set; }
         public string? allowed_mods { get; set; }
         public string? required_mods { get; set; }
+        public bool freestyle { get; set; }
 
         /// <summary>
         /// Changes to this property will not be persisted to the database.
@@ -59,6 +60,7 @@ namespace osu.Server.Spectator.Database.Models
             ruleset_id = (short)item.RulesetID;
             required_mods = JsonConvert.SerializeObject(item.RequiredMods);
             allowed_mods = JsonConvert.SerializeObject(item.AllowedMods);
+            freestyle = item.Freestyle;
             updated_at = DateTimeOffset.Now;
             expired = item.Expired;
             playlist_order = item.PlaylistOrder;
@@ -77,6 +79,7 @@ namespace osu.Server.Spectator.Database.Models
                 RulesetID = ruleset_id,
                 RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(required_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
                 AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
+                Freestyle = freestyle,
                 Expired = expired,
                 PlaylistOrder = playlist_order ?? 0,
                 PlayedAt = played_at,

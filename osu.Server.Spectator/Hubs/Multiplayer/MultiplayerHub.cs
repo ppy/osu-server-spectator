@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             Rooms = rooms;
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
-            HubContext = new MultiplayerHubContext(hubContext, rooms, users, databaseFactory, loggerFactory);
+            HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory);
         }
 
         public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);
@@ -413,6 +413,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 await HubContext.ChangeAndBroadcastUserBeatmapAvailability(room, user, newBeatmapAvailability);
+            }
+        }
+
+        public async Task ChangeUserStyle(int? beatmapId, int? rulesetId)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
+
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                await HubContext.ChangeUserStyle(beatmapId, rulesetId, room, user);
             }
         }
 

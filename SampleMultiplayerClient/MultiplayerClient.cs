@@ -59,6 +59,10 @@ namespace SampleMultiplayerClient
 
         public IEnumerable<APIMod> UserMods { get; private set; } = Enumerable.Empty<APIMod>();
 
+        public int? UserBeatmap { get; private set; }
+
+        public int? UserRuleset { get; private set; }
+
         public MultiplayerRoom? Room { get; private set; }
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
@@ -91,6 +95,9 @@ namespace SampleMultiplayerClient
 
         public Task ChangeBeatmapAvailability(BeatmapAvailability newBeatmapAvailability) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.ChangeBeatmapAvailability), newBeatmapAvailability);
+
+        public Task ChangeUserStyle(int? beatmapId, int? rulesetId) =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.ChangeUserStyle), beatmapId, rulesetId);
 
         public Task ChangeUserMods(IEnumerable<APIMod> newMods) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.ChangeUserMods), newMods);
@@ -202,6 +209,17 @@ namespace SampleMultiplayerClient
         {
             if (userId == UserID)
                 BeatmapAvailability = beatmapAvailability;
+
+            return Task.CompletedTask;
+        }
+
+        public Task UserStyleChanged(int userId, int? beatmapId, int? rulesetId)
+        {
+            if (userId == UserID)
+            {
+                UserBeatmap = beatmapId;
+                UserRuleset = rulesetId;
+            }
 
             return Task.CompletedTask;
         }

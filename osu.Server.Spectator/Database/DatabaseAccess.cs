@@ -79,10 +79,22 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleOrDefaultAsync<database_beatmap>("SELECT * FROM osu_beatmaps WHERE beatmap_id = @BeatmapId AND deleted_at IS NULL", new
-            {
-                BeatmapId = beatmapId
-            });
+            return await connection.QuerySingleOrDefaultAsync<database_beatmap>(
+                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode FROM osu_beatmaps WHERE beatmap_id = @BeatmapId AND deleted_at IS NULL", new
+                {
+                    BeatmapId = beatmapId
+                });
+        }
+
+        public async Task<database_beatmap[]> GetBeatmapsAsync(int beatmapSetId)
+        {
+            var connection = await getConnectionAsync();
+
+            return (await connection.QueryAsync<database_beatmap>(
+                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode FROM osu_beatmaps WHERE beatmapset_id = @BeatmapSetId AND deleted_at IS NULL", new
+                {
+                    BeatmapSetId = beatmapSetId
+                })).ToArray();
         }
 
         public async Task MarkRoomActiveAsync(MultiplayerRoom room)
@@ -238,8 +250,8 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             await connection.ExecuteAsync(
-                "INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, playlist_order, created_at, updated_at)"
-                + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, @playlist_order, NOW(), NOW())",
+                "INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, freestyle, playlist_order, created_at, updated_at)"
+                + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, @freestyle, @playlist_order, NOW(), NOW())",
                 item);
 
             return await connection.QuerySingleAsync<long>("SELECT max(id) FROM multiplayer_playlist_items WHERE room_id = @room_id", item);
@@ -255,6 +267,7 @@ namespace osu.Server.Spectator.Database
                 + " ruleset_id = @ruleset_id,"
                 + " required_mods = @required_mods,"
                 + " allowed_mods = @allowed_mods,"
+                + " freestyle = @freestyle,"
                 + " playlist_order = @playlist_order,"
                 + " updated_at = NOW()"
                 + " WHERE id = @id", item);
