@@ -147,27 +147,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             using (var db = databaseFactory.GetInstance())
             {
                 database_beatmap itemBeatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
+                database_beatmap[] validDifficulties = await db.GetBeatmapsAsync(itemBeatmap.beatmapset_id);
 
                 foreach (var user in room.Users)
                 {
                     int? userBeatmapId = user.BeatmapId;
                     int? userRulesetId = user.RulesetId;
 
-                    database_beatmap userBeatmap = userBeatmapId == null ? itemBeatmap : (await db.GetBeatmapAsync(userBeatmapId.Value))!;
+                    database_beatmap? foundBeatmap = validDifficulties.SingleOrDefault(b => b.beatmap_id == userBeatmapId);
 
-                    // Reset beatmap style when the beatmap set changes.
-                    if (userBeatmap.beatmapset_id != itemBeatmap.beatmapset_id)
-                    {
+                    // Reset beatmap style if it's not a valid difficulty for the current beatmap set.
+                    if (userBeatmapId != null && foundBeatmap == null)
                         userBeatmapId = null;
-                        userBeatmap = itemBeatmap;
-                    }
 
-                    // Reset ruleset style when it's no longer valid for the selected beatmap.
-                    if (userRulesetId != null && userBeatmap.playmode != 0 && userRulesetId != userBeatmap.playmode)
+                    int beatmapRuleset = foundBeatmap?.playmode ?? itemBeatmap.playmode;
+
+                    // Reset ruleset style when it's no longer valid for the resolved beatmap.
+                    if (userRulesetId != null && beatmapRuleset > 0 && userRulesetId != beatmapRuleset)
                         userRulesetId = null;
 
-                    if (userBeatmapId != user.BeatmapId || userRulesetId != user.RulesetId)
-                        await ChangeUserStyle(userBeatmapId, userRulesetId, room, user);
+                    await ChangeUserStyle(userBeatmapId, userRulesetId, room, user);
                 }
             }
         }

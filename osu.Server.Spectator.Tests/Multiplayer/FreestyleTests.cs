@@ -25,9 +25,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task AddItem()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
-
             await Hub.JoinRoom(ROOM_ID);
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
@@ -73,11 +70,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task SetUserStyle()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" });
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1, beatmap2 });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -134,11 +132,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task SetUserStyle_InvalidBeatmapSetFails()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 2, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 2, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" });
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1 });
+            Database.Setup(db => db.GetBeatmapsAsync(2)).ReturnsAsync(new[] { beatmap2 });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -159,11 +160,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task SetUserStyle_UnknownBeatmapFails()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync((database_beatmap?)null);
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync((database_beatmap?)null);
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1 });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -184,11 +185,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task SetUserStyle_InvalidRulesetIdFails()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 1, playmode = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, playmode = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" });
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1, beatmap2 });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -234,9 +236,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task EditItem()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
-
             await Hub.JoinRoom(ROOM_ID);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
@@ -253,14 +252,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task EditItem_SameBeatmapSetPreservesUserStyle()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
+            var beatmap3 = new database_beatmap { beatmap_id = 123456, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum3" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
-
-            Database.Setup(db => db.GetBeatmapAsync(123456))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+            Database.Setup(db => db.GetBeatmapAsync(123456)).ReturnsAsync(beatmap3);
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1, beatmap2, beatmap3 });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -278,7 +277,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
             {
                 ID = 1,
-                BeatmapChecksum = "checksum",
+                BeatmapChecksum = "checksum2",
                 BeatmapID = 12345,
                 Freestyle = true
             });
@@ -299,14 +298,17 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task EditItem_DifferentBeatmapSetPreservesRulesetStyle()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 2, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
+            var beatmap3 = new database_beatmap { beatmap_id = 123456, beatmapset_id = 3, playmode = 3, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum3" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 2, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" });
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+            Database.Setup(db => db.GetBeatmapAsync(123456)).ReturnsAsync(beatmap3);
 
-            Database.Setup(db => db.GetBeatmapAsync(123456))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 3, playmode = 3, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum3" });
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1 });
+            Database.Setup(db => db.GetBeatmapsAsync(2)).ReturnsAsync(new[] { beatmap2 });
+            Database.Setup(db => db.GetBeatmapsAsync(3)).ReturnsAsync(new[] { beatmap3 });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -385,11 +387,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task EditItem_DisableFreestyleResetsUserStyle()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1, beatmap2 });
 
             await Hub.JoinRoom(ROOM_ID);
             await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -455,14 +458,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task CurrentItemChanged_SameBeatmapSetPreservesUserStyle()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
+            var beatmap3 = new database_beatmap { beatmap_id = 123456, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum3" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+            Database.Setup(db => db.GetBeatmapAsync(123456)).ReturnsAsync(beatmap3);
 
-            Database.Setup(db => db.GetBeatmapAsync(123456))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1, beatmap2, beatmap3 });
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -476,7 +480,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
-                BeatmapChecksum = "checksum",
+                BeatmapChecksum = "checksum2",
                 BeatmapID = 12345,
                 Freestyle = true
             });
@@ -501,14 +505,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task CurrentItemChanged_DifferentBeatmapSetResetsUserStyle()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 2, playmode = 3, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
+            var beatmap3 = new database_beatmap { beatmap_id = 123456, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum3" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 2, playmode = 3, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+            Database.Setup(db => db.GetBeatmapAsync(123456)).ReturnsAsync(beatmap3);
 
-            Database.Setup(db => db.GetBeatmapAsync(123456))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1, beatmap3 });
+            Database.Setup(db => db.GetBeatmapsAsync(2)).ReturnsAsync(new[] { beatmap2 });
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -522,7 +528,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
-                BeatmapChecksum = "checksum",
+                BeatmapChecksum = "checksum2",
                 BeatmapID = 12345,
                 RulesetID = 3,
                 Freestyle = true
@@ -548,11 +554,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task CurrentItemChanged_FreestyleDisabledResetsUserStyle()
         {
-            Database.Setup(db => db.GetBeatmapAsync(1234))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
 
-            Database.Setup(db => db.GetBeatmapAsync(12345))
-                    .ReturnsAsync(new database_beatmap { beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" });
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1, beatmap2 });
 
             await Hub.JoinRoom(ROOM_ID);
 
