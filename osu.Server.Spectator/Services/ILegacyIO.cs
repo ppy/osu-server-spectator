@@ -14,10 +14,10 @@ namespace osu.Server.Spectator.Services
         /// <remarks>
         /// This does not join the creating user to the room. A subsequent call to <see cref="AddUserToRoomAsync"/> should be made if required.
         /// </remarks>
-        /// <param name="userId">The ID of the user that wants to create the room.</param>
+        /// <param name="hostUserId">The ID of the user that wants to create the room.</param>
         /// <param name="room">The room.</param>
         /// <returns>The room's ID.</returns>
-        Task<long> CreateRoomAsync(int userId, MultiplayerRoom room);
+        Task<long> CreateRoomAsync(int hostUserId, MultiplayerRoom room);
 
         /// <summary>
         /// Adds a user to an osu!web room.

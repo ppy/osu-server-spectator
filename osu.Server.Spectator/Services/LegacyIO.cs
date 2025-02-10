@@ -119,11 +119,11 @@ namespace osu.Server.Spectator.Services
         // Methods below purposefully async-await on `runLegacyIO()` calls rather than directly returning the underlying calls.
         // This is done for better readability of exception stacks. Directly returning the tasks elides the name of the proxying method.
 
-        public async Task<long> CreateRoomAsync(int userId, MultiplayerRoom room)
+        public async Task<long> CreateRoomAsync(int hostUserId, MultiplayerRoom room)
         {
-            return long.Parse(await runLegacyIO(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new CreateRoomRequest(room)
+            return long.Parse(await runLegacyIO(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new RoomWithHostId(room)
             {
-                UserId = userId
+                HostUserId = hostUserId
             })));
         }
 
@@ -137,15 +137,15 @@ namespace osu.Server.Spectator.Services
             await runLegacyIO(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
         }
 
-        private class CreateRoomRequest : Room
+        private class RoomWithHostId : Room
         {
             [Newtonsoft.Json.JsonProperty("user_id")]
-            public required int UserId { get; init; }
+            public required int HostUserId { get; init; }
 
             /// <summary>
             /// Creates a <see cref="Room"/> from a <see cref="MultiplayerRoom"/>.
             /// </summary>
-            public CreateRoomRequest(MultiplayerRoom room)
+            public RoomWithHostId(MultiplayerRoom room)
             {
                 RoomID = room.RoomID;
                 Host = room.Host?.User;
