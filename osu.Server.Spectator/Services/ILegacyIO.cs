@@ -9,25 +9,34 @@ namespace osu.Server.Spectator.Services
     public interface ILegacyIO
     {
         /// <summary>
-        /// Creates an osu!web Room.
+        /// Creates an osu!web room.
         /// </summary>
+        /// <remarks>
+        /// This does not join the creating user to the room. A subsequent call to <see cref="AddUserToRoomAsync"/> should be made if required.
+        /// </remarks>
         /// <param name="userId">The ID of the user that wants to create the room.</param>
         /// <param name="room">The room.</param>
         /// <returns>The room's ID.</returns>
         Task<long> CreateRoomAsync(int userId, MultiplayerRoom room);
 
         /// <summary>
-        /// Joins an osu!web Room.
+        /// Adds a user to an osu!web room.
         /// </summary>
+        /// <remarks>
+        /// This performs setup tasks like adding the user to the relevant chat channel.
+        /// </remarks>
         /// <param name="roomId">The ID of the room to join.</param>
         /// <param name="userId">The ID of the user wanting to join the room.</param>
-        Task JoinRoomAsync(long roomId, int userId);
+        Task AddUserToRoomAsync(long roomId, int userId);
 
         /// <summary>
-        /// Parts an osu!web Room.
+        /// Parts an osu!web room.
         /// </summary>
+        /// <remarks>
+        /// This performs setup tasks like removing the user from any relevant chat channels.
+        /// </remarks>
         /// <param name="roomId">The ID of the room to part.</param>
         /// <param name="userId">The ID of the user wanting to part the room.</param>
-        Task PartRoomAsync(long roomId, int userId);
+        Task RemoveUserFromRoomAsync(long roomId, int userId);
     }
 }

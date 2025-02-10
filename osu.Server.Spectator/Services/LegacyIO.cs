@@ -127,12 +127,12 @@ namespace osu.Server.Spectator.Services
             })));
         }
 
-        public async Task JoinRoomAsync(long roomId, int userId)
+        public async Task AddUserToRoomAsync(long roomId, int userId)
         {
             await runLegacyIO(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}");
         }
 
-        public async Task PartRoomAsync(long roomId, int userId)
+        public async Task RemoveUserFromRoomAsync(long roomId, int userId)
         {
             await runLegacyIO(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
         }
