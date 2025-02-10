@@ -37,6 +37,8 @@ namespace osu.Server.Spectator
         public static string LegacyIODomain { get; }
         public static string SharedInteropSecret { get; }
 
+        public static string? SentryDsn { get; }
+
         static AppSettings()
         {
             SaveReplays = Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
@@ -59,6 +61,8 @@ namespace osu.Server.Spectator
 
             LegacyIODomain = Environment.GetEnvironmentVariable("LEGACY_IO_DOMAIN") ?? string.Empty;
             SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;
+
+            SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
         }
     }
 }

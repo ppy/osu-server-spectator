@@ -25,5 +25,6 @@ For advanced testing purposes.
 | `DB_HOST` | Hostname under which the `osu-web` MySQL instance can be found. | `localhost`       |
 | `DB_PORT` | Port under which the `osu-web` MySQL instance can be found. | `3306`            |
 | `DB_USER` | Username to use when logging into the `osu-web` MySQL instance. | `osuweb`          |
+| `SENTRY_DSN` | A valid Sentry DSN to use for logging application events. | `null` (required in production) |
 | `LEGACY_IO_DOMAIN` | The root URL of the osu-web instance to which legacy IO call should be submitted | `null` (required) |
 | `SHARED_INTEROP_SECRET` | The value of the same environment variable that the target osu-web instance specifies in `.env`. | `null` (required) |

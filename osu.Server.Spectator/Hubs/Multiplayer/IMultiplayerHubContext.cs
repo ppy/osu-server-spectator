@@ -97,6 +97,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         Task EnsureAllUsersValidMods(ServerMultiplayerRoom room);
 
         /// <summary>
+        /// Adjusts user style selections to ensure they're valid for the current playlist item.
+        /// </summary>
+        /// <param name="room">The room to validate user styles in.</param>
+        Task EnsureAllUsersValidStyle(ServerMultiplayerRoom room);
+
+        /// <summary>
+        /// Changes a user's style in a room.
+        /// </summary>
+        /// <param name="beatmapId">The new beatmap selection.</param>
+        /// <param name="rulesetId">The new ruleset selection.</param>
+        /// <param name="room">The room containing the user.</param>
+        /// <param name="user">The user.</param>
+        /// <exception cref="InvalidStateException">If the new selection is not valid for current playlist item.</exception>
+        Task ChangeUserStyle(int? beatmapId, int? rulesetId, ServerMultiplayerRoom room, MultiplayerRoomUser user);
+
+        /// <summary>
         /// Changes a user's mods in a room.
         /// </summary>
         /// <param name="newMods">The new mod selection.</param>

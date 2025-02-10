@@ -93,6 +93,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.UserBeatmapAvailabilityChanged(userId, beatmapAvailability);
         }
 
+        public virtual async Task UserStyleChanged(int userId, int? beatmapId, int? rulesetId)
+        {
+            foreach (var c in Clients)
+                await c.UserStyleChanged(userId, beatmapId, rulesetId);
+        }
+
         public virtual async Task UserModsChanged(int userId, IEnumerable<APIMod> mods)
         {
             foreach (var c in Clients)

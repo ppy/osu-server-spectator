@@ -12,9 +12,11 @@ using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using osu.Server.Spectator.Database;
+using osu.Game.Rulesets;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using IDatabaseFactory = osu.Server.Spectator.Database.IDatabaseFactory;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -38,8 +40,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             IHubContext<MultiplayerHub> context,
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
-            IDatabaseFactory databaseFactory,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            IDatabaseFactory databaseFactory)
         {
             this.context = context;
             this.rooms = rooms;
@@ -76,10 +78,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged)
         {
-            await EnsureAllUsersValidMods(room);
-
             if (item.ID == room.Settings.PlaylistItemId)
+            {
+                await EnsureAllUsersValidMods(room);
+                await EnsureAllUsersValidStyle(room);
                 await UnreadyAllUsers(room, beatmapChanged);
+            }
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemChanged), item);
         }
@@ -87,6 +91,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task NotifySettingsChanged(ServerMultiplayerRoom room, bool playlistItemChanged)
         {
             await EnsureAllUsersValidMods(room);
+            await EnsureAllUsersValidStyle(room);
 
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
             await UnreadyAllUsers(room, playlistItemChanged);
@@ -126,6 +131,80 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (!room.Queue.CurrentItem.ValidateUserMods(user.Mods, out var validMods))
                     await ChangeUserMods(validMods, room, user);
             }
+        }
+
+        public async Task EnsureAllUsersValidStyle(ServerMultiplayerRoom room)
+        {
+            if (!room.Queue.CurrentItem.Freestyle)
+            {
+                // Reset entire style when freestyle is disabled.
+                foreach (var user in room.Users)
+                    await ChangeUserStyle(null, null, room, user);
+
+                return;
+            }
+
+            using (var db = databaseFactory.GetInstance())
+            {
+                database_beatmap itemBeatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
+                database_beatmap[] validDifficulties = await db.GetBeatmapsAsync(itemBeatmap.beatmapset_id);
+
+                foreach (var user in room.Users)
+                {
+                    int? userBeatmapId = user.BeatmapId;
+                    int? userRulesetId = user.RulesetId;
+
+                    database_beatmap? foundBeatmap = validDifficulties.SingleOrDefault(b => b.beatmap_id == userBeatmapId);
+
+                    // Reset beatmap style if it's not a valid difficulty for the current beatmap set.
+                    if (userBeatmapId != null && foundBeatmap == null)
+                        userBeatmapId = null;
+
+                    int beatmapRuleset = foundBeatmap?.playmode ?? itemBeatmap.playmode;
+
+                    // Reset ruleset style when it's no longer valid for the resolved beatmap.
+                    if (userRulesetId != null && beatmapRuleset > 0 && userRulesetId != beatmapRuleset)
+                        userRulesetId = null;
+
+                    await ChangeUserStyle(userBeatmapId, userRulesetId, room, user);
+                }
+            }
+        }
+
+        public async Task ChangeUserStyle(int? beatmapId, int? rulesetId, ServerMultiplayerRoom room, MultiplayerRoomUser user)
+        {
+            if (user.BeatmapId == beatmapId && user.RulesetId == rulesetId)
+                return;
+
+            log(room, user, $"User style changing from (b:{user.BeatmapId}, r:{user.RulesetId}) to (b:{beatmapId}, r:{rulesetId})");
+
+            if (rulesetId < 0 || rulesetId > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                throw new InvalidStateException("Attempted to select an unsupported ruleset.");
+
+            if (beatmapId != null || rulesetId != null)
+            {
+                if (!room.Queue.CurrentItem.Freestyle)
+                    throw new InvalidStateException("Current item does not allow free user styles.");
+
+                using (var db = databaseFactory.GetInstance())
+                {
+                    database_beatmap itemBeatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
+                    database_beatmap? userBeatmap = beatmapId == null ? itemBeatmap : await db.GetBeatmapAsync(beatmapId.Value);
+
+                    if (userBeatmap == null)
+                        throw new InvalidStateException("Invalid beatmap selected.");
+
+                    if (userBeatmap.beatmapset_id != itemBeatmap.beatmapset_id)
+                        throw new InvalidStateException("Selected beatmap is not from the same beatmap set.");
+
+                    if (rulesetId != null && userBeatmap.playmode != 0 && rulesetId != userBeatmap.playmode)
+                        throw new InvalidStateException("Selected ruleset is not supported for the given beatmap.");
+                }
+            }
+
+            user.BeatmapId = beatmapId;
+            user.RulesetId = rulesetId;
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStyleChanged), user.UserID, beatmapId, rulesetId);
         }
 
         public async Task ChangeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user)
