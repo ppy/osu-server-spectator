@@ -156,7 +156,6 @@ namespace osu.Server.Spectator.Services
                 AutoStartDuration = room.Settings.AutoStartDuration;
                 AutoSkip = room.Settings.AutoSkip;
                 Playlist = room.Playlist.Select(item => new PlaylistItem(item)).ToArray();
-                CurrentPlaylistItem = Playlist.FirstOrDefault(item => item.ID == room.Settings.PlaylistItemId);
             }
         }
 
