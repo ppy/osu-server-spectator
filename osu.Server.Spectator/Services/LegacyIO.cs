@@ -152,16 +152,8 @@ namespace osu.Server.Spectator.Services
             /// Creates a <see cref="Room"/> from a <see cref="MultiplayerRoom"/>.
             /// </summary>
             public RoomWithHostId(MultiplayerRoom room)
+                : base(room)
             {
-                RoomID = room.RoomID;
-                Host = room.Host?.User;
-                Name = room.Settings.Name;
-                Password = room.Settings.Password;
-                Type = room.Settings.MatchType;
-                QueueMode = room.Settings.QueueMode;
-                AutoStartDuration = room.Settings.AutoStartDuration;
-                AutoSkip = room.Settings.AutoSkip;
-                Playlist = room.Playlist.Select(item => new PlaylistItem(item)).ToArray();
             }
         }
 
