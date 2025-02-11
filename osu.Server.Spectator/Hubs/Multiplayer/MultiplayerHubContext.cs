@@ -80,7 +80,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             if (item.ID == room.Settings.PlaylistItemId)
             {
-                await EnsureAllUsersValidMods(room);
                 await EnsureAllUsersValidStyle(room);
                 await UnreadyAllUsers(room, beatmapChanged);
             }
@@ -90,7 +89,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task NotifySettingsChanged(ServerMultiplayerRoom room, bool playlistItemChanged)
         {
-            await EnsureAllUsersValidMods(room);
             await EnsureAllUsersValidStyle(room);
 
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
@@ -124,15 +122,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await room.StopAllCountdowns<MatchStartCountdown>();
         }
 
-        public async Task EnsureAllUsersValidMods(ServerMultiplayerRoom room)
-        {
-            foreach (var user in room.Users)
-            {
-                if (!room.Queue.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
-                    await ChangeUserMods(validMods, room, user);
-            }
-        }
-
         public async Task EnsureAllUsersValidStyle(ServerMultiplayerRoom room)
         {
             if (!room.Queue.CurrentItem.Freestyle)
@@ -140,14 +129,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 // Reset entire style when freestyle is disabled.
                 foreach (var user in room.Users)
                     await ChangeUserStyle(null, null, room, user);
-
-                return;
             }
-
-            using (var db = databaseFactory.GetInstance())
+            else
             {
-                database_beatmap itemBeatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
-                database_beatmap[] validDifficulties = await db.GetBeatmapsAsync(itemBeatmap.beatmapset_id);
+                database_beatmap itemBeatmap;
+                database_beatmap[] validDifficulties;
+
+                using (var db = databaseFactory.GetInstance())
+                {
+                    itemBeatmap = (await db.GetBeatmapAsync(room.Queue.CurrentItem.BeatmapID))!;
+                    validDifficulties = await db.GetBeatmapsAsync(itemBeatmap.beatmapset_id);
+                }
 
                 foreach (var user in room.Users)
                 {
@@ -168,6 +160,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                     await ChangeUserStyle(userBeatmapId, userRulesetId, room, user);
                 }
+            }
+
+            foreach (var user in room.Users)
+            {
+                if (!room.Queue.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
+                    await ChangeUserMods(validMods, room, user);
             }
         }
 
