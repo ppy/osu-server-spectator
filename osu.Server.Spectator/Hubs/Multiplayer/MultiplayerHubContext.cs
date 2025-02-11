@@ -128,7 +128,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             foreach (var user in room.Users)
             {
-                if (!room.Queue.CurrentItem.ValidateUserMods(user.Mods, out var validMods))
+                if (!room.Queue.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
                     await ChangeUserMods(validMods, room, user);
             }
         }
@@ -211,7 +211,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var newModList = newMods.ToList();
 
-            if (!room.Queue.CurrentItem.ValidateUserMods(newModList, out var validMods))
+            if (!room.Queue.CurrentItem.ValidateUserMods(user, newModList, out var validMods))
                 throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
 
             if (user.Mods.SequenceEqual(newModList))
