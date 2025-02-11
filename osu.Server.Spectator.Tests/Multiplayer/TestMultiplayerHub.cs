@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
@@ -19,8 +20,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
-            IHubContext<MultiplayerHub> hubContext)
-            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext)
+            IHubContext<MultiplayerHub> hubContext,
+            ILegacyIO legacyIO)
+            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, legacyIO)
         {
         }
 

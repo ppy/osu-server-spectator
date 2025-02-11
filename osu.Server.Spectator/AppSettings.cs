@@ -34,6 +34,9 @@ namespace osu.Server.Spectator
         public static string DatabaseUser { get; }
         public static string DatabasePort { get; }
 
+        public static string LegacyIODomain { get; }
+        public static string SharedInteropSecret { get; }
+
         public static string? SentryDsn { get; }
 
         static AppSettings()
@@ -55,6 +58,9 @@ namespace osu.Server.Spectator
             DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
             DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
             DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
+
+            LegacyIODomain = Environment.GetEnvironmentVariable("LEGACY_IO_DOMAIN") ?? string.Empty;
+            SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;
 
             SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
         }

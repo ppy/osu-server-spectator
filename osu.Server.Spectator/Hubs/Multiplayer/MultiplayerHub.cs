@@ -16,6 +16,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -25,6 +26,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected readonly MultiplayerHubContext HubContext;
         private readonly IDatabaseFactory databaseFactory;
         private readonly ChatFilters chatFilters;
+        private readonly ILegacyIO legacyIO;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -32,13 +34,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
-            IHubContext<MultiplayerHub> hubContext)
+            IHubContext<MultiplayerHub> hubContext,
+            ILegacyIO legacyIO)
             : base(loggerFactory, users)
         {
-            Rooms = rooms;
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
+            this.legacyIO = legacyIO;
+
+            Rooms = rooms;
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory);
+        }
+
+        public async Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
+        {
+            Log($"{Context.GetUserId()} creating room");
+
+            long roomId = await legacyIO.CreateRoomAsync(Context.GetUserId(), room);
+
+            return await JoinRoomWithPassword(roomId, room.Settings.Password);
         }
 
         public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);
@@ -47,12 +61,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             Log($"Attempting to join room {roomId}");
 
-            bool isRestricted;
             using (var db = databaseFactory.GetInstance())
-                isRestricted = await db.IsUserRestrictedAsync(Context.GetUserId());
+            {
+                if (await db.IsUserRestrictedAsync(Context.GetUserId()))
+                    throw new InvalidStateException("Can't join a room when restricted.");
+            }
 
-            if (isRestricted)
-                throw new InvalidStateException("Can't join a room when restricted.");
+            await legacyIO.AddUserToRoomAsync(roomId, Context.GetUserId());
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -739,8 +754,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
-            await leaveRoom(state, true);
             await base.CleanUpState(state);
+            await leaveRoom(state, true);
         }
 
         private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
@@ -902,6 +917,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private async Task leaveRoom(MultiplayerClientState state, bool wasKick)
         {
+            await legacyIO.RemoveUserFromRoomAsync(state.CurrentRoomID, state.UserId);
+
             using (var roomUsage = await getLocalUserRoom(state))
                 await leaveRoom(state, roomUsage, wasKick);
         }
