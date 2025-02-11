@@ -137,8 +137,14 @@ namespace osu.Server.Spectator.Services
             await runLegacyIO(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
         }
 
+        /// <summary>
+        /// A special <see cref="Room"/> that can be serialised with Newtonsoft.Json to create rooms hosted by a given <see cref="HostUserId">user</see>.
+        /// </summary>
         private class RoomWithHostId : Room
         {
+            /// <summary>
+            /// The ID of the user to host the room.
+            /// </summary>
             [Newtonsoft.Json.JsonProperty("user_id")]
             public required int HostUserId { get; init; }
 
