@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets.Osu.Mods;
+using osu.Game.Rulesets.Taiko.Mods;
 using osu.Server.Spectator.Database.Models;
 using Xunit;
 
@@ -595,5 +597,49 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         #endregion
+
+        [Fact]
+        public async Task UserModsAllowed()
+        {
+            var beatmap1 = new database_beatmap { beatmap_id = 1234, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum" };
+            var beatmap2 = new database_beatmap { beatmap_id = 12345, beatmapset_id = 1, approved = BeatmapOnlineStatus.Ranked, checksum = "checksum2" };
+
+            Database.Setup(db => db.GetBeatmapAsync(1234)).ReturnsAsync(beatmap1);
+            Database.Setup(db => db.GetBeatmapAsync(12345)).ReturnsAsync(beatmap2);
+            Database.Setup(db => db.GetBeatmapsAsync(1)).ReturnsAsync(new[] { beatmap1, beatmap2 });
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                Freestyle = true
+            });
+
+            // Set user style + mods.
+            await Hub.ChangeUserStyle(12345, 1);
+            await Hub.ChangeUserMods(new[] { new APIMod(new TaikoModConstantSpeed()), new APIMod(new TaikoModHardRock()) });
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.Equal(["CS", "HR"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
+
+            // Try select mod from invalid ruleset.
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserMods(new[] { new APIMod(new OsuModTraceable()) }));
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.Equal(["CS", "HR"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
+
+            // Try change ruleset.
+            Receiver.Invocations.Clear();
+            await Hub.ChangeUserStyle(12345, 0);
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.Equal(["HR"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                Assert.Equal(["HR"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
+                Receiver.Verify(u => u.UserModsChanged(USER_ID, It.Is<IEnumerable<APIMod>>(mods => mods.Single().Acronym == "HR")), Times.Once);
+                Receiver.Verify(u => u.UserStyleChanged(USER_ID, 12345, 0), Times.Once);
+            }
+        }
     }
 }

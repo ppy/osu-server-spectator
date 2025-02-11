@@ -204,6 +204,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             user.BeatmapId = beatmapId;
             user.RulesetId = rulesetId;
+
+            if (!room.Queue.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
+            {
+                user.Mods = validMods.ToArray();
+                await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserModsChanged), user.UserID, user.Mods);
+            }
+
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStyleChanged), user.UserID, beatmapId, rulesetId);
         }
 
