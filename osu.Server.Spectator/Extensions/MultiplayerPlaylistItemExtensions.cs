@@ -16,24 +16,28 @@ namespace osu.Server.Spectator.Extensions
         /// <summary>
         /// Checks whether the given mods are compatible with the current playlist item's mods and ruleset.
         /// </summary>
-        /// <param name="item">The <see cref="MultiplayerPlaylistItem"/> to validate the user mods for.</param>
+        /// <param name="item">The <see cref="MultiplayerPlaylistItem"/> to validate the user mods against.</param>
+        /// <param name="user">The <see cref="MultiplayerRoomUser"/> to validate the mods of.</param>
         /// <param name="proposedMods">The proposed user mods to check against the <see cref="MultiplayerPlaylistItem"/>.</param>
         /// <param name="validMods">The set of mods which _are_ valid.</param>
         /// <returns>Whether all user mods are valid for the <see cref="MultiplayerPlaylistItem"/>.</returns>
-        public static bool ValidateUserMods(this MultiplayerPlaylistItem item, IEnumerable<APIMod> proposedMods, [NotNullWhen(false)] out IEnumerable<APIMod>? validMods)
+        public static bool ValidateUserMods(this MultiplayerPlaylistItem item, MultiplayerRoomUser user, IEnumerable<APIMod> proposedMods, [NotNullWhen(false)] out IEnumerable<APIMod>? validMods)
         {
-            var ruleset = LegacyHelper.GetRulesetFromLegacyID(item.RulesetID);
+            var ruleset = LegacyHelper.GetRulesetFromLegacyID(user.RulesetId ?? item.RulesetID);
 
             bool proposedWereValid = true;
             proposedWereValid &= ModUtils.InstantiateValidModsForRuleset(ruleset, proposedMods, out var valid);
 
-            // check allowed by room
-            foreach (var mod in valid.ToList())
+            if (!item.Freestyle)
             {
-                if (item.AllowedMods.All(m => m.Acronym != mod.Acronym))
+                // check allowed by room
+                foreach (var mod in valid.ToList())
                 {
-                    valid.Remove(mod);
-                    proposedWereValid = false;
+                    if (item.AllowedMods.All(m => m.Acronym != mod.Acronym))
+                    {
+                        valid.Remove(mod);
+                        proposedWereValid = false;
+                    }
                 }
             }
 
