@@ -66,14 +66,10 @@ namespace SampleMultiplayerClient
         public MultiplayerRoom? Room { get; private set; }
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
-        {
-            return await JoinRoomWithPassword(roomId, string.Empty);
-        }
+            => await JoinRoomWithPassword(roomId, string.Empty);
 
         public async Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string? password = null)
-        {
-            return Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.JoinRoomWithPassword), roomId, password ?? string.Empty);
-        }
+            => Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.JoinRoomWithPassword), roomId, password ?? string.Empty);
 
         public async Task LeaveRoom()
         {

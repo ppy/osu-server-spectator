@@ -8,6 +8,7 @@ using osu.Server.Spectator.Hubs;
 using osu.Server.Spectator.Hubs.Metadata;
 using osu.Server.Spectator.Hubs.Multiplayer;
 using osu.Server.Spectator.Hubs.Spectator;
+using osu.Server.Spectator.Services;
 using osu.Server.Spectator.Storage;
 using StackExchange.Redis;
 
@@ -17,7 +18,9 @@ namespace osu.Server.Spectator.Extensions
     {
         public static IServiceCollection AddHubEntities(this IServiceCollection serviceCollection)
         {
-            return serviceCollection.AddSingleton<EntityStore<SpectatorClientState>>()
+            return serviceCollection.AddHttpClient()
+                                    .AddTransient<ILegacyIO, LegacyIO>()
+                                    .AddSingleton<EntityStore<SpectatorClientState>>()
                                     .AddSingleton<EntityStore<MultiplayerClientState>>()
                                     .AddSingleton<EntityStore<ServerMultiplayerRoom>>()
                                     .AddSingleton<EntityStore<ConnectionState>>()

@@ -16,6 +16,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
@@ -36,6 +37,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
         protected readonly Mock<IDatabaseFactory> DatabaseFactory;
         protected readonly Mock<IDatabaseAccess> Database;
+
+        protected readonly Mock<ILegacyIO> LegacyIO;
 
         /// <summary>
         /// A general non-gameplay receiver for the room with ID <see cref="ROOM_ID"/>.
@@ -130,13 +133,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                              .Returns(new Mock<ILogger>().Object);
 
+            LegacyIO = new Mock<ILegacyIO>();
+
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,
                 Rooms,
                 UserStates,
                 DatabaseFactory.Object,
                 new ChatFilters(DatabaseFactory.Object),
-                hubContext.Object);
+                hubContext.Object,
+                LegacyIO.Object);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 
