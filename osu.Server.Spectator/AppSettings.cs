@@ -59,7 +59,7 @@ namespace osu.Server.Spectator
             DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
             DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
-            LegacyIODomain = Environment.GetEnvironmentVariable("LEGACY_IO_DOMAIN") ?? string.Empty;
+            LegacyIODomain = Environment.GetEnvironmentVariable("LEGACY_IO_DOMAIN") ?? "http://localhost:8080";
             SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;
 
             SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
