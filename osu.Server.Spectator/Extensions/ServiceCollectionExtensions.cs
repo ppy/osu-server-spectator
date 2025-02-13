@@ -19,7 +19,7 @@ namespace osu.Server.Spectator.Extensions
         public static IServiceCollection AddHubEntities(this IServiceCollection serviceCollection)
         {
             return serviceCollection.AddHttpClient()
-                                    .AddTransient<ILegacyIO, LegacyIO>()
+                                    .AddTransient<ISharedInterop, SharedInterop>()
                                     .AddSingleton<EntityStore<SpectatorClientState>>()
                                     .AddSingleton<EntityStore<MultiplayerClientState>>()
                                     .AddSingleton<EntityStore<ServerMultiplayerRoom>>()

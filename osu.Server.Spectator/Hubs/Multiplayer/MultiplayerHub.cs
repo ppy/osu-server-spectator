@@ -26,7 +26,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected readonly MultiplayerHubContext HubContext;
         private readonly IDatabaseFactory databaseFactory;
         private readonly ChatFilters chatFilters;
-        private readonly ILegacyIO legacyIO;
+        private readonly ISharedInterop sharedInterop;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -35,12 +35,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext,
-            ILegacyIO legacyIO)
+            ISharedInterop sharedInterop)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
-            this.legacyIO = legacyIO;
+            this.sharedInterop = sharedInterop;
 
             Rooms = rooms;
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory);
@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             Log($"{Context.GetUserId()} creating room");
 
-            long roomId = await legacyIO.CreateRoomAsync(Context.GetUserId(), room);
+            long roomId = await sharedInterop.CreateRoomAsync(Context.GetUserId(), room);
 
             return await JoinRoomWithPassword(roomId, room.Settings.Password);
         }
@@ -67,7 +67,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't join a room when restricted.");
             }
 
-            await legacyIO.AddUserToRoomAsync(roomId, Context.GetUserId());
+            await sharedInterop.AddUserToRoomAsync(roomId, Context.GetUserId());
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -917,7 +917,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private async Task leaveRoom(MultiplayerClientState state, bool wasKick)
         {
-            await legacyIO.RemoveUserFromRoomAsync(state.CurrentRoomID, state.UserId);
+            await sharedInterop.RemoveUserFromRoomAsync(state.CurrentRoomID, state.UserId);
 
             using (var roomUsage = await getLocalUserRoom(state))
                 await leaveRoom(state, roomUsage, wasKick);
