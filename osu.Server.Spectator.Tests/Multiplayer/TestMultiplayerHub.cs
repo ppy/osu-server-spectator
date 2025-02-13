@@ -21,8 +21,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext,
-            ILegacyIO legacyIO)
-            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, legacyIO)
+            ISharedInterop sharedInterop)
+            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, sharedInterop)
         {
         }
 

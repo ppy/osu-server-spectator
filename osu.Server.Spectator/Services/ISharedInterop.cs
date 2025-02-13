@@ -6,7 +6,7 @@ using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Services
 {
-    public interface ILegacyIO
+    public interface ISharedInterop
     {
         /// <summary>
         /// Creates an osu!web room.
