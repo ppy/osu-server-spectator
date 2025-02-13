@@ -123,12 +123,15 @@ namespace osu.Server.Spectator.Services
             })));
         }
 
-        public async Task AddUserToRoomAsync(long roomId, int userId)
+        public async Task AddUserToRoomAsync(int userId, long roomId, string password)
         {
-            await runCommand(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}");
+            await runCommand(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}", new
+            {
+                password = password
+            });
         }
 
-        public async Task RemoveUserFromRoomAsync(long roomId, int userId)
+        public async Task RemoveUserFromRoomAsync(int userId, long roomId)
         {
             await runCommand(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
         }

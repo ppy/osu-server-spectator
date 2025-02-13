@@ -20,7 +20,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Hub.CreateRoom(new MultiplayerRoom(0));
             LegacyIO.Verify(io => io.CreateRoomAsync(USER_ID, It.IsAny<MultiplayerRoom>()), Times.Once);
-            LegacyIO.Verify(io => io.AddUserToRoomAsync(ROOM_ID, USER_ID), Times.Once);
+            LegacyIO.Verify(io => io.AddUserToRoomAsync(USER_ID, ROOM_ID, It.IsAny<string>()), Times.Once);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
@@ -33,10 +33,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task LeaveRoom()
         {
             await Hub.JoinRoom(ROOM_ID);
-            LegacyIO.Verify(io => io.RemoveUserFromRoomAsync(ROOM_ID, USER_ID), Times.Never);
+            LegacyIO.Verify(io => io.RemoveUserFromRoomAsync(USER_ID, ROOM_ID), Times.Never);
 
             await Hub.LeaveRoom();
-            LegacyIO.Verify(io => io.RemoveUserFromRoomAsync(ROOM_ID, USER_ID), Times.Once);
+            LegacyIO.Verify(io => io.RemoveUserFromRoomAsync(USER_ID, ROOM_ID), Times.Once);
 
             await Assert.ThrowsAsync<KeyNotFoundException>(() => Hub.GetRoom(ROOM_ID));
         }
