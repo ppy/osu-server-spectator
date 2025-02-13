@@ -25,9 +25,10 @@ namespace osu.Server.Spectator.Services
         /// <remarks>
         /// This performs setup tasks like adding the user to the relevant chat channel.
         /// </remarks>
-        /// <param name="roomId">The ID of the room to join.</param>
         /// <param name="userId">The ID of the user wanting to join the room.</param>
-        Task AddUserToRoomAsync(long roomId, int userId);
+        /// <param name="roomId">The ID of the room to join.</param>
+        /// <param name="password">The room's password.</param>
+        Task AddUserToRoomAsync(int userId, long roomId, string password);
 
         /// <summary>
         /// Parts an osu!web room.
@@ -35,8 +36,8 @@ namespace osu.Server.Spectator.Services
         /// <remarks>
         /// This performs setup tasks like removing the user from any relevant chat channels.
         /// </remarks>
-        /// <param name="roomId">The ID of the room to part.</param>
         /// <param name="userId">The ID of the user wanting to part the room.</param>
-        Task RemoveUserFromRoomAsync(long roomId, int userId);
+        /// <param name="roomId">The ID of the room to part.</param>
+        Task RemoveUserFromRoomAsync(int userId, long roomId);
     }
 }
