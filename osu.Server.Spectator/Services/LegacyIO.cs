@@ -31,7 +31,7 @@ namespace osu.Server.Spectator.Services
             this.httpClient = httpClient;
             logger = loggerFactory.CreateLogger("LIO");
 
-            interopDomain = AppSettings.LegacyIODomain;
+            interopDomain = AppSettings.SharedInteropDomain;
             interopSecret = AppSettings.SharedInteropSecret;
         }
 
