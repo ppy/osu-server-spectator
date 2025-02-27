@@ -87,8 +87,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 {
                     try
                     {
-                        await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
-
                         if (roomUsage.Item == null)
                         {
                             newRoomFetchStarted = true;
@@ -138,8 +136,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     {
                         try
                         {
-                            await sharedInterop.RemoveUserFromRoomAsync(Context.GetUserId(), roomId);
-
                             if (userUsage.Item != null)
                             {
                                 // the user was joined to the room, so we can run the standard leaveRoom method.
@@ -166,6 +162,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         throw;
                     }
+                }
+
+                try
+                {
+                    await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
+                }
+                catch (Exception ex)
+                {
+                    Error("Failed to add user to the databased room", ex);
                 }
 
                 var settings = new JsonSerializerSettings
@@ -919,10 +924,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private async Task leaveRoom(MultiplayerClientState state, bool wasKick)
         {
-            await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
-
             using (var roomUsage = await getLocalUserRoom(state))
                 await leaveRoom(state, roomUsage, wasKick);
+
+            try
+            {
+                await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
+            }
+            catch (Exception ex)
+            {
+                Error("Failed to remove user from the databased room", ex);
+            }
         }
 
         private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage, bool wasKick)
