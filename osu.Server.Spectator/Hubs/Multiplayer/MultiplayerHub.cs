@@ -138,6 +138,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     {
                         try
                         {
+                            await sharedInterop.RemoveUserFromRoomAsync(Context.GetUserId(), roomId);
+
                             if (userUsage.Item != null)
                             {
                                 // the user was joined to the room, so we can run the standard leaveRoom method.
