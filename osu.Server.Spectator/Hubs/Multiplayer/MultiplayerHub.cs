@@ -67,8 +67,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't join a room when restricted.");
             }
 
-            await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
-
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 if (userUsage.Item != null)
@@ -89,6 +87,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 {
                     try
                     {
+                        await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
+
                         if (roomUsage.Item == null)
                         {
                             newRoomFetchStarted = true;
