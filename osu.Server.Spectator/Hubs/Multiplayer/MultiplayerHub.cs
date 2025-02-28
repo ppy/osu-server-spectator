@@ -67,6 +67,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't join a room when restricted.");
             }
 
+            ServerMultiplayerRoom? room = null;
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 if (userUsage.Item != null)
@@ -80,8 +82,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
                 bool newRoomFetchStarted = false;
-
-                ServerMultiplayerRoom? room = null;
 
                 using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
@@ -163,25 +163,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         throw;
                     }
                 }
-
-                try
-                {
-                    await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
-                }
-                catch (Exception ex)
-                {
-                    Error("Failed to add user to the databased room", ex);
-                }
-
-                var settings = new JsonSerializerSettings
-                {
-                    // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
-                    TypeNameHandling = TypeNameHandling.Auto,
-                };
-
-                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
-                       ?? throw new InvalidOperationException();
             }
+
+            try
+            {
+                await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
+            }
+            catch (Exception ex)
+            {
+                Error("Failed to add user to the databased room", ex);
+            }
+
+            var settings = new JsonSerializerSettings
+            {
+                // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
+                TypeNameHandling = TypeNameHandling.Auto,
+            };
+
+            return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
+                   ?? throw new InvalidOperationException();
         }
 
         /// <summary>
