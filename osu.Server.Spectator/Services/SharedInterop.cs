@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -93,6 +94,22 @@ namespace osu.Server.Spectator.Services
             }
             catch (Exception e)
             {
+                if (e is SharedInteropRequestFailedException interopException)
+                {
+                    switch (interopException.StatusCode)
+                    {
+                        // Allow retry for potentially relevant 5XX responses.
+                        case HttpStatusCode.InternalServerError:
+                        case HttpStatusCode.BadGateway:
+                        case HttpStatusCode.ServiceUnavailable:
+                        case HttpStatusCode.GatewayTimeout:
+                            break;
+
+                        default:
+                            throw;
+                    }
+                }
+
                 if (retryCount-- > 0)
                 {
                     logger.LogError(e, "Shared interop request to {url} failed, retrying ({retries} remaining)", url, retryCount);
@@ -167,9 +184,12 @@ namespace osu.Server.Spectator.Services
         [Serializable]
         private class SharedInteropRequestFailedException : HubException
         {
-            private SharedInteropRequestFailedException(string message, Exception innerException)
+            public readonly HttpStatusCode StatusCode;
+
+            private SharedInteropRequestFailedException(HttpStatusCode statusCode, string message, Exception innerException)
                 : base(message, innerException)
             {
+                StatusCode = statusCode;
             }
 
             public static async Task<SharedInteropRequestFailedException> Create(string url, HttpResponseMessage response)
@@ -187,7 +207,8 @@ namespace osu.Server.Spectator.Services
                 }
 
                 // Outer exception message is serialised to clients, inner exception is logged to the server and NOT serialised to the client.
-                return new SharedInteropRequestFailedException(errorMessage, new Exception($"Shared interop request to {url} failed with {response.StatusCode} ({response.ReasonPhrase})."));
+                return new SharedInteropRequestFailedException(response.StatusCode, errorMessage,
+                    new Exception($"Shared interop request to {url} failed with {response.StatusCode} ({response.ReasonPhrase})."));
             }
 
             [Serializable]
