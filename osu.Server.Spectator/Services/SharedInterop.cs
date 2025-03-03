@@ -94,8 +94,21 @@ namespace osu.Server.Spectator.Services
             }
             catch (Exception e)
             {
-                if (e is SharedInteropRequestFailedException interopException && !interopException.AllowRetry)
-                    throw;
+                if (e is SharedInteropRequestFailedException interopException)
+                {
+                    switch (interopException.StatusCode)
+                    {
+                        // Allow retry for potentially relevant 5XX responses.
+                        case HttpStatusCode.InternalServerError:
+                        case HttpStatusCode.BadGateway:
+                        case HttpStatusCode.ServiceUnavailable:
+                        case HttpStatusCode.GatewayTimeout:
+                            break;
+
+                        default:
+                            throw;
+                    }
+                }
 
                 if (retryCount-- > 0)
                 {
@@ -177,24 +190,6 @@ namespace osu.Server.Spectator.Services
                 : base(message, innerException)
             {
                 StatusCode = statusCode;
-            }
-
-            public bool AllowRetry
-            {
-                get
-                {
-                    switch (StatusCode)
-                    {
-                        case HttpStatusCode.InternalServerError:
-                        case HttpStatusCode.BadGateway:
-                        case HttpStatusCode.ServiceUnavailable:
-                        case HttpStatusCode.GatewayTimeout:
-                            return true;
-
-                        default:
-                            return false;
-                    }
-                }
             }
 
             public static async Task<SharedInteropRequestFailedException> Create(string url, HttpResponseMessage response)
