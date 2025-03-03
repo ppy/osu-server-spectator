@@ -67,7 +67,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't join a room when restricted.");
             }
 
-            await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
+            ServerMultiplayerRoom? room = null;
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -82,8 +82,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
                 bool newRoomFetchStarted = false;
-
-                ServerMultiplayerRoom? room = null;
 
                 using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
@@ -165,16 +163,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         throw;
                     }
                 }
-
-                var settings = new JsonSerializerSettings
-                {
-                    // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
-                    TypeNameHandling = TypeNameHandling.Auto,
-                };
-
-                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
-                       ?? throw new InvalidOperationException();
             }
+
+            try
+            {
+                await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
+            }
+            catch (Exception ex)
+            {
+                Error("Failed to add user to the databased room", ex);
+            }
+
+            var settings = new JsonSerializerSettings
+            {
+                // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
+                TypeNameHandling = TypeNameHandling.Auto,
+            };
+
+            return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
+                   ?? throw new InvalidOperationException();
         }
 
         /// <summary>
@@ -917,10 +924,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private async Task leaveRoom(MultiplayerClientState state, bool wasKick)
         {
-            await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
-
             using (var roomUsage = await getLocalUserRoom(state))
                 await leaveRoom(state, roomUsage, wasKick);
+
+            try
+            {
+                await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
+            }
+            catch (Exception ex)
+            {
+                Error("Failed to remove user from the databased room", ex);
+            }
         }
 
         private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage, bool wasKick)
