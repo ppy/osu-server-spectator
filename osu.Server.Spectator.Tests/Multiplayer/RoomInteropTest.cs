@@ -40,5 +40,20 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<KeyNotFoundException>(() => Hub.GetRoom(ROOM_ID));
         }
+
+        [Fact]
+        public async Task KickUser()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser);
+            await Hub.KickUser(USER_ID_2);
+
+            LegacyIO.Verify(io => io.RemoveUserFromRoomAsync(USER_ID, ROOM_ID), Times.Never);
+            LegacyIO.Verify(io => io.RemoveUserFromRoomAsync(USER_ID_2, ROOM_ID), Times.Once);
+        }
     }
 }
