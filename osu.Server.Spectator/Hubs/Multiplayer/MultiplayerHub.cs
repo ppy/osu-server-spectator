@@ -214,6 +214,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 var room = new ServerMultiplayerRoom(roomId, HubContext)
                 {
+                    ChannelID = databaseRoom.channel_id,
                     Settings = new MultiplayerRoomSettings
                     {
                         Name = databaseRoom.name,
