@@ -165,7 +165,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
             }
 
-            _ = sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
+            try
+            {
+                _ = sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
+            }
+            catch
+            {
+            }
 
             var settings = new JsonSerializerSettings
             {
@@ -941,7 +947,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             room.RemoveUser(user);
             await removeDatabaseUser(room, user);
 
-            _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
+            try
+            {
+                _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
+            }
+            catch
+            {
+            }
 
             // handle closing the room if the only participant is the user which is leaving.
             if (room.Users.Count == 0)
