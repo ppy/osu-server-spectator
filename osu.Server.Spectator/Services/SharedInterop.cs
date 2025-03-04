@@ -13,7 +13,6 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -24,15 +23,13 @@ namespace osu.Server.Spectator.Services
     {
         private readonly HttpClient httpClient;
         private readonly ILogger logger;
-        private readonly IServiceScopeFactory scopeFactory;
 
         private readonly string interopDomain;
         private readonly string interopSecret;
 
-        public SharedInterop(HttpClient httpClient, ILoggerFactory loggerFactory, IServiceScopeFactory scopeFactory)
+        public SharedInterop(HttpClient httpClient, ILoggerFactory loggerFactory)
         {
             this.httpClient = httpClient;
-            this.scopeFactory = scopeFactory;
             logger = loggerFactory.CreateLogger("LIO");
 
             interopDomain = AppSettings.SharedInteropDomain;
@@ -130,24 +127,6 @@ namespace osu.Server.Spectator.Services
             }
         }
 
-        /// <summary>
-        /// Runs an interop command in a backgrounded scope.
-        /// </summary>
-        /// <param name="method">The HTTP method.</param>
-        /// <param name="command">The command to run.</param>
-        /// <param name="postObject">Any data to send.</param>
-        private void runCommandScoped(HttpMethod method, string command, dynamic? postObject = null)
-        {
-            _ = Task.Run(async () =>
-            {
-                using (var scope = scopeFactory.CreateScope())
-                {
-                    var scopedInterop = (SharedInterop)scope.ServiceProvider.GetRequiredService<ISharedInterop>();
-                    await scopedInterop.runCommand(method, command, postObject).ConfigureAwait(false);
-                }
-            });
-        }
-
         private static string hmacEncode(string input, byte[] key)
         {
             byte[] byteArray = Encoding.ASCII.GetBytes(input);
@@ -167,22 +146,17 @@ namespace osu.Server.Spectator.Services
             })));
         }
 
-        public Task AddUserToRoomAsync(int userId, long roomId, string password)
+        public async Task AddUserToRoomAsync(int userId, long roomId, string password)
         {
-            // Run as background process to not hold on room/user locks.
-            runCommandScoped(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}", new
+            await runCommand(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}", new
             {
                 password = password
             });
-
-            return Task.CompletedTask;
         }
 
-        public Task RemoveUserFromRoomAsync(int userId, long roomId)
+        public async Task RemoveUserFromRoomAsync(int userId, long roomId)
         {
-            // Run as background process to not hold on room/user locks.
-            runCommandScoped(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
-            return Task.CompletedTask;
+            await runCommand(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
         }
 
         /// <summary>
