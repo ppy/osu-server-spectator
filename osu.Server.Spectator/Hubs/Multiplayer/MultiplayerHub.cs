@@ -939,6 +939,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             room.RemoveUser(user);
             await removeDatabaseUser(room, user);
+            await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
 
             // handle closing the room if the only participant is the user which is leaving.
             if (room.Users.Count == 0)
@@ -970,8 +971,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
             else
                 await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
-
-            await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
         }
 
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
