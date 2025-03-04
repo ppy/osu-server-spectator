@@ -172,6 +172,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
             catch
             {
+                // Errors are logged internally by SharedInterop.
             }
 
             var settings = new JsonSerializerSettings
@@ -955,6 +956,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
             catch
             {
+                // Errors are logged internally by SharedInterop.
             }
 
             // handle closing the room if the only participant is the user which is leaving.
