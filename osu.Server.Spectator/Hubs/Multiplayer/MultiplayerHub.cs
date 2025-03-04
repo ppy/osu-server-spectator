@@ -926,15 +926,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             using (var roomUsage = await getLocalUserRoom(state))
                 await leaveRoom(state, roomUsage, wasKick);
-
-            try
-            {
-                await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
-            }
-            catch (Exception ex)
-            {
-                Error("Failed to remove user from the databased room", ex);
-            }
         }
 
         private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage, bool wasKick)
@@ -986,6 +977,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
             else
                 await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
+
+            try
+            {
+                await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
+            }
+            catch (Exception ex)
+            {
+                Error("Failed to remove user from the databased room", ex);
+            }
         }
 
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
