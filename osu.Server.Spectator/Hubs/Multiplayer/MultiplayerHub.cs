@@ -165,8 +165,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
             }
 
-            sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password)
-                         .FireAndForget(onError: e => Error("Failed to add user to databased room", e));
+            _ = sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
 
             var settings = new JsonSerializerSettings
             {
@@ -942,8 +941,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             room.RemoveUser(user);
             await removeDatabaseUser(room, user);
 
-            sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID)
-                         .FireAndForget(onError: e => Error("Failed to remove user from databased room", e));
+            _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
 
             // handle closing the room if the only participant is the user which is leaving.
             if (room.Users.Count == 0)
