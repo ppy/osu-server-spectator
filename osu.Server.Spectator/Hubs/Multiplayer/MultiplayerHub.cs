@@ -165,14 +165,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
             }
 
-            try
-            {
-                await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
-            }
-            catch (Exception ex)
-            {
-                Error("Failed to add user to the databased room", ex);
-            }
+            await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
 
             var settings = new JsonSerializerSettings
             {
@@ -978,14 +971,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             else
                 await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
 
-            try
-            {
-                await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
-            }
-            catch (Exception ex)
-            {
-                Error("Failed to remove user from the databased room", ex);
-            }
+            await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
         }
 
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
