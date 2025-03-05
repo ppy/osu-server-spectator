@@ -167,11 +167,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             try
             {
-                await sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
+                // Run in background so we don't hold locks on user/room states.
+                _ = sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
             }
-            catch (Exception ex)
+            catch
             {
-                Error("Failed to add user to the databased room", ex);
+                // Errors are logged internally by SharedInterop.
             }
 
             var settings = new JsonSerializerSettings
@@ -927,15 +928,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             using (var roomUsage = await getLocalUserRoom(state))
                 await leaveRoom(state, roomUsage, wasKick);
-
-            try
-            {
-                await sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
-            }
-            catch (Exception ex)
-            {
-                Error("Failed to remove user from the databased room", ex);
-            }
         }
 
         private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage, bool wasKick)
@@ -956,6 +948,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             room.RemoveUser(user);
             await removeDatabaseUser(room, user);
+
+            try
+            {
+                // Run in background so we don't hold locks on user/room states.
+                _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
+            }
+            catch
+            {
+                // Errors are logged internally by SharedInterop.
+            }
 
             // handle closing the room if the only participant is the user which is leaving.
             if (room.Users.Count == 0)

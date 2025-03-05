@@ -36,6 +36,12 @@ namespace osu.Server.Spectator.Services
             interopSecret = AppSettings.SharedInteropSecret;
         }
 
+        /// <summary>
+        /// Runs an interop command.
+        /// </summary>
+        /// <param name="method">The HTTP method.</param>
+        /// <param name="command">The command to run.</param>
+        /// <param name="postObject">Any data to send.</param>
         private async Task<string> runCommand(HttpMethod method, string command, dynamic? postObject = null)
         {
             int retryCount = 3;
@@ -94,6 +100,8 @@ namespace osu.Server.Spectator.Services
             }
             catch (Exception e)
             {
+                bool allowRetry = true;
+
                 if (e is SharedInteropRequestFailedException interopException)
                 {
                     switch (interopException.StatusCode)
@@ -106,17 +114,19 @@ namespace osu.Server.Spectator.Services
                             break;
 
                         default:
-                            throw;
+                            allowRetry = false;
+                            break;
                     }
                 }
 
-                if (retryCount-- > 0)
+                if (allowRetry && retryCount-- > 0)
                 {
                     logger.LogError(e, "Shared interop request to {url} failed, retrying ({retries} remaining)", url, retryCount);
                     Thread.Sleep(1000);
                     goto retry;
                 }
 
+                logger.LogError(e, "Shared interop request to {url} failed", url);
                 throw;
             }
         }
