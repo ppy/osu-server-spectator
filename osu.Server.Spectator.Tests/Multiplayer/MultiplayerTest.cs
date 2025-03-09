@@ -134,6 +134,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                              .Returns(new Mock<ILogger>().Object);
 
             LegacyIO = new Mock<ISharedInterop>();
+            LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>()))
+                    .Returns<int, MultiplayerRoom>((_, room) => Task.FromResult(room.RoomID));
 
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,
