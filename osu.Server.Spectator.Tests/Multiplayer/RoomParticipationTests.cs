@@ -16,6 +16,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task UserCanJoinWithPasswordEvenWhenNotRequired()
         {
+            await Hub.CreateRoom(new MultiplayerRoom(ROOM_ID));
+
+            SetUserContext(ContextUser2);
             await Hub.JoinRoomWithPassword(ROOM_ID, "password");
         }
 
@@ -30,6 +33,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         user_id = USER_ID
                     });
 
+            await Hub.CreateRoom(new MultiplayerRoom(ROOM_ID) { Settings = { Password = "password" } });
+
+            SetUserContext(ContextUser2);
             await Hub.JoinRoomWithPassword(ROOM_ID, "password");
         }
 
@@ -44,6 +50,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                         user_id = USER_ID
                     });
 
+            await Hub.CreateRoom(new MultiplayerRoom(ROOM_ID) { Settings = { Password = "password" } });
+
+            SetUserContext(ContextUser2);
             await Assert.ThrowsAsync<InvalidPasswordException>(() => Hub.JoinRoom(ROOM_ID));
         }
 

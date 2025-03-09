@@ -116,6 +116,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             // in theory the connection clean-up code should handle this correctly.
                             if (room.Users.Any(u => u.UserID == roomUser.UserID))
                                 throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
+
+                            if (!string.IsNullOrEmpty(room.Settings.Password))
+                            {
+                                if (room.Settings.Password != password)
+                                    throw new InvalidPasswordException();
+                            }
                         }
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, Context.GetUserId(), roomId);
