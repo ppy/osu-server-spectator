@@ -62,7 +62,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             {
                 // When changing to host-only mode, ensure that at least one non-expired playlist item exists by duplicating the current item.
                 if (room.Settings.QueueMode == QueueMode.HostOnly && room.Playlist.All(item => item.Expired))
-                    await duplicateCurrentItem(db);
+                    await addItem(db, CurrentItem.Clone());
 
                 await updatePlaylistOrder(db);
             }
@@ -88,7 +88,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 // In host-only mode, duplicate the playlist item for the next round if no other non-expired items exist.
                 if (room.Settings.QueueMode == QueueMode.HostOnly && room.Playlist.All(item => item.Expired))
-                    await duplicateCurrentItem(db);
+                    await addItem(db, CurrentItem.Clone());
             }
 
             await updateCurrentItem();
@@ -247,25 +247,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await updateCurrentItem();
         }
 
-        /// <summary>
-        /// Duplicates <see cref="CurrentItem"/> into the database.
-        /// </summary>
-        /// <param name="db">The database connection.</param>
-        private async Task duplicateCurrentItem(IDatabaseAccess db) => await addItem(db, new MultiplayerPlaylistItem
-        {
-            OwnerID = CurrentItem.OwnerID,
-            BeatmapID = CurrentItem.BeatmapID,
-            BeatmapChecksum = CurrentItem.BeatmapChecksum,
-            RulesetID = CurrentItem.RulesetID,
-            AllowedMods = CurrentItem.AllowedMods,
-            RequiredMods = CurrentItem.RequiredMods,
-            Freestyle = CurrentItem.Freestyle
-        });
-
         private async Task addItem(IDatabaseAccess db, MultiplayerPlaylistItem item)
         {
             // Add the item to the end of the list initially.
             item.PlaylistOrder = ushort.MaxValue;
+            item.Expired = false;
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
             room.Playlist.Add(item);
