@@ -27,6 +27,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly IDatabaseFactory databaseFactory;
         private readonly ChatFilters chatFilters;
         private readonly ISharedInterop sharedInterop;
+        private readonly MultiplayerEventLogger multiplayerEventLogger;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -35,12 +36,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext,
-            ISharedInterop sharedInterop)
+            ISharedInterop sharedInterop,
+            MultiplayerEventLogger multiplayerEventLogger)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
             this.sharedInterop = sharedInterop;
+            this.multiplayerEventLogger = multiplayerEventLogger;
 
             Rooms = rooms;
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory);
@@ -51,6 +54,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             Log($"{Context.GetUserId()} creating room");
 
             long roomId = await sharedInterop.CreateRoomAsync(Context.GetUserId(), room);
+            await multiplayerEventLogger.LogRoomCreatedAsync(roomId, Context.GetUserId());
 
             return await JoinRoomWithPassword(roomId, room.Settings.Password);
         }
@@ -181,6 +185,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 // Errors are logged internally by SharedInterop.
             }
 
+            await multiplayerEventLogger.LogPlayerJoinedAsync(roomId, Context.GetUserId());
+
             var settings = new JsonSerializerSettings
             {
                 // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
@@ -253,6 +259,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task LeaveRoom()
         {
             Log("Requesting to leave room");
+            long roomId;
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -261,6 +268,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 try
                 {
+                    roomId = userUsage.Item.CurrentRoomID;
                     await leaveRoom(userUsage.Item, false);
                 }
                 finally
@@ -268,6 +276,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     userUsage.Destroy();
                 }
             }
+
+            await multiplayerEventLogger.LogPlayerLeftAsync(roomId, Context.GetUserId());
         }
 
         public async Task InvitePlayer(int userId)
@@ -313,6 +323,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task TransferHost(int userId)
         {
+            long roomId;
+
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
@@ -322,6 +334,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
                 Log(room, $"Transferring host from {room.Host?.UserID} to {userId}");
+                roomId = room.RoomID;
 
                 ensureIsHost(room);
 
@@ -332,10 +345,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 await setNewHost(room, newHost);
             }
+
+            await multiplayerEventLogger.LogHostChangedAsync(roomId, userId);
         }
 
         public async Task KickUser(int userId)
         {
+            long roomId;
+
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
@@ -345,6 +362,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
                 Log(room, $"Kicking user {userId}");
+                roomId = room.RoomID;
 
                 if (userId == userUsage.Item?.UserId)
                     throw new InvalidStateException("Can't kick self");
@@ -371,6 +389,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     }
                 }
             }
+
+            await multiplayerEventLogger.LogPlayerKickedAsync(roomId, userId);
         }
 
         public async Task ChangeState(MultiplayerUserState newState)
@@ -542,6 +562,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task StartMatch()
         {
+            long roomId;
+            long playlistItemId;
+            MatchStartedEventDetail matchStartedEventDetail;
+
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
@@ -558,12 +582,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
                     throw new InvalidStateException("Can't start match when no users are ready.");
 
+                roomId = room.RoomID;
+                playlistItemId = room.Queue.CurrentItem.ID;
+                matchStartedEventDetail = room.MatchTypeImplementation.GetMatchDetails();
+
                 await HubContext.StartMatch(room);
             }
+
+            await multiplayerEventLogger.LogGameStartedAsync(roomId, playlistItemId, matchStartedEventDetail);
         }
 
         public async Task AbortMatch()
         {
+            long roomId;
+            long playlistItemId;
+
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
@@ -576,6 +609,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room.State != MultiplayerRoomState.WaitingForLoad && room.State != MultiplayerRoomState.Playing)
                     throw new InvalidStateException("Cannot abort a match that hasn't started.");
 
+                roomId = room.RoomID;
+                playlistItemId = room.Queue.CurrentItem.ID;
+
                 foreach (var user in room.Users)
                     await HubContext.ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
 
@@ -583,6 +619,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 await updateRoomStateIfRequired(room);
             }
+
+            await multiplayerEventLogger.LogGameAbortedAsync(roomId, playlistItemId);
         }
 
         public async Task AbortGameplay()
@@ -753,6 +791,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             using (var db = databaseFactory.GetInstance())
                 await db.EndMatchAsync(room);
+
+            await multiplayerEventLogger.LogRoomDisbandedAsync(room.RoomID, Context.GetUserId());
         }
 
         private async Task addDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)
@@ -819,6 +859,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         await HubContext.ChangeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
 
+                        await multiplayerEventLogger.LogGameCompletedAsync(room.RoomID, room.GetCurrentItem()!.ID);
                         await room.Queue.FinishCurrentItem();
                     }
 

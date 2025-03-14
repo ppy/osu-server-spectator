@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -40,5 +41,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public virtual void HandleUserLeft(MultiplayerRoomUser user)
         {
         }
+
+        public abstract MatchStartedEventDetail GetMatchDetails();
     }
 }
