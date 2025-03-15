@@ -50,9 +50,11 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
         {
+            int userId = Context.GetUserId();
+
             using (var usage = await GetOrCreateLocalUserState())
             {
-                var clientState = (usage.Item ??= new SpectatorClientState(Context.ConnectionId, Context.GetUserId()));
+                var clientState = (usage.Item ??= new SpectatorClientState(Context.ConnectionId, userId));
 
                 if (clientState.State != null)
                 {
@@ -72,7 +74,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 using (var db = databaseFactory.GetInstance())
                 {
                     database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
-                    string? username = await db.GetUsernameAsync(Context.GetUserId());
+                    string? username = await db.GetUsernameAsync(userId);
 
                     if (string.IsNullOrEmpty(username))
                         throw new ArgumentException(nameof(username));
@@ -87,7 +89,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                             APIMods = state.Mods.ToArray(),
                             User = new APIUser
                             {
-                                Id = Context.GetUserId(),
+                                Id = userId,
                                 Username = username,
                             },
                             Ruleset = LegacyHelper.GetRulesetFromLegacyID(state.RulesetID.Value).RulesetInfo,
@@ -104,7 +106,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
 
             // let's broadcast to every player temporarily. probably won't stay this way.
-            await Clients.All.UserBeganPlaying(Context.GetUserId(), state);
+            await Clients.Group(GetGroupId(userId)).UserBeganPlaying(userId, state);
         }
 
         public async Task SendFrameData(FrameDataBundle data)
@@ -276,7 +278,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             if (state.State == SpectatedUserState.Playing)
                 state.State = SpectatedUserState.Quit;
 
-            await Clients.All.UserFinishedPlaying(userId, state);
+            await Clients.Group(GetGroupId(userId)).UserFinishedPlaying(userId, state);
         }
     }
 }
