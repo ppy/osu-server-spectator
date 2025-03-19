@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.JsonWebTokens;
-using osu.Game.Online.Metadata;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database.Models;
@@ -127,14 +126,6 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         /// <param name="roomId">The room to retrieve playlist items from.</param>
         Task<multiplayer_playlist_item[]> GetAllPlaylistItemsAsync(long roomId);
-
-        /// <summary>
-        /// Retrieves any changed beatmap set IDs since last call.
-        /// </summary>
-        /// <param name="lastQueueId">A queue ID to fetch updated items since</param>
-        /// <param name="limit">Maximum number of entries to return. Defaults to 50.</param>
-        /// <returns>Update metadata.</returns>
-        Task<BeatmapUpdates> GetUpdatedBeatmapSets(int? lastQueueId, int limit = 50);
 
         /// <summary>
         /// Mark a score as having a replay available.
