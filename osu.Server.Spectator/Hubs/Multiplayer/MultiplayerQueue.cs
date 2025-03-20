@@ -234,8 +234,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             using (var db = dbFactory.GetInstance())
             {
                 await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
+
                 room.Playlist.Remove(item);
-                await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
 
                 // If either an item indexed earlier in the list was removed or the current item was removed, the index needs to be refreshed.
                 // Importantly, this is done before the playlist order is updated since the update requires the current item.
@@ -245,6 +245,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             await updateCurrentItem();
+
+            // It's important for clients to be notified of the removal AFTER settings are changed
+            // so that PlaylistItemId always points to a valid item in the playlist.
+            await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
         }
 
         /// <summary>
