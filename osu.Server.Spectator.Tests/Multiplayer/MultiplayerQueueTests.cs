@@ -660,5 +660,30 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.Equal(MultiplayerUserState.Idle, room.Users[1].State);
             }
         }
+
+        [Fact]
+        public async Task SettingsChangedNotifiedBeforeItemIsRemoved()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapID = 1,
+                BeatmapChecksum = "checksum",
+            });
+
+            int currentSequenceId = 0;
+            int removedAtSequenceId = 0;
+            int settingsChangedAtSequenceId = 0;
+
+            Receiver.Setup(d => d.PlaylistItemRemoved(It.IsAny<long>()))
+                    .Callback(() => removedAtSequenceId = ++currentSequenceId).CallBase();
+            Receiver.Setup(d => d.SettingsChanged(It.IsAny<MultiplayerRoomSettings>()))
+                    .Callback(() => settingsChangedAtSequenceId = ++currentSequenceId).CallBase();
+
+            await Hub.RemovePlaylistItem(1);
+
+            Assert.Equal(1, settingsChangedAtSequenceId);
+            Assert.Equal(2, removedAtSequenceId);
+        }
     }
 }
