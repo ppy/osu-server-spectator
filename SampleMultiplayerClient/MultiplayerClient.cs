@@ -65,6 +65,9 @@ namespace SampleMultiplayerClient
 
         public MultiplayerRoom? Room { get; private set; }
 
+        public Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
+            => throw new NotImplementedException();
+
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
             => await JoinRoomWithPassword(roomId, string.Empty);
 

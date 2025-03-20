@@ -26,7 +26,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected readonly MultiplayerHubContext HubContext;
         private readonly IDatabaseFactory databaseFactory;
         private readonly ChatFilters chatFilters;
-        private readonly ILegacyIO legacyIO;
+        private readonly ISharedInterop sharedInterop;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -35,12 +35,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext,
-            ILegacyIO legacyIO)
+            ISharedInterop sharedInterop)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
-            this.legacyIO = legacyIO;
+            this.sharedInterop = sharedInterop;
 
             Rooms = rooms;
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory);
@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             Log($"{Context.GetUserId()} creating room");
 
-            long roomId = await legacyIO.CreateRoomAsync(Context.GetUserId(), room);
+            long roomId = await sharedInterop.CreateRoomAsync(Context.GetUserId(), room);
 
             return await JoinRoomWithPassword(roomId, room.Settings.Password);
         }
@@ -67,7 +67,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't join a room when restricted.");
             }
 
-            await legacyIO.AddUserToRoomAsync(roomId, Context.GetUserId());
+            ServerMultiplayerRoom? room = null;
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -82,8 +82,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
                 bool newRoomFetchStarted = false;
-
-                ServerMultiplayerRoom? room = null;
 
                 using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
@@ -118,6 +116,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             // in theory the connection clean-up code should handle this correctly.
                             if (room.Users.Any(u => u.UserID == roomUser.UserID))
                                 throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
+
+                            if (!string.IsNullOrEmpty(room.Settings.Password))
+                            {
+                                if (room.Settings.Password != password)
+                                    throw new InvalidPasswordException();
+                            }
                         }
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, Context.GetUserId(), roomId);
@@ -165,16 +169,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         throw;
                     }
                 }
-
-                var settings = new JsonSerializerSettings
-                {
-                    // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
-                    TypeNameHandling = TypeNameHandling.Auto,
-                };
-
-                return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
-                       ?? throw new InvalidOperationException();
             }
+
+            try
+            {
+                // Run in background so we don't hold locks on user/room states.
+                _ = sharedInterop.AddUserToRoomAsync(Context.GetUserId(), roomId, password);
+            }
+            catch
+            {
+                // Errors are logged internally by SharedInterop.
+            }
+
+            var settings = new JsonSerializerSettings
+            {
+                // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
+                TypeNameHandling = TypeNameHandling.Auto,
+            };
+
+            return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
+                   ?? throw new InvalidOperationException();
         }
 
         /// <summary>
@@ -207,6 +221,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 var room = new ServerMultiplayerRoom(roomId, HubContext)
                 {
+                    ChannelID = databaseRoom.channel_id,
                     Settings = new MultiplayerRoomSettings
                     {
                         Name = databaseRoom.name,
@@ -917,8 +932,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private async Task leaveRoom(MultiplayerClientState state, bool wasKick)
         {
-            await legacyIO.RemoveUserFromRoomAsync(state.CurrentRoomID, state.UserId);
-
             using (var roomUsage = await getLocalUserRoom(state))
                 await leaveRoom(state, roomUsage, wasKick);
         }
@@ -941,6 +954,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             room.RemoveUser(user);
             await removeDatabaseUser(room, user);
+
+            try
+            {
+                // Run in background so we don't hold locks on user/room states.
+                _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
+            }
+            catch
+            {
+                // Errors are logged internally by SharedInterop.
+            }
 
             // handle closing the room if the only participant is the user which is leaving.
             if (room.Users.Count == 0)

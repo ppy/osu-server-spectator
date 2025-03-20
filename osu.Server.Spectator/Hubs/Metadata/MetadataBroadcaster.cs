@@ -3,13 +3,12 @@
 
 using System;
 using System.Linq;
-using System.Threading;
-using System.Timers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.Metadata;
+using osu.Server.QueueProcessor;
 using osu.Server.Spectator.Database;
-using Timer = System.Timers.Timer;
+using BeatmapUpdates = osu.Server.QueueProcessor.BeatmapUpdates;
 
 namespace osu.Server.Spectator.Hubs.Metadata
 {
@@ -21,12 +20,9 @@ namespace osu.Server.Spectator.Hubs.Metadata
         private readonly IDatabaseFactory databaseFactory;
         private readonly IHubContext<MetadataHub> metadataHubContext;
 
-        private readonly Timer timer;
-        private readonly CancellationTokenSource timerCancellationSource;
-        private readonly CancellationToken timerCancellationToken;
         private readonly ILogger logger;
 
-        private int? lastQueueId;
+        private readonly IDisposable poller;
 
         public MetadataBroadcaster(
             ILoggerFactory loggerFactory,
@@ -35,53 +31,26 @@ namespace osu.Server.Spectator.Hubs.Metadata
         {
             this.databaseFactory = databaseFactory;
             this.metadataHubContext = metadataHubContext;
-            this.logger = loggerFactory.CreateLogger(nameof(MetadataBroadcaster));
 
-            timerCancellationSource = new CancellationTokenSource();
-            timerCancellationToken = timerCancellationSource.Token;
-
-            timer = new Timer(5000);
-            timer.AutoReset = false;
-            timer.Elapsed += pollForChanges;
-            timer.Start();
+            logger = loggerFactory.CreateLogger(nameof(MetadataBroadcaster));
+            poller = BeatmapStatusWatcher.StartPollingAsync(handleUpdates, 5000).Result;
         }
 
         // ReSharper disable once AsyncVoidMethod
-        private async void pollForChanges(object? sender, ElapsedEventArgs args)
+        private async void handleUpdates(BeatmapUpdates updates)
         {
-            try
-            {
-                using (var db = databaseFactory.GetInstance())
-                {
-                    var updates = await db.GetUpdatedBeatmapSets(lastQueueId);
+            logger.LogInformation("Polled beatmap changes up to last queue id {lastProcessedQueueID}", updates.LastProcessedQueueID);
 
-                    lastQueueId = updates.LastProcessedQueueID;
-                    logger.LogInformation("Polled beatmap changes up to last queue id {lastProcessedQueueID}", updates.LastProcessedQueueID);
-
-                    if (updates.BeatmapSetIDs.Any())
-                    {
-                        logger.LogInformation("Broadcasting new beatmaps to client: {beatmapIds}", string.Join(',', updates.BeatmapSetIDs.Select(i => i.ToString())));
-                        await metadataHubContext.Clients.All.SendAsync(nameof(IMetadataClient.BeatmapSetsUpdated), updates, cancellationToken: timerCancellationToken);
-                    }
-                }
-            }
-            catch (Exception e)
+            if (updates.BeatmapSetIDs.Any())
             {
-                logger.LogError(e, $"Error during beatmap update polling");
-            }
-            finally
-            {
-                if (timerCancellationToken.IsCancellationRequested)
-                    timer.Dispose();
-                else
-                    timer.Start();
+                logger.LogInformation("Broadcasting new beatmaps to client: {beatmapIds}", string.Join(',', updates.BeatmapSetIDs.Select(i => i.ToString())));
+                await metadataHubContext.Clients.All.SendAsync(nameof(IMetadataClient.BeatmapSetsUpdated), updates);
             }
         }
 
         public void Dispose()
         {
-            timerCancellationSource.Cancel();
-            timerCancellationSource.Dispose();
+            poller.Dispose();
         }
     }
 }

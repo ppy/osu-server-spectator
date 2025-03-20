@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -18,7 +19,7 @@ using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Services
 {
-    public class LegacyIO : ILegacyIO
+    public class SharedInterop : ISharedInterop
     {
         private readonly HttpClient httpClient;
         private readonly ILogger logger;
@@ -26,20 +27,22 @@ namespace osu.Server.Spectator.Services
         private readonly string interopDomain;
         private readonly string interopSecret;
 
-        public LegacyIO(HttpClient httpClient, ILoggerFactory loggerFactory)
+        public SharedInterop(HttpClient httpClient, ILoggerFactory loggerFactory)
         {
             this.httpClient = httpClient;
             logger = loggerFactory.CreateLogger("LIO");
 
-            interopDomain = AppSettings.LegacyIODomain
-                            ?? throw new InvalidOperationException("LEGACY_IO_DOMAIN environment variable not set. "
-                                                                   + "Please set the value of this variable to the root URL of the osu-web instance to which legacy IO call should be submitted.");
-            interopSecret = AppSettings.SharedInteropSecret
-                            ?? throw new InvalidOperationException("SHARED_INTEROP_SECRET environment variable not set. "
-                                                                   + "Please set the value of this variable to the value of the same environment variable that the target osu-web instance specifies in `.env`.");
+            interopDomain = AppSettings.SharedInteropDomain;
+            interopSecret = AppSettings.SharedInteropSecret;
         }
 
-        private async Task<string> runLegacyIO(HttpMethod method, string command, dynamic? postObject = null)
+        /// <summary>
+        /// Runs an interop command.
+        /// </summary>
+        /// <param name="method">The HTTP method.</param>
+        /// <param name="command">The command to run.</param>
+        /// <param name="postObject">Any data to send.</param>
+        private async Task<string> runCommand(HttpMethod method, string command, dynamic? postObject = null)
         {
             int retryCount = 3;
 
@@ -93,17 +96,37 @@ namespace osu.Server.Spectator.Services
                 if (response.IsSuccessStatusCode)
                     return await response.Content.ReadAsStringAsync();
 
-                throw await LegacyIORequestFailedException.Create(url, response);
+                throw await SharedInteropRequestFailedException.Create(url, response);
             }
             catch (Exception e)
             {
-                if (retryCount-- > 0)
+                bool allowRetry = true;
+
+                if (e is SharedInteropRequestFailedException interopException)
                 {
-                    logger.LogError(e, "Legacy IO request to {url} failed, retrying ({retries} remaining)", url, retryCount);
+                    switch (interopException.StatusCode)
+                    {
+                        // Allow retry for potentially relevant 5XX responses.
+                        case HttpStatusCode.InternalServerError:
+                        case HttpStatusCode.BadGateway:
+                        case HttpStatusCode.ServiceUnavailable:
+                        case HttpStatusCode.GatewayTimeout:
+                            break;
+
+                        default:
+                            allowRetry = false;
+                            break;
+                    }
+                }
+
+                if (allowRetry && retryCount-- > 0)
+                {
+                    logger.LogError(e, "Shared interop request to {url} failed, retrying ({retries} remaining)", url, retryCount);
                     Thread.Sleep(1000);
                     goto retry;
                 }
 
+                logger.LogError(e, "Shared interop request to {url} failed", url);
                 throw;
             }
         }
@@ -116,25 +139,28 @@ namespace osu.Server.Spectator.Services
             return hashArray.Aggregate(string.Empty, (s, e) => s + $"{e:x2}", s => s);
         }
 
-        // Methods below purposefully async-await on `runLegacyIO()` calls rather than directly returning the underlying calls.
+        // Methods below purposefully async-await on `runCommand()` calls rather than directly returning the underlying calls.
         // This is done for better readability of exception stacks. Directly returning the tasks elides the name of the proxying method.
 
         public async Task<long> CreateRoomAsync(int hostUserId, MultiplayerRoom room)
         {
-            return long.Parse(await runLegacyIO(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new RoomWithHostId(room)
+            return long.Parse(await runCommand(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new RoomWithHostId(room)
             {
                 HostUserId = hostUserId
             })));
         }
 
-        public async Task AddUserToRoomAsync(long roomId, int userId)
+        public async Task AddUserToRoomAsync(int userId, long roomId, string password)
         {
-            await runLegacyIO(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}");
+            await runCommand(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}", new
+            {
+                password = password
+            });
         }
 
-        public async Task RemoveUserFromRoomAsync(long roomId, int userId)
+        public async Task RemoveUserFromRoomAsync(int userId, long roomId)
         {
-            await runLegacyIO(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
+            await runCommand(HttpMethod.Delete, $"multiplayer/rooms/{roomId}/users/{userId}");
         }
 
         /// <summary>
@@ -158,14 +184,17 @@ namespace osu.Server.Spectator.Services
         }
 
         [Serializable]
-        private class LegacyIORequestFailedException : HubException
+        private class SharedInteropRequestFailedException : HubException
         {
-            private LegacyIORequestFailedException(string message, Exception innerException)
+            public readonly HttpStatusCode StatusCode;
+
+            private SharedInteropRequestFailedException(HttpStatusCode statusCode, string message, Exception innerException)
                 : base(message, innerException)
             {
+                StatusCode = statusCode;
             }
 
-            public static async Task<LegacyIORequestFailedException> Create(string url, HttpResponseMessage response)
+            public static async Task<SharedInteropRequestFailedException> Create(string url, HttpResponseMessage response)
             {
                 string errorMessage = $"{(int)response.StatusCode}: {response.ReasonPhrase}";
 
@@ -180,7 +209,8 @@ namespace osu.Server.Spectator.Services
                 }
 
                 // Outer exception message is serialised to clients, inner exception is logged to the server and NOT serialised to the client.
-                return new LegacyIORequestFailedException(errorMessage, new Exception($"Legacy IO request to {url} failed with {response.StatusCode} ({response.ReasonPhrase})."));
+                return new SharedInteropRequestFailedException(response.StatusCode, errorMessage,
+                    new Exception($"Shared interop request to {url} failed with {response.StatusCode} ({response.ReasonPhrase})."));
             }
 
             [Serializable]

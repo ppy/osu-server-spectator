@@ -13,11 +13,13 @@ using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
+using osu.Server.QueueProcessor;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Spectator;
+using BeatmapUpdates = osu.Game.Online.Metadata.BeatmapUpdates;
 
 namespace osu.Server.Spectator.Hubs.Metadata
 {
@@ -107,8 +109,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         public async Task<BeatmapUpdates> GetChangesSince(int queueId)
         {
-            using (var db = databaseFactory.GetInstance())
-                return await db.GetUpdatedBeatmapSets(queueId);
+            QueueProcessor.BeatmapUpdates updates = await BeatmapStatusWatcher.GetUpdatedBeatmapSetsAsync(queueId);
+            return new BeatmapUpdates(updates.BeatmapSetIDs, updates.LastProcessedQueueID);
         }
 
         public async Task BeginWatchingUserPresence()
