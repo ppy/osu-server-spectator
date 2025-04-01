@@ -527,7 +527,7 @@ namespace osu.Server.Spectator.Database
             DapperExtensions.InstallDateTimeOffsetMapper();
 
             openConnection = new MySqlConnection(
-                $"Server={AppSettings.DatabaseHost};Port={AppSettings.DatabasePort};Database=osu;User ID={AppSettings.DatabaseUser};ConnectionTimeout=5;ConnectionReset=false;Pooling=true;");
+                $"Server={AppSettings.DatabaseHost};Port={AppSettings.DatabasePort};Database=osu;User ID={AppSettings.DatabaseUser};ConnectionTimeout=5;ConnectionReset=false;Pooling=true;Pipelining=false");
 
             await openConnection.OpenAsync();
 
