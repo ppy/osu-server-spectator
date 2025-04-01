@@ -8,7 +8,8 @@ using Microsoft.Extensions.Logging;
 using osu.Game.Online.Metadata;
 using osu.Server.QueueProcessor;
 using osu.Server.Spectator.Database;
-using BeatmapUpdates = osu.Server.QueueProcessor.BeatmapUpdates;
+using ServerBeatmapUpdates = osu.Server.QueueProcessor.BeatmapUpdates;
+using ClientBeatmapUpdates = osu.Game.Online.Metadata.BeatmapUpdates;
 
 namespace osu.Server.Spectator.Hubs.Metadata
 {
@@ -37,14 +38,14 @@ namespace osu.Server.Spectator.Hubs.Metadata
         }
 
         // ReSharper disable once AsyncVoidMethod
-        private async void handleUpdates(BeatmapUpdates updates)
+        private async void handleUpdates(ServerBeatmapUpdates updates)
         {
             logger.LogInformation("Polled beatmap changes up to last queue id {lastProcessedQueueID}", updates.LastProcessedQueueID);
 
             if (updates.BeatmapSetIDs.Any())
             {
                 logger.LogInformation("Broadcasting new beatmaps to client: {beatmapIds}", string.Join(',', updates.BeatmapSetIDs.Select(i => i.ToString())));
-                await metadataHubContext.Clients.All.SendAsync(nameof(IMetadataClient.BeatmapSetsUpdated), updates);
+                await metadataHubContext.Clients.All.SendAsync(nameof(IMetadataClient.BeatmapSetsUpdated), new ClientBeatmapUpdates(updates.BeatmapSetIDs, updates.LastProcessedQueueID));
             }
         }
 
