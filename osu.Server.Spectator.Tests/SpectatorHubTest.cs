@@ -72,7 +72,6 @@ namespace osu.Server.Spectator.Tests
         {
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
-            mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
             mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockReceiver.Object);
 
             Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
@@ -88,8 +87,8 @@ namespace osu.Server.Spectator.Tests
                 State = SpectatedUserState.Playing,
             });
 
-            // check all other users were informed that streaming began
-            mockClients.Verify(clients => clients.All, Times.Once);
+            // check all watching users were informed that streaming began
+            mockClients.Verify(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id)), Times.Once);
             mockReceiver.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(new SpectatorState
             {
                 BeatmapID = beatmap_id,
@@ -327,7 +326,7 @@ namespace osu.Server.Spectator.Tests
             Mock<ISpectatorClient> mockStreamer = new Mock<ISpectatorClient>();
 
             mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-            mockClients.Setup(clients => clients.All).Returns(mockCaller.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockCaller.Object);
             mockClients.Setup(clients => clients.User(streamer_id.ToString())).Returns(mockStreamer.Object);
             mockDatabase.Setup(db => db.GetUsernameAsync(watcher_id)).ReturnsAsync("watcher");
 
