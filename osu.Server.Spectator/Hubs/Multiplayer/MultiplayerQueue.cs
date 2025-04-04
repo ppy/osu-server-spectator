@@ -256,6 +256,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             // Add the item to the end of the list initially.
             item.PlaylistOrder = ushort.MaxValue;
             item.Expired = false;
+            item.PlayedAt = null;
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
             room.Playlist.Add(item);
