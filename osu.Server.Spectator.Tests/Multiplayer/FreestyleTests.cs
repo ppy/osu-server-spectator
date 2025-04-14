@@ -34,8 +34,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapID = 1234,
                 Freestyle = true,
                 RequiredMods = [new APIMod(new OsuModHidden())],
-                AllowedMods = [new APIMod(new OsuModHardRock())]
             });
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+            {
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                Freestyle = true,
+                AllowedMods = [new APIMod(new OsuModHidden())],
+            }));
         }
 
         #endregion
@@ -222,8 +229,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapID = 1234,
                 Freestyle = true,
                 RequiredMods = [new APIMod(new OsuModHidden())],
-                AllowedMods = [new APIMod(new OsuModHardRock())]
             });
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                BeatmapID = 1234,
+                Freestyle = true,
+                AllowedMods = [new APIMod(new OsuModHardRock())]
+            }));
         }
 
         /// <summary>
@@ -567,24 +582,19 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
                 Freestyle = true,
-                AllowedMods = [new APIMod(new OsuModHardRock())]
+                RequiredMods = [new APIMod(new OsuModHardRock())]
             });
 
             // Set user style + mods.
             await Hub.ChangeUserStyle(12345, 1);
-            await Hub.ChangeUserMods(new[] { new APIMod(new TaikoModHardRock()) });
+            await Hub.ChangeUserMods(new[] { new APIMod(new TaikoModHidden()), new APIMod(new TaikoModConstantSpeed()) });
             using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.Equal(["HR"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
+                Assert.Equal(["HD", "CS"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
 
             // Try select invalid mod.
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserMods(new[] { new APIMod(new TaikoModConstantSpeed()) }));
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserMods(new[] { new APIMod(new TaikoModEasy()) }));
             using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.Equal(["HR"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
-
-            // Try select mod from invalid ruleset.
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserMods(new[] { new APIMod(new OsuModTraceable()) }));
-            using (var usage = await Hub.GetRoom(ROOM_ID))
-                Assert.Equal(["HR"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
+                Assert.Equal(["HD", "CS"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
 
             // Try change ruleset.
             Receiver.Invocations.Clear();
@@ -592,8 +602,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
             {
-                Assert.Equal(["HR"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
-                Receiver.Verify(u => u.UserModsChanged(USER_ID, It.IsAny<IEnumerable<APIMod>>()), Times.Never());
+                Assert.Equal(["HD"], usage.Item!.Users.Single().Mods.Select(m => m.Acronym));
+                Receiver.Verify(u => u.UserModsChanged(USER_ID, It.IsAny<IEnumerable<APIMod>>()), Times.Once());
                 Receiver.Verify(u => u.UserStyleChanged(USER_ID, 12345, 0), Times.Once);
             }
         }

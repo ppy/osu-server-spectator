@@ -43,7 +43,7 @@ namespace osu.Server.Spectator.Extensions
             }
 
             // check valid as combination
-            if (!ModUtils.CheckCompatibleSet(valid, out var invalid))
+            if (!ModUtils.CheckCompatibleSet(item.RequiredMods.Select(m => m.ToMod(ruleset)).Concat(valid), out var invalid))
             {
                 proposedWereValid = false;
                 foreach (var mod in invalid)
