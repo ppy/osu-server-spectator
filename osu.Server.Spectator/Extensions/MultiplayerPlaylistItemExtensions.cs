@@ -28,13 +28,17 @@ namespace osu.Server.Spectator.Extensions
             bool proposedWereValid = true;
             proposedWereValid &= ModUtils.InstantiateValidModsForRuleset(ruleset, proposedMods, out var valid);
 
-            // check allowed by room
-            foreach (var mod in valid.ToList())
+            // Freestyle unconditionally allows all freemods.
+            if (!item.Freestyle)
             {
-                if (item.AllowedMods.All(m => m.Acronym != mod.Acronym))
+                // check allowed by room
+                foreach (var mod in valid.ToList())
                 {
-                    valid.Remove(mod);
-                    proposedWereValid = false;
+                    if (item.AllowedMods.All(m => m.Acronym != mod.Acronym))
+                    {
+                        valid.Remove(mod);
+                        proposedWereValid = false;
+                    }
                 }
             }
 
@@ -75,16 +79,7 @@ namespace osu.Server.Spectator.Extensions
             if (!ModUtils.CheckCompatibleSet(requiredMods, out var invalid))
                 throw new InvalidStateException($"Invalid combination of required mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
-            if (item.Freestyle)
-            {
-                if (!ModUtils.CheckValidModsForFreestyle(requiredMods, out invalid))
-                    throw new InvalidStateException($"Invalid required mods were selected for freestyle item: {string.Join(',', invalid.Select(m => m.Acronym))}");
-
-                if (!ModUtils.CheckValidModsForFreestyle(allowedMods, out invalid))
-                    throw new InvalidStateException($"Invalid allowed mods were selected for freestyle item: {string.Join(',', invalid.Select(m => m.Acronym))}");
-            }
-
-            if (!ModUtils.CheckValidRequiredModsForMultiplayer(requiredMods, out invalid))
+            if (!ModUtils.CheckValidRequiredModsForMultiplayer(requiredMods, item.Freestyle, out invalid))
                 throw new InvalidStateException($"Invalid required mods were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
             if (!ModUtils.CheckValidFreeModsForMultiplayer(allowedMods, out invalid))
