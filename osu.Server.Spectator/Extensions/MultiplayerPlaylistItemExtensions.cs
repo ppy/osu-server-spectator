@@ -82,7 +82,7 @@ namespace osu.Server.Spectator.Extensions
             if (!ModUtils.CheckValidRequiredModsForMultiplayer(requiredMods, item.Freestyle, out invalid))
                 throw new InvalidStateException($"Invalid required mods were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
-            if (!ModUtils.CheckValidFreeModsForMultiplayer(allowedMods, out invalid))
+            if (!ModUtils.CheckValidAllowedModsForMultiplayer(allowedMods, item.Freestyle, out invalid))
                 throw new InvalidStateException($"Invalid free mods were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
             // check aggregate combinations with each allowed mod individually.
