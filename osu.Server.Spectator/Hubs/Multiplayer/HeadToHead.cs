@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -24,5 +25,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 Hub.NotifyMatchUserStateChanged(Room, user);
             }
         }
+
+        public override MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
+        {
+            room_type = database_match_type.head_to_head
+        };
     }
 }
