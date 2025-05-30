@@ -28,6 +28,7 @@ namespace osu.Server.Spectator.Extensions
             bool proposedWereValid = true;
             proposedWereValid &= ModUtils.InstantiateValidModsForRuleset(ruleset, proposedMods, out var valid);
 
+            // Freestyle unconditionally allows all freemods.
             if (!item.Freestyle)
             {
                 // check allowed by room
@@ -42,7 +43,7 @@ namespace osu.Server.Spectator.Extensions
             }
 
             // check valid as combination
-            if (!ModUtils.CheckCompatibleSet(valid, out var invalid))
+            if (!ModUtils.CheckCompatibleSet(item.RequiredMods.Select(m => m.ToMod(ruleset)).Concat(valid), out var invalid))
             {
                 proposedWereValid = false;
                 foreach (var mod in invalid)
@@ -78,10 +79,10 @@ namespace osu.Server.Spectator.Extensions
             if (!ModUtils.CheckCompatibleSet(requiredMods, out var invalid))
                 throw new InvalidStateException($"Invalid combination of required mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
-            if (!ModUtils.CheckValidRequiredModsForMultiplayer(requiredMods, out invalid))
+            if (!ModUtils.CheckValidRequiredModsForMultiplayer(requiredMods, item.Freestyle, out invalid))
                 throw new InvalidStateException($"Invalid required mods were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
-            if (!ModUtils.CheckValidFreeModsForMultiplayer(allowedMods, out invalid))
+            if (!ModUtils.CheckValidAllowedModsForMultiplayer(allowedMods, item.Freestyle, out invalid))
                 throw new InvalidStateException($"Invalid free mods were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
             // check aggregate combinations with each allowed mod individually.

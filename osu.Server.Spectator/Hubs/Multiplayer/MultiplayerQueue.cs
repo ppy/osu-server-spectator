@@ -118,7 +118,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= limit)
                 throw new InvalidStateException($"Can't enqueue more than {limit} items at once.");
 
-            if (item.Freestyle && (item.AllowedMods.Any() || item.RequiredMods.Any()))
+            if (item.Freestyle && item.AllowedMods.Any())
                 throw new InvalidStateException("Cannot enqueue freestyle item with mods.");
 
             using (var db = dbFactory.GetInstance())
@@ -151,8 +151,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (dbFactory == null)
                 throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
 
-            if (item.Freestyle && (item.AllowedMods.Any() || item.RequiredMods.Any()))
-                throw new InvalidStateException("Cannot edit freestyle item with mods.");
+            if (item.Freestyle && item.AllowedMods.Any())
+                throw new InvalidStateException("Cannot enqueue freestyle item with mods.");
 
             using (var db = dbFactory.GetInstance())
             {
