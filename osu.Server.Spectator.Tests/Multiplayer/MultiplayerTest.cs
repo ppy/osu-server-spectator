@@ -144,7 +144,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 DatabaseFactory.Object,
                 new ChatFilters(DatabaseFactory.Object),
                 hubContext.Object,
-                LegacyIO.Object);
+                LegacyIO.Object,
+                new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object));
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 
