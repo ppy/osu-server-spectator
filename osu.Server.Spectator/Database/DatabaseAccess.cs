@@ -410,7 +410,7 @@ namespace osu.Server.Spectator.Database
             return await connection.QueryAsync<osu_build>(
                 "SELECT `build_id`, `version`, `hash`, `users` "
                 + "FROM `osu_builds` "
-                + "WHERE stream_id = 7 AND allow_bancho = 1");
+                + "WHERE stream_id IN (7, 17) AND allow_bancho = 1");
         }
 
         public async Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync()
@@ -420,7 +420,7 @@ namespace osu.Server.Spectator.Database
             return await connection.QueryAsync<osu_build>(
                 "SELECT `build_id`, `version`, `hash`, `users` "
                 + "FROM `osu_builds` "
-                + "WHERE `stream_id` IS NULL AND `version` LIKE '%-lazer-%' AND `allow_bancho` = 1");
+                + "WHERE `stream_id` IS NULL AND (`version` LIKE '%-lazer-%' OR `version` LIKE '%-tachyon-%') AND `allow_bancho` = 1");
         }
 
         public async Task UpdateBuildUserCountAsync(osu_build build)

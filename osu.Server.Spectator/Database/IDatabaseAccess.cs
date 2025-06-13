@@ -166,12 +166,12 @@ namespace osu.Server.Spectator.Database
         Task<bool> GetUserAllowsPMs(int userId);
 
         /// <summary>
-        /// Returns all available main builds from the lazer release stream.
+        /// Returns all available main builds from the lazer and tachyon release streams.
         /// </summary>
         Task<IEnumerable<osu_build>> GetAllMainLazerBuildsAsync();
 
         /// <summary>
-        /// Returns all known platform-specifc lazer builds.
+        /// Returns all known platform-specifc lazer and tachyon builds.
         /// </summary>
         Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync();
 
