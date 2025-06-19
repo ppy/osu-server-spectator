@@ -420,6 +420,7 @@ namespace osu.Server.Spectator.Database
             return await connection.QueryAsync<osu_build>(
                 "SELECT `build_id`, `version`, `hash`, `users` "
                 + "FROM `osu_builds` "
+                // Should match checks in BuildUserCountUpdater.build_version_regex.
                 + "WHERE `stream_id` IS NULL AND (`version` LIKE '%-lazer-%' OR `version` LIKE '%-tachyon-%') AND `allow_bancho` = 1");
         }
 

@@ -96,7 +96,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
             }
         }
 
-        private static readonly Regex build_version_regex = new Regex(@"(?<version>\d+\.\d+\.\d+)-lazer-.+", RegexOptions.Compiled);
+        // Should match checks in DatabaseAccess.GetAllPlatformSpecificLazerBuildsAsync.
+        private static readonly Regex build_version_regex = new Regex(@"(?<version>\d+\.\d+\.\d+)-(?:lazer|tachyon)-.+", RegexOptions.Compiled);
 
         private Dictionary<string, osu_build> constructHashToBuildMapping(IEnumerable<osu_build> mainBuilds, IEnumerable<osu_build> platformBuilds)
         {
