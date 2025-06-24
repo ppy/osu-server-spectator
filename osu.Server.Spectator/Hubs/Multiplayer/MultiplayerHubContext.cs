@@ -35,18 +35,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly EntityStore<MultiplayerClientState> users;
         private readonly IDatabaseFactory databaseFactory;
         private readonly ILogger logger;
+        private readonly MultiplayerEventLogger multiplayerEventLogger;
 
         public MultiplayerHubContext(
             IHubContext<MultiplayerHub> context,
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
             ILoggerFactory loggerFactory,
-            IDatabaseFactory databaseFactory)
+            IDatabaseFactory databaseFactory,
+            MultiplayerEventLogger multiplayerEventLogger)
         {
             this.context = context;
             this.rooms = rooms;
             this.users = users;
             this.databaseFactory = databaseFactory;
+            this.multiplayerEventLogger = multiplayerEventLogger;
 
             logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
         }
@@ -285,6 +288,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
 
             await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
+
+            await multiplayerEventLogger.LogGameStartedAsync(room.RoomID, room.Queue.CurrentItem.ID, room.MatchTypeImplementation.GetMatchDetails());
         }
 
         /// <summary>

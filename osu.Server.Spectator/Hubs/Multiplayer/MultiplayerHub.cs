@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.multiplayerEventLogger = multiplayerEventLogger;
 
             Rooms = rooms;
-            HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory);
+            HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory, multiplayerEventLogger);
         }
 
         public async Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
@@ -562,10 +562,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task StartMatch()
         {
-            long roomId;
-            long playlistItemId;
-            MatchStartedEventDetail matchStartedEventDetail;
-
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
@@ -582,14 +578,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
                     throw new InvalidStateException("Can't start match when no users are ready.");
 
-                roomId = room.RoomID;
-                playlistItemId = room.Queue.CurrentItem.ID;
-                matchStartedEventDetail = room.MatchTypeImplementation.GetMatchDetails();
-
                 await HubContext.StartMatch(room);
             }
-
-            await multiplayerEventLogger.LogGameStartedAsync(roomId, playlistItemId, matchStartedEventDetail);
         }
 
         public async Task AbortMatch()
