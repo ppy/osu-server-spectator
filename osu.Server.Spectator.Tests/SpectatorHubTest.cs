@@ -156,9 +156,9 @@ namespace osu.Server.Spectator.Tests
             await uploadsCompleteAsync();
 
             if (savingEnabled)
-                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Once);
+                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Once);
             else
-                mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
+                mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()), Times.Never);
 
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }
@@ -205,7 +205,7 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<Score>()), Times.Never);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()), Times.Never);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Quit)), Times.Once());
         }
 
@@ -255,7 +255,7 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(s => s.ScoreInfo.Mods.Any(m => m is OsuModTouchDevice))), Times.Once);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.Mods.Any(m => m is OsuModTouchDevice))), Times.Once);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Quit)), Times.Once());
         }
 
@@ -310,7 +310,7 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(s => s.ScoreInfo.Mods.Any(m => m is OsuModDoubleTime))), Times.Once);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.Mods.Any(m => m is OsuModDoubleTime))), Times.Once);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Quit)), Times.Once());
         }
 
@@ -496,9 +496,9 @@ namespace osu.Server.Spectator.Tests
             await uploadsCompleteAsync();
 
             if (saved)
-                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Once);
+                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Once);
             else
-                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Never);
+                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Never);
 
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }
@@ -581,11 +581,11 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.UserID == streamer_id
-                                                                            && score.ScoreInfo.User.OnlineID == streamer_id
-                                                                            && score.ScoreInfo.User.Username == streamer_username
-                                                                            && score.ScoreInfo.RealmUser.OnlineID == streamer_id
-                                                                            && score.ScoreInfo.RealmUser.Username == streamer_username)), Times.Once);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.UserID == streamer_id
+                                                                                              && item.Score.ScoreInfo.User.OnlineID == streamer_id
+                                                                                              && item.Score.ScoreInfo.User.Username == streamer_username
+                                                                                              && item.Score.ScoreInfo.RealmUser.OnlineID == streamer_id
+                                                                                              && item.Score.ScoreInfo.RealmUser.Username == streamer_username)), Times.Once);
 
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }
@@ -632,7 +632,7 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.OnlineID == 456)), Times.Never);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Never);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Failed)), Times.Once());
         }
 
@@ -686,7 +686,7 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<Score>(score => score.ScoreInfo.Rank == ScoreRank.A)), Times.Once);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.Rank == ScoreRank.A)), Times.Once);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }
 

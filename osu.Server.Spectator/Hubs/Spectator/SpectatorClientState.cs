@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
+using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Spectator
 {
@@ -16,6 +17,11 @@ namespace osu.Server.Spectator.Hubs.Spectator
         /// When a user is in gameplay, this is the state as conveyed at the start of the play session.
         /// </summary>
         public SpectatorState? State;
+
+        /// <summary>
+        /// When a user is in gameplay, this contains information about the beatmap the user is playing retrieved from the database.
+        /// </summary>
+        public database_beatmap? Beatmap;
 
         /// <summary>
         /// When a user is in gameplay, this is the imminent score. It will be updated throughout a play session.

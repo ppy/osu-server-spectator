@@ -2,12 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Threading.Tasks;
-using osu.Game.Scoring;
+using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator.Storage
 {
     public interface IScoreStorage
     {
-        Task WriteAsync(Score score);
+        Task WriteAsync(ScoreUploader.UploadItem score);
     }
 }

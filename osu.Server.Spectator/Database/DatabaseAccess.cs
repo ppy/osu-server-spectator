@@ -78,7 +78,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QuerySingleOrDefaultAsync<database_beatmap>(
-                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode FROM osu_beatmaps WHERE beatmap_id = @BeatmapId AND deleted_at IS NULL", new
+                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode, osu_file_version FROM osu_beatmaps WHERE beatmap_id = @BeatmapId AND deleted_at IS NULL", new
                 {
                     BeatmapId = beatmapId
                 });
@@ -89,7 +89,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return (await connection.QueryAsync<database_beatmap>(
-                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode FROM osu_beatmaps WHERE beatmapset_id = @BeatmapSetId AND deleted_at IS NULL", new
+                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode, osu_file_version FROM osu_beatmaps WHERE beatmapset_id = @BeatmapSetId AND deleted_at IS NULL", new
                 {
                     BeatmapSetId = beatmapSetId
                 })).ToArray();

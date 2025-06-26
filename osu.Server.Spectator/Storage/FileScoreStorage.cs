@@ -4,8 +4,9 @@
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using osu.Game.Scoring;
+using osu.Game.Beatmaps;
 using osu.Game.Scoring.Legacy;
+using osu.Server.Spectator.Hubs;
 
 namespace osu.Server.Spectator.Storage
 {
@@ -18,9 +19,12 @@ namespace osu.Server.Spectator.Storage
             logger = loggerFactory.CreateLogger(nameof(FileScoreStorage));
         }
 
-        public Task WriteAsync(Score score)
+        public Task WriteAsync(ScoreUploader.UploadItem item)
         {
-            var legacyEncoder = new LegacyScoreEncoder(score, null);
+            var score = item.Score;
+            // beatmap version is required for correct encoding of replays for beatmaps with version <5
+            // (see `LegacyBeatmapDecoder.EARLY_VERSION_TIMING_OFFSET`).
+            var legacyEncoder = new LegacyScoreEncoder(score, new Beatmap { BeatmapVersion = item.Beatmap.osu_file_version });
 
             string filename = score.ScoreInfo.OnlineID.ToString();
 
