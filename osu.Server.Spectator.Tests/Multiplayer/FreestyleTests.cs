@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
                 Freestyle = true,
-                RequiredMods = [new APIMod(new OsuModHidden())],
+                RequiredMods = [new APIMod(new OsuModDoubleTime())],
             });
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -41,7 +41,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
                 Freestyle = true,
-                AllowedMods = [new APIMod(new OsuModHidden())],
+                AllowedMods = [new APIMod(new OsuModDoubleTime())],
             }));
         }
 
@@ -228,7 +228,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
                 Freestyle = true,
-                RequiredMods = [new APIMod(new OsuModHidden())],
+                RequiredMods = [new APIMod(new OsuModDoubleTime())],
             });
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
