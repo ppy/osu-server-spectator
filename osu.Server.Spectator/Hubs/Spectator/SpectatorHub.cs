@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -82,6 +83,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     if (string.IsNullOrEmpty(beatmap?.checksum))
                         return;
 
+                    clientState.Beatmap = beatmap;
                     clientState.Score = new Score
                     {
                         ScoreInfo =
@@ -149,16 +151,17 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
                     // For now it's safe to drop these frames.
                     // Note that this *intentionally* skips the `endPlaySession()` call at the end of method.
-                    if (score == null || scoreToken == null)
+                    if (score == null || scoreToken == null || usage.Item?.Beatmap == null)
                         return;
 
-                    await processScore(score, scoreToken.Value);
+                    await processScore(usage.Item!);
                 }
                 finally
                 {
                     if (usage.Item != null)
                     {
                         usage.Item.State = null;
+                        usage.Item.Beatmap = null;
                         usage.Item.Score = null;
                         usage.Item.ScoreToken = null;
                     }
@@ -168,8 +171,13 @@ namespace osu.Server.Spectator.Hubs.Spectator
             await endPlaySession(Context.GetUserId(), state);
         }
 
-        private async Task processScore(Score score, long scoreToken)
+        private async Task processScore(SpectatorClientState item)
         {
+            Debug.Assert(item.Score != null && item.ScoreToken != null && item.Beatmap != null);
+
+            Score score = item.Score;
+            long scoreToken = item.ScoreToken.Value;
+
             // Do nothing with scores on unranked beatmaps.
             var status = score.ScoreInfo.BeatmapInfo!.Status;
             if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
@@ -185,7 +193,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             // even though in theory the rank could be recomputed after every replay frame.
             score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(score.ScoreInfo);
 
-            await scoreUploader.EnqueueAsync(scoreToken, score);
+            await scoreUploader.EnqueueAsync(scoreToken, score, item.Beatmap);
             await scoreProcessedSubscriber.RegisterForSingleScoreAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
         }
 

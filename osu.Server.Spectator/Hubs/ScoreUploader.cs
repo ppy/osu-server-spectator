@@ -58,7 +58,8 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="token">The score's token.</param>
         /// <param name="score">The score.</param>
-        public async Task EnqueueAsync(long token, Score score)
+        /// <param name="beatmap">The beatmap on which the score was set.</param>
+        public async Task EnqueueAsync(long token, Score score, database_beatmap beatmap)
         {
             if (!SaveReplays)
                 return;
@@ -68,7 +69,7 @@ namespace osu.Server.Spectator.Hubs
             var cancellation = new CancellationTokenSource();
             cancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
 
-            await channel.Writer.WriteAsync(new UploadItem(token, score, cancellation), cancellationToken);
+            await channel.Writer.WriteAsync(new UploadItem(token, score, beatmap, cancellation), cancellationToken);
         }
 
         private async Task readLoop()
@@ -105,7 +106,7 @@ namespace osu.Server.Spectator.Hubs
                         item.Score.ScoreInfo.OnlineID = (long)dbScore.id;
                         item.Score.ScoreInfo.Passed = dbScore.passed;
 
-                        await scoreStorage.WriteAsync(item.Score);
+                        await scoreStorage.WriteAsync(item);
                         await db.MarkScoreHasReplay(item.Score);
                         DogStatsd.Increment($"{statsd_prefix}.uploaded");
                     }
@@ -138,7 +139,7 @@ namespace osu.Server.Spectator.Hubs
             cancellationSource.Dispose();
         }
 
-        private record UploadItem(long Token, Score Score, CancellationTokenSource Cancellation) : IDisposable
+        public record UploadItem(long Token, Score Score, database_beatmap Beatmap, CancellationTokenSource Cancellation) : IDisposable
         {
             public void Dispose()
             {
