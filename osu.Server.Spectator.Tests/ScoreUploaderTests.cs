@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Online.API.Requests.Responses;
@@ -22,6 +23,7 @@ namespace osu.Server.Spectator.Tests
         private readonly Mock<IScoreStorage> mockStorage;
         private readonly Mock<IDatabaseFactory> databaseFactory;
         private readonly Mock<ILoggerFactory> loggerFactory;
+        private readonly IMemoryCache memoryCache;
 
         public ScoreUploaderTests()
         {
@@ -40,6 +42,8 @@ namespace osu.Server.Spectator.Tests
                          .Returns(new Mock<ILogger>().Object);
 
             mockStorage = new Mock<IScoreStorage>();
+
+            memoryCache = new MemoryCache(new MemoryCacheOptions());
         }
 
         /// <summary>
@@ -54,7 +58,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoreDataMergedCorrectly()
         {
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
             {
                 SaveReplays = true
             };
@@ -83,7 +87,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoreUploads()
         {
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
             {
                 SaveReplays = true
             };
@@ -100,7 +104,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoreDoesNotUploadIfDisabled()
         {
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
             {
                 SaveReplays = false
             };
@@ -113,7 +117,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task ScoreUploadsWithDelayedScoreToken()
         {
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
             {
                 SaveReplays = true
             };
@@ -137,7 +141,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task TimedOutScoreDoesNotUpload()
         {
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
             {
                 SaveReplays = true
             };
@@ -172,7 +176,7 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task FailedScoreHandledGracefully()
         {
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
             {
                 SaveReplays = true
             };
@@ -210,7 +214,7 @@ namespace osu.Server.Spectator.Tests
         public async Task TestMassUploads()
         {
             AppSettings.ReplayUploaderConcurrency = 4;
-            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object)
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
             {
                 SaveReplays = true
             };

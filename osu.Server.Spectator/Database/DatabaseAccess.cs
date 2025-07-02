@@ -403,6 +403,17 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task<osu_build?> GetBuildByIdAsync(int buildId)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleAsync<osu_build?>("SELECT `build_id`, `version`, `hash`, `users` FROM `osu_builds` WHERE `build_id` = @BuildId",
+                new
+                {
+                    BuildId = buildId
+                });
+        }
+
         public async Task<IEnumerable<osu_build>> GetAllMainLazerBuildsAsync()
         {
             var connection = await getConnectionAsync();

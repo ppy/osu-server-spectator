@@ -180,7 +180,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             using var db = databaseFactory.GetInstance();
 
-            MultiplayerRoomStats stats = (await cache.GetOrCreateAsync<MultiplayerRoomStats>(id.ToString(), e =>
+            MultiplayerRoomStats stats = (await cache.GetOrCreateAsync<MultiplayerRoomStats>($@"{nameof(MultiplayerRoomStats)}#{id}", e =>
             {
                 e.SlidingExpiration = TimeSpan.FromHours(24);
                 return Task.FromResult(new MultiplayerRoomStats { RoomID = id });
