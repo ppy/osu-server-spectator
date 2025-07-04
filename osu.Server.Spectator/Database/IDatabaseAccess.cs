@@ -166,6 +166,13 @@ namespace osu.Server.Spectator.Database
         Task<bool> GetUserAllowsPMs(int userId);
 
         /// <summary>
+        /// Returns a single build with the given ID.
+        /// </summary>
+        /// <param name="buildId"></param>
+        /// <returns></returns>
+        Task<osu_build?> GetBuildByIdAsync(int buildId);
+
+        /// <summary>
         /// Returns all available main builds from the lazer and tachyon release streams.
         /// </summary>
         Task<IEnumerable<osu_build>> GetAllMainLazerBuildsAsync();

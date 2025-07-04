@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
@@ -31,6 +32,7 @@ namespace osu.Server.Spectator.Hubs
 
         private readonly IDatabaseFactory databaseFactory;
         private readonly IScoreStorage scoreStorage;
+        private readonly IMemoryCache memoryCache;
         private readonly CancellationTokenSource cancellationSource;
         private readonly CancellationToken cancellationToken;
         private readonly ILogger logger;
@@ -38,10 +40,12 @@ namespace osu.Server.Spectator.Hubs
         public ScoreUploader(
             ILoggerFactory loggerFactory,
             IDatabaseFactory databaseFactory,
-            IScoreStorage scoreStorage)
+            IScoreStorage scoreStorage,
+            IMemoryCache memoryCache)
         {
             this.databaseFactory = databaseFactory;
             this.scoreStorage = scoreStorage;
+            this.memoryCache = memoryCache;
             logger = loggerFactory.CreateLogger(nameof(ScoreUploader));
 
             cancellationSource = new CancellationTokenSource();
@@ -102,6 +106,17 @@ namespace osu.Server.Spectator.Hubs
 
                         if (!dbScore.passed)
                             continue;
+
+                        if (dbScore.build_id != null)
+                        {
+                            var build = await memoryCache.GetOrCreateAsync($"{nameof(osu_build)}#{dbScore.build_id}",
+                                async _ =>
+                                {
+                                    using (var conn = databaseFactory.GetInstance())
+                                        return await conn.GetBuildByIdAsync(dbScore.build_id.Value);
+                                });
+                            item.Score.ScoreInfo.ClientVersion = build?.version ?? string.Empty;
+                        }
 
                         item.Score.ScoreInfo.OnlineID = (long)dbScore.id;
                         item.Score.ScoreInfo.Passed = dbScore.passed;
