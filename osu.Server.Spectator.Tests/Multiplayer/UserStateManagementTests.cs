@@ -7,6 +7,7 @@ using Moq;
 using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Database.Models;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -105,6 +106,49 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(room.Item);
                 Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
             }
+        }
+
+        [Fact]
+        public async Task AllUsersAbortingGameplayIndividuallyLogsGameAsAborted()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            await MarkCurrentUserReadyAndAvailable();
+
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
+            await Hub.StartMatch();
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
+            }
+
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            SetUserContext(ContextUser);
+            await Hub.AbortGameplay();
+            SetUserContext(ContextUser2);
+            await Hub.AbortGameplay();
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
+            }
+
+            Database.Verify(db => db.LogRoomEventAsync(It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_aborted")), Times.Once);
+            Database.Verify(db => db.LogRoomEventAsync(It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_completed")), Times.Never);
         }
 
         [Theory]
