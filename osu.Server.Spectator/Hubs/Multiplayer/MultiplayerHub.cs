@@ -584,9 +584,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task AbortMatch()
         {
-            long roomId;
-            long playlistItemId;
-
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item))
             {
@@ -599,9 +596,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room.State != MultiplayerRoomState.WaitingForLoad && room.State != MultiplayerRoomState.Playing)
                     throw new InvalidStateException("Cannot abort a match that hasn't started.");
 
-                roomId = room.RoomID;
-                playlistItemId = room.Queue.CurrentItem.ID;
-
                 foreach (var user in room.Users)
                     await HubContext.ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
 
@@ -609,8 +603,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 await updateRoomStateIfRequired(room);
             }
-
-            await multiplayerEventLogger.LogGameAbortedAsync(roomId, playlistItemId);
         }
 
         public async Task AbortGameplay()
@@ -843,13 +835,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 case MultiplayerRoomState.Playing:
                     if (room.Users.All(u => u.State != MultiplayerUserState.Playing))
                     {
+                        bool anyUserFinishedPlay = false;
+
                         foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.FinishedPlay))
+                        {
+                            anyUserFinishedPlay = true;
                             await HubContext.ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Results);
+                        }
 
                         await HubContext.ChangeRoomState(room, MultiplayerRoomState.Open);
                         await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
 
-                        await multiplayerEventLogger.LogGameCompletedAsync(room.RoomID, room.GetCurrentItem()!.ID);
+                        if (anyUserFinishedPlay)
+                            await multiplayerEventLogger.LogGameCompletedAsync(room.RoomID, room.GetCurrentItem()!.ID);
+                        else
+                            await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.GetCurrentItem()!.ID);
+
                         await room.Queue.FinishCurrentItem();
                     }
 
