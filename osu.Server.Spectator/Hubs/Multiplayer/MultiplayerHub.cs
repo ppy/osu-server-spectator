@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
-using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
@@ -29,6 +28,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly ChatFilters chatFilters;
         private readonly ISharedInterop sharedInterop;
         private readonly MultiplayerEventLogger multiplayerEventLogger;
+        private readonly IMatchmakingQueueProcessor matchmakingQueue;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -38,13 +38,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext,
             ISharedInterop sharedInterop,
-            MultiplayerEventLogger multiplayerEventLogger)
+            MultiplayerEventLogger multiplayerEventLogger,
+            IMatchmakingQueueProcessor matchmakingQueue)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
             this.sharedInterop = sharedInterop;
             this.multiplayerEventLogger = multiplayerEventLogger;
+            this.matchmakingQueue = matchmakingQueue;
 
             Rooms = rooms;
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory, multiplayerEventLogger);
@@ -1036,21 +1038,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private const int matchmaking_room_size = 8;
 
-        public Task JoinMatchmakingQueue()
-        {
-            Clients.Caller.MatchmakingQueueStatusChanged(new MatchmakingQueueStatus.InQueue
-            {
-                RoomSize = matchmaking_room_size,
-                PlayerCount = 1
-            });
+        public Task JoinMatchmakingQueue() => matchmakingQueue.AddToQueueAsync(Context.ConnectionId);
 
-            return Task.CompletedTask;
-        }
-
-        public Task LeaveMatchmakingQueue()
-        {
-            Clients.Caller.MatchmakingQueueStatusChanged(null);
-            return Task.CompletedTask;
-        }
+        public Task LeaveMatchmakingQueue() => matchmakingQueue.RemoveFromQueueAsync(Context.ConnectionId);
     }
 }
