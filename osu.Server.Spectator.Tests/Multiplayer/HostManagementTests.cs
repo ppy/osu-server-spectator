@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Database.Models;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -153,6 +154,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser);
             await Hub.StartMatch();
 
+            // ensure both players actually transition to play (not stuck in waiting for load)
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
             // Host exits and aborts.
             await Hub.AbortGameplay();
             await Hub.AbortMatch();
@@ -162,6 +171,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.True(room.Item?.Users.All(u => u.State == MultiplayerUserState.Idle));
+
+            Database.Verify(db => db.LogRoomEventAsync(It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_aborted")), Times.Once);
+            Database.Verify(db => db.LogRoomEventAsync(It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_completed")), Times.Never);
         }
 
         [Fact]

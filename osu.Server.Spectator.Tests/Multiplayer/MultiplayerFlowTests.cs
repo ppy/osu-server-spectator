@@ -4,6 +4,7 @@
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Database.Models;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -95,6 +96,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Assert.NotNull(room.Item);
                 Assert.All(room.Item.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
             }
+
+            Database.Verify(db => db.LogRoomEventAsync(It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_completed")), Times.Once);
         }
 
         /// <summary>
