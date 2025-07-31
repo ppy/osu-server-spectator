@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.API;
+using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 
@@ -145,6 +146,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             foreach (var c in Clients)
                 await c.PlaylistItemChanged(item);
+        }
+
+        public virtual async Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus? status)
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingQueueStatusChanged(status);
         }
 
         public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = new CancellationToken())

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using osu.Game.Online;
 using osu.Game.Online.API;
+using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 
@@ -73,6 +74,16 @@ namespace SampleMultiplayerClient
 
         public async Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string? password = null)
             => Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.JoinRoomWithPassword), roomId, password ?? string.Empty);
+
+        public Task JoinMatchmakingQueue()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task LeaveMatchmakingQueue()
+        {
+            throw new NotImplementedException();
+        }
 
         public async Task LeaveRoom()
         {
@@ -271,6 +282,11 @@ namespace SampleMultiplayerClient
         {
             Console.WriteLine($"Playlist item changed (id: {item.ID} beatmap: {item.BeatmapID}, ruleset: {item.RulesetID})");
             return Task.CompletedTask;
+        }
+
+        public Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus? status)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task DisconnectRequested()

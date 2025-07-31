@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
+using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
@@ -1032,5 +1033,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
 
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Information) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
+
+        private const int matchmaking_room_size = 8;
+
+        public Task JoinMatchmakingQueue()
+        {
+            Clients.Caller.MatchmakingQueueStatusChanged(new MatchmakingQueueStatus.InQueue
+            {
+                RoomSize = matchmaking_room_size,
+                PlayerCount = 1
+            });
+
+            return Task.CompletedTask;
+        }
+
+        public Task LeaveMatchmakingQueue()
+        {
+            Clients.Caller.MatchmakingQueueStatusChanged(null);
+            return Task.CompletedTask;
+        }
     }
 }
