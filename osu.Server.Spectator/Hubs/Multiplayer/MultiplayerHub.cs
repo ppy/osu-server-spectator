@@ -16,6 +16,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
 using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer

@@ -12,14 +12,8 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Services;
 
-namespace osu.Server.Spectator.Hubs.Multiplayer
+namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
-    public interface IMatchmakingQueueProcessor : IHostedService
-    {
-        Task AddToQueueAsync(string connectionId);
-        Task RemoveFromQueueAsync(string connectionId);
-    }
-
     public class MatchmakingQueueProcessor : BackgroundService, IMatchmakingQueueProcessor
     {
         private const int matchmaking_room_size = 8;
@@ -84,6 +78,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     // Todo: User ID 157 is wrong (should be BanchoBot).
                     long roomId = await sharedInterop.CreateRoomAsync(157, new MultiplayerRoom(0)
                     {
+                        Settings = { MatchType = MatchType.Matchmaking },
                         Playlist =
                         [
                             // Todo: This is just a dummy playlist item, that has to exist for a bunch of components to behave.
