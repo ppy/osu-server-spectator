@@ -289,6 +289,16 @@ namespace SampleMultiplayerClient
             throw new NotImplementedException();
         }
 
+        public Task MatchmakingSelectionToggled(int userId, long playlistItemId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchmakingToggleSelection(long playlistItemId)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task DisconnectRequested()
         {
             Console.WriteLine("Disconnect requested");

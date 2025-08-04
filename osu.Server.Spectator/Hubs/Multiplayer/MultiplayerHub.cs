@@ -1037,10 +1037,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Information) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
 
-        private const int matchmaking_room_size = 8;
-
         public Task JoinMatchmakingQueue() => matchmakingQueue.AddToQueueAsync(Context.ConnectionId);
 
         public Task LeaveMatchmakingQueue() => matchmakingQueue.RemoveFromQueueAsync(Context.ConnectionId);
+
+        public async Task MatchmakingToggleSelection(long playlistItemId)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                await ((MatchmakingImplementation)room.MatchTypeImplementation).ToggleSelectionAsync(user, playlistItemId);
+            }
+        }
     }
 }

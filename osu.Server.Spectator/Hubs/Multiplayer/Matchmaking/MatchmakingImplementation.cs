@@ -2,7 +2,10 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
@@ -25,6 +28,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         ];
 
         private readonly MatchmakingRoomState state;
+        private readonly HashSet<UserBeatmapSelection> selections = new HashSet<UserBeatmapSelection>();
 
         public MatchmakingImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
             : base(room, hub)
@@ -52,6 +56,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     TimeRemaining = TimeSpan.FromSeconds(5)
                 }, beginNextRound);
             }
+        }
+
+        public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
+        {
+            if (Room.Playlist.All(item => item.ID != playlistItemId))
+                throw new InvalidStateException("Selected playlist item is not part of the room!");
+
+            selections.Add(new UserBeatmapSelection(user, playlistItemId));
+            await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), user.UserID, playlistItemId);
         }
 
         private async Task beginNextRound(ServerMultiplayerRoom _)
@@ -94,5 +107,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             room_type = database_match_type.matchmaking
         };
+
+        private readonly record struct UserBeatmapSelection(MultiplayerRoomUser User, long ItemID);
     }
 }
