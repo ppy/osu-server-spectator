@@ -9,6 +9,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     public class MatchmakingImplementation : MatchTypeImplementation
     {
+        public const int MATCHMAKING_ROOM_SIZE = 1;
+
         private readonly MatchmakingRoomState state;
 
         public MatchmakingImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub)

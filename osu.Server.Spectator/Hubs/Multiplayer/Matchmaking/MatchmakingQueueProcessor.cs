@@ -16,8 +16,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     public class MatchmakingQueueProcessor : BackgroundService, IMatchmakingQueueProcessor
     {
-        private const int matchmaking_room_size = 8;
-
         private readonly IHubContext<MultiplayerHub> hub;
         private readonly ISharedInterop sharedInterop;
 
@@ -34,7 +32,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             await hub.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.InQueue
             {
-                RoomSize = matchmaking_room_size,
+                RoomSize = MatchmakingImplementation.MATCHMAKING_ROOM_SIZE,
                 PlayerCount = 1
             });
 
@@ -64,10 +62,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     // Todo: This should be doing an incremental outwards search for each player.
                     lock (queueLock)
                     {
-                        if (queue.Count == 0)
+                        if (queue.Count < MatchmakingImplementation.MATCHMAKING_ROOM_SIZE)
                             break;
 
-                        while (queue.Count > 0)
+                        for (int i = 0; i < MatchmakingImplementation.MATCHMAKING_ROOM_SIZE; i++)
                         {
                             string connection = queue.First();
                             ids.Add(connection);
