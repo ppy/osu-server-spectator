@@ -1,7 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using osu.Game.Online.Multiplayer;
+using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Server.Spectator.Database.Models;
 
@@ -17,13 +17,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             : base(room, hub)
         {
             room.MatchState = state = new MatchmakingRoomState();
-
-            Hub.NotifyMatchRoomStateChanged(room);
         }
 
-        public override void HandleUserJoined(MultiplayerRoomUser user)
+        public override async Task Initialise()
         {
-            base.HandleUserJoined(user);
+            await base.Initialise();
+            await Hub.NotifyMatchRoomStateChanged(Room);
         }
 
         public override MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail

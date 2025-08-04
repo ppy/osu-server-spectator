@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,22 +20,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     {
         private readonly IMultiplayerHubContext hub;
 
-        private MatchTypeImplementation matchTypeImplementation;
-
-        public MatchTypeImplementation MatchTypeImplementation
-        {
-            get => matchTypeImplementation;
-            set
-            {
-                if (matchTypeImplementation == value)
-                    return;
-
-                matchTypeImplementation = value;
-
-                foreach (var u in Users)
-                    matchTypeImplementation.HandleUserJoined(u);
-            }
-        }
+        public MatchTypeImplementation MatchTypeImplementation { get; private set; }
 
         public readonly MultiplayerQueue Queue;
 
@@ -44,13 +30,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.hub = hub;
 
             // just to ensure non-null.
-            matchTypeImplementation = createTypeImplementation(MatchType.HeadToHead);
+            ChangeMatchType(MatchType.HeadToHead);
             Queue = new MultiplayerQueue(this, hub);
         }
 
         public async Task Initialise(IDatabaseFactory dbFactory)
         {
-            ChangeMatchType(Settings.MatchType);
+            await ChangeMatchType(Settings.MatchType);
             await Queue.Initialise(dbFactory);
         }
 
@@ -70,33 +56,43 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        public void ChangeMatchType(MatchType type) => MatchTypeImplementation = createTypeImplementation(type);
-
-        public void AddUser(MultiplayerRoomUser user)
-        {
-            Users.Add(user);
-            MatchTypeImplementation.HandleUserJoined(user);
-        }
-
-        public void RemoveUser(MultiplayerRoomUser user)
-        {
-            Users.Remove(user);
-            MatchTypeImplementation.HandleUserLeft(user);
-        }
-
-        private MatchTypeImplementation createTypeImplementation(MatchType type)
+        [MemberNotNull(nameof(MatchTypeImplementation))]
+        public Task ChangeMatchType(MatchType type)
         {
             switch (type)
             {
                 case MatchType.TeamVersus:
-                    return new TeamVersus(this, hub);
+                    return ChangeMatchType(new TeamVersus(this, hub));
 
                 case MatchType.Matchmaking:
-                    return new MatchmakingImplementation(this, hub);
+                    return ChangeMatchType(new MatchmakingImplementation(this, hub));
 
                 default:
-                    return new HeadToHead(this, hub);
+                    return ChangeMatchType(new HeadToHead(this, hub));
             }
+        }
+
+        [MemberNotNull(nameof(MatchTypeImplementation))]
+        public async Task ChangeMatchType(MatchTypeImplementation implementation)
+        {
+            MatchTypeImplementation = implementation;
+
+            await MatchTypeImplementation.Initialise();
+
+            foreach (var u in Users)
+                await MatchTypeImplementation.HandleUserJoined(u);
+        }
+
+        public async Task AddUser(MultiplayerRoomUser user)
+        {
+            Users.Add(user);
+            await MatchTypeImplementation.HandleUserJoined(user);
+        }
+
+        public async Task RemoveUser(MultiplayerRoomUser user)
+        {
+            Users.Remove(user);
+            await MatchTypeImplementation.HandleUserLeft(user);
         }
 
         #region Countdowns

@@ -90,7 +90,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 typeImplementation = new Mock<MatchTypeImplementation>(room, Hub.HubContext);
-                room.MatchTypeImplementation = typeImplementation.Object;
+                await room.ChangeMatchType(typeImplementation.Object);
             }
 
             var mockRequest = new Mock<MatchUserRequest>();
