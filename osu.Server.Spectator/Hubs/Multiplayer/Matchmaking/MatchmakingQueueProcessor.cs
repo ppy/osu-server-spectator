@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
@@ -18,14 +19,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
     {
         private readonly IHubContext<MultiplayerHub> hub;
         private readonly ISharedInterop sharedInterop;
+        private readonly IDatabaseFactory databaseFactory;
 
         private readonly object queueLock = new object();
         private readonly HashSet<string> queue = new HashSet<string>();
 
-        public MatchmakingQueueProcessor(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop)
+        public MatchmakingQueueProcessor(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
+            this.databaseFactory = databaseFactory;
         }
 
         public async Task AddToQueueAsync(string connectionId)
@@ -73,29 +76,37 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                         }
                     }
 
-                    // Todo: User ID 157 is wrong (should be BanchoBot).
-                    long roomId = await sharedInterop.CreateRoomAsync(157, new MultiplayerRoom(0)
+                    MultiplayerRoom room = new MultiplayerRoom(0)
                     {
-                        Settings = { MatchType = MatchType.Matchmaking },
-                        Playlist =
-                        [
-                            // Todo: This is just a dummy playlist item, that has to exist for a bunch of components to behave.
-                            //       Its owner should also be BanchoBot (i.e. only the server shall ever change it).
-                            new MultiplayerPlaylistItem
+                        Settings = { MatchType = MatchType.Matchmaking, }
+                    };
+
+                    using (var db = databaseFactory.GetInstance())
+                    {
+                        foreach (int beatmapId in MatchmakingImplementation.BEATMAP_IDS)
+                        {
+                            var beatmap = (await db.GetBeatmapAsync(beatmapId))!;
+
+                            // Todo: These playlist items should be owned by BanchoBot.
+                            room.Playlist.Add(new MultiplayerPlaylistItem
                             {
-                                BeatmapChecksum = "821afc7f47448c51edf71d004fbb3e23",
-                                BeatmapID = 830459,
-                            }
-                        ]
-                    }).ConfigureAwait(false);
+                                BeatmapID = beatmapId,
+                                BeatmapChecksum = beatmap.checksum!,
+                                StarRating = beatmap.difficultyrating
+                            });
+                        }
+                    }
+
+                    // Todo: User ID 157 is wrong (should be BanchoBot).
+                    long roomId = await sharedInterop.CreateRoomAsync(157, room);
 
                     await hub.Clients.Clients(ids).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.FoundMatch
                     {
                         RoomId = roomId
-                    }, cancellationToken: stoppingToken).ConfigureAwait(false);
+                    }, cancellationToken: stoppingToken);
                 }
 
-                await Task.Delay(5000, stoppingToken).ConfigureAwait(false);
+                await Task.Delay(5000, stoppingToken);
             }
         }
     }
