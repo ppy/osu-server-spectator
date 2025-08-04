@@ -137,6 +137,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         /// <param name="room">The room to start the match for.</param>
         /// <exception cref="InvalidStateException">If the current playlist item is expired or the room is not in an <see cref="MultiplayerRoomState.Open"/> state.</exception>
-        Task StartMatch(ServerMultiplayerRoom room);
+        Task StartMatch(ServerMultiplayerRoom room) => StartMatch(room, true);
+
+        /// <summary>
+        /// Starts a match in a room.
+        /// </summary>
+        /// <param name="room">The room to start the match for.</param>
+        /// <param name="requireReadyUsers">Whether to require any ready users for the start to proceed.</param>
+        /// <exception cref="InvalidStateException">If the current playlist item is expired or the room is not in an <see cref="MultiplayerRoomState.Open"/> state.</exception>
+        Task StartMatch(ServerMultiplayerRoom room, bool requireReadyUsers);
     }
 }

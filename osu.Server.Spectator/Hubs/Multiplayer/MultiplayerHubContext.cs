@@ -260,7 +260,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
         }
 
-        public async Task StartMatch(ServerMultiplayerRoom room)
+        public Task StartMatch(ServerMultiplayerRoom room) => StartMatch(room, true);
+
+        public async Task StartMatch(ServerMultiplayerRoom room, bool requireReadyUsers)
         {
             if (room.State != MultiplayerRoomState.Open)
                 throw new InvalidStateException("Can't start match when already in a running state.");
@@ -269,7 +271,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 throw new InvalidStateException("Cannot start an expired playlist item.");
 
             // If no users are ready, skip the current item in the queue.
-            if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
+            if (requireReadyUsers && room.Users.All(u => u.State != MultiplayerUserState.Ready))
             {
                 await room.Queue.FinishCurrentItem();
                 return;

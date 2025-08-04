@@ -77,7 +77,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             {
                 Status = state.RoomStatus,
                 TimeRemaining = TimeSpan.FromSeconds(5)
-            }, Hub.StartMatch);
+            }, r => Hub.StartMatch(r, false));
         }
 
         public override MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
