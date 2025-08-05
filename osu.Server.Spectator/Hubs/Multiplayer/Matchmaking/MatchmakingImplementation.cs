@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using osu.Framework.Utils;
+using osu.Game.Extensions;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
@@ -80,12 +82,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task selectBeatmap(ServerMultiplayerRoom _)
         {
+            if (selections.Count == 0)
+                selections.AddRange(Room.Playlist.Select(item => new UserBeatmapSelection(null, item.ID)));
+
             state.RoomStatus = MatchmakingRoomStatus.WaitForSelection;
+            state.CandidateItems = selections.Select(s => Room.Playlist.Single(i => i.ID == s.ItemID)).ToArray();
+            state.GameplayItem = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
+
             await Hub.NotifyMatchRoomStateChanged(Room);
             await Room.StartCountdown(new MatchmakingStatusCountdown
             {
                 Status = state.RoomStatus,
-                TimeRemaining = TimeSpan.FromSeconds(15)
+                TimeRemaining = TimeSpan.FromSeconds(10)
             }, beginPlay);
         }
 
@@ -108,6 +116,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             room_type = database_match_type.matchmaking
         };
 
-        private readonly record struct UserBeatmapSelection(MultiplayerRoomUser User, long ItemID);
+        private readonly record struct UserBeatmapSelection(MultiplayerRoomUser? User, long ItemID);
     }
 }
