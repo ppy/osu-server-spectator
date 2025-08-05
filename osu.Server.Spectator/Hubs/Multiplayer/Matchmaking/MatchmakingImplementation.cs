@@ -11,6 +11,7 @@ using osu.Game.Extensions;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
@@ -54,7 +55,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             if (Room.Users.Count == MATCHMAKING_ROOM_SIZE)
             {
-                state.RoomStatus = MatchmakingRoomStatus.WaitForNextRound;
+                state.RoomStatus = MatchmakingRoomStatus.RoundStart;
                 await Hub.NotifyMatchRoomStateChanged(Room);
                 await Room.StartCountdown(new MatchmakingStatusCountdown
                 {
@@ -64,10 +65,48 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             }
         }
 
+        public override async Task HandleUserStateChanged()
+        {
+            await base.HandleUserStateChanged();
+
+            if (state.RoomStatus != MatchmakingRoomStatus.Gameplay || Room.Users.Any(u => u.State != MultiplayerUserState.Idle))
+                return;
+
+            state.RoomStatus = MatchmakingRoomStatus.RoundStart;
+            await Hub.NotifyMatchRoomStateChanged(Room);
+            await Room.StartCountdown(new MatchmakingStatusCountdown
+            {
+                Status = state.RoomStatus,
+                TimeRemaining = TimeSpan.FromSeconds(5)
+            }, beginNextRound);
+        }
+
+        public override async Task HandleMatchComplete()
+        {
+            await base.HandleMatchComplete();
+
+            // Todo: Award points.
+
+            if (Room.Users.Any(u => u.State != MultiplayerUserState.Idle))
+            {
+                await Hub.NotifyMatchRoomStateChanged(Room);
+                await Room.StartCountdown(new MatchmakingStatusCountdown
+                {
+                    Status = state.RoomStatus,
+                    TimeRemaining = TimeSpan.FromSeconds(30)
+                }, returnUsersToRoom);
+            }
+        }
+
         public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
         {
-            if (Room.Playlist.All(item => item.ID != playlistItemId))
+            MultiplayerPlaylistItem? item = Room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
+
+            if (item == null)
                 throw new InvalidStateException("Selected playlist item is not part of the room!");
+
+            if (item.Expired)
+                throw new InvalidStateException("Selected playlist item is expired!");
 
             selections.Add(new UserBeatmapSelection(user, playlistItemId));
             await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), user.UserID, playlistItemId);
@@ -75,7 +114,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task beginNextRound(ServerMultiplayerRoom _)
         {
-            state.RoomStatus = MatchmakingRoomStatus.Pick;
+            // Ensure users are in an idle state.
+            await returnUsersToRoom(Room);
+
+            // Clear selections.
+            foreach (var selection in selections.Where(s => s.User != null))
+                await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), selection.User, selection.ItemID);
+            selections.Clear();
+
+            // Start the next round.
+            state.RoomStatus = MatchmakingRoomStatus.PickBeatmap;
             await Hub.NotifyMatchRoomStateChanged(Room);
             await Room.StartCountdown(new MatchmakingStatusCountdown
             {
@@ -89,7 +137,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (selections.Count == 0)
                 selections.AddRange(Room.Playlist.Select(item => new UserBeatmapSelection(null, item.ID)));
 
-            state.RoomStatus = MatchmakingRoomStatus.WaitForSelection;
+            state.RoomStatus = MatchmakingRoomStatus.Selection;
             state.CandidateItems = selections.Select(s => s.ItemID).ToArray();
 
             // Notify users of the new beatmap.
@@ -107,14 +155,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task beginPlay(ServerMultiplayerRoom _)
         {
-            state.RoomStatus = MatchmakingRoomStatus.WaitForStart;
+            state.RoomStatus = MatchmakingRoomStatus.PrepareGameplay;
 
             await Hub.NotifyMatchRoomStateChanged(Room);
             await Room.StartCountdown(new MatchmakingStatusCountdown
             {
                 Status = state.RoomStatus,
                 TimeRemaining = TimeSpan.FromSeconds(5)
-            }, r => Hub.StartMatch(r, false));
+            }, async r =>
+            {
+                state.RoomStatus = MatchmakingRoomStatus.Gameplay;
+                await Hub.NotifyMatchRoomStateChanged(Room);
+                await Hub.StartMatch(r, false);
+            });
+        }
+
+        private async Task returnUsersToRoom(ServerMultiplayerRoom _)
+        {
+            foreach (var user in Room.Users.Where(u => u.State != MultiplayerUserState.Idle))
+                await Hub.ChangeAndBroadcastUserState(Room, user, MultiplayerUserState.Idle);
+            await Hub.UpdateRoomStateIfRequired(Room);
         }
 
         public override MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail

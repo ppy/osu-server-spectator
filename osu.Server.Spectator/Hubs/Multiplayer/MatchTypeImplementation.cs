@@ -56,6 +56,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             return Task.CompletedTask;
         }
 
+        public virtual Task HandleUserStateChanged()
+        {
+            return Task.CompletedTask;
+        }
+
+        public virtual Task HandleMatchComplete()
+        {
+            return Task.CompletedTask;
+        }
+
         public abstract MatchStartedEventDetail GetMatchDetails();
     }
 }

@@ -149,5 +149,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="requireReadyUsers">Whether to require any ready users for the start to proceed.</param>
         /// <exception cref="InvalidStateException">If the current playlist item is expired or the room is not in an <see cref="MultiplayerRoomState.Open"/> state.</exception>
         Task StartMatch(ServerMultiplayerRoom room, bool requireReadyUsers);
+
+        /// <summary>
+        /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.
+        /// </summary>
+        Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room);
     }
 }
