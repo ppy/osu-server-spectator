@@ -18,26 +18,34 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
+        public MatchTypeImplementation MatchTypeImplementation
+        {
+            get => matchTypeImplementation ?? throw new InvalidOperationException("Room not initialised.");
+            private set => matchTypeImplementation = value;
+        }
+
+        public IMultiplayerQueue Queue => MatchTypeImplementation.Queue;
+
         private readonly IMultiplayerHubContext hub;
+        private readonly IDatabaseFactory dbFactory;
+        private MatchTypeImplementation? matchTypeImplementation;
 
-        public MatchTypeImplementation MatchTypeImplementation { get; private set; }
-
-        public readonly MultiplayerQueue Queue;
-
-        public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub)
+        public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(roomId)
         {
             this.hub = hub;
-
-            // just to ensure non-null.
-            ChangeMatchType(MatchType.HeadToHead);
-            Queue = new MultiplayerQueue(this, hub);
+            this.dbFactory = dbFactory;
         }
 
-        public async Task Initialise(IDatabaseFactory dbFactory)
+        public async Task Initialise()
         {
+            using (var db = dbFactory.GetInstance())
+            {
+                foreach (var item in await db.GetAllPlaylistItemsAsync(RoomID))
+                    Playlist.Add(await item.ToMultiplayerPlaylistItem(db));
+            }
+
             await ChangeMatchType(Settings.MatchType);
-            await Queue.Initialise(dbFactory);
         }
 
         /// <summary>
@@ -62,13 +70,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             switch (type)
             {
                 case MatchType.TeamVersus:
-                    return ChangeMatchType(new TeamVersus(this, hub));
+                    return ChangeMatchType(new TeamVersus(this, hub, dbFactory));
 
                 case MatchType.Matchmaking:
-                    return ChangeMatchType(new MatchmakingImplementation(this, hub));
+                    return ChangeMatchType(new MatchmakingImplementation(this, hub, dbFactory));
 
                 default:
-                    return ChangeMatchType(new HeadToHead(this, hub));
+                    return ChangeMatchType(new HeadToHead(this, hub, dbFactory));
             }
         }
 

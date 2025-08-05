@@ -9,6 +9,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public abstract class MatchTypeImplementation
     {
+        public abstract IMultiplayerQueue Queue { get; }
+
         protected readonly ServerMultiplayerRoom Room;
         protected readonly IMultiplayerHubContext Hub;
 
@@ -21,9 +23,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// Invoked when this <see cref="MatchTypeImplementation"/> is constructed to perform any initialisation.
         /// </summary>
-        public virtual Task Initialise()
+        public virtual async Task Initialise()
         {
-            return Task.CompletedTask;
+            await Queue.Initialise();
         }
 
         /// <summary>

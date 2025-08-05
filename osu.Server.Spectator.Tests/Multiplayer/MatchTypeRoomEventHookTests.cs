@@ -19,7 +19,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task NewUserJoinedTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object)
+            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
             {
                 Playlist =
                 {
@@ -31,7 +31,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
 
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
             await room.ChangeMatchType(typeImplementation.Object);
@@ -45,7 +45,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UserLeavesTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object)
+            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
             {
                 Playlist =
                 {
@@ -57,7 +57,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
 
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             var user = new MultiplayerRoomUser(1);
 
@@ -74,7 +74,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task TypeChangeTriggersInitialJoins()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object)
+            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
             {
                 Playlist =
                 {
@@ -86,7 +86,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
 
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)

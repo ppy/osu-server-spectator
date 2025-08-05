@@ -229,7 +229,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (databaseRoom.user_id != Context.GetUserId())
                     throw new InvalidOperationException("Non-host is attempting to join match before host");
 
-                var room = new ServerMultiplayerRoom(roomId, HubContext)
+                var room = new ServerMultiplayerRoom(roomId, HubContext, databaseFactory)
                 {
                     ChannelID = databaseRoom.channel_id,
                     Settings = new MultiplayerRoomSettings
@@ -243,7 +243,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     }
                 };
 
-                await room.Initialise(databaseFactory);
+                await room.Initialise();
 
                 return room;
             }

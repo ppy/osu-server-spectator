@@ -11,6 +11,7 @@ using osu.Game.Extensions;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
@@ -29,12 +30,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             780864, 780865, 781495, 781872, 781873, 783305, 784601, 785409, 787961, 788245, 788676, 789771, 789820
         ];
 
+        public override IMultiplayerQueue Queue { get; }
+
         private readonly MatchmakingRoomState state;
         private readonly HashSet<UserBeatmapSelection> selections = new HashSet<UserBeatmapSelection>();
 
-        public MatchmakingImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
+        public MatchmakingImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(room, hub)
         {
+            Queue = new MultiplayerMatchmakingQueue(room, hub, dbFactory);
             room.MatchState = state = new MatchmakingRoomState();
         }
 
@@ -76,7 +80,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await Room.StartCountdown(new MatchmakingStatusCountdown
             {
                 Status = state.RoomStatus,
-                TimeRemaining = TimeSpan.FromSeconds(30)
+                TimeRemaining = TimeSpan.FromSeconds(10)
             }, selectBeatmap);
         }
 
@@ -86,9 +90,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 selections.AddRange(Room.Playlist.Select(item => new UserBeatmapSelection(null, item.ID)));
 
             state.RoomStatus = MatchmakingRoomStatus.WaitForSelection;
-            state.CandidateItems = selections.Select(s => Room.Playlist.Single(i => i.ID == s.ItemID)).ToArray();
-            state.GameplayItem = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
+            state.CandidateItems = selections.Select(s => s.ItemID).ToArray();
 
+            // Notify users of the new beatmap.
+            Room.Settings.PlaylistItemId = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
+            await Hub.NotifySettingsChanged(Room, true);
+
+            // Notify users of the candidates.
             await Hub.NotifyMatchRoomStateChanged(Room);
             await Room.StartCountdown(new MatchmakingStatusCountdown
             {
@@ -100,8 +108,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task beginPlay(ServerMultiplayerRoom _)
         {
             state.RoomStatus = MatchmakingRoomStatus.WaitForStart;
-
-            // Todo: Select a beatmap here...
 
             await Hub.NotifyMatchRoomStateChanged(Room);
             await Room.StartCountdown(new MatchmakingStatusCountdown
