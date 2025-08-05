@@ -22,6 +22,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
+        private static readonly JsonSerializerSettings json_settings = new JsonSerializerSettings
+        {
+            // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
+            TypeNameHandling = TypeNameHandling.Auto,
+        };
+
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
         protected readonly MultiplayerHubContext HubContext;
         private readonly IDatabaseFactory databaseFactory;
@@ -71,7 +77,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't join a room when restricted.");
             }
 
-            ServerMultiplayerRoom? room = null;
+            string roomJson;
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -89,6 +95,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
+                    ServerMultiplayerRoom? room = null;
+
                     try
                     {
                         if (roomUsage.Item == null)
@@ -172,6 +180,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         throw;
                     }
+
+                    roomJson = JsonConvert.SerializeObject(room, json_settings);
                 }
             }
 
@@ -187,14 +197,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await multiplayerEventLogger.LogPlayerJoinedAsync(roomId, Context.GetUserId());
 
-            var settings = new JsonSerializerSettings
-            {
-                // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
-                TypeNameHandling = TypeNameHandling.Auto,
-            };
-
-            return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
-                   ?? throw new InvalidOperationException();
+            return JsonConvert.DeserializeObject<MultiplayerRoom>(roomJson, json_settings) ?? throw new InvalidOperationException();
         }
 
         /// <summary>
