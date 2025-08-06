@@ -204,11 +204,16 @@ namespace osu.Server.Spectator.Database
         Task<(long roomID, long playlistItemID)?> GetMultiplayerRoomIdForScoreAsync(long scoreId);
 
         /// <summary>
+        /// Retrieve all scores for a specified playlist item.
+        /// </summary>
+        /// <param name="playlistItemId">The playlist item.</param>
+        Task<IEnumerable<SoloScore>> GetAllScoresForPlaylistItem(long playlistItemId);
+
+        /// <summary>
         /// Retrieve all passing scores for a specified playlist item.
         /// </summary>
         /// <param name="playlistItemId">The playlist item.</param>
         /// <param name="afterScoreId">An optional score ID to only fetch newer scores.</param>
-        /// <returns></returns>
         Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0);
 
         /// <summary>

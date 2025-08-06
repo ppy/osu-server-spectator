@@ -19,8 +19,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     public class MatchmakingImplementation : MatchTypeImplementation
     {
+        /// <summary>
+        /// The size of matchmaking rooms.
+        /// </summary>
         public const int MATCHMAKING_ROOM_SIZE = 1;
 
+        /// <summary>
+        /// The beatmaps that form the playlist.
+        /// </summary>
         public static readonly int[] BEATMAP_IDS =
         [
             186036, 221862, 222774, 222775, 384926, 412968, 415098, 415099, 419747, 424260, 436442, 437721, 438096, 440820, 441920, 454385, 492862, 497679, 497680, 526342, 526935, 550385, 554956,
@@ -31,15 +37,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             780864, 780865, 781495, 781872, 781873, 783305, 784601, 785409, 787961, 788245, 788676, 789771, 789820
         ];
 
+        /// <summary>
+        /// The number of points awarded for each placement position (index 0 = #1, index 7 = #8).
+        /// </summary>
+        private static readonly int[] placement_points = [8, 7, 6, 5, 4, 3, 2, 1];
+
         public override IMultiplayerQueue Queue { get; }
 
+        private readonly IDatabaseFactory dbFactory;
         private readonly MatchmakingRoomState state;
         private readonly HashSet<UserBeatmapSelection> selections = new HashSet<UserBeatmapSelection>();
 
         public MatchmakingImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(room, hub)
         {
+            this.dbFactory = dbFactory;
+
             Queue = new MultiplayerMatchmakingQueue(room, hub, dbFactory);
+
             room.MatchState = state = new MatchmakingRoomState();
         }
 
@@ -85,7 +100,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             await base.HandleMatchComplete();
 
-            // Todo: Award points.
+            SoloScore[] scores;
+            using (var db = dbFactory.GetInstance())
+                scores = (await db.GetAllScoresForPlaylistItem(Queue.CurrentItem.ID)).ToArray();
+
+            // Index of each raw total score value.
+            (int index, uint totalScore)[] totalScoreIndices = scores.OrderByDescending(s => s.total_score).Select((s, i) => (index: i, score: s.total_score)).ToArray();
+
+            foreach (var score in scores)
+            {
+                // This makes sure that, for example, if the top two players have the same total score, they'll both receive #2 placement points.
+                int placement = totalScoreIndices.Last(t => t.totalScore == score.total_score).index;
+                state.UserScores.AddPoints((int)score.user_id, placement, placement_points[placement]);
+            }
+
+            state.UserScores.AdjustPlacements();
 
             if (Room.Users.Any(u => u.State != MultiplayerUserState.Idle))
             {
