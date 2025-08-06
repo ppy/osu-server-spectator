@@ -106,7 +106,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 throw new InvalidStateException("Selected playlist item is not part of the room!");
 
             if (item.Expired)
-                throw new InvalidStateException("Selected playlist item is expired!");
+                throw new InvalidStateException("Selected playlist item has already been played!");
 
             selections.Add(new UserBeatmapSelection(user, playlistItemId));
             await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), user.UserID, playlistItemId);
