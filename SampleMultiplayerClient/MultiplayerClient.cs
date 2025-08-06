@@ -75,12 +75,7 @@ namespace SampleMultiplayerClient
         public async Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string? password = null)
             => Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.JoinRoomWithPassword), roomId, password ?? string.Empty);
 
-        public Task JoinMatchmakingQueue()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task LeaveMatchmakingQueue()
+        public Task ToggleMatchmakingQueue()
         {
             throw new NotImplementedException();
         }

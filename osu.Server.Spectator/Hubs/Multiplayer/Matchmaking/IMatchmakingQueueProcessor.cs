@@ -8,7 +8,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     public interface IMatchmakingQueueProcessor : IHostedService
     {
-        Task AddToQueueAsync(string connectionId);
-        Task RemoveFromQueueAsync(string connectionId);
+        Task AddOrRemoveFromQueueAsync(string connectionId);
     }
 }

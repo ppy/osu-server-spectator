@@ -31,26 +31,30 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             this.databaseFactory = databaseFactory;
         }
 
-        public async Task AddToQueueAsync(string connectionId)
+        public async Task AddOrRemoveFromQueueAsync(string connectionId)
         {
-            await hub.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.InQueue
+            bool inQueue;
+
+            lock (queueLock)
             {
-                RoomSize = MatchmakingImplementation.MATCHMAKING_ROOM_SIZE,
-                PlayerCount = 1
-            });
+                if (queue.Add(connectionId))
+                    inQueue = true;
+                else
+                {
+                    queue.Remove(connectionId);
+                    inQueue = false;
+                }
+            }
 
-            lock (queueLock)
-                queue.Add(connectionId);
-        }
-
-        public async Task RemoveFromQueueAsync(string connectionId)
-        {
-            bool wasRemoved;
-
-            lock (queueLock)
-                wasRemoved = queue.Remove(connectionId);
-
-            if (wasRemoved)
+            if (inQueue)
+            {
+                await hub.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.InQueue
+                {
+                    RoomSize = MatchmakingImplementation.MATCHMAKING_ROOM_SIZE,
+                    PlayerCount = 1
+                });
+            }
+            else
                 await hub.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), null);
         }
 
