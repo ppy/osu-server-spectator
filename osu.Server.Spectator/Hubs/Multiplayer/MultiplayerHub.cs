@@ -466,6 +466,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 await HubContext.ChangeAndBroadcastUserBeatmapAvailability(room, user, newBeatmapAvailability);
+
+                await room.MatchTypeImplementation.HandleUserBeatmapAvailabilityChanged(user, newBeatmapAvailability);
             }
         }
 

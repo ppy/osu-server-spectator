@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private readonly IDatabaseFactory dbFactory;
         private readonly MatchmakingRoomState state;
-        private readonly HashSet<UserBeatmapSelection> selections = new HashSet<UserBeatmapSelection>();
+        private readonly HashSet<UserPick> picks = new HashSet<UserPick>();
 
         public MatchmakingImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(room, hub)
@@ -69,37 +69,95 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await base.HandleUserJoined(user);
 
             if (Room.Users.Count == MATCHMAKING_ROOM_SIZE)
-            {
-                state.RoomStatus = MatchmakingRoomStatus.RoundStart;
-                await Hub.NotifyMatchRoomStateChanged(Room);
-                await Room.StartCountdown(new MatchmakingStatusCountdown
-                {
-                    Status = state.RoomStatus,
-                    TimeRemaining = TimeSpan.FromSeconds(5)
-                }, beginNextRound);
-            }
+                await stageRoundStart(Room);
         }
 
-        public override async Task HandleUserStateChanged()
+        public override async Task HandleUserStateChanged(MultiplayerRoomUser user)
         {
-            await base.HandleUserStateChanged();
+            await base.HandleUserStateChanged(user);
 
-            if (state.RoomStatus != MatchmakingRoomStatus.Gameplay || Room.Users.Any(u => u.State != MultiplayerUserState.Idle))
+            if (state.RoomStatus != MatchmakingRoomStatus.Results)
                 return;
 
-            state.RoomStatus = MatchmakingRoomStatus.RoundStart;
-            await Hub.NotifyMatchRoomStateChanged(Room);
-            await Room.StartCountdown(new MatchmakingStatusCountdown
-            {
-                Status = state.RoomStatus,
-                TimeRemaining = TimeSpan.FromSeconds(5)
-            }, beginNextRound);
+            if (allUsersIdle())
+                await stageRoundStart(Room);
         }
 
         public override async Task HandleMatchComplete()
         {
             await base.HandleMatchComplete();
+            await stageResults();
+        }
 
+        public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
+        {
+            MultiplayerPlaylistItem? item = Room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
+
+            if (item == null)
+                throw new InvalidStateException("Selected playlist item is not part of the room!");
+
+            if (item.Expired)
+                throw new InvalidStateException("Selected playlist item has already been played!");
+
+            picks.Add(new UserPick(user, playlistItemId));
+            await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), user.UserID, playlistItemId);
+        }
+
+        private async Task stageRoundStart(ServerMultiplayerRoom _)
+        {
+            await returnUsersToRoom(Room);
+            await startCountdown(MatchmakingRoomStatus.RoundStart, TimeSpan.FromSeconds(5), stagePicks);
+        }
+
+        private async Task stagePicks(ServerMultiplayerRoom _)
+        {
+            foreach (var selection in picks.Where(s => s.User != null))
+                await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), selection.User, selection.ItemID);
+            picks.Clear();
+
+            await startCountdown(MatchmakingRoomStatus.UserPicks, TimeSpan.FromSeconds(10), stageSelectBeatmap);
+        }
+
+        private async Task stageSelectBeatmap(ServerMultiplayerRoom _)
+        {
+            if (picks.Count == 0)
+                picks.AddRange(Room.Playlist.Select(item => new UserPick(null, item.ID)));
+
+            state.CandidateItems = picks.Select(s => s.ItemID).ToArray();
+
+            Room.Settings.PlaylistItemId = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
+            await Hub.NotifySettingsChanged(Room, true);
+
+            await startCountdown(MatchmakingRoomStatus.SelectBeatmap, TimeSpan.FromSeconds(10), stagePrepareBeatmap);
+        }
+
+        private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
+        {
+            if (allUsersReady())
+                await stagePrepareGameplay(Room);
+            else
+            {
+                // If no users are ready, continue preparing beatmap. Otherwise, move onto gameplay with any ready users.
+                await startCountdown(MatchmakingRoomStatus.PrepareBeatmap,
+                    TimeSpan.FromMinutes(2),
+                    _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
+            }
+        }
+
+        private async Task stagePrepareGameplay(ServerMultiplayerRoom _)
+        {
+            await startCountdown(MatchmakingRoomStatus.PrepareGameplay, TimeSpan.FromSeconds(5), stageGameplay);
+        }
+
+        private async Task stageGameplay(ServerMultiplayerRoom _)
+        {
+            state.RoomStatus = MatchmakingRoomStatus.Gameplay;
+            await Hub.NotifyMatchRoomStateChanged(Room);
+            await Hub.StartMatch(Room);
+        }
+
+        private async Task stageResults()
+        {
             SoloScore[] scores;
             using (var db = dbFactory.GetInstance())
                 scores = (await db.GetAllScoresForPlaylistItem(Queue.CurrentItem.ID)).ToArray();
@@ -116,94 +174,49 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.UserScores.AdjustPlacements();
 
-            if (Room.Users.Any(u => u.State != MultiplayerUserState.Idle))
-            {
-                await Hub.NotifyMatchRoomStateChanged(Room);
-                await Room.StartCountdown(new MatchmakingStatusCountdown
-                {
-                    Status = state.RoomStatus,
-                    TimeRemaining = TimeSpan.FromSeconds(30)
-                }, returnUsersToRoom);
-            }
-        }
-
-        public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
-        {
-            MultiplayerPlaylistItem? item = Room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
-
-            if (item == null)
-                throw new InvalidStateException("Selected playlist item is not part of the room!");
-
-            if (item.Expired)
-                throw new InvalidStateException("Selected playlist item has already been played!");
-
-            selections.Add(new UserBeatmapSelection(user, playlistItemId));
-            await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), user.UserID, playlistItemId);
-        }
-
-        private async Task beginNextRound(ServerMultiplayerRoom _)
-        {
-            // Ensure users are in an idle state.
-            await returnUsersToRoom(Room);
-
-            // Clear selections.
-            foreach (var selection in selections.Where(s => s.User != null))
-                await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), selection.User, selection.ItemID);
-            selections.Clear();
-
-            // Start the next round.
-            state.RoomStatus = MatchmakingRoomStatus.PickBeatmap;
-            await Hub.NotifyMatchRoomStateChanged(Room);
-            await Room.StartCountdown(new MatchmakingStatusCountdown
-            {
-                Status = state.RoomStatus,
-                TimeRemaining = TimeSpan.FromSeconds(10)
-            }, selectBeatmap);
-        }
-
-        private async Task selectBeatmap(ServerMultiplayerRoom _)
-        {
-            if (selections.Count == 0)
-                selections.AddRange(Room.Playlist.Select(item => new UserBeatmapSelection(null, item.ID)));
-
-            state.RoomStatus = MatchmakingRoomStatus.Selection;
-            state.CandidateItems = selections.Select(s => s.ItemID).ToArray();
-
-            // Notify users of the new beatmap.
-            Room.Settings.PlaylistItemId = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
-            await Hub.NotifySettingsChanged(Room, true);
-
-            // Notify users of the candidates.
-            await Hub.NotifyMatchRoomStateChanged(Room);
-            await Room.StartCountdown(new MatchmakingStatusCountdown
-            {
-                Status = state.RoomStatus,
-                TimeRemaining = TimeSpan.FromSeconds(10)
-            }, beginPlay);
-        }
-
-        private async Task beginPlay(ServerMultiplayerRoom _)
-        {
-            state.RoomStatus = MatchmakingRoomStatus.PrepareGameplay;
-
-            await Hub.NotifyMatchRoomStateChanged(Room);
-            await Room.StartCountdown(new MatchmakingStatusCountdown
-            {
-                Status = state.RoomStatus,
-                TimeRemaining = TimeSpan.FromSeconds(5)
-            }, async r =>
-            {
-                state.RoomStatus = MatchmakingRoomStatus.Gameplay;
-                await Hub.NotifyMatchRoomStateChanged(Room);
-                await Hub.StartMatch(r, false);
-            });
+            await startCountdown(MatchmakingRoomStatus.Results, TimeSpan.FromSeconds(30), stageRoundStart);
         }
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
         {
-            foreach (var user in Room.Users.Where(u => u.State != MultiplayerUserState.Idle))
-                await Hub.ChangeAndBroadcastUserState(Room, user, MultiplayerUserState.Idle);
+            foreach (var user in Room.Users)
+                await changeUserState(user, MultiplayerUserState.Idle);
+        }
+
+        private async Task changeUserState(MultiplayerRoomUser user, MultiplayerUserState newState)
+        {
+            await Hub.ChangeAndBroadcastUserState(Room, user, newState);
             await Hub.UpdateRoomStateIfRequired(Room);
+        }
+
+        private async Task startCountdown(MatchmakingRoomStatus status, TimeSpan duration, Func<ServerMultiplayerRoom, Task> continuation)
+        {
+            if (status != state.RoomStatus)
+            {
+                state.RoomStatus = status;
+                await Hub.NotifyMatchRoomStateChanged(Room);
+            }
+
+            await Room.StartCountdown(new MatchmakingStatusCountdown
+            {
+                Status = state.RoomStatus,
+                TimeRemaining = duration
+            }, continuation);
+        }
+
+        private bool allUsersIdle()
+        {
+            return Room.Users.All(u => u.State == MultiplayerUserState.Idle);
+        }
+
+        private bool allUsersReady()
+        {
+            return Room.Users.All(u => u.State == MultiplayerUserState.Ready);
+        }
+
+        private bool anyUsersReady()
+        {
+            return Room.Users.All(u => u.State == MultiplayerUserState.Ready);
         }
 
         public override MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
@@ -211,6 +224,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             room_type = database_match_type.matchmaking
         };
 
-        private readonly record struct UserBeatmapSelection(MultiplayerRoomUser? User, long ItemID);
+        private readonly record struct UserPick(MultiplayerRoomUser? User, long ItemID);
     }
 }

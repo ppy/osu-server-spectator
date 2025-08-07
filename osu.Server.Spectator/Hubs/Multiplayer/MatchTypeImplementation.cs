@@ -3,6 +3,7 @@
 
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
@@ -56,7 +57,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             return Task.CompletedTask;
         }
 
-        public virtual Task HandleUserStateChanged()
+        public virtual Task HandleUserStateChanged(MultiplayerRoomUser user)
+        {
+            return Task.CompletedTask;
+        }
+
+        public virtual Task HandleUserBeatmapAvailabilityChanged(MultiplayerRoomUser user, BeatmapAvailability availability)
         {
             return Task.CompletedTask;
         }
