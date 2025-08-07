@@ -174,9 +174,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageGameplay(ServerMultiplayerRoom _)
         {
-            state.RoomStatus = MatchmakingRoomStatus.Gameplay;
-            await Hub.NotifyMatchRoomStateChanged(Room);
-            await Hub.StartMatch(Room);
+            await startCountdown(MatchmakingRoomStatus.Gameplay, TimeSpan.Zero, Hub.StartMatch);
         }
 
         private async Task stageResults()
@@ -197,6 +195,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.UserScores.AdjustPlacements();
 
+            await Hub.NotifyMatchRoomStateChanged(Room);
             await startCountdown(MatchmakingRoomStatus.Results, TimeSpan.FromSeconds(30), stageRoundStart);
         }
 
