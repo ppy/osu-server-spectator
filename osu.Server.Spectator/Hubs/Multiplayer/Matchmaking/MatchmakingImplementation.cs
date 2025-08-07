@@ -96,6 +96,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                         await changeUserState(user, MultiplayerUserState.Ready);
                     else
                         await changeUserState(user, MultiplayerUserState.Idle);
+
+                    if (allUsersReady())
+                        await stagePrepareGameplay(Room);
                     break;
             }
         }
@@ -148,6 +151,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
         {
+            await Hub.UnreadyAllUsers(Room, true);
+
             Room.Settings.PlaylistItemId = state.CandidateItem;
             await Hub.NotifySettingsChanged(Room, true);
 
