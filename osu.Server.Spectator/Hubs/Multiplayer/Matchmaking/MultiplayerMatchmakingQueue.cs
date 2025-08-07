@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
@@ -43,6 +44,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 await db.MarkPlaylistItemAsPlayedAsync(room.RoomID, CurrentItem.ID);
                 room.Playlist[room.Playlist.IndexOf(CurrentItem)] = await (await db.GetPlaylistItemAsync(room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem(db);
                 await hub.NotifyPlaylistItemChanged(room, CurrentItem, true);
+
+                // Add a non-expired duplicate of the current item back to the room.
+                MultiplayerPlaylistItem newItem = CurrentItem.Clone();
+                newItem.Expired = false;
+                newItem.PlayedAt = null;
+                newItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, newItem));
+                room.Playlist.Add(newItem);
+                await hub.NotifyPlaylistItemAdded(room, newItem);
             }
         }
 
