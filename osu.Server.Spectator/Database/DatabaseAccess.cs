@@ -481,7 +481,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return (await connection.QueryAsync<SoloScore>(
-                "SELECT `scores`.`id`, `scores`.`total_score` FROM `scores` "
+                "SELECT * FROM `scores` "
                 + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
                 + "WHERE `multiplayer_score_links`.`playlist_item_id` = @playlistItemId", new
                 {
