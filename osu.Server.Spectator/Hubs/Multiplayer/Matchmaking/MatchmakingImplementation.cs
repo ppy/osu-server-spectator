@@ -141,15 +141,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 picks.AddRange(Room.Playlist.Select(item => new UserPick(null, item.ID)));
 
             state.CandidateItems = picks.Select(s => s.ItemID).ToArray();
-
-            Room.Settings.PlaylistItemId = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
-            await Hub.NotifySettingsChanged(Room, true);
+            state.CandidateItem = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
 
             await startCountdown(MatchmakingRoomStatus.SelectBeatmap, TimeSpan.FromSeconds(10), stagePrepareBeatmap);
         }
 
         private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
         {
+            Room.Settings.PlaylistItemId = state.CandidateItem;
+            await Hub.NotifySettingsChanged(Room, true);
+
             if (allUsersReady())
                 await stagePrepareGameplay(Room);
             else
