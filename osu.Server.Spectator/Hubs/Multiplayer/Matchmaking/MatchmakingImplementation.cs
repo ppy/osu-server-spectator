@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using osu.Framework.Utils;
 using osu.Game.Extensions;
+using osu.Game.Online;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
@@ -81,6 +82,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             if (allUsersIdle())
                 await stageRoundStart(Room);
+        }
+
+        public override async Task HandleUserBeatmapAvailabilityChanged(MultiplayerRoomUser user, BeatmapAvailability availability)
+        {
+            await base.HandleUserBeatmapAvailabilityChanged(user, availability);
+
+            switch (state.RoomStatus)
+            {
+                case MatchmakingRoomStatus.SelectBeatmap:
+                case MatchmakingRoomStatus.PrepareBeatmap:
+                    if (availability.State == DownloadState.LocallyAvailable)
+                        await changeUserState(user, MultiplayerUserState.Ready);
+                    else
+                        await changeUserState(user, MultiplayerUserState.Idle);
+                    break;
+            }
         }
 
         public override async Task HandleMatchComplete()
