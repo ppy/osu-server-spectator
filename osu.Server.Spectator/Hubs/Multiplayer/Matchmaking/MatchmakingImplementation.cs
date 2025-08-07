@@ -202,7 +202,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
         {
-            foreach (var user in Room.Users)
+            foreach (var user in Room.Users.Where(u => u.State != MultiplayerUserState.Idle))
                 await changeUserState(user, MultiplayerUserState.Idle);
         }
 
