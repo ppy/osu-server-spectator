@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.matchmakingQueue = matchmakingQueue;
 
             Rooms = rooms;
-            HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory, multiplayerEventLogger);
+            HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory, sharedInterop, multiplayerEventLogger);
         }
 
         public async Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
@@ -152,9 +152,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         {
                             if (userUsage.Item != null)
                             {
-                                // the user was joined to the room, so we can run the standard leaveRoom method.
-                                // this will handle closing the room if this was the only user.
-                                await leaveRoom(userUsage.Item, roomUsage, false);
+                                if (room != null)
+                                {
+                                    // the user was joined to the room, so we can run the standard leaveRoom method.
+                                    // this will handle closing the room if this was the only user.
+                                    await HubContext.LeaveRoom(userUsage.Item, room, false);
+                                }
                             }
                             else if (newRoomFetchStarted)
                             {
@@ -162,7 +165,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                                 {
                                     // the room was retrieved and associated to the usage, but something failed before the user (host) could join.
                                     // for now, let's mark the room as ended if this happens.
-                                    await endDatabaseMatch(room);
+                                    await HubContext.EndDatabaseMatch(room, Context.GetUserId());
                                 }
 
                                 roomUsage.Destroy();
@@ -347,7 +350,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (newHost == null)
                     throw new Exception("Target user is not in the current room");
 
-                await setNewHost(room, newHost);
+                await HubContext.SetNewHost(room, newHost);
             }
 
             await multiplayerEventLogger.LogHostChangedAsync(roomId, userId);
@@ -385,7 +388,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                     try
                     {
-                        await leaveRoom(targetUserUsage.Item, roomUsage, true);
+                        await HubContext.LeaveRoom(targetUserUsage.Item, room, true);
                     }
                     finally
                     {
@@ -768,44 +771,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await db.UpdateRoomSettingsAsync(room);
         }
 
-        private async Task updateDatabaseHost(MultiplayerRoom room)
-        {
-            using (var db = databaseFactory.GetInstance())
-                await db.UpdateRoomHostAsync(room);
-        }
-
-        private async Task endDatabaseMatch(MultiplayerRoom room)
-        {
-            using (var db = databaseFactory.GetInstance())
-                await db.EndMatchAsync(room);
-
-            await multiplayerEventLogger.LogRoomDisbandedAsync(room.RoomID, Context.GetUserId());
-        }
-
         private async Task addDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)
         {
             using (var db = databaseFactory.GetInstance())
                 await db.AddRoomParticipantAsync(room, user);
         }
 
-        private async Task removeDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)
-        {
-            using (var db = databaseFactory.GetInstance())
-                await db.RemoveRoomParticipantAsync(room, user);
-        }
-
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
             await base.CleanUpState(state);
             await leaveRoom(state, true);
-        }
-
-        private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
-        {
-            room.Host = newHost;
-            await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
-
-            await updateDatabaseHost(room);
         }
 
         /// <summary>
@@ -915,68 +890,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private async Task leaveRoom(MultiplayerClientState state, bool wasKick)
         {
             using (var roomUsage = await getLocalUserRoom(state))
-                await leaveRoom(state, roomUsage, wasKick);
-        }
-
-        private async Task leaveRoom(MultiplayerClientState state, ItemUsage<ServerMultiplayerRoom> roomUsage, bool wasKick)
-        {
-            var room = roomUsage.Item;
-
-            if (room == null)
-                throw new InvalidOperationException("Attempted to operate on a null room");
-
-            Log(room, wasKick ? "User kicked" : "User left");
-
-            await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
-
-            var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);
-
-            if (user == null)
-                throw new InvalidStateException("User was not in the expected room.");
-
-            await room.RemoveUser(user);
-            await removeDatabaseUser(room, user);
-
-            try
             {
-                // Run in background so we don't hold locks on user/room states.
-                _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
+                var room = roomUsage.Item;
+
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                await HubContext.LeaveRoom(state, room, wasKick);
             }
-            catch
-            {
-                // Errors are logged internally by SharedInterop.
-            }
-
-            // handle closing the room if the only participant is the user which is leaving.
-            if (room.Users.Count == 0)
-            {
-                await endDatabaseMatch(room);
-
-                // only destroy the usage after the database operation succeeds.
-                Log(room, "Stopping tracking of room (all users left).");
-                roomUsage.Destroy();
-                return;
-            }
-
-            await HubContext.UpdateRoomStateIfRequired(room);
-
-            // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
-            if (room.Host?.Equals(user) == true)
-            {
-                // there *has* to still be at least one user in the room (see user check above).
-                var newHost = room.Users.First();
-
-                await setNewHost(room, newHost);
-            }
-
-            if (wasKick)
-            {
-                // the target user has already been removed from the group, so send the message to them separately.
-                await Clients.Client(state.ConnectionId).UserKicked(user);
-                await Clients.Group(GetGroupId(room.RoomID)).UserKicked(user);
-            }
-            else
-                await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
         }
 
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);

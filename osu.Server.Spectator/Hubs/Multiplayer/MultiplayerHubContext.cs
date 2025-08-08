@@ -16,6 +16,7 @@ using osu.Game.Rulesets;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Services;
 using IDatabaseFactory = osu.Server.Spectator.Database.IDatabaseFactory;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
@@ -35,6 +36,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly EntityStore<MultiplayerClientState> users;
         private readonly IDatabaseFactory databaseFactory;
+        private readonly ISharedInterop sharedInterop;
         private readonly ILogger logger;
         private readonly MultiplayerEventLogger multiplayerEventLogger;
 
@@ -44,12 +46,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             EntityStore<MultiplayerClientState> users,
             ILoggerFactory loggerFactory,
             IDatabaseFactory databaseFactory,
+            ISharedInterop sharedInterop,
             MultiplayerEventLogger multiplayerEventLogger)
         {
             this.Context = context;
             this.rooms = rooms;
             this.users = users;
             this.databaseFactory = databaseFactory;
+            this.sharedInterop = sharedInterop;
             this.multiplayerEventLogger = multiplayerEventLogger;
 
             logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
@@ -386,6 +390,115 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                     break;
             }
+        }
+
+        public async Task SetNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
+        {
+            room.Host = newHost;
+
+            await Context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.HostChanged), newHost.UserID);
+
+            using (var db = databaseFactory.GetInstance())
+                await db.UpdateRoomHostAsync(room);
+        }
+
+        public async Task LeaveRoom(MultiplayerClientState state, ServerMultiplayerRoom room, bool wasKick)
+        {
+            await Context.Groups.RemoveFromGroupAsync(state.ConnectionId, MultiplayerHub.GetGroupId(room.RoomID));
+
+            var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);
+            if (user == null)
+                throw new InvalidStateException("User was not in the expected room.");
+
+            log(room, user, wasKick ? "User kicked" : "User left");
+
+            await room.RemoveUser(user);
+            await removeDatabaseUser(room, user);
+
+            try
+            {
+                // Run in background so we don't hold locks on user/room states.
+                _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
+            }
+            catch
+            {
+                // Errors are logged internally by SharedInterop.
+            }
+
+            // handle closing the room if the only participant is the user which is leaving.
+            if (room.Users.Count == 0)
+            {
+                await EndDatabaseMatch(room, user.UserID);
+                destroyRoom(room.RoomID);
+                return;
+            }
+
+            await UpdateRoomStateIfRequired(room);
+
+            // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
+            if (room.Host?.Equals(user) == true)
+            {
+                // there *has* to still be at least one user in the room (see user check above).
+                var newHost = room.Users.First();
+
+                await SetNewHost(room, newHost);
+            }
+
+            if (wasKick)
+            {
+                // the target user has already been removed from the group, so send the message to them separately.
+                await Context.Clients.Client(state.ConnectionId).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+                await Context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+            }
+            else
+                await Context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserLeft), user);
+        }
+
+        public async Task CloseRoom(ServerMultiplayerRoom room)
+        {
+            foreach (var user in room.Users)
+            {
+                using (var userUsage = await users.GetForUse(user.UserID))
+                {
+                    var clientState = userUsage.Item;
+
+                    if (clientState == null)
+                        continue;
+
+                    await LeaveRoom(clientState, room, false);
+                }
+            }
+        }
+
+        public async Task EndDatabaseMatch(MultiplayerRoom room, int userId)
+        {
+            using (var db = databaseFactory.GetInstance())
+                await db.EndMatchAsync(room);
+
+            await multiplayerEventLogger.LogRoomDisbandedAsync(room.RoomID, userId);
+        }
+
+        private void destroyRoom(long roomId)
+        {
+            Task.Run(async () =>
+            {
+                using (var roomUsage = await rooms.GetForUse(roomId))
+                {
+                    var room = roomUsage.Item;
+
+                    if (room == null)
+                        return;
+
+                    log(room, null, "Stopping tracking of room.");
+                    roomUsage.Destroy();
+                }
+            });
+        }
+
+        private async Task removeDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)
+        {
+            using (var db = databaseFactory.GetInstance())
+                await db.RemoveRoomParticipantAsync(room, user);
         }
 
         private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)

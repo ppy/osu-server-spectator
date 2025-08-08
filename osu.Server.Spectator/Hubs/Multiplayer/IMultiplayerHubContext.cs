@@ -154,5 +154,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.
         /// </summary>
         Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room);
+
+        Task CloseRoom(ServerMultiplayerRoom room);
     }
 }

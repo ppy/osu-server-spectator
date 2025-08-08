@@ -183,9 +183,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.UserScores.AdjustPlacements();
 
             if (state.Round == total_rounds)
-                await startCountdown(MatchmakingRoomStatus.RoomEnd, TimeSpan.FromMinutes(2), closeRoom);
+                await startCountdown(MatchmakingRoomStatus.RoomEnd, TimeSpan.FromMinutes(2), Hub.CloseRoom);
             else
-                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromMinutes(2), stageRoundStart);
+                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(30), stageRoundStart);
         }
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
@@ -209,10 +209,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 Status = state.RoomStatus,
                 TimeRemaining = duration
             }, continuation);
-        }
-
-        private async Task closeRoom(ServerMultiplayerRoom _)
-        {
         }
 
         private bool allUsersIdle()
