@@ -148,9 +148,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             Room.Settings.PlaylistItemId = state.CandidateItem;
             await Hub.NotifySettingsChanged(Room, lastPlaylistItem != Room.Settings.PlaylistItemId);
 
-            await startCountdown(MatchmakingRoomStatus.PrepareBeatmap,
-                TimeSpan.FromMinutes(2),
-                _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
+            if (allUsersReady())
+                await stagePrepareGameplay(Room);
+            else
+                await startCountdown(MatchmakingRoomStatus.PrepareBeatmap, TimeSpan.FromMinutes(2), _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
         }
 
         private async Task stagePrepareGameplay(ServerMultiplayerRoom _)
