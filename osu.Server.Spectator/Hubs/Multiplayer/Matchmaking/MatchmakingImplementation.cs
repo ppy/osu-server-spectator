@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using osu.Framework.Utils;
 using osu.Game.Extensions;
-using osu.Game.Online;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
@@ -79,28 +78,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             await base.HandleUserStateChanged(user);
 
-            if (state.RoomStatus != MatchmakingRoomStatus.RoundEnd)
-                return;
-
-            if (allUsersIdle())
-                await stageRoundStart(Room);
-        }
-
-        public override async Task HandleUserBeatmapAvailabilityChanged(MultiplayerRoomUser user, BeatmapAvailability availability)
-        {
-            await base.HandleUserBeatmapAvailabilityChanged(user, availability);
-
             switch (state.RoomStatus)
             {
-                case MatchmakingRoomStatus.SelectBeatmap:
                 case MatchmakingRoomStatus.PrepareBeatmap:
-                    if (availability.State == DownloadState.LocallyAvailable)
-                        await changeUserState(user, MultiplayerUserState.Ready);
-                    else
-                        await changeUserState(user, MultiplayerUserState.Idle);
-
                     if (allUsersReady())
                         await stagePrepareGameplay(Room);
+                    break;
+
+                case MatchmakingRoomStatus.RoundEnd:
+                    if (allUsersIdle())
+                        await stageRoundStart(Room);
                     break;
             }
         }
@@ -157,20 +144,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
         {
-            await Hub.UnreadyAllUsers(Room, true);
+            await Hub.UnreadyAllUsers(Room, false);
 
             Room.Settings.PlaylistItemId = state.CandidateItem;
             await Hub.NotifySettingsChanged(Room, true);
 
-            if (allUsersReady())
-                await stagePrepareGameplay(Room);
-            else
-            {
-                // If no users are ready, continue preparing beatmap. Otherwise, move onto gameplay with any ready users.
-                await startCountdown(MatchmakingRoomStatus.PrepareBeatmap,
-                    TimeSpan.FromMinutes(2),
-                    _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
-            }
+            // If no users are ready, continue preparing beatmap. Otherwise, move onto gameplay with any ready users.
+            await startCountdown(MatchmakingRoomStatus.PrepareBeatmap,
+                TimeSpan.FromMinutes(2),
+                _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
         }
 
         private async Task stagePrepareGameplay(ServerMultiplayerRoom _)
