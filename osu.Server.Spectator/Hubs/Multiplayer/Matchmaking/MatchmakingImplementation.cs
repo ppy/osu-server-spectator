@@ -134,7 +134,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task stageSelectBeatmap(ServerMultiplayerRoom _)
         {
             if (picks.Count == 0)
-                picks.AddRange(Room.Playlist.Select(item => new UserPick(null, item.ID)));
+                picks.AddRange(Room.Playlist.Where(item => !item.Expired).Select(item => new UserPick(null, item.ID)));
 
             state.CandidateItems = picks.Select(s => s.ItemID).ToArray();
             state.CandidateItem = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
