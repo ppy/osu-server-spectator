@@ -101,9 +101,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await Context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.SettingsChanged), room.Settings);
         }
 
-        public Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId)
+        public Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId)
         {
-            return rooms.GetForUse(roomId);
+            return rooms.TryGetForUse(roomId);
         }
 
         public async Task UnreadyAllUsers(ServerMultiplayerRoom room, bool resetBeatmapAvailability)

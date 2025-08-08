@@ -145,11 +145,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 // Notify users that the countdown has finished (or cancelled) and run the continuation.
                 // Note: The room must be re-retrieved rather than using our own instance to enforce single-thread access.
-                using (var roomUsage = await hub.GetRoom(RoomID))
+                using (var roomUsage = await hub.TryGetRoom(RoomID))
                 {
                     try
                     {
-                        if (roomUsage.Item == null)
+                        if (roomUsage?.Item == null)
                             return;
 
                         if (countdownInfo.StopSource.IsCancellationRequested)
