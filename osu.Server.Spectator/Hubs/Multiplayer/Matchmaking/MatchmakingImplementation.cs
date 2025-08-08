@@ -144,8 +144,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
         {
-            await Hub.UnreadyAllUsers(Room, false);
-
             Room.Settings.PlaylistItemId = state.CandidateItem;
             await Hub.NotifySettingsChanged(Room, true);
 
