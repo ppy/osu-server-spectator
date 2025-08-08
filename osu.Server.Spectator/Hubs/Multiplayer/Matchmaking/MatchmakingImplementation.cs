@@ -38,6 +38,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             780864, 780865, 781495, 781872, 781873, 783305, 784601, 785409, 787961, 788245, 788676, 789771, 789820
         ];
 
+        private const int total_rounds = 4;
+
         /// <summary>
         /// The number of points awarded for each placement position (index 0 = #1, index 7 = #8).
         /// </summary>
@@ -77,7 +79,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             await base.HandleUserStateChanged(user);
 
-            if (state.RoomStatus != MatchmakingRoomStatus.Results)
+            if (state.RoomStatus != MatchmakingRoomStatus.RoundEnd)
                 return;
 
             if (allUsersIdle())
@@ -106,7 +108,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         public override async Task HandleMatchComplete()
         {
             await base.HandleMatchComplete();
-            await stageResults();
+            await stageRoundEnd();
         }
 
         public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
@@ -120,12 +122,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 throw new InvalidStateException("Selected playlist item is expired!");
 
             picks.Add(new UserPick(user, playlistItemId));
+
             await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), user.UserID, playlistItemId);
         }
 
         private async Task stageRoundStart(ServerMultiplayerRoom _)
         {
             await returnUsersToRoom(Room);
+
+            state.Round++;
+
             await startCountdown(MatchmakingRoomStatus.RoundStart, TimeSpan.FromSeconds(5), stagePicks);
         }
 
@@ -177,7 +183,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await startCountdown(MatchmakingRoomStatus.Gameplay, TimeSpan.Zero, Hub.StartMatch);
         }
 
-        private async Task stageResults()
+        private async Task stageRoundEnd()
         {
             SoloScore[] scores;
             using (var db = dbFactory.GetInstance())
@@ -195,8 +201,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.UserScores.AdjustPlacements();
 
-            await Hub.NotifyMatchRoomStateChanged(Room);
-            await startCountdown(MatchmakingRoomStatus.Results, TimeSpan.FromSeconds(30), stageRoundStart);
+            if (state.Round == total_rounds)
+                await startCountdown(MatchmakingRoomStatus.RoomEnd, TimeSpan.FromMinutes(2), closeRoom);
+            else
+                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromMinutes(2), stageRoundStart);
         }
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
@@ -213,17 +221,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task startCountdown(MatchmakingRoomStatus status, TimeSpan duration, Func<ServerMultiplayerRoom, Task> continuation)
         {
-            if (status != state.RoomStatus)
-            {
-                state.RoomStatus = status;
-                await Hub.NotifyMatchRoomStateChanged(Room);
-            }
-
+            state.RoomStatus = status;
+            await Hub.NotifyMatchRoomStateChanged(Room);
             await Room.StartCountdown(new MatchmakingStatusCountdown
             {
                 Status = state.RoomStatus,
                 TimeRemaining = duration
             }, continuation);
+        }
+
+        private async Task closeRoom(ServerMultiplayerRoom _)
+        {
         }
 
         private bool allUsersIdle()
