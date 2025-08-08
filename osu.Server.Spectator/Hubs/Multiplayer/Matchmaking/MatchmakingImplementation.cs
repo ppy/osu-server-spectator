@@ -144,10 +144,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
         {
+            long lastPlaylistItem = Room.Settings.PlaylistItemId;
             Room.Settings.PlaylistItemId = state.CandidateItem;
-            await Hub.NotifySettingsChanged(Room, true);
+            await Hub.NotifySettingsChanged(Room, lastPlaylistItem != Room.Settings.PlaylistItemId);
 
-            // If no users are ready, continue preparing beatmap. Otherwise, move onto gameplay with any ready users.
             await startCountdown(MatchmakingRoomStatus.PrepareBeatmap,
                 TimeSpan.FromMinutes(2),
                 _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
