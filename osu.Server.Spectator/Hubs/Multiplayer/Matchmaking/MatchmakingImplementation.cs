@@ -70,8 +70,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             await base.HandleUserJoined(user);
 
-            if (Room.Users.Count == MATCHMAKING_ROOM_SIZE)
-                await stageRoundStart(Room);
+            switch (state.RoomStatus)
+            {
+                case MatchmakingRoomStatus.RoomStart:
+                    if (Room.Users.Count == MATCHMAKING_ROOM_SIZE)
+                        await stageRoundStart(Room);
+                    break;
+            }
         }
 
         public override async Task HandleUserStateChanged(MultiplayerRoomUser user)
@@ -183,7 +188,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.UserScores.AdjustPlacements();
 
             if (state.Round == total_rounds)
-                await startCountdown(MatchmakingRoomStatus.RoomEnd, TimeSpan.FromMinutes(2), Hub.CloseRoom);
+                await startCountdown(MatchmakingRoomStatus.RoomEnd, TimeSpan.FromSeconds(30), Hub.CloseRoom);
             else
                 await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(30), stageRoundStart);
         }
