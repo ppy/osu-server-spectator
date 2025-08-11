@@ -19,6 +19,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     public class MatchmakingImplementation : MatchTypeImplementation
     {
+        private const int stage_round_start_time = 5;
+        private const int stage_user_picks_time = 10;
+        private const int stage_select_beatmap_time = 10;
+        private const int stage_prepare_beatmap_time = 120;
+        private const int stage_prepare_gameplay_time = 5;
+        private const int stage_gameplay_time = 0;
+        private const int stage_round_end_quick_time = 5;
+        private const int stage_round_end_time = 30;
+        private const int stage_room_end_time = 30;
+
         /// <summary>
         /// The size of matchmaking rooms.
         /// </summary>
@@ -124,16 +134,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.Round++;
 
-            await startCountdown(MatchmakingRoomStatus.RoundStart, TimeSpan.FromSeconds(5), stagePicks);
+            await startCountdown(MatchmakingRoomStatus.RoundStart, TimeSpan.FromSeconds(stage_round_start_time), stageUserPicks);
         }
 
-        private async Task stagePicks(ServerMultiplayerRoom _)
+        private async Task stageUserPicks(ServerMultiplayerRoom _)
         {
             foreach (var selection in picks.Where(s => s.User != null))
                 await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), selection.User, selection.ItemID);
             picks.Clear();
 
-            await startCountdown(MatchmakingRoomStatus.UserPicks, TimeSpan.FromSeconds(10), stageSelectBeatmap);
+            await startCountdown(MatchmakingRoomStatus.UserPicks, TimeSpan.FromSeconds(stage_user_picks_time), stageSelectBeatmap);
         }
 
         private async Task stageSelectBeatmap(ServerMultiplayerRoom _)
@@ -144,7 +154,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.CandidateItems = picks.Select(s => s.ItemID).ToArray();
             state.CandidateItem = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
 
-            await startCountdown(MatchmakingRoomStatus.SelectBeatmap, TimeSpan.FromSeconds(10), stagePrepareBeatmap);
+            await startCountdown(MatchmakingRoomStatus.SelectBeatmap, TimeSpan.FromSeconds(stage_select_beatmap_time), stagePrepareBeatmap);
         }
 
         private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
@@ -156,17 +166,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (allUsersReady())
                 await stagePrepareGameplay(Room);
             else
-                await startCountdown(MatchmakingRoomStatus.PrepareBeatmap, TimeSpan.FromMinutes(2), _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
+            {
+                await startCountdown(MatchmakingRoomStatus.PrepareBeatmap, TimeSpan.FromSeconds(stage_prepare_beatmap_time),
+                    _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
+            }
         }
 
         private async Task stagePrepareGameplay(ServerMultiplayerRoom _)
         {
-            await startCountdown(MatchmakingRoomStatus.PrepareGameplay, TimeSpan.FromSeconds(5), stageGameplay);
+            await startCountdown(MatchmakingRoomStatus.PrepareGameplay, TimeSpan.FromSeconds(stage_prepare_gameplay_time), stageGameplay);
         }
 
         private async Task stageGameplay(ServerMultiplayerRoom _)
         {
-            await startCountdown(MatchmakingRoomStatus.Gameplay, TimeSpan.Zero, Hub.StartMatch);
+            await startCountdown(MatchmakingRoomStatus.Gameplay, TimeSpan.FromSeconds(stage_gameplay_time), Hub.StartMatch);
         }
 
         private async Task stageRoundEnd()
@@ -188,11 +201,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.UserScores.AdjustPlacements();
 
             if (state.Round == total_rounds)
-                await startCountdown(MatchmakingRoomStatus.RoomEnd, TimeSpan.FromSeconds(30), Hub.CloseRoom);
+                await startCountdown(MatchmakingRoomStatus.RoomEnd, TimeSpan.FromSeconds(stage_room_end_time), Hub.CloseRoom);
             else if (allUsersIdle())
-                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(5), stageRoundStart);
+                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(stage_round_end_quick_time), stageRoundStart);
             else
-                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(30), stageRoundStart);
+                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(stage_round_end_time), stageRoundStart);
         }
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
