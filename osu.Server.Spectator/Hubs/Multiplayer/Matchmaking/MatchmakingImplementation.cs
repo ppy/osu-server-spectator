@@ -130,11 +130,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageRoundStart(ServerMultiplayerRoom _)
         {
-            await returnUsersToRoom(Room);
-
             state.Round++;
 
-            await startCountdown(MatchmakingRoomStatus.RoundStart, TimeSpan.FromSeconds(stage_round_start_time), stageUserPicks);
+            await changeStage(MatchmakingRoomStatus.RoundStart);
+            await returnUsersToRoom(Room);
+            await startCountdown(TimeSpan.FromSeconds(stage_round_start_time), stageUserPicks);
         }
 
         private async Task stageUserPicks(ServerMultiplayerRoom _)
@@ -143,7 +143,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), selection.User, selection.ItemID);
             picks.Clear();
 
-            await startCountdown(MatchmakingRoomStatus.UserPicks, TimeSpan.FromSeconds(stage_user_picks_time), stageSelectBeatmap);
+            await changeStage(MatchmakingRoomStatus.UserPicks);
+            await startCountdown(TimeSpan.FromSeconds(stage_user_picks_time), stageSelectBeatmap);
         }
 
         private async Task stageSelectBeatmap(ServerMultiplayerRoom _)
@@ -154,7 +155,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.CandidateItems = picks.Select(s => s.ItemID).ToArray();
             state.CandidateItem = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
 
-            await startCountdown(MatchmakingRoomStatus.SelectBeatmap, TimeSpan.FromSeconds(stage_select_beatmap_time), stagePrepareBeatmap);
+            await changeStage(MatchmakingRoomStatus.SelectBeatmap);
+            await startCountdown(TimeSpan.FromSeconds(stage_select_beatmap_time), stagePrepareBeatmap);
         }
 
         private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
@@ -167,19 +169,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 await stagePrepareGameplay(Room);
             else
             {
-                await startCountdown(MatchmakingRoomStatus.PrepareBeatmap, TimeSpan.FromSeconds(stage_prepare_beatmap_time),
-                    _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
+                await changeStage(MatchmakingRoomStatus.PrepareBeatmap);
+                await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
             }
         }
 
         private async Task stagePrepareGameplay(ServerMultiplayerRoom _)
         {
-            await startCountdown(MatchmakingRoomStatus.PrepareGameplay, TimeSpan.FromSeconds(stage_prepare_gameplay_time), stageGameplay);
+            await changeStage(MatchmakingRoomStatus.PrepareGameplay);
+            await startCountdown(TimeSpan.FromSeconds(stage_prepare_gameplay_time), stageGameplay);
         }
 
         private async Task stageGameplay(ServerMultiplayerRoom _)
         {
-            await startCountdown(MatchmakingRoomStatus.Gameplay, TimeSpan.FromSeconds(stage_gameplay_time), Hub.StartMatch);
+            await changeStage(MatchmakingRoomStatus.Gameplay);
+            await startCountdown(TimeSpan.FromSeconds(stage_gameplay_time), Hub.StartMatch);
         }
 
         private async Task stageRoundEnd()
@@ -201,11 +205,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.UserScores.AdjustPlacements();
 
             if (state.Round == total_rounds)
-                await startCountdown(MatchmakingRoomStatus.RoomEnd, TimeSpan.FromSeconds(stage_room_end_time), Hub.CloseRoom);
-            else if (allUsersIdle())
-                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(stage_round_end_quick_time), stageRoundStart);
+            {
+                await changeStage(MatchmakingRoomStatus.RoomEnd);
+                await startCountdown(TimeSpan.FromSeconds(stage_room_end_time), Hub.CloseRoom);
+            }
             else
-                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(stage_round_end_time), stageRoundStart);
+            {
+                await changeStage(MatchmakingRoomStatus.RoundEnd);
+
+                if (allUsersIdle())
+                    await startCountdown(TimeSpan.FromSeconds(stage_round_end_quick_time), stageRoundStart);
+                else
+                    await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoundStart);
+            }
         }
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
@@ -220,10 +232,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await Hub.UpdateRoomStateIfRequired(Room);
         }
 
-        private async Task startCountdown(MatchmakingRoomStatus status, TimeSpan duration, Func<ServerMultiplayerRoom, Task> continuation)
+        private async Task changeStage(MatchmakingRoomStatus status)
         {
             state.RoomStatus = status;
             await Hub.NotifyMatchRoomStateChanged(Room);
+        }
+
+        private async Task startCountdown(TimeSpan duration, Func<ServerMultiplayerRoom, Task> continuation)
+        {
             await Room.StartCountdown(new MatchmakingStatusCountdown
             {
                 Status = state.RoomStatus,
