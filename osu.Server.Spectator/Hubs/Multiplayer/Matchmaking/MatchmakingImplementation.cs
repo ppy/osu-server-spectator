@@ -189,6 +189,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             if (state.Round == total_rounds)
                 await startCountdown(MatchmakingRoomStatus.RoomEnd, TimeSpan.FromSeconds(30), Hub.CloseRoom);
+            else if (allUsersIdle())
+                await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(5), stageRoundStart);
             else
                 await startCountdown(MatchmakingRoomStatus.RoundEnd, TimeSpan.FromSeconds(30), stageRoundStart);
         }
