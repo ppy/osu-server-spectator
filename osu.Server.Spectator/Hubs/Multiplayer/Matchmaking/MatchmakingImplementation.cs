@@ -20,14 +20,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
     public class MatchmakingImplementation : MatchTypeImplementation
     {
         private const int stage_round_start_time = 5;
-        private const int stage_user_picks_time = 10;
-        private const int stage_select_beatmap_time = 10;
+        private const int stage_user_picks_time = 5;
+        private const int stage_select_beatmap_time = 5;
         private const int stage_prepare_beatmap_time = 120;
         private const int stage_prepare_gameplay_time = 5;
         private const int stage_gameplay_time = 0;
         private const int stage_round_end_quick_time = 5;
-        private const int stage_round_end_time = 30;
-        private const int stage_room_end_time = 30;
+        private const int stage_round_end_time = 5;
+        private const int stage_room_end_time = 10;
 
         /// <summary>
         /// The size of matchmaking rooms.
