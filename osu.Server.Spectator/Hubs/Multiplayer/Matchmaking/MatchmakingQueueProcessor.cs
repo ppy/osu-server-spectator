@@ -83,7 +83,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
                     MultiplayerRoom room = new MultiplayerRoom(0)
                     {
-                        Settings = { MatchType = MatchType.Matchmaking, }
+                        Settings = { MatchType = MatchType.Matchmaking },
                     };
 
                     using (var db = databaseFactory.GetInstance())
@@ -103,7 +103,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     }
 
                     // Todo: User ID 157 is wrong (should be BanchoBot).
-                    long roomId = await sharedInterop.CreateRoomAsync(157, room);
+                    long roomId = await sharedInterop.CreateRoomAsync(AppSettings.BanchoBotUserId, room);
 
                     await hub.Clients.Clients(ids).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.FoundMatch
                     {
