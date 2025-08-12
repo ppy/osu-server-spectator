@@ -115,6 +115,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
         {
+            if (state.RoomStatus != MatchmakingRoomStatus.UserPicks)
+                return;
+
             MultiplayerPlaylistItem? item = Room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
 
             if (item == null)
