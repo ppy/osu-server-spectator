@@ -199,10 +199,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             {
                 // This makes sure that, for example, if the top two players have the same total score, they'll both receive #2 placement points.
                 int placement = totalScoreIndices.Last(t => t.totalScore == score.total_score).index;
-                state.UserScores.AddPoints((int)score.user_id, placement, placement_points[placement]);
+                state.SetScore((int)score.user_id, placement, placement_points[placement], score.ToScoreInfo());
             }
 
-            state.UserScores.AdjustPlacements();
+            state.ComputePlacements();
 
             if (state.Round == total_rounds)
             {
