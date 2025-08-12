@@ -11,6 +11,7 @@ using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
@@ -87,14 +88,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
                     using (var db = databaseFactory.GetInstance())
                     {
-                        foreach (int beatmapId in MatchmakingImplementation.BEATMAP_IDS)
-                        {
-                            var beatmap = (await db.GetBeatmapAsync(beatmapId))!;
+                        database_beatmap[] beatmaps = await db.GetBeatmapsAsync(MatchmakingImplementation.BEATMAP_IDS);
 
+                        foreach (database_beatmap beatmap in beatmaps)
+                        {
                             // Todo: These playlist items should be owned by BanchoBot.
                             room.Playlist.Add(new MultiplayerPlaylistItem
                             {
-                                BeatmapID = beatmapId,
+                                BeatmapID = beatmap.beatmap_id,
                                 BeatmapChecksum = beatmap.checksum!,
                                 StarRating = beatmap.difficultyrating
                             });

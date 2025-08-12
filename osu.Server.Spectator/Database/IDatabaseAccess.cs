@@ -46,6 +46,11 @@ namespace osu.Server.Spectator.Database
         Task<database_beatmap?> GetBeatmapAsync(int beatmapId);
 
         /// <summary>
+        /// Retrieves beatmaps corresponding to the given <paramref name="beatmapIds"/>.
+        /// </summary>
+        Task<database_beatmap[]> GetBeatmapsAsync(int[] beatmapIds);
+
+        /// <summary>
         /// Retrieves all beatmaps corresponding to the given <paramref name="beatmapSetId"/>.
         /// </summary>
         Task<database_beatmap[]> GetBeatmapsAsync(int beatmapSetId);

@@ -84,6 +84,17 @@ namespace osu.Server.Spectator.Database
                 });
         }
 
+        public async Task<database_beatmap[]> GetBeatmapsAsync(int[] beatmapIds)
+        {
+            var connection = await getConnectionAsync();
+
+            return (await connection.QueryAsync<database_beatmap>(
+                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode, osu_file_version FROM osu_beatmaps WHERE beatmap_id IN @BeatmapIds AND deleted_at IS NULL", new
+                {
+                    BeatmapIds = beatmapIds
+                })).ToArray();
+        }
+
         public async Task<database_beatmap[]> GetBeatmapsAsync(int beatmapSetId)
         {
             var connection = await getConnectionAsync();
