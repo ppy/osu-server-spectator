@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Rooms;
@@ -41,6 +40,10 @@ namespace osu.Server.Spectator.Database.Models
         /// </summary>
         public DateTimeOffset? played_at { get; set; }
 
+        public string? checksum { get; set; }
+
+        public double difficultyrating { get; set; }
+
         // for deserialization
         public multiplayer_playlist_item()
         {
@@ -67,15 +70,14 @@ namespace osu.Server.Spectator.Database.Models
             played_at = item.PlayedAt;
         }
 
-        public async Task<MultiplayerPlaylistItem> ToMultiplayerPlaylistItem(IDatabaseAccess db)
+        public MultiplayerPlaylistItem ToMultiplayerPlaylistItem()
         {
-            var beatmap = await db.GetBeatmapAsync(beatmap_id);
             var playlistItem = new MultiplayerPlaylistItem
             {
                 ID = id,
                 OwnerID = owner_id,
                 BeatmapID = beatmap_id,
-                BeatmapChecksum = beatmap?.checksum ?? string.Empty,
+                BeatmapChecksum = checksum ?? string.Empty,
                 RulesetID = ruleset_id,
                 RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(required_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
                 AllowedMods = JsonConvert.DeserializeObject<APIMod[]>(allowed_mods ?? string.Empty) ?? Array.Empty<APIMod>(),
@@ -83,7 +85,7 @@ namespace osu.Server.Spectator.Database.Models
                 Expired = expired,
                 PlaylistOrder = playlist_order ?? 0,
                 PlayedAt = played_at,
-                StarRating = beatmap?.difficultyrating ?? 0.0
+                StarRating = difficultyrating
             };
             return playlistItem;
         }
