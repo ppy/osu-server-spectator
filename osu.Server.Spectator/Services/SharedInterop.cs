@@ -210,7 +210,7 @@ namespace osu.Server.Spectator.Services
 
                 // Outer exception message is serialised to clients, inner exception is logged to the server and NOT serialised to the client.
                 return new SharedInteropRequestFailedException(response.StatusCode, errorMessage,
-                    new Exception($"Shared interop request to {url} failed with {response.StatusCode} ({response.ReasonPhrase})."));
+                    new Exception($"Shared interop request to {url} failed with {response.StatusCode} ({response.ReasonPhrase}):\n{await response.Content.ReadAsStringAsync()}"));
             }
 
             [Serializable]
