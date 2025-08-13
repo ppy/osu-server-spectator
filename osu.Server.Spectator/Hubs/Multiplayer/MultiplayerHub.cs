@@ -5,9 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MessagePack;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
@@ -23,6 +24,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
+        private static readonly MessagePackSerializerOptions message_pack_options = new MessagePackSerializerOptions(new SignalRUnionWorkaroundResolver());
+
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
         protected readonly MultiplayerHubContext HubContext;
         private readonly IDatabaseFactory databaseFactory;
@@ -75,7 +78,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't join a room when restricted.");
             }
 
-            ServerMultiplayerRoom? room = null;
+            byte[] roomBytes;
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -93,6 +96,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
+                    ServerMultiplayerRoom? room = null;
+
                     try
                     {
                         if (roomUsage.Item == null)
@@ -179,6 +184,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         throw;
                     }
+
+                    roomBytes = MessagePackSerializer.Serialize<MultiplayerRoom>(room, message_pack_options);
                 }
             }
 
@@ -194,14 +201,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await multiplayerEventLogger.LogPlayerJoinedAsync(roomId, Context.GetUserId());
 
-            var settings = new JsonSerializerSettings
-            {
-                // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
-                TypeNameHandling = TypeNameHandling.Auto,
-            };
-
-            return JsonConvert.DeserializeObject<MultiplayerRoom>(JsonConvert.SerializeObject(room, settings), settings)
-                   ?? throw new InvalidOperationException();
+            return MessagePackSerializer.Deserialize<MultiplayerRoom>(roomBytes);
         }
 
         /// <summary>
