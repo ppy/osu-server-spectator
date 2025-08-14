@@ -294,6 +294,11 @@ namespace SampleMultiplayerClient
             throw new NotImplementedException();
         }
 
+        public Task MatchmakingSkipToNextStage()
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task DisconnectRequested()
         {
             Console.WriteLine("Disconnect requested");

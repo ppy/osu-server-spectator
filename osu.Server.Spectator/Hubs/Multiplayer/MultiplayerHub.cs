@@ -922,5 +922,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await ((MatchmakingImplementation)room.MatchTypeImplementation).ToggleSelectionAsync(user, playlistItemId);
             }
         }
+
+        public async Task MatchmakingSkipToNextStage()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            {
+                var room = roomUsage.Item;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
+                if (user == null)
+                    throw new InvalidOperationException("Local user was not found in the expected room");
+
+                await ((MatchmakingImplementation)room.MatchTypeImplementation).SkipToNextRound();
+            }
+        }
     }
 }

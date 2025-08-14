@@ -113,6 +113,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await stageRoundEnd();
         }
 
+        public async Task SkipToNextRound()
+        {
+            _ = Room.SkipToEndOfCountdown(Room.FindCountdownOfType<MatchmakingStatusCountdown>());
+            await Task.CompletedTask;
+        }
+
         public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
         {
             if (state.RoomStatus != MatchmakingRoomStatus.UserPicks)
