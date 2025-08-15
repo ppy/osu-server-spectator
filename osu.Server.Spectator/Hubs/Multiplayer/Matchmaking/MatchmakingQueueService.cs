@@ -16,7 +16,7 @@ using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
-    public class MatchmakingQueueProcessor : BackgroundService, IMatchmakingQueueProcessor
+    public class MatchmakingQueueService : BackgroundService, IMatchmakingQueueService
     {
         private readonly IHubContext<MultiplayerHub> hub;
         private readonly ISharedInterop sharedInterop;
@@ -25,7 +25,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private readonly object queueLock = new object();
         private readonly HashSet<string> queue = new HashSet<string>();
 
-        public MatchmakingQueueProcessor(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory)
+        public MatchmakingQueueService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
@@ -57,6 +57,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             }
             else
                 await hub.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), null);
+        }
+
+        public async Task RemoveFromQueueAsync(string connectionId)
+        {
+            lock (queueLock)
+            {
+                if (!queue.Remove(connectionId))
+                    return;
+            }
+
+            await hub.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), null);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

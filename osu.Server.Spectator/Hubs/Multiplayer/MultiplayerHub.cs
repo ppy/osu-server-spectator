@@ -32,7 +32,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly ChatFilters chatFilters;
         private readonly ISharedInterop sharedInterop;
         private readonly MultiplayerEventLogger multiplayerEventLogger;
-        private readonly IMatchmakingQueueProcessor matchmakingQueue;
+        private readonly IMatchmakingQueueService matchmakingQueueService;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -43,14 +43,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             IHubContext<MultiplayerHub> hubContext,
             ISharedInterop sharedInterop,
             MultiplayerEventLogger multiplayerEventLogger,
-            IMatchmakingQueueProcessor matchmakingQueue)
+            IMatchmakingQueueService matchmakingQueueService)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
             this.sharedInterop = sharedInterop;
             this.multiplayerEventLogger = multiplayerEventLogger;
-            this.matchmakingQueue = matchmakingQueue;
+            this.matchmakingQueueService = matchmakingQueueService;
 
             Rooms = rooms;
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory, sharedInterop, multiplayerEventLogger);
@@ -780,6 +780,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
             await base.CleanUpState(state);
+            await matchmakingQueueService.RemoveFromQueueAsync(state.ConnectionId);
             await leaveRoom(state, true);
         }
 
@@ -904,7 +905,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Information) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
 
-        public Task ToggleMatchmakingQueue() => matchmakingQueue.AddOrRemoveFromQueueAsync(Context.ConnectionId);
+        public Task ToggleMatchmakingQueue() => matchmakingQueueService.AddOrRemoveFromQueueAsync(Context.ConnectionId);
 
         public async Task MatchmakingToggleSelection(long playlistItemId)
         {
