@@ -20,6 +20,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
     public class MatchmakingQueueService : BackgroundService, IMatchmakingQueueService
     {
         /// <summary>
+        /// The rate at which the matchmaking queue is updated.
+        /// </summary>
+        private static readonly TimeSpan update_rate = TimeSpan.FromSeconds(1);
+
+        /// <summary>
         /// The time before users are automatically removed from the queue if they haven't accepted the invitation.
         /// </summary>
         private static readonly TimeSpan invite_timeout = TimeSpan.FromSeconds(30);
@@ -217,7 +222,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
                 // Todo: We can notify all other users here of their expected time in the queue?
 
-                await Task.Delay(5000, stoppingToken);
+                await Task.Delay(update_rate, stoppingToken);
             }
         }
 
