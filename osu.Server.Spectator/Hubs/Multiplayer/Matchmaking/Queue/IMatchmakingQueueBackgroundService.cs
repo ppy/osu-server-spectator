@@ -4,14 +4,19 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 
-namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
+namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
-    public interface IMatchmakingQueueService : IHostedService
+    public interface IMatchmakingQueueBackgroundService : IHostedService
     {
+        /// <summary>
+        /// Whether a user is in the matchmaking queue.
+        /// </summary>
+        bool IsInQueue(MultiplayerClientState state);
+
         /// <summary>
         /// Adds a user to the matchmaking queue.
         /// </summary>
-        Task<bool> AddToQueueAsync(MultiplayerClientState state);
+        Task AddToQueueAsync(MultiplayerClientState state);
 
         /// <summary>
         /// Removes a user from the matchmaking queue.

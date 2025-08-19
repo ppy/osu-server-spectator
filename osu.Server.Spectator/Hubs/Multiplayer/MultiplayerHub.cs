@@ -18,6 +18,7 @@ using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
@@ -32,7 +33,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly ChatFilters chatFilters;
         private readonly ISharedInterop sharedInterop;
         private readonly MultiplayerEventLogger multiplayerEventLogger;
-        private readonly IMatchmakingQueueService matchmakingQueueService;
+        private readonly IMatchmakingQueueBackgroundService matchmakingQueueService;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -43,7 +44,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             IHubContext<MultiplayerHub> hubContext,
             ISharedInterop sharedInterop,
             MultiplayerEventLogger multiplayerEventLogger,
-            IMatchmakingQueueService matchmakingQueueService)
+            IMatchmakingQueueBackgroundService matchmakingQueueService)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
@@ -913,8 +914,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 var user = userUsage.Item;
 
-                if (!await matchmakingQueueService.AddToQueueAsync(user))
+                if (matchmakingQueueService.IsInQueue(user))
                     await matchmakingQueueService.RemoveFromQueueAsync(user);
+                else
+                    await matchmakingQueueService.AddToQueueAsync(user);
             }
         }
 
