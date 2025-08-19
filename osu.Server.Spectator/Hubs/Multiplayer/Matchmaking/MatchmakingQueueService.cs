@@ -20,6 +20,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
     public class MatchmakingQueueService : BackgroundService, IMatchmakingQueueService
     {
         /// <summary>
+        /// The time before users are automatically removed from the queue if they haven't accepted the invitation.
+        /// </summary>
+        private static readonly TimeSpan invite_timeout = TimeSpan.FromSeconds(30);
+
+        /// <summary>
         /// All users active in the matchmaking queue.
         /// </summary>
         private readonly HashSet<MatchmakingUser> matchmakingUsers = new HashSet<MatchmakingUser>();
@@ -93,9 +98,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 if (user.Group == null)
                     return;
 
-                user.AcceptedInvitation = true;
+                user.InviteAccepted = true;
 
-                if (user.Group.Users.All(u => u.AcceptedInvitation))
+                if (user.Group.Users.All(u => u.InviteAccepted))
                 {
                     finalisedGroup = user.Group;
 
@@ -127,39 +132,40 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         }
 
         public async Task DeclineInvitationAsync(MultiplayerClientState state)
+            => await declineInvitationAsync(new MatchmakingUser(state.ConnectionId));
+
+        private async Task declineInvitationAsync(params MatchmakingUser[] users)
         {
             // Users which have been returned to the queue because a player declined the invitation.
             List<MatchmakingUser> returnedUsers = new List<MatchmakingUser>();
 
             lock (queueLock)
             {
-                if (!matchmakingUsers.TryGetValue(new MatchmakingUser(state.ConnectionId), out MatchmakingUser? user))
-                    return;
+                foreach (var user in users)
+                    matchmakingUsers.Remove(user);
 
-                if (user.Group == null)
-                    return;
-
-                matchmakingUsers.Remove(user);
-
-                foreach (MatchmakingUser u in user.Group.Users)
+                foreach (var group in users.Where(u => u.Group != null).GroupBy(u => u.Group))
                 {
-                    if (u.Equals(user))
-                        continue;
+                    foreach (var user in group.Key!.Users)
+                    {
+                        if (!matchmakingUsers.Contains(user))
+                            continue;
 
-                    u.Group = null;
-                    u.AcceptedInvitation = false;
-
-                    returnedUsers.Add(u);
+                        user.Group = null;
+                        user.InviteAccepted = false;
+                        returnedUsers.Add(user);
+                    }
                 }
             }
 
-            // Notify the incoming user they've been removed from the queue.
-            await hub.Clients.Client(state.ConnectionId).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueLeft));
+            // Notify the incoming users they've been removed from the queue.
+            foreach (var user in users)
+                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueLeft));
 
             // Notify all other users they've been returned to the queue.
-            foreach (var user in returnedUsers)
+            foreach (var u in returnedUsers)
             {
-                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.Searching
+                await hub.Clients.Client(u.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.Searching
                 {
                     ReturnedToQueue = true
                 });
@@ -171,6 +177,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             while (!stoppingToken.IsCancellationRequested)
             {
                 List<MatchmakingGroup> newGroups = new List<MatchmakingGroup>();
+                List<MatchmakingUser> timeoutUsers = new List<MatchmakingUser>();
 
                 lock (queueLock)
                 {
@@ -183,7 +190,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                         newGroups.Add(group);
 
                         foreach (var user in users)
+                        {
+                            user.InviteStartTime = DateTimeOffset.Now;
                             user.Group = group;
+                        }
+                    }
+
+                    foreach (var user in matchmakingUsers.Where(u => u.Group != null && !u.InviteAccepted))
+                    {
+                        if (DateTimeOffset.Now - user.InviteStartTime > invite_timeout)
+                            timeoutUsers.Add(user);
                     }
                 }
 
@@ -196,6 +212,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingRoomInvited), CancellationToken.None);
                     await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.MatchFound(), CancellationToken.None);
                 }
+
+                await declineInvitationAsync(timeoutUsers.ToArray());
 
                 // Todo: We can notify all other users here of their expected time in the queue?
 
@@ -242,9 +260,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             public int Rank { get; set; }
 
             /// <summary>
+            /// The time at which this user was invited to the matchmaking room.
+            /// </summary>
+            public DateTimeOffset InviteStartTime { get; set; }
+
+            /// <summary>
             /// Whether this user has accepted the matchmaking room invitation.
             /// </summary>
-            public bool AcceptedInvitation { get; set; }
+            public bool InviteAccepted { get; set; }
 
             /// <summary>
             /// The group which this user has been matched with.
