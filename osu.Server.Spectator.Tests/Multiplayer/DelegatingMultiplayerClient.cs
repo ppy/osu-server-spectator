@@ -148,6 +148,30 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.PlaylistItemChanged(item);
         }
 
+        public virtual async Task MatchmakingQueueJoined()
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingQueueJoined();
+        }
+
+        public virtual async Task MatchmakingQueueLeft()
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingQueueLeft();
+        }
+
+        public virtual async Task MatchmakingRoomInvited()
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingRoomInvited();
+        }
+
+        public virtual async Task MatchmakingRoomReady(long roomId)
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingRoomReady(roomId);
+        }
+
         public virtual async Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus? status)
         {
             foreach (var c in Clients)

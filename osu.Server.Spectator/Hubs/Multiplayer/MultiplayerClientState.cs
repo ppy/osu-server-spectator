@@ -9,13 +9,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     [Serializable]
     public class MultiplayerClientState : ClientState
     {
-        public readonly long CurrentRoomID;
+        public long? CurrentRoomID { get; set; }
 
         [JsonConstructor]
-        public MultiplayerClientState(in string connectionId, in int userId, in long currentRoomID)
+        public MultiplayerClientState(in string connectionId, in int userId)
             : base(connectionId, userId)
         {
-            CurrentRoomID = currentRoomID;
         }
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -572,6 +573,25 @@ namespace osu.Server.Spectator.Database
                 "INSERT INTO `multiplayer_realtime_room_events` (`room_id`, `event_type`, `playlist_item_id`, `user_id`, `event_detail`, `created_at`, `updated_at`) "
                 + "VALUES (@room_id, @event_type, @playlist_item_id, @user_id, @event_detail, NOW(), NOW())",
                 ev);
+        }
+
+        public async Task<float> GetUserPP(int userId, int rulesetId)
+        {
+            string statsTable = rulesetId switch
+            {
+                0 => "osu_user_stats",
+                1 => "osu_user_stats_taiko",
+                2 => "osu_user_stats_fruits",
+                3 => "osu_user_stats_mania",
+                _ => throw new ArgumentOutOfRangeException(nameof(rulesetId), rulesetId, null)
+            };
+
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<float>($"SELECT `rank_score` FROM {statsTable} WHERE `user_id` = @userId", new
+            {
+                userId = userId
+            });
         }
 
         public void Dispose()

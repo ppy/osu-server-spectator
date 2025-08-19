@@ -235,5 +235,7 @@ namespace osu.Server.Spectator.Database
         /// Logs an event that happened in a multiplayer room.
         /// </summary>
         Task LogRoomEventAsync(multiplayer_realtime_room_event ev);
+
+        Task<float> GetUserPP(int userId, int rulesetId);
     }
 }

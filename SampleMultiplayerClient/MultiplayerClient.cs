@@ -80,6 +80,16 @@ namespace SampleMultiplayerClient
             throw new NotImplementedException();
         }
 
+        public Task MatchmakingAcceptInvitation()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchmakingDeclineInvitation()
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task LeaveRoom()
         {
             await connection.InvokeAsync(nameof(IMultiplayerServer.LeaveRoom));
@@ -277,6 +287,26 @@ namespace SampleMultiplayerClient
         {
             Console.WriteLine($"Playlist item changed (id: {item.ID} beatmap: {item.BeatmapID}, ruleset: {item.RulesetID})");
             return Task.CompletedTask;
+        }
+
+        public Task MatchmakingQueueJoined()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchmakingQueueLeft()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchmakingRoomInvited()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchmakingRoomReady(long roomId)
+        {
+            throw new NotImplementedException();
         }
 
         public Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus? status)
