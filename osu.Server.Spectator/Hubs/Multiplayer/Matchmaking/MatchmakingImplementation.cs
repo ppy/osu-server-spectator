@@ -49,11 +49,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private const int total_rounds = 4;
 
-        /// <summary>
-        /// The number of points awarded for each placement position (index 0 = #1, index 7 = #8).
-        /// </summary>
-        private static readonly int[] placement_points = [8, 7, 6, 5, 4, 3, 2, 1];
-
         public override IMultiplayerQueue Queue { get; }
 
         private readonly IDatabaseFactory dbFactory;
@@ -197,21 +192,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageRoundEnd()
         {
-            SoloScore[] scores;
+            Dictionary<int, SoloScore> scores = new Dictionary<int, SoloScore>();
+
             using (var db = dbFactory.GetInstance())
-                scores = (await db.GetAllScoresForPlaylistItem(Queue.CurrentItem.ID)).ToArray();
-
-            // Index of each raw total score value.
-            (int index, uint totalScore)[] totalScoreIndices = scores.OrderByDescending(s => s.total_score).Select((s, i) => (index: i, score: s.total_score)).ToArray();
-
-            foreach (var score in scores)
             {
-                // This makes sure that, for example, if the top two players have the same total score, they'll both receive #2 placement points.
-                int placement = totalScoreIndices.Last(t => t.totalScore == score.total_score).index;
-                state.SetScore((int)score.user_id, placement, placement_points[placement], score.ToScoreInfo());
+                foreach (var score in await db.GetAllScoresForPlaylistItem(Queue.CurrentItem.ID))
+                    scores[(int)score.user_id] = score;
             }
 
-            state.ComputePlacements();
+            state.SetScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray());
 
             if (state.Round == total_rounds)
             {

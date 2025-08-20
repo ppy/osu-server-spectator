@@ -10,73 +10,139 @@ namespace osu.Server.Spectator.Tests.Matchmaking
     public class MatchmakingRoomStateTest
     {
         [Fact]
-        public void AddPoints()
+        public void Basic()
         {
-            MatchmakingRoomState list = new MatchmakingRoomState();
-            list.NextRound();
-            list.SetScore(1, 2, 3, new SoloScoreInfo());
+            var state = new MatchmakingRoomState();
 
-            Assert.Equal(1, list.Users.Count);
+            // 1 -> 3 -> 2
 
-            Assert.Equal(3, list.Users[1].Points);
-            Assert.Equal(1, list.Users[1].Rounds.Count);
-            Assert.Equal(2, list.Users[1].Rounds[1].Placement);
+            state.NextRound();
+            state.SetScores(
+            [
+                new SoloScoreInfo { UserID = 2, TotalScore = 500 },
+                new SoloScoreInfo { UserID = 1, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 3, TotalScore = 750 },
+            ]);
 
-            list.SetScore(1, 5, 6, new SoloScoreInfo());
-            list.SetScore(2, 8, 9, new SoloScoreInfo());
+            Assert.Equal(8, state.Users[1].Points);
+            Assert.Equal(1, state.Users[1].Placement);
+            Assert.Equal(1, state.Users[1].Rounds[1].Placement);
 
-            Assert.Equal(2, list.Users.Count);
+            Assert.Equal(6, state.Users[2].Points);
+            Assert.Equal(3, state.Users[2].Placement);
+            Assert.Equal(3, state.Users[2].Rounds[1].Placement);
 
-            Assert.Equal(9, list.Users[1].Points);
-            Assert.Equal(2, list.Users[1].Rounds.Count);
-            Assert.Equal(2, list.Users[1].Rounds[0].Placement);
-            Assert.Equal(5, list.Users[1].Rounds[1].Placement);
+            Assert.Equal(7, state.Users[3].Points);
+            Assert.Equal(2, state.Users[3].Placement);
+            Assert.Equal(2, state.Users[3].Rounds[1].Placement);
 
-            Assert.Equal(9, list.Users[2].Points);
-            Assert.Equal(1, list.Users[2].Rounds.Count);
-            Assert.Equal(8, list.Users[2].Rounds[0].Placement);
+            // 2 -> 1 -> 3
+
+            state.NextRound();
+            state.SetScores(
+            [
+                new SoloScoreInfo { UserID = 2, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 1, TotalScore = 750 },
+                new SoloScoreInfo { UserID = 3, TotalScore = 500 },
+            ]);
+
+            Assert.Equal(15, state.Users[1].Points);
+            Assert.Equal(1, state.Users[1].Placement);
+            Assert.Equal(2, state.Users[1].Rounds[2].Placement);
+
+            Assert.Equal(14, state.Users[2].Points);
+            Assert.Equal(2, state.Users[2].Placement);
+            Assert.Equal(1, state.Users[2].Rounds[2].Placement);
+
+            Assert.Equal(13, state.Users[3].Points);
+            Assert.Equal(3, state.Users[3].Placement);
+            Assert.Equal(3, state.Users[3].Rounds[2].Placement);
         }
 
         [Fact]
-        public void AdjustPlacementsDistinctPoints()
+        public void MatchingScores()
         {
-            MatchmakingRoomState list = new MatchmakingRoomState();
+            var state = new MatchmakingRoomState();
 
-            list.SetScore(1, 1, 1, new SoloScoreInfo());
-            list.SetScore(2, 1, 2, new SoloScoreInfo());
-            list.ComputePlacements();
+            // 1 + 2 -> 3 + 4
 
-            Assert.Equal(1, list.Users[2].Placement);
-            Assert.Equal(2, list.Users[1].Placement);
+            state.NextRound();
+            state.SetScores(
+            [
+                new SoloScoreInfo { UserID = 1, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 2, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 3, TotalScore = 500 },
+                new SoloScoreInfo { UserID = 4, TotalScore = 500 },
+            ]);
+
+            Assert.Equal(7, state.Users[1].Points);
+            Assert.Equal(1, state.Users[1].Placement);
+            Assert.Equal(2, state.Users[1].Rounds[1].Placement);
+
+            Assert.Equal(7, state.Users[2].Points);
+            Assert.Equal(2, state.Users[2].Placement);
+            Assert.Equal(2, state.Users[2].Rounds[1].Placement);
+
+            Assert.Equal(5, state.Users[3].Points);
+            Assert.Equal(3, state.Users[3].Placement);
+            Assert.Equal(4, state.Users[3].Rounds[1].Placement);
+
+            Assert.Equal(5, state.Users[4].Points);
+            Assert.Equal(4, state.Users[4].Placement);
+            Assert.Equal(4, state.Users[4].Rounds[1].Placement);
         }
 
         [Fact]
-        public void AdjustPlacementsRoundTiebreaker()
+        public void RoundTieBreaker()
         {
-            MatchmakingRoomState list = new MatchmakingRoomState();
+            var state = new MatchmakingRoomState();
 
-            list.SetScore(1, 2, 1, new SoloScoreInfo());
-            list.SetScore(2, 1, 1, new SoloScoreInfo());
-            list.NextRound();
-            list.SetScore(1, 1, 1, new SoloScoreInfo());
-            list.SetScore(2, 2, 1, new SoloScoreInfo());
-            list.ComputePlacements();
+            // 1 -> 2
 
-            Assert.Equal(1, list.Users[2].Placement);
-            Assert.Equal(2, list.Users[1].Placement);
+            state.NextRound();
+            state.SetScores(
+            [
+                new SoloScoreInfo { UserID = 1, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 2, TotalScore = 500 },
+            ]);
+
+            // 2 -> 1
+
+            state.NextRound();
+            state.SetScores(
+            [
+                new SoloScoreInfo { UserID = 1, TotalScore = 500 },
+                new SoloScoreInfo { UserID = 2, TotalScore = 1000 },
+            ]);
+
+            Assert.Equal(1, state.Users[1].Placement);
+            Assert.Equal(2, state.Users[2].Placement);
         }
 
         [Fact]
-        public void AdjustPlacementsUserIdTiebreaker()
+        public void UserIdTieBreaker()
         {
-            MatchmakingRoomState list = new MatchmakingRoomState();
+            var state = new MatchmakingRoomState();
 
-            list.SetScore(2, 2, 1, new SoloScoreInfo());
-            list.SetScore(1, 2, 1, new SoloScoreInfo());
-            list.ComputePlacements();
+            // 1 + 2 + 3 + 4 + 5 + 6
 
-            Assert.Equal(1, list.Users[1].Placement);
-            Assert.Equal(2, list.Users[2].Placement);
+            state.NextRound();
+            state.SetScores(
+            [
+                new SoloScoreInfo { UserID = 4, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 6, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 2, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 3, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 1, TotalScore = 1000 },
+                new SoloScoreInfo { UserID = 5, TotalScore = 1000 },
+            ]);
+
+            Assert.Equal(1, state.Users[1].Placement);
+            Assert.Equal(2, state.Users[2].Placement);
+            Assert.Equal(3, state.Users[3].Placement);
+            Assert.Equal(4, state.Users[4].Placement);
+            Assert.Equal(5, state.Users[5].Placement);
+            Assert.Equal(6, state.Users[6].Placement);
         }
     }
 }
