@@ -119,7 +119,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingRoomReady), roomId);
 
                 foreach (var user in group.Users)
-                    await hub.Groups.RemoveFromGroupAsync(user.Identifier, user.Identifier);
+                    await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
             }
         }
 
