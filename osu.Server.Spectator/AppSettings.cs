@@ -32,6 +32,8 @@ namespace osu.Server.Spectator
 
         public static string DatabaseHost { get; }
         public static string DatabaseUser { get; }
+        public static string DatabasePassword { get; }
+        public static string DatabaseName { get; }
         public static string DatabasePort { get; }
 
         public static string SharedInteropDomain { get; }
@@ -57,6 +59,8 @@ namespace osu.Server.Spectator
 
             DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
             DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
+            DatabasePassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? string.Empty;
+            DatabaseName = Environment.GetEnvironmentVariable("DB_NAME") ?? "osu";
             DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
             SharedInteropDomain = Environment.GetEnvironmentVariable("SHARED_INTEROP_DOMAIN") ?? "http://localhost:8080";
