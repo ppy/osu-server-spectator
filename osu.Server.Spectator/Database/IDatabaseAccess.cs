@@ -225,5 +225,12 @@ namespace osu.Server.Spectator.Database
         /// Logs an event that happened in a multiplayer room.
         /// </summary>
         Task LogRoomEventAsync(multiplayer_realtime_room_event ev);
+
+        /// <summary>
+        /// Toggles the user's "hide user presence" website setting.
+        /// </summary>
+        /// <param name="userId">The user's ID.</param>
+        /// <param name="visible">Whether the user should appear online to other players on the website.</param>
+        Task ToggleUserPresenceAsync(int userId, bool visible);
     }
 }
