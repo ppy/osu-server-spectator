@@ -75,7 +75,22 @@ namespace SampleMultiplayerClient
         public async Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string? password = null)
             => Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.JoinRoomWithPassword), roomId, password ?? string.Empty);
 
-        public Task ToggleMatchmakingQueue()
+        public Task JoinMatchmakingLobby()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task LeaveMatchmakingLobby()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task JoinMatchmakingQueue()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task LeaveMatchmakingQueue()
         {
             throw new NotImplementedException();
         }
@@ -140,6 +155,16 @@ namespace SampleMultiplayerClient
 
         public Task InvitePlayer(int userId)
             => connection.InvokeAsync(nameof(IMultiplayerServer.InvitePlayer), userId);
+
+        public Task MatchmakingToggleSelection(long playlistItemId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchmakingSkipToNextStage()
+        {
+            throw new NotImplementedException();
+        }
 
         Task IMultiplayerClient.RoomStateChanged(MultiplayerRoomState state)
         {
@@ -309,22 +334,17 @@ namespace SampleMultiplayerClient
             throw new NotImplementedException();
         }
 
-        public Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus? status)
+        public Task MatchmakingLobbyStatusChanged(MatchmakingLobbyStatus status)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus status)
         {
             throw new NotImplementedException();
         }
 
         public Task MatchmakingSelectionToggled(int userId, long playlistItemId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task MatchmakingToggleSelection(long playlistItemId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task MatchmakingSkipToNextStage()
         {
             throw new NotImplementedException();
         }

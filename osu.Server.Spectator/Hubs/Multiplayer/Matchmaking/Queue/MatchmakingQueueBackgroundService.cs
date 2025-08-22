@@ -21,7 +21,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// The rate at which the matchmaking queue is updated.
         /// </summary>
-        private static readonly TimeSpan update_rate = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan queue_update_rate = TimeSpan.FromSeconds(1);
+
+        /// <summary>
+        /// The rate at which actively searching users are sent periodic status updates.
+        /// </summary>
+        private static readonly TimeSpan periodic_update_rate = TimeSpan.FromSeconds(5);
+
+        private const string lobby_users_group = "matchmaking-lobby-users";
 
         private readonly MatchmakingQueue queue = new MatchmakingQueue();
 
@@ -29,7 +36,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly ISharedInterop sharedInterop;
         private readonly IDatabaseFactory databaseFactory;
 
+        private int[] queuedUsersSample = [];
         private MultiplayerPlaylistItem[]? playlistItems;
+        private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory)
         {
@@ -43,9 +52,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             return queue.IsInQueue(new MatchmakingQueueUser(state.ConnectionId));
         }
 
+        public async Task AddToLobbyAsync(MultiplayerClientState state)
+        {
+            await hub.Groups.AddToGroupAsync(state.ConnectionId, lobby_users_group);
+        }
+
+        public async Task RemoveFromLobbyAsync(MultiplayerClientState state)
+        {
+            await hub.Groups.RemoveFromGroupAsync(state.ConnectionId, lobby_users_group);
+        }
+
         public async Task AddToQueueAsync(MultiplayerClientState state)
         {
-            MatchmakingQueueUser user = new MatchmakingQueueUser(state.ConnectionId);
+            MatchmakingQueueUser user = new MatchmakingQueueUser(state.ConnectionId)
+            {
+                UserId = state.UserId
+            };
 
             using (var db = databaseFactory.GetInstance())
                 user.Rank = (int)await db.GetUserPP(state.UserId, 0);
@@ -75,12 +97,27 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
             while (!stoppingToken.IsCancellationRequested)
             {
+                await updateLobby();
                 await processBundle(queue.Update());
-
-                // Todo: We can notify all other users here of their expected time in the queue?
-
-                await Task.Delay(update_rate, stoppingToken);
+                await Task.Delay(queue_update_rate, stoppingToken);
             }
+        }
+
+        private async Task updateLobby()
+        {
+            if (DateTimeOffset.Now - lastLobbyUpdateTime < periodic_update_rate)
+                return;
+
+            MatchmakingQueueUser[] users = queue.GetAllUsers();
+            Random.Shared.Shuffle(users);
+            queuedUsersSample = users.Take(50).Select(u => u.UserId).ToArray();
+
+            await hub.Clients.Group(lobby_users_group).SendAsync(nameof(IMultiplayerClient.MatchmakingLobbyStatusChanged), new MatchmakingLobbyStatus
+            {
+                UsersInQueue = queuedUsersSample
+            });
+
+            lastLobbyUpdateTime = DateTimeOffset.Now;
         }
 
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)
@@ -88,15 +125,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             foreach (var user in bundle.RemovedUsers)
                 await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueLeft));
 
-            foreach ((var user, bool rejoin) in bundle.AddedUsers)
+            foreach (var user in bundle.AddedUsers)
             {
-                if (!rejoin)
-                    await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueJoined));
-
-                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.Searching
-                {
-                    ReturnedToQueue = rejoin
-                });
+                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueJoined));
+                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.Searching());
             }
 
             foreach (var group in bundle.FormedGroups)

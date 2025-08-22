@@ -14,6 +14,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         bool IsInQueue(MultiplayerClientState state);
 
         /// <summary>
+        /// Adds a user to the matchmaking lobby.
+        /// </summary>
+        Task AddToLobbyAsync(MultiplayerClientState state);
+
+        /// <summary>
+        /// Remove sa user from the matchmaking lobby.
+        /// </summary>
+        /// <param name="state"></param>
+        /// <returns></returns>
+        Task RemoveFromLobbyAsync(MultiplayerClientState state);
+
+        /// <summary>
         /// Adds a user to the matchmaking queue.
         /// </summary>
         Task AddToQueueAsync(MultiplayerClientState state);

@@ -31,8 +31,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             var bundle = queue.Add(new MatchmakingQueueUser("1"));
             Assert.Single(bundle.AddedUsers);
-            Assert.Equal("1", bundle.AddedUsers[0].user.Identifier);
-            Assert.Equal(false, bundle.AddedUsers[0].rejoin);
+            Assert.Equal("1", bundle.AddedUsers[0].Identifier);
 
             bundle = queue.Update();
             Assert.Single(bundle.FormedGroups);
@@ -84,8 +83,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Single(bundle.RemovedUsers);
             Assert.Equal("1", bundle.RemovedUsers[0].Identifier);
             Assert.Single(bundle.AddedUsers);
-            Assert.Equal("2", bundle.AddedUsers[0].user.Identifier);
-            Assert.Equal(true, bundle.AddedUsers[0].rejoin);
+            Assert.Equal("2", bundle.AddedUsers[0].Identifier);
         }
 
         [Fact]
@@ -105,8 +103,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Single(bundle.RemovedUsers);
             Assert.Equal("2", bundle.RemovedUsers[0].Identifier);
             Assert.Single(bundle.AddedUsers);
-            Assert.Equal("1", bundle.AddedUsers[0].user.Identifier);
-            Assert.Equal(true, bundle.AddedUsers[0].rejoin);
+            Assert.Equal("1", bundle.AddedUsers[0].Identifier);
         }
     }
 }

@@ -906,18 +906,39 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         protected void Log(ServerMultiplayerRoom room, string message, LogLevel logLevel = LogLevel.Information) => base.Log($"[room:{room.RoomID}] {message}", logLevel);
 
-        public async Task ToggleMatchmakingQueue()
+        public async Task JoinMatchmakingLobby()
         {
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
+                await matchmakingQueueService.AddToLobbyAsync(userUsage.Item);
+            }
+        }
 
-                var user = userUsage.Item;
+        public async Task LeaveMatchmakingLobby()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            {
+                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
+                await matchmakingQueueService.RemoveFromLobbyAsync(userUsage.Item);
+            }
+        }
 
-                if (matchmakingQueueService.IsInQueue(user))
-                    await matchmakingQueueService.RemoveFromQueueAsync(user);
-                else
-                    await matchmakingQueueService.AddToQueueAsync(user);
+        public async Task JoinMatchmakingQueue()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            {
+                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
+                await matchmakingQueueService.AddToQueueAsync(userUsage.Item);
+            }
+        }
+
+        public async Task LeaveMatchmakingQueue()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            {
+                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
+                await matchmakingQueueService.RemoveFromQueueAsync(userUsage.Item);
             }
         }
 

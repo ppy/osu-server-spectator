@@ -23,7 +23,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// Users that have joined the queue.
         /// </summary>
-        public readonly List<(MatchmakingQueueUser user, bool rejoin)> AddedUsers = [];
+        public readonly List<MatchmakingQueueUser> AddedUsers = [];
 
         /// <summary>
         /// Users that have left the queue.

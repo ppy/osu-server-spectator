@@ -47,6 +47,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
+        /// Retrieves all users currently in the matchmaking queue.
+        /// </summary>
+        /// <returns></returns>
+        public MatchmakingQueueUser[] GetAllUsers()
+        {
+            lock (queueLock)
+                return matchmakingUsers.ToArray();
+        }
+
+        /// <summary>
         /// Adds a user to the matchmaking queue.
         /// </summary>
         /// <param name="user">The user to add.</param>
@@ -57,7 +67,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             lock (queueLock)
             {
                 if (matchmakingUsers.Add(user))
-                    bundle.AddedUsers.Add((user, false));
+                    bundle.AddedUsers.Add(user);
             }
 
             return bundle;
@@ -203,7 +213,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         user.Group = null;
                         user.InviteAccepted = false;
 
-                        bundle.AddedUsers.Add((user, true));
+                        bundle.AddedUsers.Add(user);
                     }
                 }
             }

@@ -172,6 +172,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.MatchmakingRoomReady(roomId);
         }
 
+        public virtual async Task MatchmakingLobbyStatusChanged(MatchmakingLobbyStatus status)
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingLobbyStatusChanged(status);
+        }
+
         public virtual async Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus? status)
         {
             foreach (var c in Clients)
