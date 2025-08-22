@@ -59,14 +59,14 @@ namespace osu.Server.Spectator
 
             DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
             DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osu_api";
-            DatabasePassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "password";
+            DatabasePassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "password123";
             DatabaseName = Environment.GetEnvironmentVariable("DB_NAME") ?? "osu_api";
             DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
             SharedInteropDomain = Environment.GetEnvironmentVariable("SHARED_INTEROP_DOMAIN") ?? "http://localhost:8080";
             SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;
 
-            SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
+            SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN") ?? "https://5840d8cb8d2b4d238369443bedef1d74@glitchtip.g0v0.top/4";
         }
     }
 }

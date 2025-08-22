@@ -15,10 +15,7 @@
       "launchUrl": "spectator",
       "applicationUrl": "http://localhost:5009",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "DB_USER":"osu_api",
-        "DB_PASSWORD": "password",
-        "DB_NAME": "osu_api"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
   }
