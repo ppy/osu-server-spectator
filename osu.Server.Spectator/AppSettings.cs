@@ -58,9 +58,9 @@ namespace osu.Server.Spectator
             DataDogAgentHost = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? "localhost";
 
             DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-            DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
-            DatabasePassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? string.Empty;
-            DatabaseName = Environment.GetEnvironmentVariable("DB_NAME") ?? "osu";
+            DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osu_api";
+            DatabasePassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "password";
+            DatabaseName = Environment.GetEnvironmentVariable("DB_NAME") ?? "osu_api";
             DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
             SharedInteropDomain = Environment.GetEnvironmentVariable("SHARED_INTEROP_DOMAIN") ?? "http://localhost:8080";

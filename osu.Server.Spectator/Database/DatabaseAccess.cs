@@ -29,7 +29,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QueryFirstOrDefaultAsync<int?>("SELECT user_id FROM oauth_access_tokens WHERE revoked = false AND expires_at > now() AND id = @id",
+            return await connection.QueryFirstOrDefaultAsync<int?>("SELECT user_id FROM oauth_tokens WHERE expires_at > now() AND access_token = @id",
                 new { id = jwtToken.Id });
         }
 
@@ -37,7 +37,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QueryFirstOrDefaultAsync<string?>("SELECT username FROM phpbb_users WHERE user_id = @UserID", new
+            return await connection.QueryFirstOrDefaultAsync<string?>("SELECT username FROM lazer_users WHERE id = @UserID", new
             {
                 UserID = userId
             });
@@ -47,17 +47,20 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QueryFirstOrDefaultAsync<byte>("SELECT user_warnings FROM phpbb_users WHERE user_id = @UserID", new
+            var priv = await connection.QueryFirstOrDefaultAsync<int>("SELECT priv FROM lazer_users WHERE id = @UserID", new
             {
                 UserID = userId
-            }) != 0;
+            });
+
+            // priv 值为 1 表示正常用户，其他值可能表示受限用户
+            return priv != 1;
         }
 
         public async Task<multiplayer_room?> GetRoomAsync(long roomId)
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE id = @RoomID", new
+            return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM rooms WHERE id = @RoomID", new
             {
                 RoomID = roomId
             });
@@ -67,7 +70,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM multiplayer_rooms WHERE type != 'playlists' AND id = @RoomID", new
+            return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM rooms WHERE type != 'playlists' AND id = @RoomID", new
             {
                 RoomID = roomId
             });
@@ -78,7 +81,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QuerySingleOrDefaultAsync<database_beatmap>(
-                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode, osu_file_version FROM osu_beatmaps WHERE beatmap_id = @BeatmapId AND deleted_at IS NULL", new
+                "SELECT id as beatmap_id, beatmapset_id, checksum, beatmap_status as approved, difficulty_rating as difficultyrating, mode as playmode, 0 as osu_file_version FROM beatmaps WHERE id = @BeatmapId AND deleted_at IS NULL", new
                 {
                     BeatmapId = beatmapId
                 });
@@ -89,7 +92,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return (await connection.QueryAsync<database_beatmap>(
-                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode, osu_file_version FROM osu_beatmaps WHERE beatmapset_id = @BeatmapSetId AND deleted_at IS NULL", new
+                "SELECT id as beatmap_id, beatmapset_id, checksum, beatmap_status as approved, difficulty_rating as difficultyrating, mode as playmode, 0 as osu_file_version FROM beatmaps WHERE beatmapset_id = @BeatmapSetId AND deleted_at IS NULL", new
                 {
                     BeatmapSetId = beatmapSetId
                 })).ToArray();
@@ -99,7 +102,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = null WHERE id = @RoomID", new
+            await connection.ExecuteAsync("UPDATE rooms SET ends_at = null WHERE id = @RoomID", new
             {
                 RoomID = room.RoomID
             });
@@ -109,7 +112,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name, password = @Password, type = @MatchType, queue_mode = @QueueMode WHERE id = @RoomID", new
+            await connection.ExecuteAsync("UPDATE rooms SET name = @Name, password = @Password, type = @MatchType, queue_mode = @QueueMode WHERE id = @RoomID", new
             {
                 RoomID = room.RoomID,
                 Name = room.Settings.Name,
@@ -124,7 +127,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET status = @Status WHERE id = @RoomID", new
+            await connection.ExecuteAsync("UPDATE rooms SET status = @Status WHERE id = @RoomID", new
             {
                 RoomID = room.RoomID,
                 // needs ToString() to store as enums correctly, see https://github.com/DapperLib/Dapper/issues/813.
@@ -140,7 +143,7 @@ namespace osu.Server.Spectator.Database
 
             try
             {
-                await connection.ExecuteAsync("UPDATE multiplayer_rooms SET user_id = @HostUserID WHERE id = @RoomID", new
+                await connection.ExecuteAsync("UPDATE rooms SET host_id = @HostUserID WHERE id = @RoomID", new
                 {
                     HostUserID = room.Host.UserID,
                     RoomID = room.RoomID
@@ -161,13 +164,13 @@ namespace osu.Server.Spectator.Database
                 using (var transaction = await connection.BeginTransactionAsync())
                 {
                     // the user may have previously been in the room and set some scores, so need to update their presence if existing.
-                    await connection.ExecuteAsync("INSERT INTO multiplayer_rooms_high (room_id, user_id, in_room) VALUES (@RoomID, @UserID, 1) ON DUPLICATE KEY UPDATE in_room = 1", new
+                    await connection.ExecuteAsync("INSERT INTO room_participated_users (room_id, user_id, joined_at, left_at) VALUES (@RoomID, @UserID, NOW(), NULL) ON DUPLICATE KEY UPDATE left_at = NULL", new
                     {
                         RoomID = room.RoomID,
                         UserID = user.UserID
                     }, transaction);
 
-                    await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
+                    await connection.ExecuteAsync("UPDATE rooms SET participant_count = @Count WHERE id = @RoomID", new
                     {
                         RoomID = room.RoomID,
                         Count = room.Users.Count
@@ -191,7 +194,7 @@ namespace osu.Server.Spectator.Database
 
             try
             {
-                await connection.ExecuteAsync("INSERT INTO osu_logins (user_id, ip) VALUES (@UserID, @IP)", new
+                await connection.ExecuteAsync("INSERT INTO user_login_log (user_id, ip_address, login_method) VALUES (@UserID, @IP, 'spectator')", new
                 {
                     UserID = userId,
                     IP = userIp
@@ -211,13 +214,13 @@ namespace osu.Server.Spectator.Database
             {
                 using (var transaction = await connection.BeginTransactionAsync())
                 {
-                    await connection.ExecuteAsync("UPDATE multiplayer_rooms_high SET in_room = 0 WHERE room_id = @RoomID AND user_id = @UserID", new
+                    await connection.ExecuteAsync("UPDATE room_participated_users SET left_at = NOW() WHERE room_id = @RoomID AND user_id = @UserID AND left_at IS NULL", new
                     {
                         RoomID = room.RoomID,
                         UserID = user.UserID
                     }, transaction);
 
-                    await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count WHERE id = @RoomID", new
+                    await connection.ExecuteAsync("UPDATE rooms SET participant_count = @Count WHERE id = @RoomID", new
                     {
                         RoomID = room.RoomID,
                         Count = room.Users.Count
@@ -236,7 +239,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE id = @Id AND room_id = @RoomId", new
+            return await connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM playlists WHERE id = @Id AND room_id = @RoomId", new
             {
                 Id = playlistItemId,
                 RoomId = roomId
@@ -248,11 +251,11 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             await connection.ExecuteAsync(
-                "INSERT INTO multiplayer_playlist_items (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, freestyle, playlist_order, created_at, updated_at)"
+                "INSERT INTO playlists (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, freestyle, playlist_order, created_at, updated_at)"
                 + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, @freestyle, @playlist_order, NOW(), NOW())",
                 item);
 
-            return await connection.QuerySingleAsync<long>("SELECT max(id) FROM multiplayer_playlist_items WHERE room_id = @room_id", item);
+            return await connection.QuerySingleAsync<long>("SELECT max(id) FROM playlists WHERE room_id = @room_id", item);
         }
 
         public async Task UpdatePlaylistItemAsync(multiplayer_playlist_item item)
@@ -260,7 +263,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             await connection.ExecuteAsync(
-                "UPDATE multiplayer_playlist_items SET"
+                "UPDATE playlists SET"
                 + " beatmap_id = @beatmap_id,"
                 + " ruleset_id = @ruleset_id,"
                 + " required_mods = @required_mods,"
@@ -275,7 +278,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("DELETE FROM multiplayer_playlist_items WHERE id = @Id AND room_id = @RoomId", new
+            await connection.ExecuteAsync("DELETE FROM playlists WHERE id = @Id AND room_id = @RoomId", new
             {
                 Id = playlistItemId,
                 RoomId = roomId
@@ -286,7 +289,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE multiplayer_playlist_items SET expired = 1, played_at = NOW(), updated_at = NOW() WHERE id = @PlaylistItemId AND room_id = @RoomId", new
+            await connection.ExecuteAsync("UPDATE playlists SET expired = 1, played_at = NOW(), updated_at = NOW() WHERE id = @PlaylistItemId AND room_id = @RoomId", new
             {
                 PlaylistItemId = playlistItemId,
                 RoomId = roomId
@@ -300,7 +303,7 @@ namespace osu.Server.Spectator.Database
             // Expire all non-expired items from the playlist.
             // We're not removing them because they may be linked to other tables (e.g. `multiplayer_realtime_room_events`, `multiplayer_scores_high`, etc.)
             await connection.ExecuteAsync(
-                "UPDATE multiplayer_playlist_items p"
+                "UPDATE playlists p"
                 + " SET p.expired = 1, played_at = NOW(), updated_at = NOW()"
                 + " WHERE p.room_id = @RoomID"
                 + " AND p.expired = 0"
@@ -310,10 +313,10 @@ namespace osu.Server.Spectator.Database
                     RoomID = room.RoomID
                 });
 
-            int totalUsers = connection.QuerySingle<int>("SELECT COUNT(*) FROM multiplayer_rooms_high WHERE room_id = @RoomID", new { RoomID = room.RoomID });
+            int totalUsers = connection.QuerySingle<int>("SELECT COUNT(*) FROM room_participated_users WHERE room_id = @RoomID", new { RoomID = room.RoomID });
 
             // Close the room.
-            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET participant_count = @Count, ends_at = NOW() WHERE id = @RoomID", new
+            await connection.ExecuteAsync("UPDATE rooms SET participant_count = @Count, ends_at = NOW() WHERE id = @RoomID", new
             {
                 RoomID = room.RoomID,
                 Count = totalUsers,
@@ -324,7 +327,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
+            return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM playlists WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
         }
 
         public async Task MarkScoreHasReplay(Score score)
@@ -358,38 +361,48 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<bool> IsScoreProcessedAsync(long scoreId)
+        public Task<bool> IsScoreProcessedAsync(long scoreId)
         {
-            var connection = await getConnectionAsync();
-
-            return await connection.QuerySingleOrDefaultAsync<bool>("SELECT 1 FROM `score_process_history` WHERE `score_id` = @ScoreId", new
-            {
-                ScoreId = scoreId
-            });
+            // g0v0-server doesn't have score_process_history table
+            // For now, assume all scores are not processed to allow processing
+            return Task.FromResult(false);
         }
 
         public async Task<phpbb_zebra?> GetUserRelation(int userId, int zebraId)
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleOrDefaultAsync<phpbb_zebra?>("SELECT * FROM `phpbb_zebra` WHERE `user_id` = @UserId AND `zebra_id` = @ZebraId", new
+            // g0v0-server uses relationship table instead of phpbb_zebra
+            var relationship = await connection.QuerySingleOrDefaultAsync<dynamic>("SELECT * FROM `relationship` WHERE `user_id` = @UserId AND `target_id` = @ZebraId", new
             {
                 UserId = userId,
                 ZebraId = zebraId
             });
+
+            if (relationship == null)
+                return null;
+
+            // Convert relationship to phpbb_zebra format for compatibility
+            return new phpbb_zebra
+            {
+                user_id = userId,
+                zebra_id = zebraId,
+                friend = relationship.type == "Friend",
+                foe = relationship.type == "Block"
+            };
         }
 
         public async Task<IEnumerable<int>> GetUserFriendsAsync(int userId)
         {
             var connection = await getConnectionAsync();
 
-            // Query pulled from osu!bancho.
+            // Query adapted for g0v0-server schema using relationship table
             return await connection.QueryAsync<int>(
-                "SELECT zebra_id FROM phpbb_zebra z "
-                + "JOIN phpbb_users u ON z.zebra_id = u.user_id "
-                + "WHERE z.user_id = @UserId "
-                + "AND friend = 1 "
-                + "AND (`user_warnings` = '0' and `user_type` = '0')", new
+                "SELECT r.target_id FROM relationship r "
+                + "JOIN lazer_users u ON r.target_id = u.id "
+                + "WHERE r.user_id = @UserId "
+                + "AND r.type = 'Friend' "
+                + "AND u.priv = 1", new
                 {
                     UserId = userId
                 });
@@ -399,56 +412,52 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleOrDefaultAsync<bool>("SELECT `user_allow_pm` FROM `phpbb_users` WHERE `user_id` = @UserId", new
+            // 在g0v0-server中，使用pm_friends_only字段（false表示允许所有人发送PM）
+            var pmFriendsOnly = await connection.QuerySingleOrDefaultAsync<bool>("SELECT `pm_friends_only` FROM `lazer_users` WHERE `id` = @UserId", new
             {
                 UserId = userId
             });
+            
+            // 如果pm_friends_only为false，表示允许所有人发送PM
+            return !pmFriendsOnly;
         }
 
         public async Task<osu_build?> GetBuildByIdAsync(int buildId)
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleAsync<osu_build?>("SELECT `build_id`, `version`, `hash`, `users` FROM `osu_builds` WHERE `build_id` = @BuildId",
-                new
-                {
-                    BuildId = buildId
-                });
+            // g0v0-server doesn't have osu_builds table, return a dummy build
+            return new osu_build
+            {
+                build_id = (uint)buildId,
+                version = "unknown",
+                hash = null,
+                users = 0
+            };
         }
 
-        public async Task<IEnumerable<osu_build>> GetAllMainLazerBuildsAsync()
+        public Task<IEnumerable<osu_build>> GetAllMainLazerBuildsAsync()
         {
-            var connection = await getConnectionAsync();
-
-            return await connection.QueryAsync<osu_build>(
-                "SELECT `build_id`, `version`, `hash`, `users` "
-                + "FROM `osu_builds` "
-                + "WHERE stream_id IN (7, 17) AND allow_bancho = 1");
+            // g0v0-server doesn't have osu_builds table, return empty list
+            return Task.FromResult<IEnumerable<osu_build>>(new List<osu_build>());
         }
 
-        public async Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync()
+        public Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync()
         {
-            var connection = await getConnectionAsync();
-
-            return await connection.QueryAsync<osu_build>(
-                "SELECT `build_id`, `version`, `hash`, `users` "
-                + "FROM `osu_builds` "
-                // Should match checks in BuildUserCountUpdater.build_version_regex.
-                + "WHERE `stream_id` IS NULL AND (`version` LIKE '%-lazer-%' OR `version` LIKE '%-tachyon-%') AND `allow_bancho` = 1");
+            // g0v0-server doesn't have osu_builds table, return empty list
+            return Task.FromResult<IEnumerable<osu_build>>(new List<osu_build>());
         }
 
-        public async Task UpdateBuildUserCountAsync(osu_build build)
+        public Task UpdateBuildUserCountAsync(osu_build build)
         {
-            var connection = await getConnectionAsync();
-
-            await connection.ExecuteAsync("UPDATE `osu_builds` SET `users` = @users WHERE `build_id` = @build_id", build);
+            // g0v0-server doesn't have osu_builds table, do nothing
+            return Task.CompletedTask;
         }
 
-        public async Task<IEnumerable<chat_filter>> GetAllChatFiltersAsync()
+        public Task<IEnumerable<chat_filter>> GetAllChatFiltersAsync()
         {
-            var connection = await getConnectionAsync();
-
-            return await connection.QueryAsync<chat_filter>("SELECT * FROM `chat_filters`");
+            // g0v0-server doesn't have chat_filters table, return empty list
+            return Task.FromResult<IEnumerable<chat_filter>>(new List<chat_filter>());
         }
 
         public async Task<IEnumerable<multiplayer_room>> GetActiveDailyChallengeRoomsAsync()
@@ -456,7 +465,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QueryAsync<multiplayer_room>(
-                "SELECT * FROM `multiplayer_rooms` "
+                "SELECT * FROM `rooms` "
                 + "WHERE `category` = 'daily_challenge' "
                 + "AND `type` = 'playlists' "
                 + "AND `starts_at` <= NOW() "
@@ -468,10 +477,10 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QuerySingleOrDefaultAsync<(long, long)?>(
-                "SELECT `multiplayer_playlist_items`.`room_id`, `multiplayer_playlist_items`.`id` "
+                "SELECT `playlists`.`room_id`, `playlists`.`id` "
                 + "FROM `multiplayer_score_links` "
-                + "JOIN `multiplayer_playlist_items` "
-                + "ON `multiplayer_score_links`.`playlist_item_id` = `multiplayer_playlist_items`.`id` "
+                + "JOIN `playlists` "
+                + "ON `multiplayer_score_links`.`playlist_item_id` = `playlists`.`id` "
                 + "WHERE `multiplayer_score_links`.`score_id` = @scoreId",
                 new { scoreId = scoreId });
         }
@@ -483,12 +492,11 @@ namespace osu.Server.Spectator.Database
             return (await connection.QueryAsync<SoloScore>(
                 "SELECT `scores`.`id`, `scores`.`total_score` FROM `scores` "
                 + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
-                + "JOIN `phpbb_users` ON `phpbb_users`.`user_id` = `multiplayer_score_links`.`user_id` "
+                + "JOIN `lazer_users` ON `lazer_users`.`id` = `multiplayer_score_links`.`user_id` "
                 + "WHERE `scores`.`passed` = 1 "
                 + "AND `multiplayer_score_links`.`playlist_item_id` = @playlistItemId "
                 + "AND `multiplayer_score_links`.`score_id` > @afterScoreId "
-                + "AND `phpbb_users`.`user_type` = 0 "
-                + "AND `phpbb_users`.`user_warnings` = 0", new
+                + "AND `lazer_users`.`priv` = 1", new
                 {
                     playlistItemId = playlistItemId,
                     afterScoreId = afterScoreId,
@@ -511,21 +519,9 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleAsync<int>(
-                "WITH `user_score` AS (SELECT `total_score`, `last_score_id` FROM `multiplayer_rooms_high` WHERE `room_id` = @roomId AND `user_id` = @userId) "
-                + "SELECT COUNT(1) + 1 FROM `multiplayer_rooms_high` "
-                + "JOIN `phpbb_users` ON `phpbb_users`.`user_id` = `multiplayer_rooms_high`.`user_id` "
-                + "WHERE `multiplayer_rooms_high`.`room_id` = @roomId "
-                + "AND `multiplayer_rooms_high`.`user_id` != @userId "
-                + "AND `phpbb_users`.`user_type` = 0 "
-                + "AND `phpbb_users`.`user_warnings` = 0 "
-                + "AND (`multiplayer_rooms_high`.`total_score` > (SELECT `total_score` FROM `user_score`) OR "
-                + "(`multiplayer_rooms_high`.`total_score` = (SELECT `total_score` FROM `user_score`) AND `multiplayer_rooms_high`.`last_score_id` < (SELECT `last_score_id` FROM `user_score`)))",
-                new
-                {
-                    roomId = roomId,
-                    userId = userId,
-                });
+            // g0v0-server doesn't have multiplayer_rooms_high table
+            // For now, return a default rank of 1
+            return 1;
         }
 
         public async Task LogRoomEventAsync(multiplayer_realtime_room_event ev)
