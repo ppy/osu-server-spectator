@@ -85,7 +85,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM rooms WHERE type != 'playlists' AND id = @RoomID", new
+            return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM rooms WHERE type != 'room_playlists' AND id = @RoomID", new
             {
                 RoomID = roomId
             });
@@ -96,10 +96,27 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QuerySingleOrDefaultAsync<database_beatmap>(
-                "SELECT id as beatmap_id, beatmapset_id, checksum, beatmap_status as approved, difficulty_rating as difficultyrating, mode as playmode, 0 as osu_file_version FROM beatmaps WHERE id = @BeatmapId AND deleted_at IS NULL", new
-                {
-                    BeatmapId = beatmapId
-                });
+                @"SELECT 
+            id as beatmap_id, 
+            beatmapset_id, 
+            checksum, 
+            beatmap_status as approved, 
+            difficulty_rating as difficultyrating, 
+            CASE 
+                WHEN mode = 'osu' THEN 0
+                WHEN mode = 'taiko' THEN 1  
+                WHEN mode = 'fruits' THEN 2
+                WHEN mode = 'mania' THEN 3
+                WHEN mode = 'osurx' THEN 4
+                WHEN mode = 'osuap' THEN 5
+                WHEN mode = 'taikorx' THEN 6
+                WHEN mode = 'fruitsrx' THEN 7
+                ELSE 0
+            END as playmode, 
+            0 as osu_file_version 
+        FROM beatmaps 
+        WHERE id = @BeatmapId AND deleted_at IS NULL", 
+                new { BeatmapId = beatmapId });
         }
 
         public async Task<database_beatmap[]> GetBeatmapsAsync(int beatmapSetId)
@@ -254,7 +271,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM playlists WHERE id = @Id AND room_id = @RoomId", new
+            return await connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM room_playlists WHERE id = @Id AND room_id = @RoomId", new
             {
                 Id = playlistItemId,
                 RoomId = roomId
@@ -266,11 +283,11 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             await connection.ExecuteAsync(
-                "INSERT INTO playlists (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, freestyle, playlist_order, created_at, updated_at)"
+                "INSERT INTO room_playlists (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, freestyle, playlist_order, created_at, updated_at)"
                 + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, @freestyle, @playlist_order, NOW(), NOW())",
                 item);
 
-            return await connection.QuerySingleAsync<long>("SELECT max(id) FROM playlists WHERE room_id = @room_id", item);
+            return await connection.QuerySingleAsync<long>("SELECT max(id) FROM room_playlists WHERE room_id = @room_id", item);
         }
 
         public async Task UpdatePlaylistItemAsync(multiplayer_playlist_item item)
@@ -278,7 +295,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             await connection.ExecuteAsync(
-                "UPDATE playlists SET"
+                "UPDATE room_playlists SET"
                 + " beatmap_id = @beatmap_id,"
                 + " ruleset_id = @ruleset_id,"
                 + " required_mods = @required_mods,"
@@ -293,7 +310,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("DELETE FROM playlists WHERE id = @Id AND room_id = @RoomId", new
+            await connection.ExecuteAsync("DELETE FROM room_playlists WHERE id = @Id AND room_id = @RoomId", new
             {
                 Id = playlistItemId,
                 RoomId = roomId
@@ -304,7 +321,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE playlists SET expired = 1, played_at = NOW(), updated_at = NOW() WHERE id = @PlaylistItemId AND room_id = @RoomId", new
+            await connection.ExecuteAsync("UPDATE room_playlists SET expired = 1, played_at = NOW(), updated_at = NOW() WHERE id = @PlaylistItemId AND room_id = @RoomId", new
             {
                 PlaylistItemId = playlistItemId,
                 RoomId = roomId
@@ -318,7 +335,7 @@ namespace osu.Server.Spectator.Database
             // Expire all non-expired items from the playlist.
             // We're not removing them because they may be linked to other tables (e.g. `multiplayer_realtime_room_events`, `multiplayer_scores_high`, etc.)
             await connection.ExecuteAsync(
-                "UPDATE playlists p"
+                "UPDATE room_playlists p"
                 + " SET p.expired = 1, played_at = NOW(), updated_at = NOW()"
                 + " WHERE p.room_id = @RoomID"
                 + " AND p.expired = 0"
@@ -482,7 +499,7 @@ namespace osu.Server.Spectator.Database
             return await connection.QueryAsync<multiplayer_room>(
                 "SELECT * FROM `rooms` "
                 + "WHERE `category` = 'daily_challenge' "
-                + "AND `type` = 'playlists' "
+                + "AND `type` = 'room_playlists' "
                 + "AND `starts_at` <= NOW() "
                 + "AND `ends_at` > NOW()");
         }
@@ -492,10 +509,10 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QuerySingleOrDefaultAsync<(long, long)?>(
-                "SELECT `playlists`.`room_id`, `playlists`.`id` "
+                "SELECT `room_playlists`.`room_id`, `room_playlists`.`id` "
                 + "FROM `multiplayer_score_links` "
-                + "JOIN `playlists` "
-                + "ON `multiplayer_score_links`.`playlist_item_id` = `playlists`.`id` "
+                + "JOIN `room_playlists` "
+                + "ON `multiplayer_score_links`.`playlist_item_id` = `room_playlists`.`id` "
                 + "WHERE `multiplayer_score_links`.`score_id` = @scoreId",
                 new { scoreId = scoreId });
         }
