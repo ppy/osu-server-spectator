@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -29,8 +30,22 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QueryFirstOrDefaultAsync<int?>("SELECT user_id FROM oauth_tokens WHERE expires_at > now() AND access_token = @id",
-                new { id = jwtToken.Id });
+            // 获取 JWT 中的 jti claim (token ID) 作为 access_token
+            var tokenId = jwtToken.GetClaim("jti")?.Value ?? jwtToken.Id;
+
+            if (string.IsNullOrEmpty(tokenId))
+            {
+                // 如果没有 jti，尝试使用整个 token 的原始值
+                // 这需要从 context 中获取，但这里我们先返回 null
+                return null;
+            }
+
+            // 查询 oauth_tokens 表，验证 token 是否有效且未过期
+            var result = await connection.QueryFirstOrDefaultAsync<(int user_id, DateTime expires_at)?>(
+                "SELECT user_id, expires_at FROM oauth_tokens WHERE access_token = @tokenId AND expires_at > UTC_TIMESTAMP()",
+                new { tokenId = tokenId });
+
+            return result?.user_id;
         }
 
         public async Task<string?> GetUsernameAsync(int userId)
