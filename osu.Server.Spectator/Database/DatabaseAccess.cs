@@ -627,7 +627,7 @@ namespace osu.Server.Spectator.Database
                 : $"Server={AppSettings.DatabaseHost};Port={AppSettings.DatabasePort};Database={AppSettings.DatabaseName};User ID={AppSettings.DatabaseUser};Password={AppSettings.DatabasePassword};ConnectionTimeout=5;ConnectionReset=false;Pooling=true;Pipelining=false";
 
             //打印连接字符串
-            logger.LogInformation("Connecting to database: {ConnectionString}", connectionString);
+            //logger.LogInformation("Connecting to database: {ConnectionString}", connectionString);
 
             openConnection = new MySqlConnection(connectionString);
 
