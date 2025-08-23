@@ -88,7 +88,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM rooms WHERE type != 'room_playlists' AND id = @RoomID", new
+            return await connection.QueryFirstOrDefaultAsync<multiplayer_room>("SELECT * FROM rooms WHERE type != 'multiplayer_playlist_items' AND id = @RoomID", new
             {
                 RoomID = roomId
             });
@@ -299,61 +299,76 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM room_playlists WHERE id = @Id AND room_id = @RoomId", new
-            {
-                Id = playlistItemId,
-                RoomId = roomId
-            });
+            return await connection.QuerySingleAsync<multiplayer_playlist_item>(
+                "SELECT * FROM room_playlists WHERE id = @Id AND room_id = @RoomId",
+                new { Id = playlistItemId, RoomId = roomId });
         }
 
         public async Task<long> AddPlaylistItemAsync(multiplayer_playlist_item item)
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync(
-                "INSERT INTO room_playlists (owner_id, room_id, beatmap_id, ruleset_id, allowed_mods, required_mods, freestyle, playlist_order, created_at, updated_at)"
-                + " VALUES (@owner_id, @room_id, @beatmap_id, @ruleset_id, @allowed_mods, @required_mods, @freestyle, @playlist_order, NOW(), NOW())",
+            // 计算该房间内的下一个逻辑 id，并在同一条 INSERT 中使用
+            // 同时显式写入 expired / played_at，避免 NOT NULL 无默认值的问题
+            await connection.ExecuteAsync(@"
+        INSERT INTO room_playlists
+            (id, owner_id, room_id, beatmap_id, ruleset_id,
+             allowed_mods, required_mods, freestyle, playlist_order,
+             expired, played_at)
+        VALUES
+            (
+                (SELECT COALESCE(MAX(rp.id), -1) + 1
+                 FROM room_playlists rp
+                 WHERE rp.room_id = @room_id),
+                @owner_id, @room_id, @beatmap_id, @ruleset_id,
+                @allowed_mods, @required_mods, @freestyle, @playlist_order,
+                @expired, @played_at
+            );",
                 item);
 
-            return await connection.QuerySingleAsync<long>("SELECT max(id) FROM room_playlists WHERE room_id = @room_id", item);
+            // 返回刚插入行的“逻辑 id”（不是自增主键 db_id）
+            // 通过 LAST_INSERT_ID() 关联取回那一行的 id
+            return await connection.QuerySingleAsync<long>(@"
+        SELECT id FROM room_playlists WHERE db_id = LAST_INSERT_ID();");
         }
 
         public async Task UpdatePlaylistItemAsync(multiplayer_playlist_item item)
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync(
-                "UPDATE room_playlists SET"
-                + " beatmap_id = @beatmap_id,"
-                + " ruleset_id = @ruleset_id,"
-                + " required_mods = @required_mods,"
-                + " allowed_mods = @allowed_mods,"
-                + " freestyle = @freestyle,"
-                + " playlist_order = @playlist_order,"
-                + " updated_at = NOW()"
-                + " WHERE id = @id", item);
+            await connection.ExecuteAsync(@"
+        UPDATE room_playlists SET
+            beatmap_id     = @beatmap_id,
+            ruleset_id     = @ruleset_id,
+            required_mods  = @required_mods,
+            allowed_mods   = @allowed_mods,
+            freestyle      = @freestyle,
+            playlist_order = @playlist_order,
+            expired        = @expired,
+            played_at      = @played_at,
+            updated_at     = NOW()
+        WHERE id = @id AND room_id = @room_id;", item);
         }
 
         public async Task RemovePlaylistItemAsync(long roomId, long playlistItemId)
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("DELETE FROM room_playlists WHERE id = @Id AND room_id = @RoomId", new
-            {
-                Id = playlistItemId,
-                RoomId = roomId
-            });
+            await connection.ExecuteAsync(
+                "DELETE FROM room_playlists WHERE id = @Id AND room_id = @RoomId",
+                new { Id = playlistItemId, RoomId = roomId });
         }
+
 
         public async Task MarkPlaylistItemAsPlayedAsync(long roomId, long playlistItemId)
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE room_playlists SET expired = 1, played_at = NOW(), updated_at = NOW() WHERE id = @PlaylistItemId AND room_id = @RoomId", new
-            {
-                PlaylistItemId = playlistItemId,
-                RoomId = roomId
-            });
+            await connection.ExecuteAsync(@"
+        UPDATE room_playlists
+        SET expired = 1, played_at = NOW(), updated_at = NOW()
+        WHERE id = @PlaylistItemId AND room_id = @RoomId;",
+                new { PlaylistItemId = playlistItemId, RoomId = roomId });
         }
 
         public async Task EndMatchAsync(MultiplayerRoom room)
