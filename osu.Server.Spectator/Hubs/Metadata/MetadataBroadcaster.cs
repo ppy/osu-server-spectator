@@ -34,7 +34,18 @@ namespace osu.Server.Spectator.Hubs.Metadata
             this.metadataHubContext = metadataHubContext;
 
             logger = loggerFactory.CreateLogger(nameof(MetadataBroadcaster));
-            poller = BeatmapStatusWatcher.StartPollingAsync(handleUpdates, 5000).Result;
+            
+            // g0v0-server doesn't have the same queue structure, so disable BeatmapStatusWatcher
+            // Check if this is g0v0-server environment by checking database name
+            if (AppSettings.DatabaseName == "osu_api")
+            {
+                logger.LogInformation("g0v0-server environment detected. BeatmapStatusWatcher disabled.");
+                poller = new DummyDisposable();
+            }
+            else
+            {
+                poller = BeatmapStatusWatcher.StartPollingAsync(handleUpdates, 5000).Result;
+            }
         }
 
         // ReSharper disable once AsyncVoidMethod
@@ -52,6 +63,17 @@ namespace osu.Server.Spectator.Hubs.Metadata
         public void Dispose()
         {
             poller.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// A dummy disposable class for when BeatmapStatusWatcher is disabled.
+    /// </summary>
+    internal class DummyDisposable : IDisposable
+    {
+        public void Dispose()
+        {
+            // No-op
         }
     }
 }

@@ -59,7 +59,7 @@ namespace osu.Server.Spectator
 
             DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
             DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osu_api";
-            DatabasePassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "password123";
+            DatabasePassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "osu_password";
             DatabaseName = Environment.GetEnvironmentVariable("DB_NAME") ?? "osu_api";
             DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
