@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -19,9 +20,43 @@ using osu.Server.Spectator.Hubs;
 using osu.Server.Spectator.Hubs.Metadata;
 using osu.Server.Spectator.Hubs.Multiplayer;
 using osu.Server.Spectator.Hubs.Spectator;
+using Dapper;
 
 namespace osu.Server.Spectator
 {
+    // 添加 TypeHandler 类
+    public class PlaymodeTypeHandler : SqlMapper.TypeHandler<ushort>
+    {
+        public override void SetValue(IDbDataParameter parameter, ushort value)
+        {
+            parameter.Value = value;
+        }
+
+        public override ushort Parse(object value)
+        {
+            if (value is string stringValue)
+            {
+                return stringValue.ToUpper() switch
+                {
+                    "OSU" => 0,
+                    "TAIKO" => 1,
+                    "CATCH" => 2,
+                    "FRUITS" => 2, // 别名
+                    "MANIA" => 3,
+                    _ => ushort.TryParse(stringValue, out var result) ? result : (ushort)0
+                };
+            }
+            
+            if (value is ushort ushortValue)
+                return ushortValue;
+                
+            if (value is int intValue)
+                return (ushort)intValue;
+                
+            return Convert.ToUInt16(value);
+        }
+    }
+
     public class Startup
     {
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -58,6 +93,9 @@ namespace osu.Server.Spectator
             services.AddHubEntities()
                     .AddDatabaseServices()
                     .AddMemoryCache();
+
+            // 在这里注册 Dapper TypeHandler
+            SqlMapper.AddTypeHandler(new PlaymodeTypeHandler());
 
             services.AddDistributedMemoryCache(); // replace with redis
 
