@@ -39,5 +39,13 @@ namespace osu.Server.Spectator.Services
         /// <param name="userId">The ID of the user wanting to part the room.</param>
         /// <param name="roomId">The ID of the room to part.</param>
         Task RemoveUserFromRoomAsync(int userId, long roomId);
+
+        /// <summary>
+        /// 预确保谱面存在。
+        /// </summary>
+        /// <remarks>
+        ///  This will queue a background job to download the beatmap if it does not already exist.
+        /// </remarks>
+        Task EnsureBeatmapPresentAsync(int beatmapId);
     }
 }

@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             using (var db = dbFactory.GetInstance())
             {
-                var beatmap = await db.GetBeatmapAsync(item.BeatmapID);
+                var beatmap = await db.GetBeatmapOrFetchAsync(item.BeatmapID);
 
                 if (beatmap == null)
                     throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");
@@ -156,7 +156,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             using (var db = dbFactory.GetInstance())
             {
-                var beatmap = await db.GetBeatmapAsync(item.BeatmapID);
+                var beatmap = await db.GetBeatmapOrFetchAsync(item.BeatmapID);
 
                 if (beatmap == null)
                     throw new InvalidStateException("Attempted to add a beatmap which does not exist online.");

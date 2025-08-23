@@ -225,5 +225,12 @@ namespace osu.Server.Spectator.Database
         /// Logs an event that happened in a multiplayer room.
         /// </summary>
         Task LogRoomEventAsync(multiplayer_realtime_room_event ev);
+        /// <summary>
+        /// 预确保谱面存在。
+        /// </summary>
+        /// <remarks>
+        ///  This will queue a background job to download the beatmap if it does not already exist.
+        /// </remarks>
+        Task<database_beatmap?> GetBeatmapOrFetchAsync(int beatmapId);
     }
 }

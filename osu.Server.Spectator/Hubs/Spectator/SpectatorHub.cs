@@ -74,7 +74,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                 using (var db = databaseFactory.GetInstance())
                 {
-                    database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
+                    database_beatmap? beatmap = await db.GetBeatmapOrFetchAsync(state.BeatmapID.Value);
                     string? username = await db.GetUsernameAsync(userId);
 
                     if (string.IsNullOrEmpty(username))

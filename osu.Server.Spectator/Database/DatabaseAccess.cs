@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+
 using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Extensions.Logging;
@@ -13,6 +14,7 @@ using MySqlConnector;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Database
 {
@@ -20,7 +22,7 @@ namespace osu.Server.Spectator.Database
     {
         private MySqlConnection? openConnection;
         private readonly ILogger<DatabaseAccess> logger;
-
+        private readonly ISharedInterop sharedInterop;
         public DatabaseAccess(ILoggerFactory loggerFactory)
         {
             logger = loggerFactory.CreateLogger<DatabaseAccess>();
@@ -117,6 +119,31 @@ namespace osu.Server.Spectator.Database
         FROM beatmaps 
         WHERE id = @BeatmapId AND deleted_at IS NULL", 
                 new { BeatmapId = beatmapId });
+        }
+        
+        /// <summary>
+        /// 获取谱面，如果不存在则通知 LIO 拉取。
+        /// </summary>
+        /// <param name="beatmapId">谱面 ID</param>
+        /// <returns>谱面信息，如果不存在则返回 null</returns>
+        public async Task<database_beatmap?> GetBeatmapOrFetchAsync(int beatmapId)
+        {
+            //var beatmap = await GetBeatmapAsync(beatmapId);
+            //if (beatmap != null) return beatmap;
+
+            logger.LogDebug("Beatmap {BeatmapId} not found in database, requesting LIO to fetch it", beatmapId);
+            
+            try
+            {
+                await sharedInterop.EnsureBeatmapPresentAsync(beatmapId);
+                logger.LogDebug("LIO returned success for beatmap {BeatmapId}, checking database again", beatmapId);
+                return await GetBeatmapAsync(beatmapId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "LIO request failed for beatmap {BeatmapId}: {ErrorMessage}", beatmapId, ex.Message);
+                return null;
+            }
         }
 
         public async Task<database_beatmap[]> GetBeatmapsAsync(int beatmapSetId)

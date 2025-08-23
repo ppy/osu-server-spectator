@@ -183,6 +183,16 @@ namespace osu.Server.Spectator.Services
             }
         }
 
+        /// <summary>
+        /// 预先请求服务器确保谱面存在。
+        /// </summary>
+        public async Task EnsureBeatmapPresentAsync(int beatmapId)
+        {
+            // 端点：POST /_lio/beatmaps/ensure
+            var payload = new { beatmap_id = beatmapId };
+            await runCommand(HttpMethod.Post, "beatmaps/ensure", payload);
+        }
+
         [Serializable]
         private class SharedInteropRequestFailedException : HubException
         {
