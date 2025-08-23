@@ -209,7 +209,7 @@ namespace osu.Server.Spectator.Database
 
             try
             {
-                await connection.ExecuteAsync("INSERT INTO user_login_log (user_id, ip_address, login_method) VALUES (@UserID, @IP, 'spectator')", new
+                await connection.ExecuteAsync("INSERT INTO user_login_log (user_id, ip_address, login_method, login_time) VALUES (@UserID, @IP, 'spectator', UTC_TIMESTAMP())", new
                 {
                     UserID = userId,
                     IP = userIp

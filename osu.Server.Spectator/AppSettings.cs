@@ -63,7 +63,7 @@ namespace osu.Server.Spectator
             ReplaysBucket = Environment.GetEnvironmentVariable("REPLAYS_BUCKET") ?? string.Empty;
             TrackBuildUserCounts = Environment.GetEnvironmentVariable("TRACK_BUILD_USER_COUNTS") == "1";
 
-            ServerPort = Environment.GetEnvironmentVariable("SERVER_PORT") ?? "80";
+            ServerPort = Environment.GetEnvironmentVariable("SERVER_PORT") ?? "8086";
             RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "localhost";
             DataDogAgentHost = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? "localhost";
 
@@ -73,7 +73,7 @@ namespace osu.Server.Spectator
             DatabaseName = Environment.GetEnvironmentVariable("DB_NAME") ?? "osu_api";
             DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
-            SharedInteropDomain = Environment.GetEnvironmentVariable("SHARED_INTEROP_DOMAIN") ?? "http://localhost:8080";
+            SharedInteropDomain = Environment.GetEnvironmentVariable("SHARED_INTEROP_DOMAIN") ?? "http://localhost:8000";
             SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;
 
             SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN") ?? "https://5840d8cb8d2b4d238369443bedef1d74@glitchtip.g0v0.top/4";
