@@ -224,8 +224,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 if (databaseRoom.ends_at != null && databaseRoom.ends_at < DateTimeOffset.Now)
                     throw new InvalidStateException("Match has already ended.");
-
-                if (databaseRoom.user_id != Context.GetUserId())
+                //打印两个id
+                Log($"Database room user_id: {databaseRoom.host_id}, Context user_id: {Context.GetUserId()}");
+                if (databaseRoom.host_id != Context.GetUserId())
                     throw new InvalidOperationException("Non-host is attempting to join match before host");
 
                 var room = new ServerMultiplayerRoom(roomId, HubContext)

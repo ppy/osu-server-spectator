@@ -342,7 +342,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM playlists WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
+            return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM room_playlists WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
         }
 
         public async Task MarkScoreHasReplay(Score score)

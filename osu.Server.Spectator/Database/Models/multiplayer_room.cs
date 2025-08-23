@@ -11,7 +11,7 @@ namespace osu.Server.Spectator.Database.Models
     public class multiplayer_room
     {
         public long id { get; set; }
-        public int user_id { get; set; }
+        public int host_id { get; set; }
         public string name { get; set; } = string.Empty;
         public string password { get; set; } = string.Empty;
         public int channel_id { get; set; }
