@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  spectator:
+    build:
+      context: ./osu.Server.Spectator
+      dockerfile: Dockerfile
+    image: osu-server-spectator:latest
+    container_name: osu-server-spectator
+    ports:
+      - "8089:80"
+    environment:
+      - SAVE_REPLAYS=${SAVE_REPLAYS:-}
+      - REPLAY_UPLOAD_THREADS=${REPLAY_UPLOAD_THREADS:-1}
+      - REPLAYS_PATH=${REPLAYS_PATH:-replays}
+      - S3_KEY=${S3_KEY:-}
+      - S3_SECRET=${S3_SECRET:-}
+      - REPLAYS_BUCKET=${REPLAYS_BUCKET:-}
+      - TRACK_BUILD_USER_COUNTS=${TRACK_BUILD_USER_COUNTS:-}
+      - SERVER_PORT=${SERVER_PORT:-80}
+      - REDIS_HOST=${REDIS_HOST:-localhost}
+      - DD_AGENT_HOST=${DD_AGENT_HOST:-localhost}
+      - DB_HOST=${DB_HOST:-localhost}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_USER=${DB_USER:-osu_api}
+      - DB_PASSWORD=${DB_PASSWORD:-osu_password}
+      - DB_NAME=${DB_NAME:-osu_api}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SHARED_INTEROP_DOMAIN=${SHARED_INTEROP_DOMAIN:-http://localhost:8000}
+      - SHARED_INTEROP_SECRET=${SHARED_INTEROP_SECRET:-}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      - OSU_CLIENT_ID=${OSU_CLIENT_ID:-5}
+      - USE_LEGACY_RSA_AUTH=${USE_LEGACY_RSA_AUTH:-}
+    volumes:
+      - ./replays:/app/replays
+    restart: unless-stopped
