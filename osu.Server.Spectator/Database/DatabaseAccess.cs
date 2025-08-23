@@ -538,6 +538,19 @@ namespace osu.Server.Spectator.Database
                 ev);
         }
 
+        public async Task ToggleUserPresenceAsync(int userId, bool visible)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync(
+                "UPDATE `phpbb_users` SET `user_allow_viewonline` = @visible WHERE `user_id` = @userId",
+                new
+                {
+                    visible = visible,
+                    userId = userId
+                });
+        }
+
         public void Dispose()
         {
             openConnection?.Dispose();

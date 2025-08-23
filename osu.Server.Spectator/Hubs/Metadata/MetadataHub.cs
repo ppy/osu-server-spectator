@@ -169,6 +169,20 @@ namespace osu.Server.Spectator.Hubs.Metadata
                     Clients.Caller.UserPresenceUpdated(usage.Item.UserId, usage.Item.ToUserPresence())
                 );
             }
+
+            switch (status)
+            {
+                case UserStatus.Online:
+                case UserStatus.DoNotDisturb:
+                    using (var db = databaseFactory.GetInstance())
+                        await db.ToggleUserPresenceAsync(Context.GetUserId(), visible: true);
+                    break;
+
+                case UserStatus.Offline:
+                    using (var db = databaseFactory.GetInstance())
+                        await db.ToggleUserPresenceAsync(Context.GetUserId(), visible: false);
+                    break;
+            }
         }
 
         private static readonly object update_stats_lock = new object();
