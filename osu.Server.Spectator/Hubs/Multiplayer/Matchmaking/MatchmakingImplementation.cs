@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using osu.Framework.Utils;
-using osu.Game.Extensions;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
@@ -53,7 +52,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private readonly IDatabaseFactory dbFactory;
         private readonly MatchmakingRoomState state;
-        private readonly HashSet<UserPick> picks = new HashSet<UserPick>();
+        private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
 
         public MatchmakingImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(room, hub)
@@ -127,9 +126,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (item.Expired)
                 throw new InvalidStateException("Selected playlist item is expired!");
 
-            picks.Add(new UserPick(user, playlistItemId));
+            if (userPicks.TryGetValue(user.UserID, out long existingPick))
+            {
+                if (existingPick == playlistItemId)
+                    return;
 
-            await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), user.UserID, playlistItemId);
+                await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingItemDeselected), user.UserID, existingPick);
+            }
+
+            userPicks[user.UserID] = playlistItemId;
+
+            await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingItemSelected), user.UserID, playlistItemId);
         }
 
         private async Task stageRoundStart(ServerMultiplayerRoom _)
@@ -143,9 +150,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageUserPicks(ServerMultiplayerRoom _)
         {
-            foreach (var selection in picks.Where(s => s.User != null))
-                await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingSelectionToggled), selection.User, selection.ItemID);
-            picks.Clear();
+            userPicks.Clear();
 
             await changeStage(MatchmakingRoomStatus.UserPicks);
             await startCountdown(TimeSpan.FromSeconds(stage_user_picks_time), stageSelectBeatmap);
@@ -153,10 +158,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageSelectBeatmap(ServerMultiplayerRoom _)
         {
-            if (picks.Count == 0)
-                picks.AddRange(Room.Playlist.Where(item => !item.Expired).Select(item => new UserPick(null, item.ID)));
+            long[] candidates = userPicks.Values.ToArray();
 
-            state.CandidateItems = picks.Select(s => s.ItemID).ToArray();
+            if (candidates.Length == 0)
+                candidates = Room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray();
+
+            state.CandidateItems = candidates;
             state.CandidateItem = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
 
             await changeStage(MatchmakingRoomStatus.SelectBeatmap);
@@ -264,7 +271,5 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             room_type = database_match_type.matchmaking
         };
-
-        private readonly record struct UserPick(MultiplayerRoomUser? User, long ItemID);
     }
 }

@@ -184,10 +184,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.MatchmakingQueueStatusChanged(status);
         }
 
-        public async Task MatchmakingSelectionToggled(int userId, long playlistItemId)
+        public virtual async Task MatchmakingItemSelected(int userId, long playlistItemId)
         {
             foreach (var c in Clients)
-                await c.MatchmakingSelectionToggled(userId, playlistItemId);
+                await c.MatchmakingItemSelected(userId, playlistItemId);
+        }
+
+        public virtual async Task MatchmakingItemDeselected(int userId, long playlistItemId)
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingItemDeselected(userId, playlistItemId);
         }
 
         public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = new CancellationToken())

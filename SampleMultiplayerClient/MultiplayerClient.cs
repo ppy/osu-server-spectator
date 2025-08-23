@@ -344,7 +344,12 @@ namespace SampleMultiplayerClient
             throw new NotImplementedException();
         }
 
-        public Task MatchmakingSelectionToggled(int userId, long playlistItemId)
+        public Task MatchmakingItemSelected(int userId, long playlistItemId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task MatchmakingItemDeselected(int userId, long playlistItemId)
         {
             throw new NotImplementedException();
         }
