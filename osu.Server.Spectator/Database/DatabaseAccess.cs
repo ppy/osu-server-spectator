@@ -376,13 +376,13 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             // Expire all non-expired items from the playlist.
-            // We're not removing them because they may be linked to other tables (e.g. `multiplayer_realtime_room_events`, `multiplayer_scores_high`, etc.)
+            // We're not removing them because they may be linked to other tables (e.g. `multiplayer_realtime_room_events`, `multiplayer_scores_high`, etc.) 
+            // TODO: Re-enable this when `osu_api.multiplayer_score_links` exists. + " AND (SELECT COUNT(*) FROM multiplayer_score_links l WHERE l.playlist_item_id = p.id) = 0"
             await connection.ExecuteAsync(
                 "UPDATE room_playlists p"
                 + " SET p.expired = 1, played_at = NOW(), updated_at = NOW()"
                 + " WHERE p.room_id = @RoomID"
-                + " AND p.expired = 0"
-                + " AND (SELECT COUNT(*) FROM multiplayer_score_links l WHERE l.playlist_item_id = p.id) = 0",
+                + " AND p.expired = 0",
                 new
                 {
                     RoomID = room.RoomID
