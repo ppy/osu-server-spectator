@@ -23,9 +23,10 @@ namespace osu.Server.Spectator.Database
         private MySqlConnection? openConnection;
         private readonly ILogger<DatabaseAccess> logger;
         private readonly ISharedInterop sharedInterop;
-        public DatabaseAccess(ILoggerFactory loggerFactory)
+        public DatabaseAccess(ILoggerFactory loggerFactory, ISharedInterop sharedInterop)
         {
             logger = loggerFactory.CreateLogger<DatabaseAccess>();
+            this.sharedInterop = sharedInterop;
         }
 
         public async Task<int?> GetUserIdFromTokenAsync(JsonWebToken jwtToken)
@@ -128,8 +129,8 @@ namespace osu.Server.Spectator.Database
         /// <returns>谱面信息，如果不存在则返回 null</returns>
         public async Task<database_beatmap?> GetBeatmapOrFetchAsync(int beatmapId)
         {
-            //var beatmap = await GetBeatmapAsync(beatmapId);
-            //if (beatmap != null) return beatmap;
+            var beatmap = await GetBeatmapAsync(beatmapId);
+            if (beatmap != null) return beatmap;
 
             logger.LogDebug("Beatmap {BeatmapId} not found in database, requesting LIO to fetch it", beatmapId);
             
