@@ -335,7 +335,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
             }
 
-            await ChangeRoomState(room, anyUserPlaying ? MultiplayerRoomState.Playing : MultiplayerRoomState.Open);
+            if (anyUserPlaying)
+                await ChangeRoomState(room, MultiplayerRoomState.Playing);
+            else
+            {
+                await ChangeRoomState(room, MultiplayerRoomState.Open);
+                await room.MatchTypeImplementation.HandleMatchComplete();
+            }
         }
 
         public async Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room)
