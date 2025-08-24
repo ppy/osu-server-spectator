@@ -31,26 +31,25 @@ namespace osu.Server.Spectator.Database
 
         public async Task<int?> GetUserIdFromTokenAsync(JsonWebToken jwtToken)
         {
-            var connection = await getConnectionAsync();
-
-            // 获取 JWT 中的 jti claim (token ID) 作为 access_token
-            var tokenId = jwtToken.GetClaim("jti")?.Value ?? jwtToken.Id;
-
-            if (string.IsNullOrEmpty(tokenId))
+            // 直接从 sub claim 获取用户ID
+            var userIdClaim = jwtToken.GetClaim("sub")?.Value;
+    
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
             {
-                // 如果没有 jti，尝试使用整个 token 的原始值
-                // 这需要从 context 中获取，但这里我们先返回 null
+                //Console.WriteLine("Invalid or missing sub claim in token");
                 return null;
             }
-
-            // 查询 oauth_tokens 表，验证 token 是否有效且未过期
-            var result = await connection.QueryFirstOrDefaultAsync<(int user_id, DateTime expires_at)?>(
-                "SELECT user_id, expires_at FROM oauth_tokens WHERE access_token = @tokenId AND expires_at > UTC_TIMESTAMP()",
-                new { tokenId = tokenId });
-
-            return result?.user_id;
+    
+            //Console.WriteLine("User ID from token: {0}", userId);
+    
+            // 可选：验证用户是否存在和token是否有效
+            var connection = await getConnectionAsync();
+            var result = await connection.QueryFirstOrDefaultAsync<int?>(
+                "SELECT user_id FROM oauth_tokens WHERE user_id = @userId AND expires_at > UTC_TIMESTAMP()",
+                new { userId = userId });
+    
+            return result;
         }
-
         public async Task<string?> GetUsernameAsync(int userId)
         {
             var connection = await getConnectionAsync();
