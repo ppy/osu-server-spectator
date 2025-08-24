@@ -80,6 +80,8 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         Task AddLoginForUserAsync(int userId, string? userIp);
 
+        Task OfflineUser(int userId);
+
         /// <summary>
         /// Remove a new participant for the specified <paramref name="room"/> in the database.
         /// </summary>
@@ -214,7 +216,7 @@ namespace osu.Server.Spectator.Database
         /// <summary>
         /// Returns the best score of user with <paramref name="userId"/> on the playlist item with <paramref name="playlistItemId"/>.
         /// </summary>
-        Task<playlist_best_score?> GetUserBestScoreAsync(long roomId,long playlistItemId, int userId);
+        Task<playlist_best_score?> GetUserBestScoreAsync(long roomId, long playlistItemId, int userId);
 
         /// <summary>
         /// Gets the overall rank of user <paramref name="userId"/> in the room with <paramref name="roomId"/>.
@@ -225,6 +227,7 @@ namespace osu.Server.Spectator.Database
         /// Logs an event that happened in a multiplayer room.
         /// </summary>
         Task LogRoomEventAsync(multiplayer_realtime_room_event ev);
+
         /// <summary>
         /// 预确保谱面存在。
         /// </summary>

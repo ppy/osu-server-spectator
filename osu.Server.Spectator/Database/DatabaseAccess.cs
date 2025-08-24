@@ -218,22 +218,29 @@ namespace osu.Server.Spectator.Database
             }
         }
 
-        public async Task AddLoginForUserAsync(int userId, string? userIp)
+        public Task AddLoginForUserAsync(int userId, string? userIp)
         {
-            if (string.IsNullOrEmpty(userIp))
-                return;
+            return Task.CompletedTask;
+            // if (string.IsNullOrEmpty(userIp))
+            //     return;
+            //
+            // var connection = await getConnectionAsync();
+            //
+            // try
+            // {
+            //     await connection.ExecuteAsync("INSERT INTO user_login_log (user_id, ip_address, login_method, login_time) VALUES (@UserID, @IP, 'spectator', UTC_TIMESTAMP())",
+            //         new { UserID = userId, IP = userIp });
+            // }
+            // catch (MySqlException ex)
+            // {
+            //     logger.LogWarning(ex, "Could not log login for user {UserId}", userId);
+            // }
+        }
 
+        public async Task OfflineUser(int userId)
+        {
             var connection = await getConnectionAsync();
-
-            try
-            {
-                await connection.ExecuteAsync("INSERT INTO user_login_log (user_id, ip_address, login_method, login_time) VALUES (@UserID, @IP, 'spectator', UTC_TIMESTAMP())",
-                    new { UserID = userId, IP = userIp });
-            }
-            catch (MySqlException ex)
-            {
-                logger.LogWarning(ex, "Could not log login for user {UserId}", userId);
-            }
+            await connection.ExecuteAsync("UPDATE lazer_users SET last_visit = NOW() WHERE `id` = @userId", new { userId = userId });
         }
 
         public async Task RemoveRoomParticipantAsync(MultiplayerRoom room, MultiplayerRoomUser user)

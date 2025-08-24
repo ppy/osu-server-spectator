@@ -19,6 +19,7 @@ using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Spectator;
+using StackExchange.Redis;
 using BeatmapUpdates = osu.Game.Online.Metadata.BeatmapUpdates;
 
 namespace osu.Server.Spectator.Hubs.Metadata
@@ -29,6 +30,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
         private readonly IDatabaseFactory databaseFactory;
         private readonly IDailyChallengeUpdater dailyChallengeUpdater;
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
+        private readonly IConnectionMultiplexer redis;
 
         internal const string ONLINE_PRESENCE_WATCHERS_GROUP = "metadata:online-presence-watchers";
         internal static string FRIEND_PRESENCE_WATCHERS_GROUP(int userId) => $"metadata:online-presence-watchers:{userId}";
@@ -41,13 +43,15 @@ namespace osu.Server.Spectator.Hubs.Metadata
             EntityStore<MetadataClientState> userStates,
             IDatabaseFactory databaseFactory,
             IDailyChallengeUpdater dailyChallengeUpdater,
-            IScoreProcessedSubscriber scoreProcessedSubscriber)
+            IScoreProcessedSubscriber scoreProcessedSubscriber,
+            IConnectionMultiplexer redis)
             : base(loggerFactory, userStates)
         {
             this.cache = cache;
             this.databaseFactory = databaseFactory;
             this.dailyChallengeUpdater = dailyChallengeUpdater;
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
+            this.redis = redis;
         }
 
         public override async Task OnConnectedAsync()
@@ -102,6 +106,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 ? forwardedForIp.ToString().Split(',').First()
                 // fallback to getting the raw IP.
                 : Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
+            IDatabase redisDb = redis.GetDatabase();
+            redisDb.StringSet($"metadata:online:{usage.Item!.UserId}", "metadata", TimeSpan.FromHours(2));
 
             using (var db = databaseFactory.GetInstance())
                 await db.AddLoginForUserAsync(usage.Item!.UserId, userIp);
@@ -242,6 +248,10 @@ namespace osu.Server.Spectator.Hubs.Metadata
         protected override async Task CleanUpState(MetadataClientState state)
         {
             await base.CleanUpState(state);
+            using (var db = databaseFactory.GetInstance())
+                await db.OfflineUser(state.UserId);
+            IDatabase redisDb = redis.GetDatabase();
+            redisDb.KeyDelete($"metadata:online:{state.UserId}");
             if (shouldBroadcastPresenceToOtherUsers(state))
                 await broadcastUserPresenceUpdate(state.UserId, null);
             await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);
