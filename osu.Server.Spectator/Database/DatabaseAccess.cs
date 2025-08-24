@@ -600,12 +600,12 @@ namespace osu.Server.Spectator.Database
 
         public async Task LogRoomEventAsync(multiplayer_realtime_room_event ev)
         {
+            // TODO: 服务端没有创建这个表保留
             var connection = await getConnectionAsync();
-
-            await connection.ExecuteAsync(
+            /*await connection.ExecuteAsync(
                 "INSERT INTO `multiplayer_realtime_room_events` (`room_id`, `event_type`, `playlist_item_id`, `user_id`, `event_detail`, `created_at`, `updated_at`) "
                 + "VALUES (@room_id, @event_type, @playlist_item_id, @user_id, @event_detail, NOW(), NOW())",
-                ev);
+                ev);*/
         }
 
         public void Dispose()
