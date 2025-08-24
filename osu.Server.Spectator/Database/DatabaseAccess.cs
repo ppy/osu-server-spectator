@@ -382,11 +382,11 @@ namespace osu.Server.Spectator.Database
             return await connection.QuerySingleOrDefaultAsync<SoloScore?>("SELECT * FROM `scores` WHERE `id` = @Id", new { Id = id });
         }
 
-        public Task<bool> IsScoreProcessedAsync(long scoreId)
+        public async Task<bool> IsScoreProcessedAsync(long scoreId)
         {
-            // g0v0-server doesn't have score_process_history table
-            // For now, assume all scores are not processed to allow processing
-            return Task.FromResult(false);
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<bool>("SELECT 1 FROM `scores` WHERE `id` = @ScoreId AND `processed` = '1'", new { ScoreId = scoreId });
         }
 
         public async Task<phpbb_zebra?> GetUserRelation(int userId, int zebraId)
@@ -467,7 +467,7 @@ namespace osu.Server.Spectator.Database
             return await connection.QueryAsync<multiplayer_room>(
                 "SELECT * FROM `rooms` "
                 + "WHERE `category` = 'daily_challenge' "
-                + "AND `type` = 'room_playlists' "
+                + "AND `type` = 'playlists' "
                 + "AND `starts_at` <= NOW() "
                 + "AND `ends_at` > NOW()");
         }
@@ -477,11 +477,9 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QuerySingleOrDefaultAsync<(long, long)?>(
-                "SELECT `room_playlists`.`room_id`, `room_playlists`.`id` "
-                + "FROM `multiplayer_score_links` "
-                + "JOIN `room_playlists` "
-                + "ON `multiplayer_score_links`.`playlist_item_id` = `room_playlists`.`id` "
-                + "WHERE `multiplayer_score_links`.`score_id` = @scoreId",
+                "SELECT `room_id`, `playlist_item_id` "
+                + "FROM `scores` "
+                + "WHERE `id` = @scoreId",
                 new { scoreId = scoreId });
         }
 
@@ -491,29 +489,39 @@ namespace osu.Server.Spectator.Database
 
             return (await connection.QueryAsync<SoloScore>(
                 "SELECT `scores`.`id`, `scores`.`total_score` FROM `scores` "
-                + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
-                + "JOIN `lazer_users` ON `lazer_users`.`id` = `multiplayer_score_links`.`user_id` "
+                + "JOIN `playlist_best_scores` ON `playlist_best_scores`.`score_id` = `scores`.`id` "
                 + "WHERE `scores`.`passed` = 1 "
-                + "AND `multiplayer_score_links`.`playlist_item_id` = @playlistItemId "
-                + "AND `multiplayer_score_links`.`score_id` > @afterScoreId "
-                + "AND `lazer_users`.`priv` = 1", new { playlistItemId = playlistItemId, afterScoreId = afterScoreId, }));
+                + "AND `playlist_best_scores`.`playlist_id` = @playlistItemId "
+                + "AND `playlist_best_scores`.`score_id` > @afterScoreId "
+                , new { playlistItemId = playlistItemId, afterScoreId = afterScoreId, }));
         }
 
-        public async Task<multiplayer_scores_high?> GetUserBestScoreAsync(long playlistItemId, int userId)
+        public async Task<playlist_best_score?> GetUserBestScoreAsync(long roomId, long playlistItemId, int userId)
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleOrDefaultAsync<multiplayer_scores_high>(
-                "SELECT * FROM `multiplayer_scores_high` WHERE `playlist_item_id` = @playlistItemId AND `user_id` = @userId", new { playlistItemId = playlistItemId, userId = userId });
+            return await connection.QuerySingleOrDefaultAsync<playlist_best_score>(
+                "SELECT * FROM `playlist_best_scores` WHERE `playlist_id` = @playlistItemId AND `user_id` = @userId AND `room_id` = @roomId",
+                new { playlistItemId = playlistItemId, userId = userId, roomId = roomId });
         }
 
-        public async Task<int> GetUserRankInRoomAsync(long roomId, int userId)
+        public async Task<int> GetUserRankInRoomAsync(long roomId, long playlistItemId, ulong scoreId)
         {
             var connection = await getConnectionAsync();
-
-            // g0v0-server doesn't have multiplayer_rooms_high table
-            // For now, return a default rank of 1
-            return 1;
+            // https://github.com/GooGuTeam/g0v0-server/blob/main/app/database/playlist_best_score.py#L78
+            return await connection.QuerySingleOrDefaultAsync<int>(
+                "SELECT sub.row_number"
+                + "FROM ("
+                + "   SELECT "
+                + "        score_id,"
+                + "        ROW_NUMBER() OVER ("
+                + "            PARTITION BY playlist_id, room_id "
+                + "            ORDER BY total_score DESC"
+                + "        ) AS row_number"
+                + "    FROM playlist_best_scores"
+                + "    WHERE playlist_id = @playlistItemId AND room_id = @roomId" + ") AS sub"
+                + "WHERE sub.score_id = @scoreId;",
+                new { playlistItemId = playlistItemId, roomId = roomId, scoreId = scoreId });
         }
 
         public async Task LogRoomEventAsync(multiplayer_realtime_room_event ev)

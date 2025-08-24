@@ -214,12 +214,12 @@ namespace osu.Server.Spectator.Database
         /// <summary>
         /// Returns the best score of user with <paramref name="userId"/> on the playlist item with <paramref name="playlistItemId"/>.
         /// </summary>
-        Task<multiplayer_scores_high?> GetUserBestScoreAsync(long playlistItemId, int userId);
+        Task<playlist_best_score?> GetUserBestScoreAsync(long roomId,long playlistItemId, int userId);
 
         /// <summary>
         /// Gets the overall rank of user <paramref name="userId"/> in the room with <paramref name="roomId"/>.
         /// </summary>
-        Task<int> GetUserRankInRoomAsync(long roomId, int userId);
+        Task<int> GetUserRankInRoomAsync(long roomId, long playlistItemId, ulong scoreId);
 
         /// <summary>
         /// Logs an event that happened in a multiplayer room.

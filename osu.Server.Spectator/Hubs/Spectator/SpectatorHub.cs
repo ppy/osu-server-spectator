@@ -89,18 +89,9 @@ namespace osu.Server.Spectator.Hubs.Spectator
                         ScoreInfo =
                         {
                             APIMods = state.Mods.ToArray(),
-                            User = new APIUser
-                            {
-                                Id = userId,
-                                Username = username,
-                            },
+                            User = new APIUser { Id = userId, Username = username, },
                             Ruleset = LegacyHelper.GetRulesetFromLegacyID(state.RulesetID.Value).RulesetInfo,
-                            BeatmapInfo = new BeatmapInfo
-                            {
-                                OnlineID = state.BeatmapID.Value,
-                                MD5Hash = beatmap.checksum,
-                                Status = beatmap.approved
-                            },
+                            BeatmapInfo = new BeatmapInfo { OnlineID = state.BeatmapID.Value, MD5Hash = beatmap.checksum, Status = beatmap.approved },
                             MaximumStatistics = state.MaximumStatistics
                         }
                     };
@@ -180,7 +171,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
             // Do nothing with scores on unranked beatmaps.
             var status = score.ScoreInfo.BeatmapInfo!.Status;
-            if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
+            if (!AppSettings.EnableAllBeatmapLeaderboard && (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays))
                 return;
 
             // if the user never hit anything, further processing that depends on the score existing can be waived because the client won't have submitted the score anyway.
@@ -233,11 +224,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             if (watcherUsername == null)
                 return;
 
-            var watcher = new SpectatorUser
-            {
-                OnlineID = watcherId,
-                Username = watcherUsername,
-            };
+            var watcher = new SpectatorUser { OnlineID = watcherId, Username = watcherUsername, };
 
             await Clients.User(userId.ToString()).UserStartedWatching([watcher]);
         }

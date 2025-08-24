@@ -101,7 +101,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 using var db = databaseFactory.GetInstance();
 
                 (long roomID, long playlistItemID)? multiplayerLookup = await db.GetMultiplayerRoomIdForScoreAsync(scoreProcessed.ScoreId);
-
+                logger.LogInformation($"Lookup: {multiplayerLookup.ToString()}");
                 if (multiplayerLookup == null)
                     return;
 
@@ -119,10 +119,10 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     return;
 
                 int? newRank = null;
-                var userBest = await db.GetUserBestScoreAsync(multiplayerLookup.Value.playlistItemID, (int)score.user_id);
+                var userBest = await db.GetUserBestScoreAsync(multiplayerLookup.Value.roomID,multiplayerLookup.Value.playlistItemID, (int)score.user_id);
 
                 if (userBest?.score_id == score.id)
-                    newRank = await db.GetUserRankInRoomAsync(multiplayerLookup.Value.roomID, (int)score.user_id);
+                    newRank = await db.GetUserRankInRoomAsync(multiplayerLookup.Value.roomID, multiplayerLookup.Value.playlistItemID, score.id);
 
                 lock (multiplayerRoomSubscriptions)
                 {
