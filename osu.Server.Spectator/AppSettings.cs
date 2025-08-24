@@ -84,9 +84,6 @@ namespace osu.Server.Spectator
             JwtAccessTokenExpireMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_ACCESS_TOKEN_EXPIRE_MINUTES") ?? "1440");
             OsuClientId = int.Parse(Environment.GetEnvironmentVariable("OSU_CLIENT_ID") ?? "5");
             UseLegacyRsaAuth = Environment.GetEnvironmentVariable("USE_LEGACY_RSA_AUTH") == "1";
-            //打印日志JWT配置
-            Console.WriteLine($"[JWT] Algorithm: {JwtAlgorithm}, AccessTokenExpireMinutes: {JwtAccessTokenExpireMinutes}, OsuClientId: {OsuClientId}, UseLegacyRsaAuth: {UseLegacyRsaAuth}");
-            
         }
     }
 }
