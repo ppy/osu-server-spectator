@@ -28,3 +28,4 @@ For advanced testing purposes.
 | `SENTRY_DSN` | A valid Sentry DSN to use for logging application events. | `null` (required in production) |
 | `SHARED_INTEROP_DOMAIN` | The root URL of the osu-web instance to which shared interop calls should be submitted | `http://localhost:80` |
 | `SHARED_INTEROP_SECRET` | The value of the same environment variable that the target osu-web instance specifies in `.env`. | `null` (required) |
+
