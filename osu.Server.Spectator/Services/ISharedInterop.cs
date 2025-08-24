@@ -3,6 +3,7 @@
 
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
+using System.IO;
 
 namespace osu.Server.Spectator.Services
 {
@@ -47,5 +48,7 @@ namespace osu.Server.Spectator.Services
         ///  This will queue a background job to download the beatmap if it does not already exist.
         /// </remarks>
         Task EnsureBeatmapPresentAsync(int beatmapId);
+
+        void UploadReplayAsync(int scoreInfoUserID, long scoreInfoOnlineID, int scoreInfoBeatmapId, MemoryStream outStream);
     }
 }

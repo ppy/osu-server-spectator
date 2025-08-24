@@ -10,17 +10,9 @@ namespace osu.Server.Spectator
         public static bool SaveReplays { get; set; }
         public static int ReplayUploaderConcurrency { get; set; }
 
-        #region For use with FileScoreStorage
+        #region Sync With g0v0-server
 
-        public static string ReplaysPath { get; set; }
-
-        #endregion
-
-        #region For use with S3ScoreStorage
-
-        public static string S3Key { get; }
-        public static string S3Secret { get; }
-        public static string ReplaysBucket { get; }
+        public static bool EnableAllBeatmapLeaderboard { get; set; }
 
         #endregion
 
@@ -57,21 +49,19 @@ namespace osu.Server.Spectator
             ReplayUploaderConcurrency = int.Parse(Environment.GetEnvironmentVariable("REPLAY_UPLOAD_THREADS") ?? "1");
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ReplayUploaderConcurrency);
 
-            ReplaysPath = Environment.GetEnvironmentVariable("REPLAYS_PATH") ?? "replays";
-            S3Key = Environment.GetEnvironmentVariable("S3_KEY") ?? string.Empty;
-            S3Secret = Environment.GetEnvironmentVariable("S3_SECRET") ?? string.Empty;
-            ReplaysBucket = Environment.GetEnvironmentVariable("REPLAYS_BUCKET") ?? string.Empty;
+            EnableAllBeatmapLeaderboard = Environment.GetEnvironmentVariable("ENABLE_ALL_BEATMAP_LEADERBOARD") == "true";
+
             TrackBuildUserCounts = Environment.GetEnvironmentVariable("TRACK_BUILD_USER_COUNTS") == "1";
 
             ServerPort = Environment.GetEnvironmentVariable("SERVER_PORT") ?? "8086";
             RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "localhost";
             DataDogAgentHost = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? "localhost";
 
-            DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-            DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osu_api";
-            DatabasePassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "osu_password";
-            DatabaseName = Environment.GetEnvironmentVariable("DB_NAME") ?? "osu_api";
-            DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
+            DatabaseHost = Environment.GetEnvironmentVariable("MYSQL_HOST") ?? Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+            DatabaseUser = Environment.GetEnvironmentVariable("MYSQL_USER") ?? Environment.GetEnvironmentVariable("DB_USER") ?? "osu_api";
+            DatabasePassword = Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ?? Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "osu_password";
+            DatabaseName = Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? Environment.GetEnvironmentVariable("DB_NAME") ?? "osu_api";
+            DatabasePort = Environment.GetEnvironmentVariable("MYSQL_PORT") ?? Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
 
             SharedInteropDomain = Environment.GetEnvironmentVariable("SHARED_INTEROP_DOMAIN") ?? "http://localhost:8000";
             SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;

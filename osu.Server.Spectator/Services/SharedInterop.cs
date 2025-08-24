@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using System.IO;
 
 namespace osu.Server.Spectator.Services
 {
@@ -74,16 +75,7 @@ namespace osu.Server.Spectator.Services
             {
                 string signature = hmacEncode(url, Encoding.UTF8.GetBytes(interopSecret));
 
-                var httpRequestMessage = new HttpRequestMessage
-                {
-                    RequestUri = new Uri(url),
-                    Method = method,
-                    Headers =
-                    {
-                        { "X-LIO-Signature", signature },
-                        { "Accept", "application/json" },
-                    },
-                };
+                var httpRequestMessage = new HttpRequestMessage { RequestUri = new Uri(url), Method = method, Headers = { { "X-LIO-Signature", signature }, { "Accept", "application/json" }, }, };
 
                 if (serialisedPostObject != null)
                 {
@@ -144,18 +136,12 @@ namespace osu.Server.Spectator.Services
 
         public async Task<long> CreateRoomAsync(int hostUserId, MultiplayerRoom room)
         {
-            return long.Parse(await runCommand(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new RoomWithHostId(room)
-            {
-                HostUserId = hostUserId
-            })));
+            return long.Parse(await runCommand(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new RoomWithHostId(room) { HostUserId = hostUserId })));
         }
 
         public async Task AddUserToRoomAsync(int userId, long roomId, string password)
         {
-            await runCommand(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}", new
-            {
-                password = password
-            });
+            await runCommand(HttpMethod.Put, $"multiplayer/rooms/{roomId}/users/{userId}", new { password = password });
         }
 
         public async Task RemoveUserFromRoomAsync(int userId, long roomId)
@@ -191,6 +177,12 @@ namespace osu.Server.Spectator.Services
             // 端点：POST /_lio/beatmaps/ensure
             var payload = new { beatmap_id = beatmapId };
             await runCommand(HttpMethod.Post, "beatmaps/ensure", payload);
+        }
+
+        public void UploadReplayAsync(int scoreInfoUserID, long scoreInfoOnlineID, int scoreInfoBeatmapId, MemoryStream outStream)
+        {
+            var payload = new { score_id = scoreInfoOnlineID, user_id = scoreInfoUserID, beatmap_id = scoreInfoBeatmapId, mreplay = Convert.ToBase64String(outStream.ToArray()) };
+            _ = runCommand(HttpMethod.Post, "scores/replay", payload);
         }
 
         [Serializable]

@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Extensions
         /// </summary>
         public static string GetTokenId(this HubCallerContext context)
         {
-            return context.User?.FindFirst(claim => claim.Type == "random")?.Value
+            return context.User?.FindFirst(claim => claim.Type == "jti")?.Value
                    ?? throw new InvalidOperationException("Could not retrieve JWT ID claim from token");
         }
     }
