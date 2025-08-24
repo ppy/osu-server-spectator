@@ -13,5 +13,6 @@ namespace osu.Server.Spectator.Database.Models
         spotlights,
         featured_artist,
         daily_challenge,
+        realtime,
     }
 }
