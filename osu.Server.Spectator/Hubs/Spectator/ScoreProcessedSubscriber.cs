@@ -101,7 +101,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 using var db = databaseFactory.GetInstance();
 
                 (long roomID, long playlistItemID)? multiplayerLookup = await db.GetMultiplayerRoomIdForScoreAsync(scoreProcessed.ScoreId);
-                logger.LogInformation($"Lookup: {multiplayerLookup.ToString()}");
                 if (multiplayerLookup == null)
                     return;
 
