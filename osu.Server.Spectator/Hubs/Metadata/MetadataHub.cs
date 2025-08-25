@@ -54,6 +54,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
             this.redis = redis;
         }
 
+        private IDatabase redisDatabase => redis.GetDatabase();
+
         public override async Task OnConnectedAsync()
         {
             await base.OnConnectedAsync();
@@ -106,8 +108,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 ? forwardedForIp.ToString().Split(',').First()
                 // fallback to getting the raw IP.
                 : Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString();
-            IDatabase redisDb = redis.GetDatabase();
-            redisDb.StringSet($"metadata:online:{usage.Item!.UserId}", "metadata", TimeSpan.FromHours(2));
+            redisDatabase.StringSet($"metadata:online:{usage.Item!.UserId}", "metadata", TimeSpan.FromHours(2));
 
             using (var db = databaseFactory.GetInstance())
                 await db.AddLoginForUserAsync(usage.Item!.UserId, userIp);
@@ -250,8 +251,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
             await base.CleanUpState(state);
             using (var db = databaseFactory.GetInstance())
                 await db.OfflineUser(state.UserId);
-            IDatabase redisDb = redis.GetDatabase();
-            redisDb.KeyDelete($"metadata:online:{state.UserId}");
+            redisDatabase.KeyDelete($"metadata:online:{state.UserId}");
             if (shouldBroadcastPresenceToOtherUsers(state))
                 await broadcastUserPresenceUpdate(state.UserId, null);
             await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);

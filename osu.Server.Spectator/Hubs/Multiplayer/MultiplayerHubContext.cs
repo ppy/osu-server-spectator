@@ -16,6 +16,7 @@ using osu.Game.Rulesets;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using StackExchange.Redis;
 using IDatabaseFactory = osu.Server.Spectator.Database.IDatabaseFactory;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
@@ -36,6 +37,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly IDatabaseFactory databaseFactory;
         private readonly ILogger logger;
         private readonly MultiplayerEventLogger multiplayerEventLogger;
+        private readonly IConnectionMultiplexer redis;
 
         public MultiplayerHubContext(
             IHubContext<MultiplayerHub> context,
@@ -43,16 +45,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             EntityStore<MultiplayerClientState> users,
             ILoggerFactory loggerFactory,
             IDatabaseFactory databaseFactory,
-            MultiplayerEventLogger multiplayerEventLogger)
+            MultiplayerEventLogger multiplayerEventLogger,
+            IConnectionMultiplexer redis)
         {
             this.context = context;
             this.rooms = rooms;
             this.users = users;
+            this.redis = redis;
             this.databaseFactory = databaseFactory;
             this.multiplayerEventLogger = multiplayerEventLogger;
 
             logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
         }
+
+        private IDatabase redisDatabase => redis.GetDatabase();
 
         public Task NotifyNewMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
         {
@@ -303,6 +309,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await room.StopAllCountdowns<ForceGameplayStartCountdown>();
 
             bool anyUserPlaying = false;
+            int playedUser = 0;
 
             // Start gameplay for users that are able to, and abort the others which cannot.
             foreach (var user in room.Users)
@@ -317,6 +324,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Playing);
                     await context.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.GameplayStarted));
                     anyUserPlaying = true;
+                    playedUser++;
                 }
                 else if (user.State == MultiplayerUserState.WaitingForLoad)
                 {
@@ -326,7 +334,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
             }
 
-            await ChangeRoomState(room, anyUserPlaying ? MultiplayerRoomState.Playing : MultiplayerRoomState.Open);
+            if (anyUserPlaying)
+            {
+                await ChangeRoomState(room, MultiplayerRoomState.Playing);
+                redisDatabase.StringSet($"multiplayer:{room.RoomID}:gameplay:players", playedUser, TimeSpan.FromHours(1));
+            }
+            else
+            {
+                await ChangeRoomState(room, MultiplayerRoomState.Open);
+            }
         }
 
         private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)
