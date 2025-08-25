@@ -208,10 +208,11 @@ namespace osu.Server.Spectator.Database
         /// <summary>
         /// Retrieve all passing scores for a specified playlist item.
         /// </summary>
+        /// <param name="roomId"></param>
         /// <param name="playlistItemId">The playlist item.</param>
         /// <param name="afterScoreId">An optional score ID to only fetch newer scores.</param>
         /// <returns></returns>
-        Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0);
+        Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long roomId, long playlistItemId, ulong afterScoreId = 0UL);
 
         /// <summary>
         /// Returns the best score of user with <paramref name="userId"/> on the playlist item with <paramref name="playlistItemId"/>.

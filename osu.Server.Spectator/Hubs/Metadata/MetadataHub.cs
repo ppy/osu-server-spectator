@@ -211,7 +211,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
                 ulong lastProcessed = itemStats.LastProcessedScoreID;
 
-                SoloScore[] scores = (await db.GetPassingScoresForPlaylistItem(itemId, itemStats.LastProcessedScoreID)).ToArray();
+                SoloScore[] scores = (await db.GetPassingScoresForPlaylistItem(stats.RoomID, itemId, itemStats.LastProcessedScoreID)).ToArray();
 
                 if (scores.Length == 0)
                     return;

@@ -490,7 +490,7 @@ namespace osu.Server.Spectator.Database
                 new { scoreId = scoreId });
         }
 
-        public async Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0)
+        public async Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long roomId, long playlistItemId, ulong afterScoreId = 0)
         {
             var connection = await getConnectionAsync();
 
@@ -499,8 +499,9 @@ namespace osu.Server.Spectator.Database
                 + "JOIN `playlist_best_scores` ON `playlist_best_scores`.`score_id` = `scores`.`id` "
                 + "WHERE `scores`.`passed` = 1 "
                 + "AND `playlist_best_scores`.`playlist_id` = @playlistItemId "
+                + "AND `playlist_best_scores`.`room_id` = @roomId "
                 + "AND `playlist_best_scores`.`score_id` > @afterScoreId "
-                , new { playlistItemId = playlistItemId, afterScoreId = afterScoreId, }));
+                , new { playlistItemId = playlistItemId, afterScoreId = afterScoreId, roomId = roomId }));
         }
 
         public async Task<playlist_best_score?> GetUserBestScoreAsync(long roomId, long playlistItemId, int userId)
