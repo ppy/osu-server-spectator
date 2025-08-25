@@ -17,6 +17,7 @@ using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Services;
+using StackExchange.Redis;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -43,7 +44,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext,
             ISharedInterop sharedInterop,
-            MultiplayerEventLogger multiplayerEventLogger)
+            MultiplayerEventLogger multiplayerEventLogger,
+            IConnectionMultiplexer redis)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
@@ -52,7 +54,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.multiplayerEventLogger = multiplayerEventLogger;
 
             Rooms = rooms;
-            HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory, multiplayerEventLogger);
+            HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory, multiplayerEventLogger, redis);
         }
 
         public async Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
