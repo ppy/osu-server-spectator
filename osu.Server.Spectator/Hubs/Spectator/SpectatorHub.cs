@@ -174,6 +174,10 @@ namespace osu.Server.Spectator.Hubs.Spectator
             if (!AppSettings.EnableAllBeatmapLeaderboard && (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays))
                 return;
 
+            // Do nothing with failed score
+            if (!score.ScoreInfo.Passed)
+                return;
+
             // if the user never hit anything, further processing that depends on the score existing can be waived because the client won't have submitted the score anyway.
             // see: https://github.com/ppy/osu/blob/a47ccb8edd2392258b6b7e176b222a9ecd511fc0/osu.Game/Screens/Play/SubmittingPlayer.cs#L281
             if (!score.ScoreInfo.Statistics.Any(s => s.Key.IsHit() && s.Value > 0))
