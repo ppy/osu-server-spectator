@@ -17,6 +17,8 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Helpers;
+using StackExchange.Redis;
 
 namespace osu.Server.Spectator.Hubs.Spectator
 {
@@ -35,19 +37,24 @@ namespace osu.Server.Spectator.Hubs.Spectator
         private readonly IDatabaseFactory databaseFactory;
         private readonly ScoreUploader scoreUploader;
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
+        private readonly IConnectionMultiplexer redis;
 
         public SpectatorHub(
             ILoggerFactory loggerFactory,
             EntityStore<SpectatorClientState> users,
             IDatabaseFactory databaseFactory,
             ScoreUploader scoreUploader,
-            IScoreProcessedSubscriber scoreProcessedSubscriber)
+            IScoreProcessedSubscriber scoreProcessedSubscriber,
+            IConnectionMultiplexer redis)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
             this.scoreUploader = scoreUploader;
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
+            this.redis = redis;
         }
+
+        private IDatabase redisDatabase => redis.GetDatabase();
 
         public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
         {
@@ -146,6 +153,11 @@ namespace osu.Server.Spectator.Hubs.Spectator
                         return;
 
                     await processScore(usage.Item!);
+
+                    int exitTime = (int)Math.Round((score.Replay.Frames.LastOrDefault()?.Time ?? 0) / 1000);
+                    if (state.State == SpectatedUserState.Failed || state.State == SpectatedUserState.Quit)
+                        await processFailtime(usage.Item!, exitTime, state);
+                    await editPlayTime(usage.Item!, exitTime);
                 }
                 finally
                 {
@@ -190,6 +202,68 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
             await scoreUploader.EnqueueAsync(scoreToken, score, item.Beatmap);
             await scoreProcessedSubscriber.RegisterForSingleScoreAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
+        }
+
+        private async Task processFailtime(SpectatorClientState item, int exitTime, SpectatorState state)
+        {
+            using (var db = databaseFactory.GetInstance())
+            {
+                var failTime = await db.GetBeatmapFailTimeAsync(item.Beatmap!.beatmap_id);
+                int[]? target;
+
+                if (failTime == null)
+                {
+                    failTime = new fail_time { beatmap_id = item.Beatmap!.beatmap_id, exit = BlobHelper.IntArrayToBlob(new int[100]), fail = BlobHelper.IntArrayToBlob(new int[100]) };
+                }
+
+                switch (state.State)
+                {
+                    case SpectatedUserState.Failed:
+                        target = BlobHelper.ParseBlobToIntArray(failTime.fail);
+                        break;
+
+                    case SpectatedUserState.Quit:
+                        target = BlobHelper.ParseBlobToIntArray(failTime.exit);
+                        break;
+
+                    default:
+                        return;
+                }
+
+                int index = Math.Clamp((int)(exitTime / item.Beatmap.total_length * 100), 0, 99);
+                target[index] += 1;
+                byte[] blob = BlobHelper.IntArrayToBlob(target);
+                failTime.fail = state.State == SpectatedUserState.Failed ? blob : failTime.fail;
+                failTime.exit = state.State == SpectatedUserState.Quit ? blob : failTime.exit;
+                await db.UpdateFailTimeAsync(failTime);
+            }
+        }
+
+        private async Task editPlayTime(SpectatorClientState item, int exitTime)
+        {
+            string key = $"score:existed_time:{item.ScoreToken}";
+            var messages = redisDatabase.StreamRange(key, "-", "+", 1);
+            if (messages.Length == 0)
+                return;
+
+            var message = messages[0];
+            int beforeTime = (int)message["time"];
+            redisDatabase.KeyDelete(key);
+            string gamemode = GameModeHelper.GameModeToStringSpecial(item.Score!.ScoreInfo.RulesetID, item.Score.ScoreInfo.APIMods);
+
+            using (var db = databaseFactory.GetInstance())
+            {
+                int? playTime = await db.GetUserPlaytimeAsync(gamemode, Context.GetUserId());
+
+                if (playTime == null)
+                {
+                    return;
+                }
+
+                playTime -= beforeTime;
+                playTime += Math.Min(beforeTime, exitTime);
+                await db.UpdateUserPlaytimeAsync(gamemode, Context.GetUserId(), playTime.Value);
+            }
         }
 
         public async Task StartWatchingUser(int userId)

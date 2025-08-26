@@ -236,5 +236,12 @@ namespace osu.Server.Spectator.Database
         ///  This will queue a background job to download the beatmap if it does not already exist.
         /// </remarks>
         Task<database_beatmap?> GetBeatmapOrFetchAsync(int beatmapId);
+
+        Task<fail_time?> GetBeatmapFailTimeAsync(int beatmapId);
+
+        Task UpdateFailTimeAsync(fail_time failTime);
+
+        Task<int?> GetUserPlaytimeAsync(string gamemode, int userId);
+        Task UpdateUserPlaytimeAsync(string gamemode, int userId, int playTime);
     }
 }

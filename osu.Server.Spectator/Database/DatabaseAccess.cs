@@ -93,6 +93,7 @@ namespace osu.Server.Spectator.Database
             checksum,
             beatmap_status as approved,
             difficulty_rating as difficultyrating,
+            total_length,
             CASE
                 WHEN mode = 'osu' THEN 0
                 WHEN mode = 'taiko' THEN 1
@@ -104,7 +105,7 @@ namespace osu.Server.Spectator.Database
                 WHEN mode = 'fruitsrx' THEN 7
                 ELSE 0
             END as playmode,
-            0 as osu_file_version
+            14 as osu_file_version
         FROM beatmaps
         WHERE id = @BeatmapId AND deleted_at IS NULL",
                 new { BeatmapId = beatmapId });
@@ -133,6 +134,38 @@ namespace osu.Server.Spectator.Database
                 logger.LogWarning(ex, "LIO request failed for beatmap {BeatmapId}: {ErrorMessage}", beatmapId, ex.Message);
                 return null;
             }
+        }
+
+        public async Task<fail_time?> GetBeatmapFailTimeAsync(int beatmapId)
+        {
+            var connection = await getConnectionAsync();
+            return (await connection.QuerySingleOrDefaultAsync<fail_time>(
+                "SELECT * FROM failtime WHERE beatmap_id = @BeatmapId",
+                new { BeatmapId = beatmapId }));
+        }
+
+        public async Task UpdateFailTimeAsync(fail_time failTime)
+        {
+            var connection = await getConnectionAsync();
+            await connection.ExecuteAsync(
+                @"INSERT INTO failtime (beatmap_id, fail, `exit`)
+                VALUES (@BeatmapId, @Fail, @Exit)
+                ON DUPLICATE KEY UPDATE fail = @Fail, `exit` = @Exit",
+                new { BeatmapId = failTime.beatmap_id, Fail = failTime.fail, Exit = failTime.exit });
+        }
+
+        public async Task<int?> GetUserPlaytimeAsync(string gamemode, int userId)
+        {
+            var connection = await getConnectionAsync();
+            return await connection.QuerySingleOrDefaultAsync<int?>(
+                "SELECT play_time FROM lazer_user_statistics WHERE user_id = @UserId AND mode = @GameMode", new { UserId = userId, GameMode = gamemode });
+        }
+
+        public async Task UpdateUserPlaytimeAsync(string gamemode, int userId, int playTime)
+        {
+            var connection = await getConnectionAsync();
+            await connection.ExecuteAsync("UPDATE lazer_user_statistics SET play_time = @PlayTime WHERE user_id = @UserId AND mode = @GameMode",
+                new { UserId = userId, GameMode = gamemode, PlayTime = playTime });
         }
 
         public async Task<database_beatmap[]> GetBeatmapsAsync(int beatmapSetId)

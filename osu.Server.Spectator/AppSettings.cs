@@ -14,6 +14,12 @@ namespace osu.Server.Spectator
 
         public static bool EnableAllBeatmapLeaderboard { get; set; }
 
+        // ReSharper disable once InconsistentNaming
+        public static bool EnableAP { get; set; }
+
+        // ReSharper disable once InconsistentNaming
+        public static bool EnableRX { get; set; }
+
         #endregion
 
         public static bool TrackBuildUserCounts { get; set; }
@@ -50,6 +56,8 @@ namespace osu.Server.Spectator
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ReplayUploaderConcurrency);
 
             EnableAllBeatmapLeaderboard = Environment.GetEnvironmentVariable("ENABLE_ALL_BEATMAP_LEADERBOARD") == "true";
+            EnableAP = (Environment.GetEnvironmentVariable("ENABLE_AP") ?? Environment.GetEnvironmentVariable("ENABLE_OSU_AP")) == "true";
+            EnableRX = (Environment.GetEnvironmentVariable("ENABLE_RX") ?? Environment.GetEnvironmentVariable("ENABLE_OSU_RX")) == "true";
 
             TrackBuildUserCounts = Environment.GetEnvironmentVariable("TRACK_BUILD_USER_COUNTS") == "1";
 

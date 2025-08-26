@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Authentication
         public void Configure(JwtBearerOptions options)
         {
             SecurityKey signingKey;
-            
+
             if (AppSettings.UseLegacyRsaAuth)
             {
                 // 使用原有的 RSA 公钥验证方式
@@ -41,12 +41,12 @@ namespace osu.Server.Spectator.Authentication
             {
                 // 使用 HS256 对称密钥验证（与 Python g0v0-server 兼容）
                 var secretKey = AppSettings.JwtSecretKey;
-                
+
                 if (string.IsNullOrEmpty(secretKey) || secretKey == "your_jwt_secret_here")
                 {
                     throw new InvalidOperationException("JWT Secret Key is required for HS256 authentication. Please set JWT_SECRET_KEY environment variable.");
                 }
-                
+
                 var keyBytes = Encoding.UTF8.GetBytes(secretKey);
                 signingKey = new SymmetricSecurityKey(keyBytes);
             }
@@ -68,7 +68,7 @@ namespace osu.Server.Spectator.Authentication
                 OnTokenValidated = async context =>
                 {
                     var jwtToken = (JsonWebToken)context.SecurityToken;
-                    
+
                     // 从 sub claim 中获取用户 ID
                     if (!int.TryParse(jwtToken.Subject, out int tokenUserId))
                     {
@@ -116,11 +116,7 @@ namespace osu.Server.Spectator.Authentication
 
             var asymmetricKeyParameter = PublicKeyFactory.CreateKey(keyBytes);
             var rsaKeyParameters = (RsaKeyParameters)asymmetricKeyParameter;
-            var rsaParameters = new RSAParameters
-            {
-                Modulus = rsaKeyParameters.Modulus.ToByteArrayUnsigned(),
-                Exponent = rsaKeyParameters.Exponent.ToByteArrayUnsigned()
-            };
+            var rsaParameters = new RSAParameters { Modulus = rsaKeyParameters.Modulus.ToByteArrayUnsigned(), Exponent = rsaKeyParameters.Exponent.ToByteArrayUnsigned() };
 
             var rsa = new RSACryptoServiceProvider();
             rsa.ImportParameters(rsaParameters);
