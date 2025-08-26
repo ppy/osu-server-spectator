@@ -34,9 +34,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await room.Initialise(DatabaseFactory.Object);
 
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
-            room.MatchTypeImplementation = typeImplementation.Object;
+            await room.ChangeMatchType(typeImplementation.Object);
 
-            room.AddUser(new MultiplayerRoomUser(1));
+            await room.AddUser(new MultiplayerRoomUser(1));
 
             typeImplementation.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
@@ -61,12 +61,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             var user = new MultiplayerRoomUser(1);
 
-            room.AddUser(user);
+            await room.AddUser(user);
 
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
-            room.MatchTypeImplementation = typeImplementation.Object;
+            await room.ChangeMatchType(typeImplementation.Object);
 
-            room.RemoveUser(user);
+            await room.RemoveUser(user);
             typeImplementation.Verify(m => m.HandleUserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
 
@@ -90,11 +90,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
-                room.AddUser(new MultiplayerRoomUser(i));
+                await room.AddUser(new MultiplayerRoomUser(i));
 
             // change the match type
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
-            room.MatchTypeImplementation = typeImplementation.Object;
+            await room.ChangeMatchType(typeImplementation.Object);
 
             // ensure the match type received hook events for all already joined users.
             typeImplementation.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Exactly(5));

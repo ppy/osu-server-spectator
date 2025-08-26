@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Server.Spectator.Database.Models;
@@ -17,20 +18,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             : base(room, hub)
         {
             room.MatchState = state = TeamVersusRoomState.CreateDefault();
-
-            Hub.NotifyMatchRoomStateChanged(room);
         }
 
-        public override void HandleUserJoined(MultiplayerRoomUser user)
+        public override async Task Initialise()
         {
-            base.HandleUserJoined(user);
+            await base.Initialise();
+            await Hub.NotifyMatchRoomStateChanged(Room);
+        }
+
+        public override async Task HandleUserJoined(MultiplayerRoomUser user)
+        {
+            await base.HandleUserJoined(user);
 
             user.MatchState = new TeamVersusUserState { TeamID = getBestAvailableTeam() };
-            Hub.NotifyMatchUserStateChanged(Room, user);
+            await Hub.NotifyMatchUserStateChanged(Room, user);
         }
 
-        public override void HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
+        public override async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
         {
+            await base.HandleUserRequest(user, request);
+
             switch (request)
             {
                 case ChangeTeamRequest changeTeam:
@@ -40,7 +47,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (user.MatchState is TeamVersusUserState userState)
                         userState.TeamID = changeTeam.TeamID;
 
-                    Hub.NotifyMatchUserStateChanged(Room, user);
+                    await Hub.NotifyMatchUserStateChanged(Room, user);
                     break;
             }
         }

@@ -139,7 +139,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         // inform clients before adding user to the room.
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
-                        room.AddUser(roomUser);
+                        await room.AddUser(roomUser);
                         room.UpdateForRetrieval();
 
                         await addDatabaseUser(room, roomUser);
@@ -554,7 +554,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         break;
 
                     default:
-                        room.MatchTypeImplementation.HandleUserRequest(user, request);
+                        await room.MatchTypeImplementation.HandleUserRequest(user, request);
                         break;
                 }
             }
@@ -730,7 +730,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 if (previousSettings.MatchType != settings.MatchType)
                 {
-                    room.ChangeMatchType(settings.MatchType);
+                    await room.ChangeMatchType(settings.MatchType);
                     Log(room, $"Switching room ruleset to {room.MatchTypeImplementation}");
                 }
 
@@ -984,7 +984,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (user == null)
                 throw new InvalidStateException("User was not in the expected room.");
 
-            room.RemoveUser(user);
+            await room.RemoveUser(user);
             await removeDatabaseUser(room, user);
 
             try
