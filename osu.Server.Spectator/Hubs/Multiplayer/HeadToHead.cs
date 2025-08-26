@@ -8,14 +8,11 @@ using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public class HeadToHead : MatchTypeImplementation
+    public class HeadToHead : MultiplayerTypeImplementation
     {
-        public override IPlaylistImplementation Playlist { get; }
-
         public HeadToHead(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
-            : base(room, hub)
+            : base(room, hub, dbFactory)
         {
-            Playlist = new MultiplayerPlaylistImplementation(room, hub, dbFactory);
         }
 
         public override async Task HandleUserJoined(MultiplayerRoomUser user)

@@ -11,17 +11,13 @@ using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public class TeamVersus : MatchTypeImplementation
+    public class TeamVersus : MultiplayerTypeImplementation
     {
-        public override IPlaylistImplementation Playlist { get; }
-
         private readonly TeamVersusRoomState state;
 
         public TeamVersus(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
-            : base(room, hub)
+            : base(room, hub, dbFactory)
         {
-            Playlist = new MultiplayerPlaylistImplementation(room, hub, dbFactory);
-
             room.MatchState = state = TeamVersusRoomState.CreateDefault();
         }
 

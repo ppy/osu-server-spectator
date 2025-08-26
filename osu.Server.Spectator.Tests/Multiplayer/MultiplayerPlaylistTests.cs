@@ -499,7 +499,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            for (int i = 1; i < MultiplayerPlaylistImplementation.PER_USER_LIMIT; i++)
+            for (int i = 1; i < MultiplayerTypeImplementation.GUEST_PLAYLIST_LIMIT; i++)
             {
                 await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
                 {
@@ -521,7 +521,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(MultiplayerPlaylistImplementation.PER_USER_LIMIT, room.Playlist.Count);
+                Assert.Equal(MultiplayerTypeImplementation.GUEST_PLAYLIST_LIMIT, room.Playlist.Count);
                 Assert.Equal(4444, room.Playlist[0].BeatmapID);
             }
         }

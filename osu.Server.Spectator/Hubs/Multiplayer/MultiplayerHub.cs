@@ -640,8 +640,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
-                await room.PlaylistImplementation.AddItem(item, user);
-                Log(room, $"Item ID {item.ID} added at slot {room.PlaylistImplementation.UpcomingItems.TakeWhile(i => i != item).Count() + 1} (of {room.Playlist.Count})");
+                await room.MatchTypeImplementation.AddPlaylistItem(item, user);
 
                 await updateRoomStateIfRequired(room);
             }
@@ -661,7 +660,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Editing playlist item {item.ID} for beatmap {item.BeatmapID}");
-                await room.PlaylistImplementation.EditItem(item, user);
+                await room.MatchTypeImplementation.EditPlaylistItem(item, user);
             }
         }
 
@@ -679,7 +678,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Removing playlist item {playlistItemId}");
-                await room.PlaylistImplementation.RemoveItem(playlistItemId, user);
+                await room.MatchTypeImplementation.RemovePlaylistItem(playlistItemId, user);
 
                 await updateRoomStateIfRequired(room);
             }
@@ -734,12 +733,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     Log(room, $"Switching room ruleset to {room.MatchTypeImplementation}");
                 }
 
-                if (previousSettings.QueueMode != settings.QueueMode)
-                {
-                    await room.PlaylistImplementation.UpdateFromQueueModeChange();
-                    Log(room, $"Switching queue mode to {settings.QueueMode}");
-                }
-
+                await room.MatchTypeImplementation.HandleSettingsChanged();
                 await HubContext.NotifySettingsChanged(room, false);
 
                 await updateRoomStateIfRequired(room);
@@ -814,7 +808,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 case MultiplayerRoomState.Open:
                     if (room.Settings.AutoStartEnabled)
                     {
-                        bool shouldHaveCountdown = !room.PlaylistImplementation.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
+                        bool shouldHaveCountdown = !room.MatchTypeImplementation.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
                         if (shouldHaveCountdown && !room.ActiveCountdowns.Any(c => c is MatchStartCountdown))
                             await room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, HubContext.StartMatch);
@@ -851,7 +845,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         else
                             await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.GetCurrentItem()!.ID);
 
-                        await room.PlaylistImplementation.FinishCurrentItem();
+                        await room.MatchTypeImplementation.HandleGameplayCompleted();
                     }
 
                     break;
@@ -879,7 +873,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (oldState != MultiplayerUserState.Idle)
                         throw new InvalidStateChangeException(oldState, newState);
 
-                    if (room.PlaylistImplementation.CurrentItem.Expired)
+                    if (room.MatchTypeImplementation.CurrentItem.Expired)
                         throw new InvalidStateException("Cannot ready up while all items have been played.");
 
                     break;
