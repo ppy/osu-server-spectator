@@ -730,7 +730,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 if (previousSettings.MatchType != settings.MatchType)
                 {
-                    room.ChangeMatchType(settings.MatchType);
+                    await room.ChangeMatchType(settings.MatchType);
                     Log(room, $"Switching room ruleset to {room.MatchTypeImplementation}");
                 }
 
