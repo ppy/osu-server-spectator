@@ -20,13 +20,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     {
         public IMatchController Controller
         {
-            get => matchTypeImplementation ?? throw new InvalidOperationException("Room not initialised.");
-            private set => matchTypeImplementation = value;
+            get => matchController ?? throw new InvalidOperationException("Room not initialised.");
+            private set => matchController = value;
         }
 
         private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
-        private IMatchController? matchTypeImplementation;
+        private IMatchController? matchController;
 
         public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(roomId)
@@ -76,9 +76,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         [MemberNotNull(nameof(Controller))]
-        public async Task ChangeMatchType(IMatchController implementation)
+        public async Task ChangeMatchType(IMatchController controller)
         {
-            Controller = implementation;
+            Controller = controller;
 
             await Controller.Initialise();
 

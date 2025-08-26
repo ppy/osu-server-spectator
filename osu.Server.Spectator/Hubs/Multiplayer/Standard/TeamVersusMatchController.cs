@@ -11,9 +11,6 @@ using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 {
-    /// <summary>
-    /// Implementation of a team-versus room.
-    /// </summary>
     public class TeamVersusMatchController : StandardMatchController
     {
         private readonly ServerMultiplayerRoom room;

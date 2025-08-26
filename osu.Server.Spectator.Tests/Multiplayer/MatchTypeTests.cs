@@ -79,9 +79,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task MatchUserRequestForwardsToImplementation()
+        public async Task MatchUserRequestForwardsToController()
         {
-            Mock<IMatchController> typeImplementation;
+            Mock<IMatchController> controller;
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -90,8 +90,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
 
-                typeImplementation = new Mock<IMatchController>();
-                await room.ChangeMatchType(typeImplementation.Object);
+                controller = new Mock<IMatchController>();
+                await room.ChangeMatchType(controller.Object);
             }
 
             var mockRequest = new Mock<MatchUserRequest>();
@@ -102,7 +102,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
-                typeImplementation.Verify(r => r.HandleUserRequest(room.Users.First(), mockRequest.Object), Times.Once());
+                controller.Verify(r => r.HandleUserRequest(room.Users.First(), mockRequest.Object), Times.Once());
             }
         }
 

@@ -33,12 +33,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await room.Initialise();
 
-            Mock<IMatchController> typeImplementation = new Mock<IMatchController>();
-            await room.ChangeMatchType(typeImplementation.Object);
+            Mock<IMatchController> controller = new Mock<IMatchController>();
+            await room.ChangeMatchType(controller.Object);
 
             await room.AddUser(new MultiplayerRoomUser(1));
 
-            typeImplementation.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Once());
+            controller.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
 
         [Fact]
@@ -63,11 +63,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await room.AddUser(user);
 
-            Mock<IMatchController> typeImplementation = new Mock<IMatchController>();
-            await room.ChangeMatchType(typeImplementation.Object);
+            Mock<IMatchController> controller = new Mock<IMatchController>();
+            await room.ChangeMatchType(controller.Object);
 
             await room.RemoveUser(user);
-            typeImplementation.Verify(m => m.HandleUserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once());
+            controller.Verify(m => m.HandleUserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
 
         [Fact]
@@ -93,11 +93,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await room.AddUser(new MultiplayerRoomUser(i));
 
             // change the match type
-            Mock<IMatchController> typeImplementation = new Mock<IMatchController>();
-            await room.ChangeMatchType(typeImplementation.Object);
+            Mock<IMatchController> controller = new Mock<IMatchController>();
+            await room.ChangeMatchType(controller.Object);
 
             // ensure the match type received hook events for all already joined users.
-            typeImplementation.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Exactly(5));
+            controller.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Exactly(5));
         }
     }
 }

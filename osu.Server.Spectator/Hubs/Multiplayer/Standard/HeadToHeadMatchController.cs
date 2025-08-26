@@ -8,9 +8,6 @@ using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 {
-    /// <summary>
-    /// Implementation of a head-to-head room.
-    /// </summary>
     public class HeadToHeadMatchController : StandardMatchController
     {
         private readonly ServerMultiplayerRoom room;

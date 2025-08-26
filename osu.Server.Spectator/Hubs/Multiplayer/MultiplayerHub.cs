@@ -135,7 +135,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, Context.GetUserId(), roomId);
 
-                        // because match type implementations may send subsequent information via Users collection hooks,
+                        // because match controllers may send subsequent information via Users collection hooks,
                         // inform clients before adding user to the room.
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
