@@ -23,24 +23,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             private set => matchTypeImplementation = value;
         }
 
-        public readonly IPlaylistImplementation PlaylistImplementation;
+        public IPlaylistImplementation PlaylistImplementation => MatchTypeImplementation.Playlist;
 
         private readonly IMultiplayerHubContext hub;
+        private readonly IDatabaseFactory dbFactory;
         private MatchTypeImplementation? matchTypeImplementation;
 
-        public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub)
+        public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(roomId)
         {
             this.hub = hub;
-
-            PlaylistImplementation = new MultiplayerPlaylistImplementation(this, hub);
+            this.dbFactory = dbFactory;
         }
 
         public async Task Initialise(IDatabaseFactory dbFactory)
         {
             await ChangeMatchType(Settings.MatchType);
-
-            await PlaylistImplementation.Initialise(dbFactory);
         }
 
         /// <summary>
@@ -65,10 +63,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             switch (type)
             {
                 case MatchType.TeamVersus:
-                    return ChangeMatchType(new TeamVersus(this, hub));
+                    return ChangeMatchType(new TeamVersus(this, hub, dbFactory));
 
                 default:
-                    return ChangeMatchType(new HeadToHead(this, hub));
+                    return ChangeMatchType(new HeadToHead(this, hub, dbFactory));
             }
         }
 
@@ -93,18 +91,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             Users.Remove(user);
             await MatchTypeImplementation.HandleUserLeft(user);
-        }
-
-        private MatchTypeImplementation createTypeImplementation(MatchType type)
-        {
-            switch (type)
-            {
-                case MatchType.TeamVersus:
-                    return new TeamVersus(this, hub);
-
-                default:
-                    return new HeadToHead(this, hub);
-            }
         }
 
         #region Countdowns

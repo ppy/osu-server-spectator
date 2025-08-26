@@ -6,17 +6,22 @@ using System.Linq;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class TeamVersus : MatchTypeImplementation
     {
+        public override IPlaylistImplementation Playlist { get; }
+
         private readonly TeamVersusRoomState state;
 
-        public TeamVersus(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
+        public TeamVersus(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(room, hub)
         {
+            Playlist = new MultiplayerPlaylistImplementation(room, hub, dbFactory);
+
             room.MatchState = state = TeamVersusRoomState.CreateDefault();
         }
 

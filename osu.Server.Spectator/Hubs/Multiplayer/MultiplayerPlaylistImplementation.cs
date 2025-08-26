@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,23 +22,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private readonly ServerMultiplayerRoom room;
         private readonly IMultiplayerHubContext hub;
+        private readonly IDatabaseFactory dbFactory;
 
-        private IDatabaseFactory? dbFactory;
         private int currentIndex;
 
-        public MultiplayerPlaylistImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
+        public MultiplayerPlaylistImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
         {
             this.room = room;
             this.hub = hub;
+            this.dbFactory = dbFactory;
         }
 
         /// <summary>
         /// Initialises the queue from the database.
         /// </summary>
-        public async Task Initialise(IDatabaseFactory dbFactory)
+        public async Task Initialise()
         {
-            this.dbFactory = dbFactory;
-
             using (var db = dbFactory.GetInstance())
             {
                 foreach (var item in await db.GetAllPlaylistItemsAsync(room.RoomID))
@@ -56,8 +54,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         public async Task UpdateFromQueueModeChange()
         {
-            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
-
             using (var db = dbFactory.GetInstance())
             {
                 // When changing to host-only mode, ensure that at least one non-expired playlist item exists by duplicating the current item.
@@ -75,8 +71,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         public async Task FinishCurrentItem()
         {
-            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
-
             using (var db = dbFactory.GetInstance())
             {
                 // Expire and let clients know that the current item has finished.
@@ -103,9 +97,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
         public async Task AddItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
-            if (dbFactory == null)
-                throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
-
             bool isHostOnly = room.Settings.QueueMode == QueueMode.HostOnly;
 
             bool isHost = user.Equals(room.Host);
@@ -148,9 +139,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task EditItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
-            if (dbFactory == null)
-                throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
-
             if (item.Freestyle && item.AllowedMods.Any())
                 throw new InvalidStateException("Cannot enqueue freestyle item with mods.");
 
@@ -208,8 +196,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="user">The user removing the item.</param>
         public async Task RemoveItem(long playlistItemId, MultiplayerRoomUser user)
         {
-            if (dbFactory == null) throw new InvalidOperationException($"Call {nameof(Initialise)} first.");
-
             var item = room.Playlist.FirstOrDefault(item => item.ID == playlistItemId);
 
             if (item == null)

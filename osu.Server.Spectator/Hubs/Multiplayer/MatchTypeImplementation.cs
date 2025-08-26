@@ -9,6 +9,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public abstract class MatchTypeImplementation
     {
+        public abstract IPlaylistImplementation Playlist { get; }
+
         protected readonly ServerMultiplayerRoom Room;
         protected readonly IMultiplayerHubContext Hub;
 
@@ -18,9 +20,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             Hub = hub;
         }
 
-        public virtual Task Initialise()
+        public virtual async Task Initialise()
         {
-            return Task.CompletedTask;
+            await Playlist.Initialise();
         }
 
         /// <summary>

@@ -3,15 +3,19 @@
 
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class HeadToHead : MatchTypeImplementation
     {
-        public HeadToHead(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
+        public override IPlaylistImplementation Playlist { get; }
+
+        public HeadToHead(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(room, hub)
         {
+            Playlist = new MultiplayerPlaylistImplementation(room, hub, dbFactory);
         }
 
         public override async Task HandleUserJoined(MultiplayerRoomUser user)

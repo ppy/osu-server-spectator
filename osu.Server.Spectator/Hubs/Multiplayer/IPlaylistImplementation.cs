@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using osu.Server.Spectator.Database;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -18,7 +17,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// Initialises the queue from the database.
         /// </summary>
-        Task Initialise(IDatabaseFactory dbFactory);
+        Task Initialise();
 
         /// <summary>
         /// Updates the queue as a result of a change in the queueing mode.

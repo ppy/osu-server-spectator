@@ -19,7 +19,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task NewUserJoinedTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object)
+            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
             {
                 Playlist =
                 {
@@ -45,7 +45,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UserLeavesTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object)
+            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
             {
                 Playlist =
                 {
@@ -74,7 +74,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task TypeChangeTriggersInitialJoins()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object)
+            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
             {
                 Playlist =
                 {
