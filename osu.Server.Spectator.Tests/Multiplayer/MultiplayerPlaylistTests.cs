@@ -9,7 +9,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
 using osu.Server.Spectator.Database.Models;
-using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -499,7 +499,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            for (int i = 1; i < MultiplayerTypeImplementation.GUEST_PLAYLIST_LIMIT; i++)
+            for (int i = 1; i < StandardMatchController.GUEST_PLAYLIST_LIMIT; i++)
             {
                 await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
                 {
@@ -521,7 +521,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(MultiplayerTypeImplementation.GUEST_PLAYLIST_LIMIT, room.Playlist.Count);
+                Assert.Equal(StandardMatchController.GUEST_PLAYLIST_LIMIT, room.Playlist.Count);
                 Assert.Equal(4444, room.Playlist[0].BeatmapID);
             }
         }

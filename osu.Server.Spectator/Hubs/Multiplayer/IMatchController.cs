@@ -8,7 +8,7 @@ using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public interface IMatchTypeImplementation
+    public interface IMatchController
     {
         MultiplayerPlaylistItem CurrentItem { get; }
 

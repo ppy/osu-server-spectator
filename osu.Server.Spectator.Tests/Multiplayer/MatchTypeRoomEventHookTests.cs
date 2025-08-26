@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await room.Initialise();
 
-            Mock<IMatchTypeImplementation> typeImplementation = new Mock<IMatchTypeImplementation>();
+            Mock<IMatchController> typeImplementation = new Mock<IMatchController>();
             await room.ChangeMatchType(typeImplementation.Object);
 
             await room.AddUser(new MultiplayerRoomUser(1));
@@ -63,7 +63,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await room.AddUser(user);
 
-            Mock<IMatchTypeImplementation> typeImplementation = new Mock<IMatchTypeImplementation>();
+            Mock<IMatchController> typeImplementation = new Mock<IMatchController>();
             await room.ChangeMatchType(typeImplementation.Object);
 
             await room.RemoveUser(user);
@@ -93,7 +93,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await room.AddUser(new MultiplayerRoomUser(i));
 
             // change the match type
-            Mock<IMatchTypeImplementation> typeImplementation = new Mock<IMatchTypeImplementation>();
+            Mock<IMatchController> typeImplementation = new Mock<IMatchController>();
             await room.ChangeMatchType(typeImplementation.Object);
 
             // ensure the match type received hook events for all already joined users.

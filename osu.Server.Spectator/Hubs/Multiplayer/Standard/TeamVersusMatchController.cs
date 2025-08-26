@@ -9,18 +9,18 @@ using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
-namespace osu.Server.Spectator.Hubs.Multiplayer
+namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 {
     /// <summary>
     /// Implementation of a team-versus room.
     /// </summary>
-    public class TeamVersus : MultiplayerTypeImplementation
+    public class TeamVersusMatchController : StandardMatchController
     {
         private readonly ServerMultiplayerRoom room;
         private readonly IMultiplayerHubContext hub;
         private readonly TeamVersusRoomState state;
 
-        public TeamVersus(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
+        public TeamVersusMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(room, hub, dbFactory)
         {
             this.room = room;

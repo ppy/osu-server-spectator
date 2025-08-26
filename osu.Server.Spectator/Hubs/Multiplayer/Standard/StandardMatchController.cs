@@ -11,12 +11,12 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Extensions;
 
-namespace osu.Server.Spectator.Hubs.Multiplayer
+namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 {
     /// <summary>
     /// Abstract class that implements the logic for a generic multiplayer room.
     /// </summary>
-    public abstract class MultiplayerTypeImplementation : IMatchTypeImplementation
+    public abstract class StandardMatchController : IMatchController
     {
         public const int HOST_PLAYLIST_LIMIT = 50;
         public const int GUEST_PLAYLIST_LIMIT = 3;
@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private QueueMode queueMode;
         private int currentPlaylistItemIndex;
 
-        protected MultiplayerTypeImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
+        protected StandardMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
         {
             this.room = room;
             this.hub = hub;

@@ -554,7 +554,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         break;
 
                     default:
-                        await room.MatchTypeImplementation.HandleUserRequest(user, request);
+                        await room.Controller.HandleUserRequest(user, request);
                         break;
                 }
             }
@@ -640,7 +640,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
-                await room.MatchTypeImplementation.AddPlaylistItem(item, user);
+                await room.Controller.AddPlaylistItem(item, user);
 
                 await updateRoomStateIfRequired(room);
             }
@@ -660,7 +660,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Editing playlist item {item.ID} for beatmap {item.BeatmapID}");
-                await room.MatchTypeImplementation.EditPlaylistItem(item, user);
+                await room.Controller.EditPlaylistItem(item, user);
             }
         }
 
@@ -678,7 +678,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Removing playlist item {playlistItemId}");
-                await room.MatchTypeImplementation.RemovePlaylistItem(playlistItemId, user);
+                await room.Controller.RemovePlaylistItem(playlistItemId, user);
 
                 await updateRoomStateIfRequired(room);
             }
@@ -730,10 +730,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (previousSettings.MatchType != settings.MatchType)
                 {
                     await room.ChangeMatchType(settings.MatchType);
-                    Log(room, $"Switching room ruleset to {room.MatchTypeImplementation}");
+                    Log(room, $"Switching room ruleset to {room.Controller}");
                 }
 
-                await room.MatchTypeImplementation.HandleSettingsChanged();
+                await room.Controller.HandleSettingsChanged();
                 await HubContext.NotifySettingsChanged(room, false);
 
                 await updateRoomStateIfRequired(room);
@@ -808,7 +808,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 case MultiplayerRoomState.Open:
                     if (room.Settings.AutoStartEnabled)
                     {
-                        bool shouldHaveCountdown = !room.MatchTypeImplementation.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
+                        bool shouldHaveCountdown = !room.Controller.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
                         if (shouldHaveCountdown && !room.ActiveCountdowns.Any(c => c is MatchStartCountdown))
                             await room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, HubContext.StartMatch);
@@ -845,7 +845,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         else
                             await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.GetCurrentItem()!.ID);
 
-                        await room.MatchTypeImplementation.HandleGameplayCompleted();
+                        await room.Controller.HandleGameplayCompleted();
                     }
 
                     break;
@@ -873,7 +873,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (oldState != MultiplayerUserState.Idle)
                         throw new InvalidStateChangeException(oldState, newState);
 
-                    if (room.MatchTypeImplementation.CurrentItem.Expired)
+                    if (room.Controller.CurrentItem.Expired)
                         throw new InvalidStateException("Cannot ready up while all items have been played.");
 
                     break;

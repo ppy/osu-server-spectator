@@ -6,17 +6,17 @@ using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
-namespace osu.Server.Spectator.Hubs.Multiplayer
+namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 {
     /// <summary>
     /// Implementation of a head-to-head room.
     /// </summary>
-    public class HeadToHead : MultiplayerTypeImplementation
+    public class HeadToHeadMatchController : StandardMatchController
     {
         private readonly ServerMultiplayerRoom room;
         private readonly IMultiplayerHubContext hub;
 
-        public HeadToHead(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
+        public HeadToHeadMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(room, hub, dbFactory)
         {
             this.room = room;

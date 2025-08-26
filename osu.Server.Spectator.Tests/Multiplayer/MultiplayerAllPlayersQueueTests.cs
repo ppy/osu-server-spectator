@@ -7,7 +7,7 @@ using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
-using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -186,7 +186,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            for (int i = 1; i < MultiplayerTypeImplementation.GUEST_PLAYLIST_LIMIT; i++)
+            for (int i = 1; i < StandardMatchController.GUEST_PLAYLIST_LIMIT; i++)
                 await addItem();
 
             // Host should be allowed to add many items even in non-host-only queue modes.
@@ -216,7 +216,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             // Non-host user should be able to add items up to a defined limit.
-            for (int i = 0; i < MultiplayerTypeImplementation.GUEST_PLAYLIST_LIMIT; i++)
+            for (int i = 0; i < StandardMatchController.GUEST_PLAYLIST_LIMIT; i++)
                 await addItem();
 
             // User is not allowed to add more items.

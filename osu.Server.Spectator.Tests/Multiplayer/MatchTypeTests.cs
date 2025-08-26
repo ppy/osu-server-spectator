@@ -11,6 +11,7 @@ using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -80,7 +81,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task MatchUserRequestForwardsToImplementation()
         {
-            Mock<IMatchTypeImplementation> typeImplementation;
+            Mock<IMatchController> typeImplementation;
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -89,7 +90,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
 
-                typeImplementation = new Mock<IMatchTypeImplementation>();
+                typeImplementation = new Mock<IMatchController>();
                 await room.ChangeMatchType(typeImplementation.Object);
             }
 
@@ -126,7 +127,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.True(room.MatchTypeImplementation is TeamVersus);
+                Assert.True(room.Controller is TeamVersusMatchController);
                 Assert.Equal(MatchType.TeamVersus, room.Settings.MatchType);
 
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
@@ -155,7 +156,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 Assert.Equal(MatchType.TeamVersus, room.Settings.MatchType);
-                Assert.IsType<TeamVersus>(room.MatchTypeImplementation);
+                Assert.IsType<TeamVersusMatchController>(room.Controller);
             }
         }
 

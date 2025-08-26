@@ -7,11 +7,12 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
 {
-    public class TeamVersusTests : MultiplayerTest
+    public class TeamVersusMatchControllerTests : MultiplayerTest
     {
         [Theory]
         [InlineData(0)]
@@ -32,7 +33,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             };
             await room.Initialise();
 
-            var teamVersus = new TeamVersus(room, hub.Object, DatabaseFactory.Object);
+            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object);
 
             // change the match type
             await room.ChangeMatchType(teamVersus);
@@ -67,7 +68,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
             await room.Initialise();
-            var teamVersus = new TeamVersus(room, hub.Object, DatabaseFactory.Object);
+            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object);
 
             // change the match type
             await room.ChangeMatchType(teamVersus);
@@ -113,7 +114,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // change all users to team 0
             for (int i = 0; i < 5; i++)
-                await room.MatchTypeImplementation.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
+                await room.Controller.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
 
             Assert.All(room.Users, u => checkUserOnTeam(u, 0));
 

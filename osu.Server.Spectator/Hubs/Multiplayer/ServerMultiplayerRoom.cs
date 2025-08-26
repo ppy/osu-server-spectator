@@ -12,12 +12,13 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
-        public IMatchTypeImplementation MatchTypeImplementation
+        public IMatchController Controller
         {
             get => matchTypeImplementation ?? throw new InvalidOperationException("Room not initialised.");
             private set => matchTypeImplementation = value;
@@ -25,7 +26,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
-        private IMatchTypeImplementation? matchTypeImplementation;
+        private IMatchController? matchTypeImplementation;
 
         public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(roomId)
@@ -61,40 +62,40 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        [MemberNotNull(nameof(MatchTypeImplementation))]
+        [MemberNotNull(nameof(Controller))]
         public Task ChangeMatchType(MatchType type)
         {
             switch (type)
             {
                 case MatchType.TeamVersus:
-                    return ChangeMatchType(new TeamVersus(this, hub, dbFactory));
+                    return ChangeMatchType(new TeamVersusMatchController(this, hub, dbFactory));
 
                 default:
-                    return ChangeMatchType(new HeadToHead(this, hub, dbFactory));
+                    return ChangeMatchType(new HeadToHeadMatchController(this, hub, dbFactory));
             }
         }
 
-        [MemberNotNull(nameof(MatchTypeImplementation))]
-        public async Task ChangeMatchType(IMatchTypeImplementation implementation)
+        [MemberNotNull(nameof(Controller))]
+        public async Task ChangeMatchType(IMatchController implementation)
         {
-            MatchTypeImplementation = implementation;
+            Controller = implementation;
 
-            await MatchTypeImplementation.Initialise();
+            await Controller.Initialise();
 
             foreach (var u in Users)
-                await MatchTypeImplementation.HandleUserJoined(u);
+                await Controller.HandleUserJoined(u);
         }
 
         public async Task AddUser(MultiplayerRoomUser user)
         {
             Users.Add(user);
-            await MatchTypeImplementation.HandleUserJoined(user);
+            await Controller.HandleUserJoined(user);
         }
 
         public async Task RemoveUser(MultiplayerRoomUser user)
         {
             Users.Remove(user);
-            await MatchTypeImplementation.HandleUserLeft(user);
+            await Controller.HandleUserLeft(user);
         }
 
         #region Countdowns
