@@ -14,7 +14,7 @@ using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public class MultiplayerQueue
+    public class MultiplayerPlaylistImplementation
     {
         public const int HOST_LIMIT = 50;
         public const int PER_USER_LIMIT = 3;
@@ -27,7 +27,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private IDatabaseFactory? dbFactory;
         private int currentIndex;
 
-        public MultiplayerQueue(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
+        public MultiplayerPlaylistImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
         {
             this.room = room;
             this.hub = hub;

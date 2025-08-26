@@ -186,7 +186,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-            for (int i = 1; i < MultiplayerQueue.PER_USER_LIMIT; i++)
+            for (int i = 1; i < MultiplayerPlaylistImplementation.PER_USER_LIMIT; i++)
                 await addItem();
 
             // Host should be allowed to add many items even in non-host-only queue modes.
@@ -216,7 +216,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             // Non-host user should be able to add items up to a defined limit.
-            for (int i = 0; i < MultiplayerQueue.PER_USER_LIMIT; i++)
+            for (int i = 0; i < MultiplayerPlaylistImplementation.PER_USER_LIMIT; i++)
                 await addItem();
 
             // User is not allowed to add more items.

@@ -23,7 +23,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             private set => matchTypeImplementation = value;
         }
 
-        public readonly MultiplayerQueue Queue;
+        public readonly MultiplayerPlaylistImplementation PlaylistImplementation;
 
         private readonly IMultiplayerHubContext hub;
         private MatchTypeImplementation? matchTypeImplementation;
@@ -33,14 +33,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             this.hub = hub;
 
-            Queue = new MultiplayerQueue(this, hub);
+            PlaylistImplementation = new MultiplayerPlaylistImplementation(this, hub);
         }
 
         public async Task Initialise(IDatabaseFactory dbFactory)
         {
             await ChangeMatchType(Settings.MatchType);
 
-            await Queue.Initialise(dbFactory);
+            await PlaylistImplementation.Initialise(dbFactory);
         }
 
         /// <summary>
