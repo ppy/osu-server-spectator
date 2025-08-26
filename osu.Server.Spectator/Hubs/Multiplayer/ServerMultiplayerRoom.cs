@@ -71,16 +71,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public void ChangeMatchType(MatchType type) => MatchTypeImplementation = createTypeImplementation(type);
 
-        public void AddUser(MultiplayerRoomUser user)
+        public async Task AddUser(MultiplayerRoomUser user)
         {
             Users.Add(user);
-            MatchTypeImplementation.HandleUserJoined(user);
+            await MatchTypeImplementation.HandleUserJoined(user);
         }
 
-        public void RemoveUser(MultiplayerRoomUser user)
+        public async Task RemoveUser(MultiplayerRoomUser user)
         {
             Users.Remove(user);
-            MatchTypeImplementation.HandleUserLeft(user);
+            await MatchTypeImplementation.HandleUserLeft(user);
         }
 
         private MatchTypeImplementation createTypeImplementation(MatchType type)

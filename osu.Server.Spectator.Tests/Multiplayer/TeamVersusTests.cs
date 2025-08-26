@@ -39,10 +39,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             var user = new MultiplayerRoomUser(1);
 
-            room.AddUser(user);
+            await room.AddUser(user);
             hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
 
-            teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
+            await teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
 
             checkUserOnTeam(user, team);
             hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Exactly(2));
@@ -74,13 +74,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             var user = new MultiplayerRoomUser(1);
 
-            room.AddUser(user);
+            await room.AddUser(user);
             // called once on the initial user join operation (to inform other clients in the room).
             hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
 
             var previousTeam = ((TeamVersusUserState)user.MatchState!).TeamID;
 
-            Assert.Throws<InvalidStateException>(() => teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team }));
+            await Assert.ThrowsAsync<InvalidStateException>(() => teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team }));
 
             checkUserOnTeam(user, previousTeam);
             // was not called a second time from the invalid change.
@@ -109,11 +109,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
-                room.AddUser(new MultiplayerRoomUser(i));
+                await room.AddUser(new MultiplayerRoomUser(i));
 
             // change all users to team 0
             for (int i = 0; i < 5; i++)
-                room.MatchTypeImplementation.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
+                await room.MatchTypeImplementation.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
 
             Assert.All(room.Users, u => checkUserOnTeam(u, 0));
 
@@ -121,7 +121,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 var newUser = new MultiplayerRoomUser(i);
 
-                room.AddUser(newUser);
+                await room.AddUser(newUser);
 
                 // all new users should be joined to team 1 to balance the user counts.
                 checkUserOnTeam(newUser, 1);
@@ -147,7 +147,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
-                room.AddUser(new MultiplayerRoomUser(i));
+                await room.AddUser(new MultiplayerRoomUser(i));
 
             // change the match type
             room.ChangeMatchType(MatchType.TeamVersus);
@@ -180,7 +180,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
-                room.AddUser(new MultiplayerRoomUser(i));
+                await room.AddUser(new MultiplayerRoomUser(i));
 
             checkUserOnTeam(room.Users[0], 0);
             checkUserOnTeam(room.Users[1], 1);
