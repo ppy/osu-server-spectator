@@ -39,12 +39,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task Initialise()
         {
             using (var db = dbFactory.GetInstance())
-            {
-                foreach (var item in await db.GetAllPlaylistItemsAsync(room.RoomID))
-                    room.Playlist.Add(await item.ToMultiplayerPlaylistItem(db));
-
                 await updatePlaylistOrder(db);
-            }
 
             await updateCurrentItem();
         }
