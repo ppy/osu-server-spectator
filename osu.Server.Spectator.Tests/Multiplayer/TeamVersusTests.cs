@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     },
                 }
             };
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             var teamVersus = new TeamVersus(room, hub.Object, DatabaseFactory.Object);
 
@@ -66,7 +66,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     },
                 }
             };
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
             var teamVersus = new TeamVersus(room, hub.Object, DatabaseFactory.Object);
 
             // change the match type
@@ -102,7 +102,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     },
                 }
             };
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             // change the match type
             await room.ChangeMatchType(MatchType.TeamVersus);
@@ -143,7 +143,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     },
                 }
             };
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -174,7 +174,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     },
                 }
             };
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             await room.ChangeMatchType(MatchType.TeamVersus);
 

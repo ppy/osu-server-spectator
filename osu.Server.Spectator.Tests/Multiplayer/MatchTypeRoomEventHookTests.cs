@@ -31,7 +31,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
 
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
             await room.ChangeMatchType(typeImplementation.Object);
@@ -57,7 +57,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
 
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             var user = new MultiplayerRoomUser(1);
 
@@ -86,7 +86,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
 
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)

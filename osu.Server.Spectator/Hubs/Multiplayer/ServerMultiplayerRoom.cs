@@ -36,7 +36,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.dbFactory = dbFactory;
         }
 
-        public async Task Initialise(IDatabaseFactory dbFactory)
+        public async Task Initialise()
         {
             using (var db = dbFactory.GetInstance())
             {

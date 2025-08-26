@@ -239,7 +239,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     }
                 };
 
-                await room.Initialise(databaseFactory);
+                await room.Initialise();
 
                 return room;
             }
