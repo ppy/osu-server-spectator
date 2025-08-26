@@ -17,7 +17,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
-        public MatchTypeImplementation MatchTypeImplementation
+        public IMatchTypeImplementation MatchTypeImplementation
         {
             get => matchTypeImplementation ?? throw new InvalidOperationException("Room not initialised.");
             private set => matchTypeImplementation = value;
@@ -25,7 +25,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
-        private MatchTypeImplementation? matchTypeImplementation;
+        private IMatchTypeImplementation? matchTypeImplementation;
 
         public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(roomId)
@@ -75,7 +75,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         [MemberNotNull(nameof(MatchTypeImplementation))]
-        public async Task ChangeMatchType(MatchTypeImplementation implementation)
+        public async Task ChangeMatchType(IMatchTypeImplementation implementation)
         {
             MatchTypeImplementation = implementation;
 

@@ -80,7 +80,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task MatchUserRequestForwardsToImplementation()
         {
-            Mock<MatchTypeImplementation> typeImplementation;
+            Mock<IMatchTypeImplementation> typeImplementation;
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -89,7 +89,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = roomUsage.Item;
                 Debug.Assert(room != null);
 
-                typeImplementation = new Mock<MatchTypeImplementation>(room, Hub.HubContext);
+                typeImplementation = new Mock<IMatchTypeImplementation>(room, Hub.HubContext);
                 await room.ChangeMatchType(typeImplementation.Object);
             }
 

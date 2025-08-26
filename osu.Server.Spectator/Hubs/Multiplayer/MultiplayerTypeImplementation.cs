@@ -13,32 +13,37 @@ using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public abstract class MultiplayerTypeImplementation : MatchTypeImplementation
+    /// <summary>
+    /// Abstract class that implements the logic for a generic multiplayer room.
+    /// </summary>
+    public abstract class MultiplayerTypeImplementation : IMatchTypeImplementation
     {
         public const int HOST_PLAYLIST_LIMIT = 50;
         public const int GUEST_PLAYLIST_LIMIT = 3;
 
-        public override MultiplayerPlaylistItem CurrentItem => Room.Playlist[currentPlaylistItemIndex];
+        public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentPlaylistItemIndex];
 
+        private readonly ServerMultiplayerRoom room;
+        private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
 
         private QueueMode queueMode;
         private int currentPlaylistItemIndex;
 
         protected MultiplayerTypeImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
-            : base(room, hub)
         {
+            this.room = room;
+            this.hub = hub;
             this.dbFactory = dbFactory;
+
             queueMode = room.Settings.QueueMode;
         }
 
         /// <summary>
         /// Initialises the queue from the database.
         /// </summary>
-        public override async Task Initialise()
+        public virtual async Task Initialise()
         {
-            await base.Initialise();
-
             using (var db = dbFactory.GetInstance())
                 await updatePlaylistOrder(db);
 
@@ -48,19 +53,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// Updates the queue as a result of a change in the queueing mode.
         /// </summary>
-        public override async Task HandleSettingsChanged()
+        public virtual async Task HandleSettingsChanged()
         {
-            await base.HandleSettingsChanged();
-
-            if (queueMode == Room.Settings.QueueMode)
+            if (queueMode == room.Settings.QueueMode)
                 return;
 
-            queueMode = Room.Settings.QueueMode;
+            queueMode = room.Settings.QueueMode;
 
             using (var db = dbFactory.GetInstance())
             {
                 // When changing to host-only mode, ensure that at least one non-expired playlist item exists by duplicating the current item.
-                if (Room.Settings.QueueMode == QueueMode.HostOnly && Room.Playlist.All(item => item.Expired))
+                if (room.Settings.QueueMode == QueueMode.HostOnly && room.Playlist.All(item => item.Expired))
                     await addItem(db, CurrentItem.Clone());
 
                 await updatePlaylistOrder(db);
@@ -72,25 +75,38 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// Expires the current playlist item and advances to the next one in the order defined by the queueing mode.
         /// </summary>
-        public override async Task HandleGameplayCompleted()
+        public virtual async Task HandleGameplayCompleted()
         {
-            await base.HandleGameplayCompleted();
-
             using (var db = dbFactory.GetInstance())
             {
                 // Expire and let clients know that the current item has finished.
-                await db.MarkPlaylistItemAsPlayedAsync(Room.RoomID, CurrentItem.ID);
-                Room.Playlist[currentPlaylistItemIndex] = await (await db.GetPlaylistItemAsync(Room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem(db);
+                await db.MarkPlaylistItemAsPlayedAsync(room.RoomID, CurrentItem.ID);
+                room.Playlist[currentPlaylistItemIndex] = await (await db.GetPlaylistItemAsync(room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem(db);
 
-                await Hub.NotifyPlaylistItemChanged(Room, CurrentItem, true);
+                await hub.NotifyPlaylistItemChanged(room, CurrentItem, true);
                 await updatePlaylistOrder(db);
 
                 // In host-only mode, duplicate the playlist item for the next round if no other non-expired items exist.
-                if (Room.Settings.QueueMode == QueueMode.HostOnly && Room.Playlist.All(item => item.Expired))
+                if (room.Settings.QueueMode == QueueMode.HostOnly && room.Playlist.All(item => item.Expired))
                     await addItem(db, CurrentItem.Clone());
             }
 
             await updateCurrentItem();
+        }
+
+        public virtual Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
+        {
+            return Task.CompletedTask;
+        }
+
+        public virtual Task HandleUserJoined(MultiplayerRoomUser user)
+        {
+            return Task.CompletedTask;
+        }
+
+        public virtual Task HandleUserLeft(MultiplayerRoomUser user)
+        {
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -100,19 +116,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="user">The user adding the item.</param>
         /// <exception cref="NotHostException">If the adding user is not the host in host-only mode.</exception>
         /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
-        public override async Task AddPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
+        public virtual async Task AddPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
-            await base.AddPlaylistItem(item, user);
-
-            bool isHostOnly = Room.Settings.QueueMode == QueueMode.HostOnly;
-            bool isHost = user.Equals(Room.Host);
+            bool isHostOnly = room.Settings.QueueMode == QueueMode.HostOnly;
+            bool isHost = user.Equals(room.Host);
 
             if (isHostOnly && !isHost)
                 throw new NotHostException();
 
             int limit = isHost ? HOST_PLAYLIST_LIMIT : GUEST_PLAYLIST_LIMIT;
 
-            if (Room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= limit)
+            if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= limit)
                 throw new InvalidStateException($"Can't enqueue more than {limit} items at once.");
 
             if (item.Freestyle && item.AllowedMods.Any())
@@ -143,10 +157,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        public override async Task EditPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
+        public virtual async Task EditPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
-            await base.EditPlaylistItem(item, user);
-
             if (item.Freestyle && item.AllowedMods.Any())
                 throw new InvalidStateException("Cannot enqueue freestyle item with mods.");
 
@@ -170,18 +182,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 item.OwnerID = user.UserID;
                 item.StarRating = beatmap.difficultyrating;
 
-                var existingItem = Room.Playlist.SingleOrDefault(i => i.ID == item.ID);
+                var existingItem = room.Playlist.SingleOrDefault(i => i.ID == item.ID);
 
                 if (existingItem == CurrentItem)
                 {
-                    if (Room.State != MultiplayerRoomState.Open)
+                    if (room.State != MultiplayerRoomState.Open)
                         throw new InvalidStateException("The current item in the room cannot be edited when currently being played.");
                 }
 
                 if (existingItem == null)
                     throw new InvalidStateException("Attempted to change an item that doesn't exist.");
 
-                if (existingItem.OwnerID != user.UserID && !user.Equals(Room.Host))
+                if (existingItem.OwnerID != user.UserID && !user.Equals(room.Host))
                     throw new InvalidStateException("Attempted to change an item which is not owned by the user.");
 
                 if (existingItem.Expired)
@@ -190,10 +202,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 // Ensure the playlist order doesn't change.
                 item.PlaylistOrder = existingItem.PlaylistOrder;
 
-                await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, item));
-                Room.Playlist[Room.Playlist.IndexOf(existingItem)] = item;
+                await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                room.Playlist[room.Playlist.IndexOf(existingItem)] = item;
 
-                await Hub.NotifyPlaylistItemChanged(Room, item, existingItem.BeatmapChecksum != item.BeatmapChecksum);
+                await hub.NotifyPlaylistItemChanged(room, item, existingItem.BeatmapChecksum != item.BeatmapChecksum);
             }
         }
 
@@ -202,14 +214,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         /// <param name="playlistItemId">The item to remove.</param>
         /// <param name="user">The user removing the item.</param>
-        public override async Task RemovePlaylistItem(long playlistItemId, MultiplayerRoomUser user)
+        public virtual async Task RemovePlaylistItem(long playlistItemId, MultiplayerRoomUser user)
         {
-            await base.RemovePlaylistItem(playlistItemId, user);
-
-            var item = Room.Playlist.FirstOrDefault(item => item.ID == playlistItemId);
+            var item = room.Playlist.FirstOrDefault(item => item.ID == playlistItemId);
 
             if (item == null)
-                throw new InvalidStateException("Item does not exist in the Room.");
+                throw new InvalidStateException("Item does not exist in the room.");
 
             if (item == CurrentItem)
             {
@@ -217,11 +227,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (UpcomingItems.Count() == 1)
                     throw new InvalidStateException("The only item in the room cannot be removed.");
 
-                if (Room.State != MultiplayerRoomState.Open)
+                if (room.State != MultiplayerRoomState.Open)
                     throw new InvalidStateException("The current item in the room cannot be removed when currently being played.");
             }
 
-            if (item.OwnerID != user.UserID && !user.Equals(Room.Host))
+            if (item.OwnerID != user.UserID && !user.Equals(room.Host))
                 throw new InvalidStateException("Attempted to remove an item which is not owned by the user.");
 
             if (item.Expired)
@@ -229,13 +239,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             using (var db = dbFactory.GetInstance())
             {
-                await db.RemovePlaylistItemAsync(Room.RoomID, playlistItemId);
+                await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
 
-                Room.Playlist.Remove(item);
+                room.Playlist.Remove(item);
 
                 // If either an item indexed earlier in the list was removed or the current item was removed, the index needs to be refreshed.
                 // Importantly, this is done before the playlist order is updated since the update requires the current item.
-                currentPlaylistItemIndex = Room.Playlist.IndexOf(UpcomingItems.First());
+                currentPlaylistItemIndex = room.Playlist.IndexOf(UpcomingItems.First());
 
                 await updatePlaylistOrder(db);
             }
@@ -244,8 +254,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             // It's important for clients to be notified of the removal AFTER settings are changed
             // so that PlaylistItemId always points to a valid item in the playlist.
-            await Hub.NotifyPlaylistItemRemoved(Room, playlistItemId);
+            await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
         }
+
+        public abstract MatchStartedEventDetail GetMatchDetails();
 
         private async Task addItem(IDatabaseAccess db, MultiplayerPlaylistItem item)
         {
@@ -253,15 +265,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             item.PlaylistOrder = ushort.MaxValue;
             item.Expired = false;
             item.PlayedAt = null;
-            item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, item));
+            item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
-            Room.Playlist.Add(item);
-            await Hub.NotifyPlaylistItemAdded(Room, item);
+            room.Playlist.Add(item);
+            await hub.NotifyPlaylistItemAdded(room, item);
 
             await updatePlaylistOrder(db);
         }
 
-        public IEnumerable<MultiplayerPlaylistItem> UpcomingItems => Room.Playlist.Where(i => !i.Expired).OrderBy(i => i.PlaylistOrder);
+        public IEnumerable<MultiplayerPlaylistItem> UpcomingItems => room.Playlist.Where(i => !i.Expired).OrderBy(i => i.PlaylistOrder);
 
         /// <summary>
         /// Updates <see cref="CurrentItem"/> and the playlist item ID stored in the room's settings.
@@ -269,15 +281,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private async Task updateCurrentItem()
         {
             // Pick the next non-expired playlist item by playlist order, or default to the most-recently-expired item.
-            MultiplayerPlaylistItem nextItem = UpcomingItems.FirstOrDefault() ?? Room.Playlist.OrderByDescending(i => i.PlayedAt).First();
+            MultiplayerPlaylistItem nextItem = UpcomingItems.FirstOrDefault() ?? room.Playlist.OrderByDescending(i => i.PlayedAt).First();
 
-            currentPlaylistItemIndex = Room.Playlist.IndexOf(nextItem);
+            currentPlaylistItemIndex = room.Playlist.IndexOf(nextItem);
 
-            long lastItemID = Room.Settings.PlaylistItemId;
-            Room.Settings.PlaylistItemId = nextItem.ID;
+            long lastItemID = room.Settings.PlaylistItemId;
+            room.Settings.PlaylistItemId = nextItem.ID;
 
             if (nextItem.ID != lastItemID)
-                await Hub.NotifySettingsChanged(Room, true);
+                await hub.NotifySettingsChanged(room, true);
         }
 
         /// <summary>
@@ -287,10 +299,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             List<MultiplayerPlaylistItem> orderedActiveItems;
 
-            switch (Room.Settings.QueueMode)
+            switch (room.Settings.QueueMode)
             {
                 default:
-                    orderedActiveItems = Room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).ToList();
+                    orderedActiveItems = room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).ToList();
                     break;
 
                 case QueueMode.AllPlayersRoundRobin:
@@ -300,7 +312,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     var firstSetOrderByUserId = new Dictionary<int, int>();
 
                     // Group each user's items in order of addition.
-                    var userItemGroups = Room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).GroupBy(item => item.OwnerID);
+                    var userItemGroups = room.Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).GroupBy(item => item.OwnerID);
 
                     foreach (IEnumerable<MultiplayerPlaylistItem> set in userItemGroups.Interleave())
                     {
@@ -334,8 +346,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 item.PlaylistOrder = (ushort)i;
 
-                await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, item));
-                await Hub.NotifyPlaylistItemChanged(Room, item, false);
+                await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                await hub.NotifyPlaylistItemChanged(room, item, false);
             }
         }
     }

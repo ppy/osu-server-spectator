@@ -8,61 +8,34 @@ using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public abstract class MatchTypeImplementation
+    public interface IMatchTypeImplementation
     {
-        public abstract MultiplayerPlaylistItem CurrentItem { get; }
+        MultiplayerPlaylistItem CurrentItem { get; }
 
-        protected readonly ServerMultiplayerRoom Room;
-        protected readonly IMultiplayerHubContext Hub;
+        Task Initialise();
 
-        protected MatchTypeImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub)
-        {
-            Room = room;
-            Hub = hub;
-        }
+        Task HandleSettingsChanged();
 
-        public virtual Task Initialise()
-        {
-            return Task.CompletedTask;
-        }
-
-        public virtual Task HandleSettingsChanged()
-        {
-            return Task.CompletedTask;
-        }
-
-        public virtual Task HandleGameplayCompleted()
-        {
-            return Task.CompletedTask;
-        }
+        Task HandleGameplayCompleted();
 
         /// <summary>
         /// Called when a user has requested a match type specific action.
         /// </summary>
         /// <param name="user">The user requesting the action.</param>
         /// <param name="request">The nature of the action.</param>
-        public virtual Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
-        {
-            return Task.CompletedTask;
-        }
+        Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request);
 
         /// <summary>
         /// Called once for each user which joins the room. Will be run once for each user after initial construction.
         /// </summary>
         /// <param name="user">The user which joined the room.</param>
-        public virtual Task HandleUserJoined(MultiplayerRoomUser user)
-        {
-            return Task.CompletedTask;
-        }
+        Task HandleUserJoined(MultiplayerRoomUser user);
 
         /// <summary>
         /// Called once for each user leaving the room.
         /// </summary>
         /// <param name="user">The user which left the room.</param>
-        public virtual Task HandleUserLeft(MultiplayerRoomUser user)
-        {
-            return Task.CompletedTask;
-        }
+        Task HandleUserLeft(MultiplayerRoomUser user);
 
         /// <summary>
         /// Add a playlist item to the room's queue.
@@ -71,26 +44,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="user">The user adding the item.</param>
         /// <exception cref="NotHostException">If the adding user is not the host in host-only mode.</exception>
         /// <exception cref="InvalidStateException">If the given playlist item is not valid.</exception>
-        public virtual Task AddPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
-        {
-            return Task.CompletedTask;
-        }
+        Task AddPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user);
 
-        public virtual Task EditPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
-        {
-            return Task.CompletedTask;
-        }
+        Task EditPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user);
 
         /// <summary>
         /// Removes a playlist item from the room's queue.
         /// </summary>
         /// <param name="playlistItemId">The item to remove.</param>
         /// <param name="user">The user removing the item.</param>
-        public virtual Task RemovePlaylistItem(long playlistItemId, MultiplayerRoomUser user)
-        {
-            return Task.CompletedTask;
-        }
+        Task RemovePlaylistItem(long playlistItemId, MultiplayerRoomUser user);
 
-        public abstract MatchStartedEventDetail GetMatchDetails();
+        MatchStartedEventDetail GetMatchDetails();
     }
 }

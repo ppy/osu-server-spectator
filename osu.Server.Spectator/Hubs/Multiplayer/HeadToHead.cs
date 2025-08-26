@@ -8,11 +8,19 @@ using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
+    /// <summary>
+    /// Implementation of a head-to-head room.
+    /// </summary>
     public class HeadToHead : MultiplayerTypeImplementation
     {
+        private readonly ServerMultiplayerRoom room;
+        private readonly IMultiplayerHubContext hub;
+
         public HeadToHead(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(room, hub, dbFactory)
         {
+            this.room = room;
+            this.hub = hub;
         }
 
         public override async Task HandleUserJoined(MultiplayerRoomUser user)
@@ -24,7 +32,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 // we don't need a state, but keep things simple by completely nulling the state.
                 // this allows the client to see a user state change and handle match type specifics based on that alone.
                 user.MatchState = null;
-                await Hub.NotifyMatchUserStateChanged(Room, user);
+                await hub.NotifyMatchUserStateChanged(room, user);
             }
         }
 
