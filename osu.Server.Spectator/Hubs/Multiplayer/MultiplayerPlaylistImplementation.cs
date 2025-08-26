@@ -14,7 +14,7 @@ using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public class MultiplayerPlaylistImplementation
+    public class MultiplayerPlaylistImplementation : IPlaylistImplementation
     {
         public const int HOST_LIMIT = 50;
         public const int PER_USER_LIMIT = 3;

@@ -23,7 +23,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             private set => matchTypeImplementation = value;
         }
 
-        public readonly MultiplayerPlaylistImplementation PlaylistImplementation;
+        public readonly IPlaylistImplementation PlaylistImplementation;
 
         private readonly IMultiplayerHubContext hub;
         private MatchTypeImplementation? matchTypeImplementation;
