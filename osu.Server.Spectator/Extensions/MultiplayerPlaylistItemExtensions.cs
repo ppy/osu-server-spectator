@@ -8,6 +8,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Utils;
+using osu.Server.Spectator.Helpers;
 
 namespace osu.Server.Spectator.Extensions
 {

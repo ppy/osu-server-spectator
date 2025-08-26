@@ -1,0 +1,6 @@
+[submodule "osu.Game.Rulesets.Sentakki"]
+	path = osu.Game.Rulesets.Sentakki
+	url = https://github.com/GooGuTeam/custom-ruleset-sentakki
+[submodule "osu"]
+	path = osu
+	url = https://github.com/GooGuTeam/osu.git

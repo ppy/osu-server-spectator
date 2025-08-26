@@ -16,6 +16,7 @@ namespace osu.Server.Spectator.Helpers
                 1 => "TAIKO",
                 2 => "FRUITS",
                 3 => "MANIA",
+                10 => "SENTAKKI",
                 _ => "Unknown"
             };
         }

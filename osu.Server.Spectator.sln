@@ -1,12 +1,21 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+#
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Server.Spectator", "osu.Server.Spectator\osu.Server.Spectator.csproj", "{25BA3E1C-81EC-4DFB-9476-E7C6132CAD12}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Server.Spectator.Tests", "osu.Server.Spectator.Tests\osu.Server.Spectator.Tests.csproj", "{8FA8D3BE-FC98-45F6-98FC-07F70DD2483B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Sentakki", "osu.Game.Rulesets.Sentakki\osu.Game.Rulesets.Sentakki\osu.Game.Rulesets.Sentakki.csproj", "{1F6CE8F8-1CF5-455B-9064-63CC12410B56}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleSpectatorClient", "SampleSpectatorClient\SampleSpectatorClient.csproj", "{E126B79F-50B9-4448-8DE6-564BB820EE9D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "osu", "osu", "{24A7550D-0CEB-4EA8-AB33-0A37E821F332}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleMultiplayerClient", "SampleMultiplayerClient\SampleMultiplayerClient.csproj", "{1F6CE8F8-1CF5-455B-9064-63CC12410B56}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Catch", "osu\osu.Game.Rulesets.Catch\osu.Game.Rulesets.Catch.csproj", "{2E469EC0-CA02-4E4D-BCBA-982A6DBAC3C4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Mania", "osu\osu.Game.Rulesets.Mania\osu.Game.Rulesets.Mania.csproj", "{2E496EB6-5339-45E7-87D6-841880F77F49}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Osu", "osu\osu.Game.Rulesets.Osu\osu.Game.Rulesets.Osu.csproj", "{CC41586F-57B1-4CFD-B742-61E78217BBBF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Taiko", "osu\osu.Game.Rulesets.Taiko\osu.Game.Rulesets.Taiko.csproj", "{17436516-7140-4F75-B18C-756C35FE3D16}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game", "osu\osu.Game\osu.Game.csproj", "{94254F88-DB5D-4BE4-B41C-772F6D01A0C9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,17 +27,32 @@ Global
 		{25BA3E1C-81EC-4DFB-9476-E7C6132CAD12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25BA3E1C-81EC-4DFB-9476-E7C6132CAD12}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{25BA3E1C-81EC-4DFB-9476-E7C6132CAD12}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8FA8D3BE-FC98-45F6-98FC-07F70DD2483B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8FA8D3BE-FC98-45F6-98FC-07F70DD2483B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8FA8D3BE-FC98-45F6-98FC-07F70DD2483B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8FA8D3BE-FC98-45F6-98FC-07F70DD2483B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E126B79F-50B9-4448-8DE6-564BB820EE9D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1F6CE8F8-1CF5-455B-9064-63CC12410B56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1F6CE8F8-1CF5-455B-9064-63CC12410B56}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1F6CE8F8-1CF5-455B-9064-63CC12410B56}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1F6CE8F8-1CF5-455B-9064-63CC12410B56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E469EC0-CA02-4E4D-BCBA-982A6DBAC3C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E469EC0-CA02-4E4D-BCBA-982A6DBAC3C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E469EC0-CA02-4E4D-BCBA-982A6DBAC3C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E469EC0-CA02-4E4D-BCBA-982A6DBAC3C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E496EB6-5339-45E7-87D6-841880F77F49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E496EB6-5339-45E7-87D6-841880F77F49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E496EB6-5339-45E7-87D6-841880F77F49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E496EB6-5339-45E7-87D6-841880F77F49}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC41586F-57B1-4CFD-B742-61E78217BBBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC41586F-57B1-4CFD-B742-61E78217BBBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC41586F-57B1-4CFD-B742-61E78217BBBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC41586F-57B1-4CFD-B742-61E78217BBBF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17436516-7140-4F75-B18C-756C35FE3D16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17436516-7140-4F75-B18C-756C35FE3D16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17436516-7140-4F75-B18C-756C35FE3D16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17436516-7140-4F75-B18C-756C35FE3D16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94254F88-DB5D-4BE4-B41C-772F6D01A0C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94254F88-DB5D-4BE4-B41C-772F6D01A0C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94254F88-DB5D-4BE4-B41C-772F6D01A0C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94254F88-DB5D-4BE4-B41C-772F6D01A0C9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2E469EC0-CA02-4E4D-BCBA-982A6DBAC3C4} = {24A7550D-0CEB-4EA8-AB33-0A37E821F332}
+		{2E496EB6-5339-45E7-87D6-841880F77F49} = {24A7550D-0CEB-4EA8-AB33-0A37E821F332}
+		{CC41586F-57B1-4CFD-B742-61E78217BBBF} = {24A7550D-0CEB-4EA8-AB33-0A37E821F332}
+		{17436516-7140-4F75-B18C-756C35FE3D16} = {24A7550D-0CEB-4EA8-AB33-0A37E821F332}
+		{94254F88-DB5D-4BE4-B41C-772F6D01A0C9} = {24A7550D-0CEB-4EA8-AB33-0A37E821F332}
 	EndGlobalSection
 EndGlobal

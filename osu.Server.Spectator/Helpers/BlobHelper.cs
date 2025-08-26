@@ -3,7 +3,7 @@
 
 using System;
 
-namespace osu.Server.Spectator
+namespace osu.Server.Spectator.Helpers
 {
     public static class BlobHelper
     {

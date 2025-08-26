@@ -21,6 +21,10 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - run: ./UseLocalOsu.sh
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
