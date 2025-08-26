@@ -77,6 +77,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             MatchTypeImplementation = implementation;
 
+            await MatchTypeImplementation.Initialise();
+
             foreach (var u in Users)
                 await MatchTypeImplementation.HandleUserJoined(u);
         }

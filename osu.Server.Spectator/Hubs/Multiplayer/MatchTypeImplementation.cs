@@ -18,6 +18,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             Hub = hub;
         }
 
+        public virtual Task Initialise()
+        {
+            return Task.CompletedTask;
+        }
+
         /// <summary>
         /// Called when a user has requested a match type specific action.
         /// </summary>

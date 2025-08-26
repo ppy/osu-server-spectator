@@ -18,8 +18,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             : base(room, hub)
         {
             room.MatchState = state = TeamVersusRoomState.CreateDefault();
+        }
 
-            Hub.NotifyMatchRoomStateChanged(room);
+        public override async Task Initialise()
+        {
+            await base.Initialise();
+            await Hub.NotifyMatchRoomStateChanged(Room);
         }
 
         public override async Task HandleUserJoined(MultiplayerRoomUser user)
