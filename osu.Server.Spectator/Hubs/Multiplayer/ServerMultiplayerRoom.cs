@@ -12,35 +12,38 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
-        public MatchTypeImplementation MatchTypeImplementation
+        public IMatchController Controller
         {
-            get => matchTypeImplementation ?? throw new InvalidOperationException("Room not initialised.");
-            private set => matchTypeImplementation = value;
+            get => matchController ?? throw new InvalidOperationException("Room not initialised.");
+            private set => matchController = value;
         }
 
-        public readonly MultiplayerQueue Queue;
-
         private readonly IMultiplayerHubContext hub;
-        private MatchTypeImplementation? matchTypeImplementation;
+        private readonly IDatabaseFactory dbFactory;
+        private IMatchController? matchController;
 
-        public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub)
+        public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(roomId)
         {
             this.hub = hub;
-
-            Queue = new MultiplayerQueue(this, hub);
+            this.dbFactory = dbFactory;
         }
 
-        public async Task Initialise(IDatabaseFactory dbFactory)
+        public async Task Initialise()
         {
-            await ChangeMatchType(Settings.MatchType);
+            using (var db = dbFactory.GetInstance())
+            {
+                foreach (var item in await db.GetAllPlaylistItemsAsync(RoomID))
+                    Playlist.Add(await item.ToMultiplayerPlaylistItem(db));
+            }
 
-            await Queue.Initialise(dbFactory);
+            await ChangeMatchType(Settings.MatchType);
         }
 
         /// <summary>
@@ -59,52 +62,40 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        [MemberNotNull(nameof(MatchTypeImplementation))]
+        [MemberNotNull(nameof(Controller))]
         public Task ChangeMatchType(MatchType type)
         {
             switch (type)
             {
                 case MatchType.TeamVersus:
-                    return ChangeMatchType(new TeamVersus(this, hub));
+                    return ChangeMatchType(new TeamVersusMatchController(this, hub, dbFactory));
 
                 default:
-                    return ChangeMatchType(new HeadToHead(this, hub));
+                    return ChangeMatchType(new HeadToHeadMatchController(this, hub, dbFactory));
             }
         }
 
-        [MemberNotNull(nameof(MatchTypeImplementation))]
-        public async Task ChangeMatchType(MatchTypeImplementation implementation)
+        [MemberNotNull(nameof(Controller))]
+        public async Task ChangeMatchType(IMatchController controller)
         {
-            MatchTypeImplementation = implementation;
+            Controller = controller;
 
-            await MatchTypeImplementation.Initialise();
+            await Controller.Initialise();
 
             foreach (var u in Users)
-                await MatchTypeImplementation.HandleUserJoined(u);
+                await Controller.HandleUserJoined(u);
         }
 
         public async Task AddUser(MultiplayerRoomUser user)
         {
             Users.Add(user);
-            await MatchTypeImplementation.HandleUserJoined(user);
+            await Controller.HandleUserJoined(user);
         }
 
         public async Task RemoveUser(MultiplayerRoomUser user)
         {
             Users.Remove(user);
-            await MatchTypeImplementation.HandleUserLeft(user);
-        }
-
-        private MatchTypeImplementation createTypeImplementation(MatchType type)
-        {
-            switch (type)
-            {
-                case MatchType.TeamVersus:
-                    return new TeamVersus(this, hub);
-
-                default:
-                    return new HeadToHead(this, hub);
-            }
+            await Controller.HandleUserLeft(user);
         }
 
         #region Countdowns

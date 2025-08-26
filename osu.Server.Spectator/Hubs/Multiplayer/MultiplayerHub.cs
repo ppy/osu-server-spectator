@@ -135,7 +135,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, Context.GetUserId(), roomId);
 
-                        // because match type implementations may send subsequent information via Users collection hooks,
+                        // because match controllers may send subsequent information via Users collection hooks,
                         // inform clients before adding user to the room.
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
@@ -225,7 +225,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (databaseRoom.user_id != Context.GetUserId())
                     throw new InvalidOperationException("Non-host is attempting to join match before host");
 
-                var room = new ServerMultiplayerRoom(roomId, HubContext)
+                var room = new ServerMultiplayerRoom(roomId, HubContext, databaseFactory)
                 {
                     ChannelID = databaseRoom.channel_id,
                     Settings = new MultiplayerRoomSettings
@@ -239,7 +239,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     }
                 };
 
-                await room.Initialise(databaseFactory);
+                await room.Initialise();
 
                 return room;
             }
@@ -554,7 +554,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         break;
 
                     default:
-                        await room.MatchTypeImplementation.HandleUserRequest(user, request);
+                        await room.Controller.HandleUserRequest(user, request);
                         break;
                 }
             }
@@ -640,8 +640,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
-                await room.Queue.AddItem(item, user);
-                Log(room, $"Item ID {item.ID} added at slot {room.Queue.UpcomingItems.TakeWhile(i => i != item).Count() + 1} (of {room.Playlist.Count})");
+                await room.Controller.AddPlaylistItem(item, user);
 
                 await updateRoomStateIfRequired(room);
             }
@@ -661,7 +660,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Editing playlist item {item.ID} for beatmap {item.BeatmapID}");
-                await room.Queue.EditItem(item, user);
+                await room.Controller.EditPlaylistItem(item, user);
             }
         }
 
@@ -679,7 +678,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Removing playlist item {playlistItemId}");
-                await room.Queue.RemoveItem(playlistItemId, user);
+                await room.Controller.RemovePlaylistItem(playlistItemId, user);
 
                 await updateRoomStateIfRequired(room);
             }
@@ -731,15 +730,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (previousSettings.MatchType != settings.MatchType)
                 {
                     await room.ChangeMatchType(settings.MatchType);
-                    Log(room, $"Switching room ruleset to {room.MatchTypeImplementation}");
+                    Log(room, $"Switching room ruleset to {room.Controller}");
                 }
 
-                if (previousSettings.QueueMode != settings.QueueMode)
-                {
-                    await room.Queue.UpdateFromQueueModeChange();
-                    Log(room, $"Switching queue mode to {settings.QueueMode}");
-                }
-
+                await room.Controller.HandleSettingsChanged();
                 await HubContext.NotifySettingsChanged(room, false);
 
                 await updateRoomStateIfRequired(room);
@@ -814,7 +808,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 case MultiplayerRoomState.Open:
                     if (room.Settings.AutoStartEnabled)
                     {
-                        bool shouldHaveCountdown = !room.Queue.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
+                        bool shouldHaveCountdown = !room.Controller.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
                         if (shouldHaveCountdown && !room.ActiveCountdowns.Any(c => c is MatchStartCountdown))
                             await room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, HubContext.StartMatch);
@@ -851,7 +845,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         else
                             await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.GetCurrentItem()!.ID);
 
-                        await room.Queue.FinishCurrentItem();
+                        await room.Controller.HandleGameplayCompleted();
                     }
 
                     break;
@@ -879,7 +873,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (oldState != MultiplayerUserState.Idle)
                         throw new InvalidStateChangeException(oldState, newState);
 
-                    if (room.Queue.CurrentItem.Expired)
+                    if (room.Controller.CurrentItem.Expired)
                         throw new InvalidStateException("Cannot ready up while all items have been played.");
 
                     break;
