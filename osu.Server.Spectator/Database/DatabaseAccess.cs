@@ -575,7 +575,7 @@ namespace osu.Server.Spectator.Database
                 ev);
         }
 
-        public async Task<float> GetUserPP(int userId, int rulesetId)
+        public async Task<float> GetUserPPAsync(int userId, int rulesetId)
         {
             string statsTable = rulesetId switch
             {
@@ -591,6 +591,17 @@ namespace osu.Server.Spectator.Database
             return await connection.QuerySingleOrDefaultAsync<float>($"SELECT `rank_score` FROM {statsTable} WHERE `user_id` = @userId", new
             {
                 userId = userId
+            });
+        }
+
+        public async Task IncrementMatchmakingFirstPlacementsAsync(int userId)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync("INSERT INTO `matchmaking_stats` (`user_id`, `first_placements`) VALUES (@UserId, 1)"
+                                          + " ON DUPLICATE KEY UPDATE `first_placements` = `first_placements` + 1", new
+            {
+                UserId = userId
             });
         }
 

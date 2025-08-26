@@ -211,6 +211,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             if (state.Round == total_rounds)
             {
+                await updateUserStats();
                 await changeStage(MatchmakingRoomStatus.RoomEnd);
                 await startCountdown(TimeSpan.FromSeconds(stage_room_end_time), Hub.CloseRoom);
             }
@@ -223,6 +224,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 else
                     await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoundStart);
             }
+        }
+
+        private async Task updateUserStats()
+        {
+            MatchmakingUser? firstPlaceUser = state.Users.FirstOrDefault(u => u.Placement == 1);
+
+            // Can be null in the case none of the users played a map.
+            if (firstPlaceUser == null)
+                return;
+
+            using (var db = dbFactory.GetInstance())
+                await db.IncrementMatchmakingFirstPlacementsAsync(firstPlaceUser.UserId);
         }
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)

@@ -70,7 +70,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             };
 
             using (var db = databaseFactory.GetInstance())
-                user.Rank = (int)await db.GetUserPP(state.UserId, 0);
+                user.Rank = (int)await db.GetUserPPAsync(state.UserId, 0);
 
             await processBundle(queue.Add(user));
         }
