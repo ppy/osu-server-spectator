@@ -236,7 +236,12 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE id = @Id AND room_id = @RoomId", new
+            return await connection.QuerySingleAsync<multiplayer_playlist_item>("SELECT `i`.*, `b`.`checksum`, `b`.`difficultyrating` "
+                                                                                + "FROM `multiplayer_playlist_items` `i` "
+                                                                                + "JOIN `osu_beatmaps` `b` "
+                                                                                + "ON `b`.`beatmap_id` = `i`.`beatmap_id` "
+                                                                                + "WHERE `i`.`id` = @Id "
+                                                                                + "AND `i`.`room_id` = @RoomId", new
             {
                 Id = playlistItemId,
                 RoomId = roomId
@@ -324,7 +329,14 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT * FROM multiplayer_playlist_items WHERE room_id = @RoomId", new { RoomId = roomId })).ToArray();
+            return (await connection.QueryAsync<multiplayer_playlist_item>("SELECT `i`.*, `b`.`checksum`, `b`.`difficultyrating` "
+                                                                           + "FROM `multiplayer_playlist_items` `i` "
+                                                                           + "JOIN `osu_beatmaps` `b` "
+                                                                           + "ON `b`.`beatmap_id` = `i`.`beatmap_id` "
+                                                                           + "WHERE `i`.`room_id` = @RoomId", new
+            {
+                RoomId = roomId
+            })).ToArray();
         }
 
         public async Task MarkScoreHasReplay(Score score)
