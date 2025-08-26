@@ -35,7 +35,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             var teamVersus = new TeamVersus(room, hub.Object);
 
             // change the match type
-            room.MatchTypeImplementation = teamVersus;
+            await room.ChangeMatchType(teamVersus);
 
             var user = new MultiplayerRoomUser(1);
 
@@ -70,7 +70,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             var teamVersus = new TeamVersus(room, hub.Object);
 
             // change the match type
-            room.MatchTypeImplementation = teamVersus;
+            await room.ChangeMatchType(teamVersus);
 
             var user = new MultiplayerRoomUser(1);
 
@@ -105,7 +105,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await room.Initialise(DatabaseFactory.Object);
 
             // change the match type
-            room.ChangeMatchType(MatchType.TeamVersus);
+            await room.ChangeMatchType(MatchType.TeamVersus);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -150,7 +150,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await room.AddUser(new MultiplayerRoomUser(i));
 
             // change the match type
-            room.ChangeMatchType(MatchType.TeamVersus);
+            await room.ChangeMatchType(MatchType.TeamVersus);
 
             checkUserOnTeam(room.Users[0], 0);
             checkUserOnTeam(room.Users[1], 1);
@@ -176,7 +176,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             };
             await room.Initialise(DatabaseFactory.Object);
 
-            room.ChangeMatchType(MatchType.TeamVersus);
+            await room.ChangeMatchType(MatchType.TeamVersus);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -189,8 +189,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             checkUserOnTeam(room.Users[4], 0);
 
             // change the match type
-            room.ChangeMatchType(MatchType.HeadToHead);
-            room.ChangeMatchType(MatchType.TeamVersus);
+            await room.ChangeMatchType(MatchType.HeadToHead);
+            await room.ChangeMatchType(MatchType.TeamVersus);
 
             checkUserOnTeam(room.Users[0], 0);
             checkUserOnTeam(room.Users[1], 1);
