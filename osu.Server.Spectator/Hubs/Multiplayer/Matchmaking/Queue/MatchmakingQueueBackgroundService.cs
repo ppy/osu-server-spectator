@@ -161,7 +161,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 using (var db = databaseFactory.GetInstance())
                 {
-                    database_beatmap[] beatmaps = await db.GetBeatmapsAsync(MatchmakingImplementation.BEATMAP_IDS);
+                    database_beatmap[] beatmaps = await db.GetBeatmapsAsync(MatchmakingMatchController.BEATMAP_IDS);
                     playlistItems = beatmaps.Select(b => new MultiplayerPlaylistItem
                     {
                         BeatmapID = b.beatmap_id,

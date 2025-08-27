@@ -9,25 +9,28 @@ using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
-namespace osu.Server.Spectator.Hubs.Multiplayer
+namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 {
-    public class TeamVersus : MatchTypeImplementation
+    public class TeamVersusMatchController : StandardMatchController
     {
-        public override IMultiplayerQueue Queue { get; }
-
+        private readonly ServerMultiplayerRoom room;
+        private readonly IMultiplayerHubContext hub;
         private readonly TeamVersusRoomState state;
 
-        public TeamVersus(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
-            : base(room, hub)
+        public TeamVersusMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
+            : base(room, hub, dbFactory)
         {
-            Queue = new MultiplayerQueue(room, hub, dbFactory);
+            this.room = room;
+            this.hub = hub;
+
             room.MatchState = state = TeamVersusRoomState.CreateDefault();
         }
 
         public override async Task Initialise()
         {
             await base.Initialise();
-            await Hub.NotifyMatchRoomStateChanged(Room);
+
+            await hub.NotifyMatchRoomStateChanged(room);
         }
 
         public override async Task HandleUserJoined(MultiplayerRoomUser user)
@@ -35,7 +38,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await base.HandleUserJoined(user);
 
             user.MatchState = new TeamVersusUserState { TeamID = getBestAvailableTeam() };
-            await Hub.NotifyMatchUserStateChanged(Room, user);
+            await hub.NotifyMatchUserStateChanged(room, user);
         }
 
         public override async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
@@ -51,7 +54,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (user.MatchState is TeamVersusUserState userState)
                         userState.TeamID = changeTeam.TeamID;
 
-                    await Hub.NotifyMatchUserStateChanged(Room, user);
+                    await hub.NotifyMatchUserStateChanged(room, user);
                     break;
             }
         }
@@ -64,11 +67,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             // initially check for any teams which don't yet have players, but are lower than TeamCount.
             foreach (var team in state.Teams)
             {
-                if (Room.Users.All(u => (u.MatchState as TeamVersusUserState)?.TeamID != team.ID))
+                if (room.Users.All(u => (u.MatchState as TeamVersusUserState)?.TeamID != team.ID))
                     return team.ID;
             }
 
-            var countsByTeams = Room.Users
+            var countsByTeams = room.Users
                                     .GroupBy(u => (u.MatchState as TeamVersusUserState)?.TeamID)
                                     .Where(g => g.Key.HasValue)
                                     .OrderBy(g => g.Count());
@@ -80,7 +83,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var teams = new Dictionary<int, room_team>();
 
-            foreach (var user in Room.Users)
+            foreach (var user in room.Users)
             {
                 if (user.MatchState is TeamVersusUserState userState)
                     teams[user.UserID] = userState.TeamID == 0 ? room_team.red : room_team.blue;

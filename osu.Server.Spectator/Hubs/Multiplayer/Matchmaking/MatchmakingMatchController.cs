@@ -16,7 +16,7 @@ using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
-    public class MatchmakingImplementation : MatchTypeImplementation
+    public class MatchmakingMatchController : IMatchController
     {
         private const int stage_round_start_time = 5;
         private const int stage_user_picks_time = 5;
@@ -48,68 +48,110 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private const int total_rounds = 4;
 
-        public override IMultiplayerQueue Queue { get; }
+        public MultiplayerPlaylistItem CurrentItem => room.CurrentPlaylistItem;
 
+        private readonly ServerMultiplayerRoom room;
+        private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
         private readonly MatchmakingRoomState state;
         private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
 
-        public MatchmakingImplementation(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
-            : base(room, hub)
+        public MatchmakingMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
         {
+            this.room = room;
+            this.hub = hub;
             this.dbFactory = dbFactory;
 
-            Queue = new MultiplayerMatchmakingQueue(room, hub, dbFactory);
-
             room.MatchState = state = new MatchmakingRoomState();
+            room.Settings.PlaylistItemId = room.Playlist[0].ID;
         }
 
-        public override async Task Initialise()
+        public async Task Initialise()
         {
-            await base.Initialise();
-            await Hub.NotifyMatchRoomStateChanged(Room);
+            await hub.NotifyMatchRoomStateChanged(room);
         }
 
-        public override async Task HandleUserJoined(MultiplayerRoomUser user)
+        public Task HandleSettingsChanged()
         {
-            await base.HandleUserJoined(user);
+            return Task.CompletedTask;
+        }
 
+        public async Task HandleGameplayCompleted()
+        {
+            using (var db = dbFactory.GetInstance())
+            {
+                // Expire and let clients know that the current item has finished.
+                await db.MarkPlaylistItemAsPlayedAsync(room.RoomID, CurrentItem.ID);
+                room.Playlist[room.Playlist.IndexOf(CurrentItem)] = (await db.GetPlaylistItemAsync(room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem();
+                await hub.NotifyPlaylistItemChanged(room, CurrentItem, true);
+
+                // Add a non-expired duplicate of the current item back to the room.
+                MultiplayerPlaylistItem newItem = CurrentItem.Clone();
+                newItem.Expired = false;
+                newItem.PlayedAt = null;
+                newItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, newItem));
+                room.Playlist.Add(newItem);
+                await hub.NotifyPlaylistItemAdded(room, newItem);
+            }
+
+            await stageRoundEnd();
+        }
+
+        public Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
+        {
+            return Task.CompletedTask;
+        }
+
+        public async Task HandleUserJoined(MultiplayerRoomUser user)
+        {
             switch (state.RoomStatus)
             {
                 case MatchmakingRoomStatus.RoomStart:
-                    if (Room.Users.Count == MATCHMAKING_ROOM_SIZE)
-                        await stageRoundStart(Room);
+                    if (room.Users.Count == MATCHMAKING_ROOM_SIZE)
+                        await stageRoundStart(room);
                     break;
             }
         }
 
-        public override async Task HandleUserStateChanged(MultiplayerRoomUser user)
+        public Task HandleUserLeft(MultiplayerRoomUser user)
         {
-            await base.HandleUserStateChanged(user);
+            return Task.CompletedTask;
+        }
 
+        public Task AddPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task EditPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task RemovePlaylistItem(long playlistItemId, MultiplayerRoomUser user)
+        {
+            return Task.CompletedTask;
+        }
+
+        public async Task HandleUserStateChanged(MultiplayerRoomUser user)
+        {
             switch (state.RoomStatus)
             {
                 case MatchmakingRoomStatus.PrepareBeatmap:
                     if (allUsersReady())
-                        await stagePrepareGameplay(Room);
+                        await stagePrepareGameplay(room);
                     break;
 
                 case MatchmakingRoomStatus.RoundEnd:
                     if (allUsersIdle())
-                        await stageRoundStart(Room);
+                        await stageRoundStart(room);
                     break;
             }
         }
 
-        public override async Task HandleMatchComplete()
-        {
-            await base.HandleMatchComplete();
-            await stageRoundEnd();
-        }
-
         public async Task SkipToNextRound()
         {
-            _ = Room.SkipToEndOfCountdown(Room.FindCountdownOfType<MatchmakingStatusCountdown>());
+            _ = room.SkipToEndOfCountdown(room.FindCountdownOfType<MatchmakingStatusCountdown>());
             await Task.CompletedTask;
         }
 
@@ -118,7 +160,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (state.RoomStatus != MatchmakingRoomStatus.UserPicks)
                 return;
 
-            MultiplayerPlaylistItem? item = Room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
+            MultiplayerPlaylistItem? item = room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
 
             if (item == null)
                 throw new InvalidStateException("Selected playlist item is not part of the room!");
@@ -131,12 +173,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 if (existingPick == playlistItemId)
                     return;
 
-                await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingItemDeselected), user.UserID, existingPick);
+                await hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingItemDeselected), user.UserID, existingPick);
             }
 
             userPicks[user.UserID] = playlistItemId;
 
-            await Hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(Room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingItemSelected), user.UserID, playlistItemId);
+            await hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingItemSelected), user.UserID, playlistItemId);
         }
 
         private async Task stageRoundStart(ServerMultiplayerRoom _)
@@ -144,7 +186,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.Round++;
 
             await changeStage(MatchmakingRoomStatus.RoundStart);
-            await returnUsersToRoom(Room);
+            await returnUsersToRoom(room);
             await startCountdown(TimeSpan.FromSeconds(stage_round_start_time), stageUserPicks);
         }
 
@@ -161,7 +203,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             long[] candidates = userPicks.Values.ToArray();
 
             if (candidates.Length == 0)
-                candidates = Room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray();
+                candidates = room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray();
 
             state.CandidateItems = candidates;
             state.CandidateItem = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
@@ -172,16 +214,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
         {
-            long lastPlaylistItem = Room.Settings.PlaylistItemId;
-            Room.Settings.PlaylistItemId = state.CandidateItem;
-            await Hub.NotifySettingsChanged(Room, lastPlaylistItem != Room.Settings.PlaylistItemId);
+            long lastPlaylistItem = room.Settings.PlaylistItemId;
+            room.Settings.PlaylistItemId = state.CandidateItem;
+            await hub.NotifySettingsChanged(room, lastPlaylistItem != room.Settings.PlaylistItemId);
 
             if (allUsersReady())
-                await stagePrepareGameplay(Room);
+                await stagePrepareGameplay(room);
             else
             {
                 await changeStage(MatchmakingRoomStatus.PrepareBeatmap);
-                await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => anyUsersReady() ? stagePrepareGameplay(Room) : stagePrepareBeatmap(Room));
+                await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => anyUsersReady() ? stagePrepareGameplay(room) : stagePrepareBeatmap(room));
             }
         }
 
@@ -194,7 +236,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task stageGameplay(ServerMultiplayerRoom _)
         {
             await changeStage(MatchmakingRoomStatus.Gameplay);
-            await startCountdown(TimeSpan.FromSeconds(stage_gameplay_time), Hub.StartMatch);
+            await startCountdown(TimeSpan.FromSeconds(stage_gameplay_time), hub.StartMatch);
         }
 
         private async Task stageRoundEnd()
@@ -203,7 +245,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             using (var db = dbFactory.GetInstance())
             {
-                foreach (var score in await db.GetAllScoresForPlaylistItem(Queue.CurrentItem.ID))
+                foreach (var score in await db.GetAllScoresForPlaylistItem(CurrentItem.ID))
                     scores[(int)score.user_id] = score;
             }
 
@@ -213,7 +255,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             {
                 await updateUserStats();
                 await changeStage(MatchmakingRoomStatus.RoomEnd);
-                await startCountdown(TimeSpan.FromSeconds(stage_room_end_time), Hub.CloseRoom);
+                await startCountdown(TimeSpan.FromSeconds(stage_room_end_time), hub.CloseRoom);
             }
             else
             {
@@ -240,25 +282,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
         {
-            foreach (var user in Room.Users.Where(u => u.State != MultiplayerUserState.Idle))
+            foreach (var user in room.Users.Where(u => u.State != MultiplayerUserState.Idle))
                 await changeUserState(user, MultiplayerUserState.Idle);
         }
 
         private async Task changeUserState(MultiplayerRoomUser user, MultiplayerUserState newState)
         {
-            await Hub.ChangeAndBroadcastUserState(Room, user, newState);
-            await Hub.UpdateRoomStateIfRequired(Room);
+            await hub.ChangeAndBroadcastUserState(room, user, newState);
+            await hub.UpdateRoomStateIfRequired(room);
         }
 
         private async Task changeStage(MatchmakingRoomStatus status)
         {
             state.RoomStatus = status;
-            await Hub.NotifyMatchRoomStateChanged(Room);
+            await hub.NotifyMatchRoomStateChanged(room);
         }
 
         private async Task startCountdown(TimeSpan duration, Func<ServerMultiplayerRoom, Task> continuation)
         {
-            await Room.StartCountdown(new MatchmakingStatusCountdown
+            await room.StartCountdown(new MatchmakingStatusCountdown
             {
                 Status = state.RoomStatus,
                 TimeRemaining = duration
@@ -267,20 +309,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private bool allUsersIdle()
         {
-            return Room.Users.All(u => u.State == MultiplayerUserState.Idle);
+            return room.Users.All(u => u.State == MultiplayerUserState.Idle);
         }
 
         private bool allUsersReady()
         {
-            return Room.Users.All(u => u.State == MultiplayerUserState.Ready);
+            return room.Users.All(u => u.State == MultiplayerUserState.Ready);
         }
 
         private bool anyUsersReady()
         {
-            return Room.Users.All(u => u.State == MultiplayerUserState.Ready);
+            return room.Users.All(u => u.State == MultiplayerUserState.Ready);
         }
 
-        public override MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
+        public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
         {
             room_type = database_match_type.matchmaking
         };

@@ -7,7 +7,7 @@ using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
-using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
 
-            for (int i = 1; i < MultiplayerQueue.PER_USER_LIMIT + 1; i++)
+            for (int i = 1; i < StandardMatchController.GUEST_PLAYLIST_LIMIT + 1; i++)
                 await addItem();
 
             async Task addItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem

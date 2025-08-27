@@ -142,7 +142,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         userUsage.Item.CurrentRoomID = roomId;
 
-                        // because match type implementations may send subsequent information via Users collection hooks,
+                        // because match controllers may send subsequent information via Users collection hooks,
                         // inform clients before adding user to the room.
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
@@ -472,8 +472,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 await HubContext.ChangeAndBroadcastUserBeatmapAvailability(room, user, newBeatmapAvailability);
-
-                await room.MatchTypeImplementation.HandleUserBeatmapAvailabilityChanged(user, newBeatmapAvailability);
             }
         }
 
@@ -565,7 +563,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         break;
 
                     default:
-                        await room.MatchTypeImplementation.HandleUserRequest(user, request);
+                        await room.Controller.HandleUserRequest(user, request);
                         break;
                 }
             }
@@ -651,8 +649,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
-                await room.Queue.AddItem(item, user);
-                Log(room, $"Item ID {item.ID} added at slot {room.Queue.UpcomingItems.TakeWhile(i => i != item).Count() + 1} (of {room.Playlist.Count})");
+                await room.Controller.AddPlaylistItem(item, user);
 
                 await HubContext.UpdateRoomStateIfRequired(room);
             }
@@ -672,7 +669,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Editing playlist item {item.ID} for beatmap {item.BeatmapID}");
-                await room.Queue.EditItem(item, user);
+                await room.Controller.EditPlaylistItem(item, user);
             }
         }
 
@@ -690,7 +687,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Removing playlist item {playlistItemId}");
-                await room.Queue.RemoveItem(playlistItemId, user);
+                await room.Controller.RemovePlaylistItem(playlistItemId, user);
 
                 await HubContext.UpdateRoomStateIfRequired(room);
             }
@@ -742,15 +739,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (previousSettings.MatchType != settings.MatchType)
                 {
                     await room.ChangeMatchType(settings.MatchType);
-                    Log(room, $"Switching room ruleset to {room.MatchTypeImplementation}");
+                    Log(room, $"Switching room ruleset to {room.Controller}");
                 }
 
-                if (previousSettings.QueueMode != settings.QueueMode)
-                {
-                    await room.Queue.UpdateFromQueueModeChange();
-                    Log(room, $"Switching queue mode to {settings.QueueMode}");
-                }
-
+                await room.Controller.HandleSettingsChanged();
                 await HubContext.NotifySettingsChanged(room, false);
 
                 await HubContext.UpdateRoomStateIfRequired(room);
@@ -808,7 +800,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (oldState != MultiplayerUserState.Idle)
                         throw new InvalidStateChangeException(oldState, newState);
 
-                    if (room.Queue.CurrentItem.Expired)
+                    if (room.Controller.CurrentItem.Expired)
                         throw new InvalidStateException("Cannot ready up while all items have been played.");
 
                     break;
@@ -973,7 +965,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                await ((MatchmakingImplementation)room.MatchTypeImplementation).ToggleSelectionAsync(user, playlistItemId);
+                await ((MatchmakingMatchController)room.Controller).ToggleSelectionAsync(user, playlistItemId);
             }
         }
 
@@ -990,7 +982,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                await ((MatchmakingImplementation)room.MatchTypeImplementation).SkipToNextRound();
+                await ((MatchmakingMatchController)room.Controller).SkipToNextRound();
             }
         }
     }

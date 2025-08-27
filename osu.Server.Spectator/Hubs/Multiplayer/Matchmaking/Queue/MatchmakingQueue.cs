@@ -12,7 +12,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// The required room size;
         /// </summary>
-        public int RoomSize { get; set; } = MatchmakingImplementation.MATCHMAKING_ROOM_SIZE;
+        public int RoomSize { get; set; } = MatchmakingMatchController.MATCHMAKING_ROOM_SIZE;
 
         /// <summary>
         /// The time before users are automatically removed from the queue if they haven't accepted the invitation.

@@ -40,8 +40,14 @@ namespace osu.Server.Spectator.Database.Models
         /// </summary>
         public DateTimeOffset? played_at { get; set; }
 
+        /// <summary>
+        /// The beatmap checksum.
+        /// </summary>
         public string? checksum { get; set; }
 
+        /// <summary>
+        /// The beatmap difficulty rating.
+        /// </summary>
         public double difficultyrating { get; set; }
 
         // for deserialization
