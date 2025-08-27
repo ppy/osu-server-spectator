@@ -17,15 +17,50 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     public class MatchmakingMatchController : IMatchController
     {
-        private const int stage_round_start_time = 5;
-        private const int stage_user_picks_time = 5;
+        /// <summary>
+        /// Duration users are given to view standings at the round start screen.
+        /// </summary>
+        private const int stage_round_start_time = 10;
+
+        /// <summary>
+        /// Duration users are given to pick their beatmap.
+        /// </summary>
+        private const int stage_user_picks_time = 20;
+
+        /// <summary>
+        /// Duration before the beatmap is revealed to users (should approximate client animation time).
+        /// </summary>
         private const int stage_select_beatmap_time = 5;
+
+        /// <summary>
+        /// Duration users are given to download the beatmap before they're excluded from the match.
+        /// </summary>
         private const int stage_prepare_beatmap_time = 120;
+
+        /// <summary>
+        /// Duration users are given to prepare for the match to start.
+        /// </summary>
         private const int stage_prepare_gameplay_time = 5;
+
+        /// <summary>
+        /// Unused.
+        /// </summary>
         private const int stage_gameplay_time = 0;
-        private const int stage_round_end_quick_time = 5;
-        private const int stage_round_end_time = 5;
-        private const int stage_room_end_time = 10;
+
+        /// <summary>
+        /// Break duration users are given after a round for the case where all users have exited the results screen.
+        /// </summary>
+        private const int stage_round_end_quick_time = 10;
+
+        /// <summary>
+        /// Duration users are given to preview the results of a round before they're forced back to the match.
+        /// </summary>
+        private const int stage_round_end_time = 60;
+
+        /// <summary>
+        /// Duration after the match concludes before the room is closed.
+        /// </summary>
+        private const int stage_room_end_time = 120;
 
         /// <summary>
         /// The size of matchmaking rooms.
