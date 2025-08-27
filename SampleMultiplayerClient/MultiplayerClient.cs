@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
+using osu.Framework.Extensions.TypeExtensions;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
@@ -48,6 +49,15 @@ namespace SampleMultiplayerClient
             connection.On<long>(nameof(IMultiplayerClient.PlaylistItemRemoved), ((IMultiplayerClient)this).PlaylistItemRemoved);
             connection.On<int, long, string>(nameof(IMultiplayerClient.Invited), ((IMultiplayerClient)this).Invited);
             connection.On(nameof(IStatefulUserHubClient.DisconnectRequested), ((IStatefulUserHubClient)this).DisconnectRequested);
+
+            connection.On(nameof(IMultiplayerClient.MatchmakingQueueJoined), ((IMultiplayerClient)this).MatchmakingQueueJoined);
+            connection.On(nameof(IMultiplayerClient.MatchmakingQueueLeft), ((IMultiplayerClient)this).MatchmakingQueueLeft);
+            connection.On(nameof(IMultiplayerClient.MatchmakingRoomInvited), ((IMultiplayerClient)this).MatchmakingRoomInvited);
+            connection.On<long>(nameof(IMultiplayerClient.MatchmakingRoomReady), ((IMultiplayerClient)this).MatchmakingRoomReady);
+            connection.On<MatchmakingLobbyStatus>(nameof(IMultiplayerClient.MatchmakingLobbyStatusChanged), ((IMultiplayerClient)this).MatchmakingLobbyStatusChanged);
+            connection.On<MatchmakingQueueStatus>(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), ((IMultiplayerClient)this).MatchmakingQueueStatusChanged);
+            connection.On<int, long>(nameof(IMultiplayerClient.MatchmakingItemSelected), ((IMultiplayerClient)this).MatchmakingItemSelected);
+            connection.On<int, long>(nameof(IMultiplayerClient.MatchmakingItemDeselected), ((IMultiplayerClient)this).MatchmakingItemDeselected);
         }
 
         public MultiplayerUserState State { get; private set; }
@@ -66,8 +76,8 @@ namespace SampleMultiplayerClient
 
         public MultiplayerRoom? Room { get; private set; }
 
-        public Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
-            => throw new NotImplementedException();
+        public async Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
+            => Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.CreateRoom), room);
 
         public async Task<MultiplayerRoom> JoinRoom(long roomId)
             => await JoinRoomWithPassword(roomId, string.Empty);
@@ -75,35 +85,17 @@ namespace SampleMultiplayerClient
         public async Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string? password = null)
             => Room = await connection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerServer.JoinRoomWithPassword), roomId, password ?? string.Empty);
 
-        public Task JoinMatchmakingLobby()
-        {
-            throw new NotImplementedException();
-        }
+        public Task JoinMatchmakingLobby() => connection.InvokeAsync(nameof(IMultiplayerServer.JoinMatchmakingLobby));
 
-        public Task LeaveMatchmakingLobby()
-        {
-            throw new NotImplementedException();
-        }
+        public Task LeaveMatchmakingLobby() => connection.InvokeAsync(nameof(IMultiplayerServer.LeaveMatchmakingLobby));
 
-        public Task JoinMatchmakingQueue()
-        {
-            throw new NotImplementedException();
-        }
+        public Task JoinMatchmakingQueue() => connection.InvokeAsync(nameof(IMultiplayerServer.JoinMatchmakingQueue));
 
-        public Task LeaveMatchmakingQueue()
-        {
-            throw new NotImplementedException();
-        }
+        public Task LeaveMatchmakingQueue() => connection.InvokeAsync(nameof(IMultiplayerServer.LeaveMatchmakingQueue));
 
-        public Task MatchmakingAcceptInvitation()
-        {
-            throw new NotImplementedException();
-        }
+        public Task MatchmakingAcceptInvitation() => connection.InvokeAsync(nameof(IMultiplayerServer.MatchmakingAcceptInvitation));
 
-        public Task MatchmakingDeclineInvitation()
-        {
-            throw new NotImplementedException();
-        }
+        public Task MatchmakingDeclineInvitation() => connection.InvokeAsync(nameof(IMultiplayerServer.MatchmakingDeclineInvitation));
 
         public async Task LeaveRoom()
         {
@@ -156,15 +148,9 @@ namespace SampleMultiplayerClient
         public Task InvitePlayer(int userId)
             => connection.InvokeAsync(nameof(IMultiplayerServer.InvitePlayer), userId);
 
-        public Task MatchmakingToggleSelection(long playlistItemId)
-        {
-            throw new NotImplementedException();
-        }
+        public Task MatchmakingToggleSelection(long playlistItemId) => connection.InvokeAsync(nameof(IMultiplayerServer.MatchmakingToggleSelection), playlistItemId);
 
-        public Task MatchmakingSkipToNextStage()
-        {
-            throw new NotImplementedException();
-        }
+        public Task MatchmakingSkipToNextStage() => connection.InvokeAsync(nameof(IMultiplayerServer.MatchmakingSkipToNextStage));
 
         Task IMultiplayerClient.RoomStateChanged(MultiplayerRoomState state)
         {
@@ -316,42 +302,50 @@ namespace SampleMultiplayerClient
 
         public Task MatchmakingQueueJoined()
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Matchmaking queue joined.");
+            return Task.CompletedTask;
         }
 
         public Task MatchmakingQueueLeft()
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Matchmaking queue left.");
+            return Task.CompletedTask;
         }
 
         public Task MatchmakingRoomInvited()
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Invited to a matchmaking match.");
+            return Task.CompletedTask;
         }
 
         public Task MatchmakingRoomReady(long roomId)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Matchmaking room ready (id: {roomId}).");
+            return Task.CompletedTask;
         }
 
         public Task MatchmakingLobbyStatusChanged(MatchmakingLobbyStatus status)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Matchmaking lobby status changed (users-in-queue: {status.UsersInQueue.Length}).");
+            return Task.CompletedTask;
         }
 
         public Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus status)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Matchmaking queue status changed (status: {status.GetType().ReadableName()}).");
+            return Task.CompletedTask;
         }
 
         public Task MatchmakingItemSelected(int userId, long playlistItemId)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Matchmaking playlist item selected: (user: {userId}, item: {playlistItemId}).");
+            return Task.CompletedTask;
         }
 
         public Task MatchmakingItemDeselected(int userId, long playlistItemId)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Matchmaking playlist item deselected: (user: {userId}, item: {playlistItemId}).");
+            return Task.CompletedTask;
         }
 
         public async Task DisconnectRequested()
