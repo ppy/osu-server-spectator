@@ -78,7 +78,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// Retrieves a <see cref="ServerMultiplayerRoom"/> usage.
         /// </summary>
         /// <param name="roomId">The ID of the room to retrieve.</param>
-        Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId);
+        Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId);
 
         /// <summary>
         /// Unreadies all users in a room.
