@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using osu.Framework.Utils;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
@@ -200,13 +199,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageSelectBeatmap(ServerMultiplayerRoom _)
         {
-            long[] candidates = userPicks.Values.ToArray();
+            long[] pickIds = userPicks.Values.ToArray();
+            int remainderPickCount = room.Users.Count - pickIds.Length;
 
-            if (candidates.Length == 0)
-                candidates = room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray();
+            if (remainderPickCount > 0)
+            {
+                long[] availablePicks = room.Playlist.Where(item => !item.Expired && !pickIds.Contains(item.ID)).Select(i => i.ID).ToArray();
+                Random.Shared.Shuffle(availablePicks);
+                pickIds = pickIds.Concat(availablePicks.Take(remainderPickCount)).ToArray();
+            }
 
-            state.CandidateItems = candidates;
-            state.CandidateItem = state.CandidateItems[RNG.Next(0, state.CandidateItems.Length)];
+            state.CandidateItems = pickIds;
+            state.CandidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
 
             await changeStage(MatchmakingRoomStatus.SelectBeatmap);
             await startCountdown(TimeSpan.FromSeconds(stage_select_beatmap_time), stagePrepareBeatmap);
