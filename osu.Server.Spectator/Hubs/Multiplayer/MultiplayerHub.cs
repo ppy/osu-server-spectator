@@ -83,9 +83,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
-                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
-
-                if (userUsage.Item.CurrentRoomID != null)
+                if (userUsage.Item != null)
                 {
                     // if the user already has a state, it means they are already in a room and can't join another without first leaving.
                     throw new InvalidStateException("Can't join a room when already in another room.");
@@ -140,7 +138,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             }
                         }
 
-                        userUsage.Item.CurrentRoomID = roomId;
+                        userUsage.Item = new MultiplayerClientState(Context.ConnectionId, Context.GetUserId(), roomId);
 
                         // because match controllers may send subsequent information via Users collection hooks,
                         // inform clients before adding user to the room.
@@ -160,12 +158,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         {
                             if (userUsage.Item != null)
                             {
+                                // the user was joined to the room, so we can run the standard leaveRoom method.
+                                // this will handle closing the room if this was the only user.
                                 if (room != null)
-                                {
-                                    // the user was joined to the room, so we can run the standard leaveRoom method.
-                                    // this will handle closing the room if this was the only user.
                                     await HubContext.LeaveRoom(userUsage.Item, room, false);
-                                }
                             }
                             else if (newRoomFetchStarted)
                             {
@@ -273,12 +269,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
-                if (userUsage.Item?.CurrentRoomID == null)
+                if (userUsage.Item == null)
                     return;
 
                 try
                 {
-                    roomId = userUsage.Item.CurrentRoomID.Value;
+                    roomId = userUsage.Item.CurrentRoomID;
                     await leaveRoom(userUsage.Item, false);
                 }
                 finally
@@ -775,7 +771,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
             await base.CleanUpState(state);
-            await matchmakingQueueService.RemoveFromQueueAsync(state);
+            await matchmakingQueueService.RemoveFromQueueAsync(new MatchmakingClientState(state));
             await leaveRoom(state, true);
         }
 
@@ -875,10 +871,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         private async Task<ItemUsage<ServerMultiplayerRoom>> getLocalUserRoom(MultiplayerClientState? state)
         {
-            if (state?.CurrentRoomID == null)
+            if (state == null)
                 throw new NotJoinedRoomException();
 
-            return await Rooms.GetForUse(state.CurrentRoomID.Value);
+            return await Rooms.GetForUse(state.CurrentRoomID);
         }
 
         private async Task leaveRoom(MultiplayerClientState state, bool wasKick)
@@ -900,56 +896,38 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task JoinMatchmakingLobby()
         {
-            using (var userUsage = await GetOrCreateLocalUserState())
-            {
-                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
-                await matchmakingQueueService.AddToLobbyAsync(userUsage.Item);
-            }
+            using (await GetOrCreateLocalUserState())
+                await matchmakingQueueService.AddToLobbyAsync(new MatchmakingClientState(Context));
         }
 
         public async Task LeaveMatchmakingLobby()
         {
-            using (var userUsage = await GetOrCreateLocalUserState())
-            {
-                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
-                await matchmakingQueueService.RemoveFromLobbyAsync(userUsage.Item);
-            }
+            using (await GetOrCreateLocalUserState())
+                await matchmakingQueueService.RemoveFromLobbyAsync(new MatchmakingClientState(Context));
         }
 
         public async Task JoinMatchmakingQueue()
         {
-            using (var userUsage = await GetOrCreateLocalUserState())
-            {
-                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
-                await matchmakingQueueService.AddToQueueAsync(userUsage.Item);
-            }
+            using (await GetOrCreateLocalUserState())
+                await matchmakingQueueService.AddToQueueAsync(new MatchmakingClientState(Context));
         }
 
         public async Task LeaveMatchmakingQueue()
         {
-            using (var userUsage = await GetOrCreateLocalUserState())
-            {
-                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
-                await matchmakingQueueService.RemoveFromQueueAsync(userUsage.Item);
-            }
+            using (await GetOrCreateLocalUserState())
+                await matchmakingQueueService.RemoveFromQueueAsync(new MatchmakingClientState(Context));
         }
 
         public async Task MatchmakingAcceptInvitation()
         {
-            using (var userUsage = await GetOrCreateLocalUserState())
-            {
-                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
-                await matchmakingQueueService.AcceptInvitationAsync(userUsage.Item);
-            }
+            using (await GetOrCreateLocalUserState())
+                await matchmakingQueueService.AcceptInvitationAsync(new MatchmakingClientState(Context));
         }
 
         public async Task MatchmakingDeclineInvitation()
         {
-            using (var userUsage = await GetOrCreateLocalUserState())
-            {
-                userUsage.Item ??= new MultiplayerClientState(Context.ConnectionId, Context.GetUserId());
-                await matchmakingQueueService.DeclineInvitationAsync(userUsage.Item);
-            }
+            using (await GetOrCreateLocalUserState())
+                await matchmakingQueueService.DeclineInvitationAsync(new MatchmakingClientState(Context));
         }
 
         public async Task MatchmakingToggleSelection(long playlistItemId)

@@ -422,7 +422,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             try
             {
                 // Run in background so we don't hold locks on user/room states.
-                _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID!.Value);
+                _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID);
             }
             catch
             {
