@@ -115,10 +115,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     return bundle;
 
                 foreach (var u in user.Group.Users)
-                {
                     matchmakingUsers.Remove(u);
-                    bundle.RemovedUsers.Add(u);
-                }
 
                 bundle.CompletedGroups.Add(user.Group);
             }
