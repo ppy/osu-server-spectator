@@ -217,7 +217,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageRoundStart(ServerMultiplayerRoom _)
         {
-            state.Round++;
+            state.CurrentRound++;
 
             await changeStage(MatchmakingRoomStatus.RoundStart);
             await returnUsersToRoom(room);
@@ -288,9 +288,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     scores[(int)score.user_id] = score;
             }
 
-            state.SetScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray());
+            state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray());
 
-            if (state.Round == total_rounds)
+            if (state.CurrentRound == total_rounds)
             {
                 await updateUserStats();
                 await changeStage(MatchmakingRoomStatus.RoomEnd);
