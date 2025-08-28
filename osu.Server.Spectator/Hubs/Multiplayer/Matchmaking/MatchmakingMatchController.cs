@@ -48,14 +48,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private const int stage_gameplay_time = 0;
 
         /// <summary>
-        /// Break duration users are given after a round for the case where all users have exited the results screen.
-        /// </summary>
-        private const int stage_round_end_quick_time = 10;
-
-        /// <summary>
         /// Duration users are given to preview the results of a round before they're forced back to the match.
         /// </summary>
-        private const int stage_round_end_time = 60;
+        private const int stage_round_end_time = 10;
 
         /// <summary>
         /// Duration after the match concludes before the room is closed.
@@ -174,11 +169,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 case MatchmakingRoomStatus.PrepareBeatmap:
                     if (allUsersReady())
                         await stagePrepareGameplay(room);
-                    break;
-
-                case MatchmakingRoomStatus.RoundEnd:
-                    if (allUsersIdle())
-                        await stageRoundStart(room);
                     break;
             }
         }
@@ -299,11 +289,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             else
             {
                 await changeStage(MatchmakingRoomStatus.RoundEnd);
-
-                if (allUsersIdle())
-                    await startCountdown(TimeSpan.FromSeconds(stage_round_end_quick_time), stageRoundStart);
-                else
-                    await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoundStart);
+                await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoundStart);
             }
         }
 
