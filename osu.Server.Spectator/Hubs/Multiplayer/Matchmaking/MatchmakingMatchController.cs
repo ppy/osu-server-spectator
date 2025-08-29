@@ -133,11 +133,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task HandleUserJoined(MultiplayerRoomUser user)
         {
-            switch (state.RoomStatus)
+            switch (state.Stage)
             {
-                case MatchmakingRoomStatus.RoomStart:
+                case MatchmakingStage.WaitingForClientsJoin:
                     if (room.Users.Count == MATCHMAKING_ROOM_SIZE)
-                        await stageRoundStart(room);
+                        await stageRoundWarmupTime(room);
                     break;
             }
         }
@@ -164,24 +164,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task HandleUserStateChanged(MultiplayerRoomUser user)
         {
-            switch (state.RoomStatus)
+            switch (state.Stage)
             {
-                case MatchmakingRoomStatus.PrepareBeatmap:
+                case MatchmakingStage.WaitingForClientsBeatmapDownload:
                     if (allUsersReady())
-                        await stagePrepareGameplay(room);
+                        await stageGameplayWarmupTime(room);
                     break;
             }
         }
 
         public async Task SkipToNextRound()
         {
-            _ = room.SkipToEndOfCountdown(room.FindCountdownOfType<MatchmakingStatusCountdown>());
+            _ = room.SkipToEndOfCountdown(room.FindCountdownOfType<MatchmakingStageCountdown>());
             await Task.CompletedTask;
         }
 
         public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
         {
-            if (state.RoomStatus != MatchmakingRoomStatus.UserPicks)
+            if (state.Stage != MatchmakingStage.UserBeatmapSelect)
                 return;
 
             MultiplayerPlaylistItem? item = room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
@@ -205,24 +205,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await hub.Context.Clients.Groups(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingItemSelected), user.UserID, playlistItemId);
         }
 
-        private async Task stageRoundStart(ServerMultiplayerRoom _)
+        private async Task stageRoundWarmupTime(ServerMultiplayerRoom _)
         {
             state.CurrentRound++;
 
-            await changeStage(MatchmakingRoomStatus.RoundStart);
+            await changeStage(MatchmakingStage.RoundWarmupTime);
             await returnUsersToRoom(room);
-            await startCountdown(TimeSpan.FromSeconds(stage_round_start_time), stageUserPicks);
+            await startCountdown(TimeSpan.FromSeconds(stage_round_start_time), stageUserBeatmapSelect);
         }
 
-        private async Task stageUserPicks(ServerMultiplayerRoom _)
+        private async Task stageUserBeatmapSelect(ServerMultiplayerRoom _)
         {
             userPicks.Clear();
 
-            await changeStage(MatchmakingRoomStatus.UserPicks);
-            await startCountdown(TimeSpan.FromSeconds(stage_user_picks_time), stageSelectBeatmap);
+            await changeStage(MatchmakingStage.UserBeatmapSelect);
+            await startCountdown(TimeSpan.FromSeconds(stage_user_picks_time), stageServerBeatmapFinalised);
         }
 
-        private async Task stageSelectBeatmap(ServerMultiplayerRoom _)
+        private async Task stageServerBeatmapFinalised(ServerMultiplayerRoom _)
         {
             long[] pickIds = userPicks.Values.ToArray();
             int remainderPickCount = room.Users.Count - pickIds.Length;
@@ -237,34 +237,34 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.CandidateItems = pickIds;
             state.CandidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
 
-            await changeStage(MatchmakingRoomStatus.SelectBeatmap);
-            await startCountdown(TimeSpan.FromSeconds(stage_select_beatmap_time), stagePrepareBeatmap);
+            await changeStage(MatchmakingStage.ServerBeatmapFinalised);
+            await startCountdown(TimeSpan.FromSeconds(stage_select_beatmap_time), stageWaitingForClientsBeatmapDownload);
         }
 
-        private async Task stagePrepareBeatmap(ServerMultiplayerRoom _)
+        private async Task stageWaitingForClientsBeatmapDownload(ServerMultiplayerRoom _)
         {
             long lastPlaylistItem = room.Settings.PlaylistItemId;
             room.Settings.PlaylistItemId = state.CandidateItem;
             await hub.NotifySettingsChanged(room, lastPlaylistItem != room.Settings.PlaylistItemId);
 
             if (allUsersReady())
-                await stagePrepareGameplay(room);
+                await stageGameplayWarmupTime(room);
             else
             {
-                await changeStage(MatchmakingRoomStatus.PrepareBeatmap);
-                await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => anyUsersReady() ? stagePrepareGameplay(room) : stagePrepareBeatmap(room));
+                await changeStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+                await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => anyUsersReady() ? stageGameplayWarmupTime(room) : stageWaitingForClientsBeatmapDownload(room));
             }
         }
 
-        private async Task stagePrepareGameplay(ServerMultiplayerRoom _)
+        private async Task stageGameplayWarmupTime(ServerMultiplayerRoom _)
         {
-            await changeStage(MatchmakingRoomStatus.PrepareGameplay);
+            await changeStage(MatchmakingStage.GameplayWarmupTime);
             await startCountdown(TimeSpan.FromSeconds(stage_prepare_gameplay_time), stageGameplay);
         }
 
         private async Task stageGameplay(ServerMultiplayerRoom _)
         {
-            await changeStage(MatchmakingRoomStatus.Gameplay);
+            await changeStage(MatchmakingStage.Gameplay);
             await startCountdown(TimeSpan.FromSeconds(stage_gameplay_time), hub.StartMatch);
         }
 
@@ -283,13 +283,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (state.CurrentRound == total_rounds)
             {
                 await updateUserStats();
-                await changeStage(MatchmakingRoomStatus.RoomEnd);
+                await changeStage(MatchmakingStage.Ended);
                 await startCountdown(TimeSpan.FromSeconds(stage_room_end_time), hub.CloseRoom);
             }
             else
             {
-                await changeStage(MatchmakingRoomStatus.RoundEnd);
-                await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoundStart);
+                await changeStage(MatchmakingStage.ResultsDisplaying);
+                await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoundWarmupTime);
             }
         }
 
@@ -317,24 +317,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await hub.UpdateRoomStateIfRequired(room);
         }
 
-        private async Task changeStage(MatchmakingRoomStatus status)
+        private async Task changeStage(MatchmakingStage stage)
         {
-            state.RoomStatus = status;
+            state.Stage = stage;
             await hub.NotifyMatchRoomStateChanged(room);
         }
 
         private async Task startCountdown(TimeSpan duration, Func<ServerMultiplayerRoom, Task> continuation)
         {
-            await room.StartCountdown(new MatchmakingStatusCountdown
+            await room.StartCountdown(new MatchmakingStageCountdown
             {
-                Status = state.RoomStatus,
+                Stage = state.Stage,
                 TimeRemaining = duration
             }, continuation);
-        }
-
-        private bool allUsersIdle()
-        {
-            return room.Users.All(u => u.State == MultiplayerUserState.Idle);
         }
 
         private bool allUsersReady()
