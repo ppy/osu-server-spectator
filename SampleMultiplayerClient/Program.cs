@@ -132,6 +132,34 @@ namespace SampleMultiplayerClient
                             await targetClient.StartMatch();
                             break;
 
+                        case "mmjoinlobby":
+                            await targetClient.JoinMatchmakingLobby();
+                            break;
+
+                        case "mmleavelobby":
+                            await targetClient.LeaveMatchmakingLobby();
+                            break;
+
+                        case "mmjoinqueue":
+                            await targetClient.JoinMatchmakingQueue();
+                            break;
+
+                        case "mmleavequeue":
+                            await targetClient.LeaveMatchmakingQueue();
+                            break;
+
+                        case "mmaccept":
+                            await targetClient.MatchmakingAcceptInvitation();
+                            break;
+
+                        case "mmdecline":
+                            await targetClient.MatchmakingDeclineInvitation();
+                            break;
+
+                        case "mmselect":
+                            await targetClient.MatchmakingToggleSelection(int.Parse(args[0]));
+                            break;
+
                         default:
                             Console.WriteLine("Unknown command");
                             continue;

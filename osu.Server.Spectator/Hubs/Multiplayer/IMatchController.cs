@@ -37,6 +37,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="user">The user which left the room.</param>
         Task HandleUserLeft(MultiplayerRoomUser user);
 
+        Task HandleUserStateChanged(MultiplayerRoomUser user);
+
         /// <summary>
         /// Add a playlist item to the room's queue.
         /// </summary>

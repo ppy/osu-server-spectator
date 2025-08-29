@@ -39,6 +39,8 @@ namespace osu.Server.Spectator
 
         public static string? SentryDsn { get; }
 
+        public static int BanchoBotUserId { get; }
+
         static AppSettings()
         {
             SaveReplays = Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
@@ -63,6 +65,8 @@ namespace osu.Server.Spectator
             SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;
 
             SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
+
+            BanchoBotUserId = int.TryParse(Environment.GetEnvironmentVariable("BANCHO_BOT_USER_ID"), out int id) ? id : 2;
         }
     }
 }

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.API;
+using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 
@@ -145,6 +146,54 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             foreach (var c in Clients)
                 await c.PlaylistItemChanged(item);
+        }
+
+        public virtual async Task MatchmakingQueueJoined()
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingQueueJoined();
+        }
+
+        public virtual async Task MatchmakingQueueLeft()
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingQueueLeft();
+        }
+
+        public virtual async Task MatchmakingRoomInvited()
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingRoomInvited();
+        }
+
+        public virtual async Task MatchmakingRoomReady(long roomId)
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingRoomReady(roomId);
+        }
+
+        public virtual async Task MatchmakingLobbyStatusChanged(MatchmakingLobbyStatus status)
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingLobbyStatusChanged(status);
+        }
+
+        public virtual async Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus? status)
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingQueueStatusChanged(status);
+        }
+
+        public virtual async Task MatchmakingItemSelected(int userId, long playlistItemId)
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingItemSelected(userId, playlistItemId);
+        }
+
+        public virtual async Task MatchmakingItemDeselected(int userId, long playlistItemId)
+        {
+            foreach (var c in Clients)
+                await c.MatchmakingItemDeselected(userId, playlistItemId);
         }
 
         public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = new CancellationToken())

@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -15,6 +16,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     /// </summary>
     public interface IMultiplayerHubContext
     {
+        IHubContext<MultiplayerHub> Context { get; }
+
         /// <summary>
         /// Notifies users in a room of an event.
         /// </summary>
@@ -137,6 +140,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         /// <param name="room">The room to start the match for.</param>
         /// <exception cref="InvalidStateException">If the current playlist item is expired or the room is not in an <see cref="MultiplayerRoomState.Open"/> state.</exception>
-        Task StartMatch(ServerMultiplayerRoom room);
+        Task StartMatch(ServerMultiplayerRoom room) => StartMatch(room, true);
+
+        /// <summary>
+        /// Starts a match in a room.
+        /// </summary>
+        /// <param name="room">The room to start the match for.</param>
+        /// <param name="requireReadyUsers">Whether to require any ready users for the start to proceed.</param>
+        /// <exception cref="InvalidStateException">If the current playlist item is expired or the room is not in an <see cref="MultiplayerRoomState.Open"/> state.</exception>
+        Task StartMatch(ServerMultiplayerRoom room, bool requireReadyUsers);
+
+        /// <summary>
+        /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.
+        /// </summary>
+        Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room);
+
+        Task CloseRoom(ServerMultiplayerRoom room);
     }
 }

@@ -109,6 +109,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             return Task.CompletedTask;
         }
 
+        public virtual Task HandleUserStateChanged(MultiplayerRoomUser user)
+        {
+            return Task.CompletedTask;
+        }
+
         /// <summary>
         /// Add a playlist item to the room's queue.
         /// </summary>

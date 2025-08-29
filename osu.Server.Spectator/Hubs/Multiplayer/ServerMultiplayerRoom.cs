@@ -12,6 +12,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
 using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
@@ -67,6 +68,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             switch (type)
             {
+                case MatchType.Matchmaking:
+                    return ChangeMatchType(new MatchmakingMatchController(this, hub, dbFactory));
+
                 case MatchType.TeamVersus:
                     return ChangeMatchType(new TeamVersusMatchController(this, hub, dbFactory));
 

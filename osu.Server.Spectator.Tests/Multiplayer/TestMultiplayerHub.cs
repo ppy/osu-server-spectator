@@ -23,7 +23,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             IHubContext<MultiplayerHub> hubContext,
             ISharedInterop sharedInterop,
             MultiplayerEventLogger multiplayerEventLogger)
-            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, sharedInterop, multiplayerEventLogger)
+            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, sharedInterop, multiplayerEventLogger, null)
         {
         }
 
