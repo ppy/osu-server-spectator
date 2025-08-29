@@ -668,17 +668,19 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("INSERT INTO `matchmaking_user_stats` (`user_id`, `ruleset_id`, `first_placements`, `total_points`, `created_at`, `updated_at`) "
-                                          + "VALUES (@UserId, @RulesetId, @FirstPlacements, @TotalPoints, NOW(), NOW()) "
+            await connection.ExecuteAsync("INSERT INTO `matchmaking_user_stats` (`user_id`, `ruleset_id`, `first_placements`, `total_points`, `elo_data`, `created_at`, `updated_at`) "
+                                          + "VALUES (@UserId, @RulesetId, @FirstPlacements, @TotalPoints, @EloData, NOW(), NOW()) "
                                           + "ON DUPLICATE KEY UPDATE "
                                           + "`first_placements` = @FirstPlacements, "
                                           + "`total_points` = @TotalPoints, "
+                                          + "`elo_data` = @EloData, "
                                           + "`updated_at` = NOW()", new
             {
                 UserId = stats.user_id,
                 RulesetId = stats.ruleset_id,
                 FirstPlacements = stats.first_placements,
-                TotalPoints = stats.total_points
+                TotalPoints = stats.total_points,
+                EloData = stats.elo_data
             });
         }
 
