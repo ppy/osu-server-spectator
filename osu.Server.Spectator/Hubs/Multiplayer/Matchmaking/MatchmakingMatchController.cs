@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 await hub.NotifyPlaylistItemAdded(room, newItem);
             }
 
-            await stageRoundEnd();
+            await stageResultsDisplaying();
         }
 
         public Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
@@ -268,7 +268,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await startCountdown(TimeSpan.FromSeconds(stage_gameplay_time), hub.StartMatch);
         }
 
-        private async Task stageRoundEnd()
+        private async Task stageResultsDisplaying()
         {
             Dictionary<int, SoloScore> scores = new Dictionary<int, SoloScore>();
 
@@ -280,29 +280,27 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray());
 
+            await changeStage(MatchmakingStage.ResultsDisplaying);
+
             if (state.CurrentRound == total_rounds)
-            {
-                await updateUserStats();
-                await changeStage(MatchmakingStage.Ended);
-                await startCountdown(TimeSpan.FromSeconds(stage_room_end_time), hub.CloseRoom);
-            }
+                await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoomEnd);
             else
-            {
-                await changeStage(MatchmakingStage.ResultsDisplaying);
                 await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoundWarmupTime);
-            }
         }
 
-        private async Task updateUserStats()
+        private async Task stageRoomEnd(ServerMultiplayerRoom _)
         {
             MatchmakingUser? firstPlaceUser = state.Users.FirstOrDefault(u => u.Placement == 1);
 
             // Can be null in the case none of the users played a map.
-            if (firstPlaceUser == null)
-                return;
+            if (firstPlaceUser != null)
+            {
+                using (var db = dbFactory.GetInstance())
+                    await db.IncrementMatchmakingFirstPlacementsAsync(firstPlaceUser.UserId);
+            }
 
-            using (var db = dbFactory.GetInstance())
-                await db.IncrementMatchmakingFirstPlacementsAsync(firstPlaceUser.UserId);
+            await changeStage(MatchmakingStage.Ended);
+            await startCountdown(TimeSpan.FromSeconds(stage_room_end_time), hub.CloseRoom);
         }
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
