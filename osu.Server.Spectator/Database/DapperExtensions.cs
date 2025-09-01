@@ -24,11 +24,12 @@ namespace osu.Server.Spectator.Database
                         break;
 
                     case DbType.DateTimeOffset:
+                    case DbType.String: // TODO: i don't know why it's coming in as a string but let's just try and handle it for now?
                         parameter.Value = value;
                         break;
 
                     default:
-                        throw new InvalidOperationException("DateTimeOffset must be assigned to a DbType.DateTime SQL field.");
+                        throw new InvalidOperationException("Must be DateTime or DateTimeOffset object to be mapped.");
                 }
             }
 
