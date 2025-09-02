@@ -164,7 +164,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 long roomId = await sharedInterop.CreateRoomAsync(AppSettings.BanchoBotUserId, new MultiplayerRoom(0)
                 {
-                    Settings = { MatchType = MatchType.Matchmaking },
+                    Settings =
+                    {
+                        MatchType = MatchType.Matchmaking,
+                        Password = Guid.NewGuid().ToString()
+                    },
                     Playlist = await queryPlaylistItems(bundle.Queue.RulesetId)
                 });
 
