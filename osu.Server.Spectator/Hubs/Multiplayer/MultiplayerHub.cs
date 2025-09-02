@@ -17,11 +17,12 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
+    public partial class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
         private static readonly MessagePackSerializerOptions message_pack_options = new MessagePackSerializerOptions(new SignalRUnionWorkaroundResolver());
 
@@ -31,6 +32,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly ChatFilters chatFilters;
         private readonly ISharedInterop sharedInterop;
         private readonly MultiplayerEventLogger multiplayerEventLogger;
+        private readonly IMatchmakingQueueBackgroundService matchmakingQueueService;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -40,13 +42,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext,
             ISharedInterop sharedInterop,
-            MultiplayerEventLogger multiplayerEventLogger)
+            MultiplayerEventLogger multiplayerEventLogger,
+            IMatchmakingQueueBackgroundService matchmakingQueueService)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
             this.sharedInterop = sharedInterop;
             this.multiplayerEventLogger = multiplayerEventLogger;
+            this.matchmakingQueueService = matchmakingQueueService;
 
             Rooms = rooms;
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory, multiplayerEventLogger);
@@ -222,7 +226,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (databaseRoom.ends_at != null && databaseRoom.ends_at < DateTimeOffset.Now)
                     throw new InvalidStateException("Match has already ended.");
 
-                if (databaseRoom.user_id != Context.GetUserId())
+                if (databaseRoom.type != database_match_type.matchmaking && databaseRoom.user_id != Context.GetUserId())
                     throw new InvalidOperationException("Non-host is attempting to join match before host");
 
                 var room = new ServerMultiplayerRoom(roomId, HubContext, databaseFactory)
@@ -786,6 +790,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
             await base.CleanUpState(state);
+            await matchmakingQueueService.RemoveFromQueueAsync(new MatchmakingClientState(state));
             await leaveRoom(state, true);
         }
 

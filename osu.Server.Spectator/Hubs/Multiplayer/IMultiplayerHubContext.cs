@@ -144,5 +144,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room);
 
+        Task NotifyMatchmakingItemSelected(ServerMultiplayerRoom room, int userId, long playlistItemId);
+
+        Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId);
     }
 }

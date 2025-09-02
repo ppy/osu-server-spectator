@@ -389,6 +389,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
+        public async Task NotifyMatchmakingItemSelected(ServerMultiplayerRoom room, int userId, long playlistItemId)
+        {
+            await context.Clients.Groups(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingItemSelected), userId, playlistItemId);
+        }
+
+        public async Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId)
+        {
+            await context.Clients.Groups(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchmakingItemDeselected), userId, playlistItemId);
+        }
+
         private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)
         {
             logger.Log(logLevel, "[user:{userId}] [room:{roomID}] {message}",
