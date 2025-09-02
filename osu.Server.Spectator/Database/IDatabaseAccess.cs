@@ -245,6 +245,8 @@ namespace osu.Server.Spectator.Database
 
         Task<float> GetUserPPAsync(int userId, int rulesetId);
 
-        Task IncrementMatchmakingFirstPlacementsAsync(int userId);
+        Task<matchmaking_user_stats> GetMatchmakingUserStatsAsync(int userId, int rulesetId);
+
+        Task UpdateMatchmakingUserStatsAsync(matchmaking_user_stats stats);
     }
 }

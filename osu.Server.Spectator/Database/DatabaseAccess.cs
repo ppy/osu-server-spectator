@@ -620,14 +620,36 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task IncrementMatchmakingFirstPlacementsAsync(int userId)
+        public async Task<matchmaking_user_stats> GetMatchmakingUserStatsAsync(int userId, int rulesetId)
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("INSERT INTO `matchmaking_stats` (`user_id`, `first_placements`) VALUES (@UserId, 1)"
-                                          + " ON DUPLICATE KEY UPDATE `first_placements` = `first_placements` + 1", new
+            return await connection.QuerySingleOrDefaultAsync<matchmaking_user_stats>("SELECT * FROM `matchmaking_user_stats` WHERE `user_id` = @UserId AND `ruleset_id` = @RulesetId", new
             {
-                UserId = userId
+                UserId = userId,
+                RulesetId = rulesetId
+            }) ?? new matchmaking_user_stats
+            {
+                user_id = (uint)userId,
+                ruleset_id = (ushort)rulesetId
+            };
+        }
+
+        public async Task UpdateMatchmakingUserStatsAsync(matchmaking_user_stats stats)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync("INSERT INTO `matchmaking_user_stats` (`user_id`, `ruleset_id`, `first_placements`, `total_points`, `created_at`, `updated_at`) "
+                                          + "VALUES (@UserId, @RulesetId, @FirstPlacements, @TotalPoints, NOW(), NOW()) "
+                                          + "ON DUPLICATE KEY UPDATE "
+                                          + "`first_placements` = @FirstPlacements, "
+                                          + "`total_points` = @TotalPoints, "
+                                          + "`updated_at` = NOW()", new
+            {
+                UserId = stats.user_id,
+                RulesetId = stats.ruleset_id,
+                FirstPlacements = stats.first_placements,
+                TotalPoints = stats.total_points
             });
         }
 

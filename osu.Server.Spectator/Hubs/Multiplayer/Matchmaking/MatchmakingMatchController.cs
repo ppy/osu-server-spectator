@@ -86,6 +86,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private readonly IDatabaseFactory dbFactory;
         private readonly MatchmakingRoomState state;
         private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
+        private readonly int rulesetId;
 
         public MatchmakingMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
         {
@@ -95,6 +96,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             room.MatchState = state = new MatchmakingRoomState();
             room.Settings.PlaylistItemId = room.Playlist[0].ID;
+
+            // Todo: This should be retrieved from the room creation parameters instead.
+            rulesetId = CurrentItem.RulesetID;
         }
 
         public async Task Initialise()
@@ -273,6 +277,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
 
+            await updateUserStats();
+
             await changeStage(MatchmakingStage.ResultsDisplaying);
 
             if (state.CurrentRound == total_rounds)
@@ -283,17 +289,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageRoomEnd(ServerMultiplayerRoom _)
         {
-            MatchmakingUser? firstPlaceUser = state.Users.FirstOrDefault(u => u.Placement == 1);
-
-            // Can be null in the case none of the users played a map.
-            if (firstPlaceUser != null)
-            {
-                using (var db = dbFactory.GetInstance())
-                    await db.IncrementMatchmakingFirstPlacementsAsync(firstPlaceUser.UserId);
-            }
-
             await changeStage(MatchmakingStage.Ended);
             await startCountdown(TimeSpan.FromSeconds(stage_room_end_time), _ => Task.CompletedTask);
+        }
+
+        private async Task updateUserStats()
+        {
+            using (var db = dbFactory.GetInstance())
+            {
+                foreach (var user in state.Users)
+                {
+                    matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserId, rulesetId);
+
+                    if (user.Placement == 1)
+                        stats.first_placements++;
+
+                    stats.total_points += (uint)user.Points;
+
+                    await db.UpdateMatchmakingUserStatsAsync(stats);
+                }
+            }
         }
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
