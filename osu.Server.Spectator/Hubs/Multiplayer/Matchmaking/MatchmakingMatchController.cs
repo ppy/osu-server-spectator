@@ -167,10 +167,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             }
         }
 
-        public async Task SkipToNextRound()
+        public Task SkipToNextRound()
         {
-            _ = room.SkipToEndOfCountdown(room.FindCountdownOfType<MatchmakingStageCountdown>());
-            await Task.CompletedTask;
+            throw new InvalidStateException("Skipping matchmaking rounds is not allowed.");
+            // _ = room.SkipToEndOfCountdown(room.FindCountdownOfType<MatchmakingStageCountdown>());
         }
 
         public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
