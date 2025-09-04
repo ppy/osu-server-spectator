@@ -63,11 +63,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private const int stage_room_end_time = 120;
 
         /// <summary>
-        /// The size of matchmaking rooms.
+        /// The room size.
         /// </summary>
-        public const int MATCHMAKING_ROOM_SIZE = 8;
+        private static readonly int room_size = AppSettings.MatchmakingRoomSize;
 
-        private const int total_rounds = 5;
+        /// <summary>
+        /// The total number of rounds.
+        /// </summary>
+        private static readonly int total_rounds = AppSettings.MatchmakingRoomRounds;
 
         /// <summary>
         /// The number of points awarded for each placement position (index 0 = #1, index 7 = #8).
@@ -132,7 +135,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             switch (state.Stage)
             {
                 case MatchmakingStage.WaitingForClientsJoin:
-                    if (++joinedUserCount == MATCHMAKING_ROOM_SIZE)
+                    if (++joinedUserCount == room_size)
                         await stageRoundWarmupTime(room);
                     break;
             }
@@ -171,8 +174,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public Task SkipToNextRound()
         {
-            throw new InvalidStateException("Skipping matchmaking rounds is not allowed.");
-            // _ = room.SkipToEndOfCountdown(room.FindCountdownOfType<MatchmakingStageCountdown>());
+            if (!AppSettings.MatchmakingRoomAllowSkip)
+                throw new InvalidStateException("Skipping matchmaking rounds is not allowed.");
+
+            _ = room.SkipToEndOfCountdown(room.FindCountdownOfType<MatchmakingStageCountdown>());
+            return Task.CompletedTask;
         }
 
         public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
