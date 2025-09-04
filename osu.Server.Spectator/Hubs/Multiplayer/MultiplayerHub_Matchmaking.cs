@@ -11,8 +11,14 @@ using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public partial class MultiplayerHub
+    public partial class MultiplayerHub : IMatchmakingServer
     {
+        public async Task<MatchmakingPool[]> GetMatchmakingPools()
+        {
+            using (var db = databaseFactory.GetInstance())
+                return (await db.GetActiveMatchmakingPoolsAsync()).Select(p => p.ToMatchmakingPool()).ToArray();
+        }
+
         public async Task MatchmakingJoinLobby()
         {
             using (await GetOrCreateLocalUserState())
@@ -25,14 +31,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await matchmakingQueueService.RemoveFromLobbyAsync(new MatchmakingClientState(Context));
         }
 
-        public async Task MatchmakingJoinQueue(MatchmakingSettings settings)
+        public async Task MatchmakingJoinQueue(int poolId)
         {
             using (await GetOrCreateLocalUserState())
             {
-                await matchmakingQueueService.AddToQueueAsync(new MatchmakingClientState(Context)
-                {
-                    Settings = settings
-                });
+                await matchmakingQueueService.AddToQueueAsync(new MatchmakingClientState(Context), poolId);
             }
         }
 

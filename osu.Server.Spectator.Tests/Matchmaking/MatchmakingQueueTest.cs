@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using Xunit;
 
@@ -10,7 +11,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 {
     public class MatchmakingQueueTest
     {
-        private readonly MatchmakingQueue queue = new MatchmakingQueue();
+        private readonly MatchmakingQueue queue = new MatchmakingQueue(new matchmaking_pool());
 
         [Fact]
         public void EmptyUpdate()
