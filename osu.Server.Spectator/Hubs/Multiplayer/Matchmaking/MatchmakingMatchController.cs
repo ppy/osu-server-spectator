@@ -61,17 +61,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// </summary>
         public const int MATCHMAKING_ROOM_SIZE = 8;
 
-        /// <summary>
-        /// The beatmaps that form the playlist for each ruleset.
-        /// </summary>
-        public static readonly IReadOnlyDictionary<int, int[]> BEATMAP_IDS = new Dictionary<int, int[]>
-        {
-            { 0, [259, 830459, 841629, 853336, 882017] },
-            { 1, [819935, 819935, 819935, 819935, 819935] },
-            { 2, [527141, 527141, 527141, 527141, 527141] },
-            { 3, [710980, 710980, 710980, 710980, 710980] },
-        };
-
         private const int total_rounds = 5;
 
         /// <summary>
