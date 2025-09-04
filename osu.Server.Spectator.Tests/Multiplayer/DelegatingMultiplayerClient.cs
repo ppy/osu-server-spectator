@@ -167,10 +167,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.MatchmakingRoomInvited();
         }
 
-        public virtual async Task MatchmakingRoomReady(long roomId)
+        public virtual async Task MatchmakingRoomReady(long roomId, string password)
         {
             foreach (var c in Clients.OfType<IMatchmakingClient>())
-                await c.MatchmakingRoomReady(roomId);
+                await c.MatchmakingRoomReady(roomId, password);
         }
 
         public virtual async Task MatchmakingLobbyStatusChanged(MatchmakingLobbyStatus status)
