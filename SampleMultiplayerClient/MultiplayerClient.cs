@@ -16,7 +16,7 @@ using osu.Game.Online.Rooms;
 
 namespace SampleMultiplayerClient
 {
-    public class MultiplayerClient : IMultiplayerClient, IMultiplayerServer
+    public class MultiplayerClient : IMultiplayerClient, IMultiplayerServer, IMatchmakingClient
     {
         private readonly HubConnection connection;
 
@@ -50,14 +50,14 @@ namespace SampleMultiplayerClient
             connection.On<int, long, string>(nameof(IMultiplayerClient.Invited), ((IMultiplayerClient)this).Invited);
             connection.On(nameof(IStatefulUserHubClient.DisconnectRequested), ((IStatefulUserHubClient)this).DisconnectRequested);
 
-            connection.On(nameof(IMultiplayerClient.MatchmakingQueueJoined), ((IMultiplayerClient)this).MatchmakingQueueJoined);
-            connection.On(nameof(IMultiplayerClient.MatchmakingQueueLeft), ((IMultiplayerClient)this).MatchmakingQueueLeft);
-            connection.On(nameof(IMultiplayerClient.MatchmakingRoomInvited), ((IMultiplayerClient)this).MatchmakingRoomInvited);
-            connection.On<long>(nameof(IMultiplayerClient.MatchmakingRoomReady), ((IMultiplayerClient)this).MatchmakingRoomReady);
-            connection.On<MatchmakingLobbyStatus>(nameof(IMultiplayerClient.MatchmakingLobbyStatusChanged), ((IMultiplayerClient)this).MatchmakingLobbyStatusChanged);
-            connection.On<MatchmakingQueueStatus>(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), ((IMultiplayerClient)this).MatchmakingQueueStatusChanged);
-            connection.On<int, long>(nameof(IMultiplayerClient.MatchmakingItemSelected), ((IMultiplayerClient)this).MatchmakingItemSelected);
-            connection.On<int, long>(nameof(IMultiplayerClient.MatchmakingItemDeselected), ((IMultiplayerClient)this).MatchmakingItemDeselected);
+            connection.On(nameof(IMatchmakingClient.MatchmakingQueueJoined), ((IMatchmakingClient)this).MatchmakingQueueJoined);
+            connection.On(nameof(IMatchmakingClient.MatchmakingQueueLeft), ((IMatchmakingClient)this).MatchmakingQueueLeft);
+            connection.On(nameof(IMatchmakingClient.MatchmakingRoomInvited), ((IMatchmakingClient)this).MatchmakingRoomInvited);
+            connection.On<long>(nameof(IMatchmakingClient.MatchmakingRoomReady), ((IMatchmakingClient)this).MatchmakingRoomReady);
+            connection.On<MatchmakingLobbyStatus>(nameof(IMatchmakingClient.MatchmakingLobbyStatusChanged), ((IMatchmakingClient)this).MatchmakingLobbyStatusChanged);
+            connection.On<MatchmakingQueueStatus>(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), ((IMatchmakingClient)this).MatchmakingQueueStatusChanged);
+            connection.On<int, long>(nameof(IMatchmakingClient.MatchmakingItemSelected), ((IMatchmakingClient)this).MatchmakingItemSelected);
+            connection.On<int, long>(nameof(IMatchmakingClient.MatchmakingItemDeselected), ((IMatchmakingClient)this).MatchmakingItemDeselected);
         }
 
         public MultiplayerUserState State { get; private set; }

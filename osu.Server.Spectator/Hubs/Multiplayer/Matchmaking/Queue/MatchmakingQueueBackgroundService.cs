@@ -98,7 +98,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public async Task AcceptInvitationAsync(MatchmakingClientState state)
         {
             // Immediately notify the incoming user of their intent to join the match.
-            await hub.Clients.Client(state.ConnectionId).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.JoiningMatch());
+            await hub.Clients.Client(state.ConnectionId).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.JoiningMatch());
 
             foreach ((_, MatchmakingQueue queue) in queues)
                 await processBundle(queue.MarkInvitationAccepted(new MatchmakingQueueUser(state.ConnectionId)));
@@ -132,7 +132,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             Random.Shared.Shuffle(users);
             queuedUsersSample = users.Take(50).Select(u => u.UserId).ToArray();
 
-            await hub.Clients.Group(lobby_users_group).SendAsync(nameof(IMultiplayerClient.MatchmakingLobbyStatusChanged), new MatchmakingLobbyStatus
+            await hub.Clients.Group(lobby_users_group).SendAsync(nameof(IMatchmakingClient.MatchmakingLobbyStatusChanged), new MatchmakingLobbyStatus
             {
                 UsersInQueue = queuedUsersSample
             });
@@ -143,12 +143,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)
         {
             foreach (var user in bundle.RemovedUsers)
-                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueLeft));
+                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueLeft));
 
             foreach (var user in bundle.AddedUsers)
             {
-                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueJoined));
-                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.Searching());
+                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueJoined));
+                await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.Searching());
             }
 
             foreach (var group in bundle.FormedGroups)
@@ -156,8 +156,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 foreach (var user in group.Users)
                     await hub.Groups.AddToGroupAsync(user.Identifier, group.Identifier, CancellationToken.None);
 
-                await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingRoomInvited));
-                await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.MatchFound());
+                await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomInvited));
+                await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.MatchFound());
             }
 
             foreach (var group in bundle.CompletedGroups)
@@ -172,7 +172,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     Playlist = await queryPlaylistItems(bundle.Queue.RulesetId)
                 });
 
-                await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMultiplayerClient.MatchmakingRoomReady), roomId);
+                await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId);
 
                 foreach (var user in group.Users)
                     await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
