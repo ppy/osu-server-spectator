@@ -16,6 +16,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -145,7 +146,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 new ChatFilters(DatabaseFactory.Object),
                 hubContext.Object,
                 LegacyIO.Object,
-                new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object));
+                new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object),
+                new Mock<IMatchmakingQueueBackgroundService>().Object);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 

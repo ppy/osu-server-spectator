@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -22,8 +23,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             ChatFilters chatFilters,
             IHubContext<MultiplayerHub> hubContext,
             ISharedInterop sharedInterop,
-            MultiplayerEventLogger multiplayerEventLogger)
-            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, sharedInterop, multiplayerEventLogger)
+            MultiplayerEventLogger multiplayerEventLogger,
+            IMatchmakingQueueBackgroundService matchmakingQueueBackgroundService)
+            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, sharedInterop, multiplayerEventLogger, matchmakingQueueBackgroundService)
         {
         }
 

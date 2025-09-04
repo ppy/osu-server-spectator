@@ -138,5 +138,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="room">The room to start the match for.</param>
         /// <exception cref="InvalidStateException">If the current playlist item is expired or the room is not in an <see cref="MultiplayerRoomState.Open"/> state.</exception>
         Task StartMatch(ServerMultiplayerRoom room);
+
+        /// <summary>
+        /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.
+        /// </summary>
+        Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room);
+
+        Task NotifyMatchmakingItemSelected(ServerMultiplayerRoom room, int userId, long playlistItemId);
+
+        Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId);
     }
 }

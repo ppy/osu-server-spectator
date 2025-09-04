@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Game.Online.API;
+using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
@@ -237,6 +238,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             user.State = state;
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), user.UserID, user.State);
+
+            await room.Controller.HandleUserStateChanged(user);
         }
 
         public async Task ChangeAndBroadcastUserBeatmapAvailability(ServerMultiplayerRoom room, MultiplayerRoomUser user, BeatmapAvailability newBeatmapAvailability)
@@ -326,7 +329,75 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
             }
 
-            await ChangeRoomState(room, anyUserPlaying ? MultiplayerRoomState.Playing : MultiplayerRoomState.Open);
+            if (anyUserPlaying)
+                await ChangeRoomState(room, MultiplayerRoomState.Playing);
+            else
+            {
+                await ChangeRoomState(room, MultiplayerRoomState.Open);
+                await room.Controller.HandleGameplayCompleted();
+            }
+        }
+
+        public async Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room)
+        {
+            //check whether a room state change is required.
+            switch (room.State)
+            {
+                case MultiplayerRoomState.Open:
+                    if (room.Settings.AutoStartEnabled)
+                    {
+                        bool shouldHaveCountdown = !room.Controller.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
+
+                        if (shouldHaveCountdown && !room.ActiveCountdowns.Any(c => c is MatchStartCountdown))
+                            await room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, StartMatch);
+                    }
+
+                    break;
+
+                case MultiplayerRoomState.WaitingForLoad:
+                    int countGameplayUsers = room.Users.Count(u => MultiplayerHub.IsGameplayState(u.State));
+                    int countReadyUsers = room.Users.Count(u => u.State == MultiplayerUserState.ReadyForGameplay);
+
+                    // Attempt to start gameplay when no more users need to change states. If all users have aborted, this will abort the match.
+                    if (countReadyUsers == countGameplayUsers)
+                        await StartOrStopGameplay(room);
+
+                    break;
+
+                case MultiplayerRoomState.Playing:
+                    if (room.Users.All(u => u.State != MultiplayerUserState.Playing))
+                    {
+                        bool anyUserFinishedPlay = false;
+
+                        foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.FinishedPlay))
+                        {
+                            anyUserFinishedPlay = true;
+                            await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Results);
+                        }
+
+                        await ChangeRoomState(room, MultiplayerRoomState.Open);
+                        await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.ResultsReady));
+
+                        if (anyUserFinishedPlay)
+                            await multiplayerEventLogger.LogGameCompletedAsync(room.RoomID, room.GetCurrentItem()!.ID);
+                        else
+                            await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.GetCurrentItem()!.ID);
+
+                        await room.Controller.HandleGameplayCompleted();
+                    }
+
+                    break;
+            }
+        }
+
+        public async Task NotifyMatchmakingItemSelected(ServerMultiplayerRoom room, int userId, long playlistItemId)
+        {
+            await context.Clients.Groups(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemSelected), userId, playlistItemId);
+        }
+
+        public async Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId)
+        {
+            await context.Clients.Groups(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemDeselected), userId, playlistItemId);
         }
 
         private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)

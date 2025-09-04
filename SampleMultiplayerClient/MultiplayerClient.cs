@@ -7,14 +7,16 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
+using osu.Framework.Extensions.TypeExtensions;
 using osu.Game.Online;
 using osu.Game.Online.API;
+using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 
 namespace SampleMultiplayerClient
 {
-    public class MultiplayerClient : IMultiplayerClient, IMultiplayerServer
+    public class MultiplayerClient : IMultiplayerClient, IMultiplayerServer, IMatchmakingClient
     {
         private readonly HubConnection connection;
 
@@ -47,6 +49,15 @@ namespace SampleMultiplayerClient
             connection.On<long>(nameof(IMultiplayerClient.PlaylistItemRemoved), ((IMultiplayerClient)this).PlaylistItemRemoved);
             connection.On<int, long, string>(nameof(IMultiplayerClient.Invited), ((IMultiplayerClient)this).Invited);
             connection.On(nameof(IStatefulUserHubClient.DisconnectRequested), ((IStatefulUserHubClient)this).DisconnectRequested);
+
+            connection.On(nameof(IMatchmakingClient.MatchmakingQueueJoined), ((IMatchmakingClient)this).MatchmakingQueueJoined);
+            connection.On(nameof(IMatchmakingClient.MatchmakingQueueLeft), ((IMatchmakingClient)this).MatchmakingQueueLeft);
+            connection.On(nameof(IMatchmakingClient.MatchmakingRoomInvited), ((IMatchmakingClient)this).MatchmakingRoomInvited);
+            connection.On<long, string>(nameof(IMatchmakingClient.MatchmakingRoomReady), ((IMatchmakingClient)this).MatchmakingRoomReady);
+            connection.On<MatchmakingLobbyStatus>(nameof(IMatchmakingClient.MatchmakingLobbyStatusChanged), ((IMatchmakingClient)this).MatchmakingLobbyStatusChanged);
+            connection.On<MatchmakingQueueStatus>(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), ((IMatchmakingClient)this).MatchmakingQueueStatusChanged);
+            connection.On<int, long>(nameof(IMatchmakingClient.MatchmakingItemSelected), ((IMatchmakingClient)this).MatchmakingItemSelected);
+            connection.On<int, long>(nameof(IMatchmakingClient.MatchmakingItemDeselected), ((IMatchmakingClient)this).MatchmakingItemDeselected);
         }
 
         public MultiplayerUserState State { get; private set; }
@@ -270,6 +281,70 @@ namespace SampleMultiplayerClient
         public Task PlaylistItemChanged(MultiplayerPlaylistItem item)
         {
             Console.WriteLine($"Playlist item changed (id: {item.ID} beatmap: {item.BeatmapID}, ruleset: {item.RulesetID})");
+            return Task.CompletedTask;
+        }
+
+        public Task MatchmakingJoinLobby() => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingJoinLobby));
+
+        public Task MatchmakingLeaveLobby() => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingLeaveLobby));
+
+        public Task MatchmakingJoinQueue(MatchmakingSettings settings) => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingJoinQueue), settings);
+
+        public Task MatchmakingLeaveQueue() => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingLeaveQueue));
+
+        public Task MatchmakingAcceptInvitation() => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingAcceptInvitation));
+
+        public Task MatchmakingDeclineInvitation() => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingDeclineInvitation));
+
+        public Task MatchmakingToggleSelection(long playlistItemId) => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingToggleSelection), playlistItemId);
+
+        public Task MatchmakingSkipToNextStage() => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingSkipToNextStage));
+
+        public Task MatchmakingQueueJoined()
+        {
+            Console.WriteLine("Matchmaking queue joined.");
+            return Task.CompletedTask;
+        }
+
+        public Task MatchmakingQueueLeft()
+        {
+            Console.WriteLine("Matchmaking queue left.");
+            return Task.CompletedTask;
+        }
+
+        public Task MatchmakingRoomInvited()
+        {
+            Console.WriteLine("Invited to a matchmaking match.");
+            return Task.CompletedTask;
+        }
+
+        public Task MatchmakingRoomReady(long roomId, string password)
+        {
+            Console.WriteLine($"Matchmaking room ready (id: {roomId}).");
+            return Task.CompletedTask;
+        }
+
+        public Task MatchmakingLobbyStatusChanged(MatchmakingLobbyStatus status)
+        {
+            Console.WriteLine($"Matchmaking lobby status changed (users-in-queue: {status.UsersInQueue.Length}).");
+            return Task.CompletedTask;
+        }
+
+        public Task MatchmakingQueueStatusChanged(MatchmakingQueueStatus status)
+        {
+            Console.WriteLine($"Matchmaking queue status changed (status: {status.GetType().ReadableName()}).");
+            return Task.CompletedTask;
+        }
+
+        public Task MatchmakingItemSelected(int userId, long playlistItemId)
+        {
+            Console.WriteLine($"Matchmaking playlist item selected: (user: {userId}, item: {playlistItemId}).");
+            return Task.CompletedTask;
+        }
+
+        public Task MatchmakingItemDeselected(int userId, long playlistItemId)
+        {
+            Console.WriteLine($"Matchmaking playlist item deselected: (user: {userId}, item: {playlistItemId}).");
             return Task.CompletedTask;
         }
 

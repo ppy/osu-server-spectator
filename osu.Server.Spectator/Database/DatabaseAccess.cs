@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -82,6 +83,17 @@ namespace osu.Server.Spectator.Database
                 {
                     BeatmapId = beatmapId
                 });
+        }
+
+        public async Task<database_beatmap[]> GetBeatmapsAsync(int[] beatmapIds)
+        {
+            var connection = await getConnectionAsync();
+
+            return (await connection.QueryAsync<database_beatmap>(
+                "SELECT beatmap_id, beatmapset_id, checksum, approved, difficultyrating, playmode, osu_file_version FROM osu_beatmaps WHERE beatmap_id IN @BeatmapIds AND deleted_at IS NULL", new
+                {
+                    BeatmapIds = beatmapIds
+                })).ToArray();
         }
 
         public async Task<database_beatmap[]> GetBeatmapsAsync(int beatmapSetId)
@@ -488,6 +500,32 @@ namespace osu.Server.Spectator.Database
                 new { scoreId = scoreId });
         }
 
+        /// <summary>
+        /// Retrieves ALL score data for scores on a playlist item.
+        /// </summary>
+        /// <remarks>
+        /// This should be used sparingly as it queries full rows.
+        /// </remarks>
+        /// <param name="playlistItemId">The playlist item.</param>
+        public async Task<IEnumerable<SoloScore>> GetAllScoresForPlaylistItem(long playlistItemId)
+        {
+            var connection = await getConnectionAsync();
+
+            return (await connection.QueryAsync<SoloScore>(
+                "SELECT * FROM `scores` "
+                + "JOIN `multiplayer_score_links` ON `multiplayer_score_links`.`score_id` = `scores`.`id` "
+                + "WHERE `multiplayer_score_links`.`playlist_item_id` = @playlistItemId", new
+                {
+                    playlistItemId = playlistItemId
+                }));
+        }
+
+        /// <summary>
+        /// Retrieves the <see cref="SoloScore.id">ID</see> and <see cref="SoloScore.total_score">total score</see> for passing scores on a playlist item.
+        /// Retrieves the passing score ids and total scores on a playlist item.
+        /// </summary>
+        /// <param name="playlistItemId">The playlist item.</param>
+        /// <param name="afterScoreId">The score ID after which to retrieve.</param>
         public async Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0)
         {
             var connection = await getConnectionAsync();
@@ -561,6 +599,80 @@ namespace osu.Server.Spectator.Database
                     visible = visible,
                     userId = userId
                 });
+        }
+
+        public async Task<float> GetUserPPAsync(int userId, int rulesetId)
+        {
+            string statsTable = rulesetId switch
+            {
+                0 => "osu_user_stats",
+                1 => "osu_user_stats_taiko",
+                2 => "osu_user_stats_fruits",
+                3 => "osu_user_stats_mania",
+                _ => throw new ArgumentOutOfRangeException(nameof(rulesetId), rulesetId, null)
+            };
+
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<float>($"SELECT `rank_score` FROM {statsTable} WHERE `user_id` = @userId", new
+            {
+                userId = userId
+            });
+        }
+
+        public async Task<matchmaking_pool[]> GetMatchmakingPoolsAsync(int rulesetId)
+        {
+            var connection = await getConnectionAsync();
+
+            return (await connection.QueryAsync<matchmaking_pool>("SELECT * FROM `matchmaking_pools` WHERE `ruleset_id` = @RulesetId AND `active` = 1", new
+            {
+                RulesetId = rulesetId
+            })).ToArray();
+        }
+
+        public async Task<matchmaking_pool_beatmap[]> GetMatchmakingPoolBeatmapsAsync(int poolId)
+        {
+            var connection = await getConnectionAsync();
+
+            return (await connection.QueryAsync<matchmaking_pool_beatmap>("SELECT p.*, b.checksum, b.difficultyrating FROM `matchmaking_pool_beatmaps` p "
+                                                                          + "JOIN `osu_beatmaps` b ON p.beatmap_id = b.beatmap_id "
+                                                                          + "WHERE p.pool_id = @PoolId", new
+            {
+                PoolId = poolId
+            })).ToArray();
+        }
+
+        public async Task<matchmaking_user_stats> GetMatchmakingUserStatsAsync(int userId, int rulesetId)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<matchmaking_user_stats>("SELECT * FROM `matchmaking_user_stats` WHERE `user_id` = @UserId AND `ruleset_id` = @RulesetId", new
+            {
+                UserId = userId,
+                RulesetId = rulesetId
+            }) ?? new matchmaking_user_stats
+            {
+                user_id = (uint)userId,
+                ruleset_id = (ushort)rulesetId
+            };
+        }
+
+        public async Task UpdateMatchmakingUserStatsAsync(matchmaking_user_stats stats)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync("INSERT INTO `matchmaking_user_stats` (`user_id`, `ruleset_id`, `first_placements`, `total_points`, `created_at`, `updated_at`) "
+                                          + "VALUES (@UserId, @RulesetId, @FirstPlacements, @TotalPoints, NOW(), NOW()) "
+                                          + "ON DUPLICATE KEY UPDATE "
+                                          + "`first_placements` = @FirstPlacements, "
+                                          + "`total_points` = @TotalPoints, "
+                                          + "`updated_at` = NOW()", new
+            {
+                UserId = stats.user_id,
+                RulesetId = stats.ruleset_id,
+                FirstPlacements = stats.first_placements,
+                TotalPoints = stats.total_points
+            });
         }
 
         public void Dispose()

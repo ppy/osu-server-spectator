@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using osu.Framework.Utils;
 using osu.Game.Online;
 using osu.Game.Online.API;
+using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 
@@ -130,6 +131,34 @@ namespace SampleMultiplayerClient
 
                         case "startmatch":
                             await targetClient.StartMatch();
+                            break;
+
+                        case "mmjoinlobby":
+                            await targetClient.MatchmakingJoinLobby();
+                            break;
+
+                        case "mmleavelobby":
+                            await targetClient.MatchmakingLeaveLobby();
+                            break;
+
+                        case "mmjoinqueue":
+                            await targetClient.MatchmakingJoinQueue(new MatchmakingSettings());
+                            break;
+
+                        case "mmleavequeue":
+                            await targetClient.MatchmakingLeaveQueue();
+                            break;
+
+                        case "mmaccept":
+                            await targetClient.MatchmakingAcceptInvitation();
+                            break;
+
+                        case "mmdecline":
+                            await targetClient.MatchmakingDeclineInvitation();
+                            break;
+
+                        case "mmselect":
+                            await targetClient.MatchmakingToggleSelection(int.Parse(args[0]));
                             break;
 
                         default:
