@@ -17,6 +17,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
     public class MatchmakingMatchController : IMatchController
     {
         /// <summary>
+        /// Duration users are given to enter the room before it automatically starts.
+        /// This is not expected to run to completion.
+        /// </summary>
+        private const int stage_waiting_for_clients_join_time = 60;
+
+        /// <summary>
         /// Duration users are given to view standings at the round start screen.
         /// </summary>
         private const int stage_round_start_time = 10;
@@ -77,6 +83,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
         private readonly int rulesetId;
 
+        private int joinedUserCount;
+
         public MatchmakingMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
         {
             this.room = room;
@@ -93,6 +101,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         public async Task Initialise()
         {
             await hub.NotifyMatchRoomStateChanged(room);
+            await startCountdown(TimeSpan.FromSeconds(stage_waiting_for_clients_join_time), stageRoundWarmupTime);
         }
 
         public Task HandleSettingsChanged()
@@ -123,7 +132,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             switch (state.Stage)
             {
                 case MatchmakingStage.WaitingForClientsJoin:
-                    if (room.Users.Count == MATCHMAKING_ROOM_SIZE)
+                    if (++joinedUserCount == MATCHMAKING_ROOM_SIZE)
                         await stageRoundWarmupTime(room);
                     break;
             }
