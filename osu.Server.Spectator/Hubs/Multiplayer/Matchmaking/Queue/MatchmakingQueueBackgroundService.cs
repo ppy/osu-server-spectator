@@ -83,11 +83,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             using (var db = databaseFactory.GetInstance())
                 user.Rank = (int)await db.GetUserPPAsync(state.UserId, state.Settings.RulesetId);
 
-            MatchmakingQueue queue = queues.GetOrAdd(state.Settings, _ => new MatchmakingQueue
-            {
-                RulesetId = state.Settings.RulesetId
-            });
-
+            MatchmakingQueue queue = queues.GetOrAdd(state.Settings, _ => new MatchmakingQueue { Settings = state.Settings });
             await processBundle(queue.Add(user));
         }
 
@@ -134,7 +130,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, "Failed to update the matchmaking queue for ruleset {rulesetId}.", queue.RulesetId);
+                        logger.LogError(ex, "Failed to update the matchmaking queue for ruleset {rulesetId}.", queue.Settings.RulesetId);
                         SentrySdk.CaptureException(ex);
                     }
                 }
@@ -190,7 +186,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         MatchType = MatchType.Matchmaking,
                         Password = password
                     },
-                    Playlist = await queryPlaylistItems(bundle.Queue.RulesetId)
+                    Playlist = await queryPlaylistItems(bundle.Queue.Settings)
                 });
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
@@ -200,17 +196,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
         }
 
-        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(int rulesetId)
+        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(MatchmakingSettings settings)
         {
             using (var db = databaseFactory.GetInstance())
             {
-                matchmaking_pool pool = (await db.GetMatchmakingPoolsAsync(rulesetId)).Last();
+                matchmaking_pool pool = (await db.GetMatchmakingPoolsAsync(settings.RulesetId, settings.Variant)).Last();
                 matchmaking_pool_beatmap[] beatmaps = await db.GetMatchmakingPoolBeatmapsAsync(pool.id);
                 return beatmaps.Select(b => new MultiplayerPlaylistItem
                 {
                     BeatmapID = b.beatmap_id,
                     BeatmapChecksum = b.checksum!,
-                    RulesetID = rulesetId,
+                    RulesetID = settings.RulesetId,
                     StarRating = b.difficultyrating,
                 }).ToArray();
             }

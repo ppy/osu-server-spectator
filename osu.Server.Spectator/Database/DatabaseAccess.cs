@@ -620,13 +620,14 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<matchmaking_pool[]> GetMatchmakingPoolsAsync(int rulesetId)
+        public async Task<matchmaking_pool[]> GetMatchmakingPoolsAsync(int rulesetId, int variantId)
         {
             var connection = await getConnectionAsync();
 
-            return (await connection.QueryAsync<matchmaking_pool>("SELECT * FROM `matchmaking_pools` WHERE `ruleset_id` = @RulesetId AND `active` = 1", new
+            return (await connection.QueryAsync<matchmaking_pool>("SELECT * FROM `matchmaking_pools` WHERE `ruleset_id` = @RulesetId AND `variant_id` = @VariantId AND `active` = 1", new
             {
-                RulesetId = rulesetId
+                RulesetId = rulesetId,
+                VariantId = variantId
             })).ToArray();
         }
 

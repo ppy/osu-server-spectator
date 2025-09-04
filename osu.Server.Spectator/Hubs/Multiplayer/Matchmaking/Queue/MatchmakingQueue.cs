@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using osu.Game.Online.Matchmaking;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
@@ -20,9 +21,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public TimeSpan InviteTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
-        /// The ruleset ID for this queue.
+        /// The settings for this queue.
         /// </summary>
-        public int RulesetId { get; set; }
+        public MatchmakingSettings Settings { get; set; } = new MatchmakingSettings();
 
         /// <summary>
         /// All users active in the matchmaking queue.
