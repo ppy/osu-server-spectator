@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private const string lobby_users_group = "matchmaking-lobby-users";
 
-        private readonly ConcurrentDictionary<MatchmakingSettings, MatchmakingQueue> queues = new ConcurrentDictionary<MatchmakingSettings, MatchmakingQueue>();
+        private readonly ConcurrentDictionary<int, MatchmakingQueue> poolQueues = new ConcurrentDictionary<int, MatchmakingQueue>();
 
         private readonly IHubContext<MultiplayerHub> hub;
         private readonly ISharedInterop sharedInterop;
@@ -54,7 +54,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public bool IsInQueue(MatchmakingClientState state)
         {
-            foreach ((_, MatchmakingQueue queue) in queues)
+            foreach ((_, MatchmakingQueue queue) in poolQueues)
             {
                 if (queue.IsInQueue(new MatchmakingQueueUser(state.ConnectionId)))
                     return true;
@@ -73,27 +73,31 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             await hub.Groups.RemoveFromGroupAsync(state.ConnectionId, lobby_users_group);
         }
 
-        public async Task AddToQueueAsync(MatchmakingClientState state)
+        public async Task AddToQueueAsync(MatchmakingClientState state, int poolId)
         {
+            matchmaking_pool? pool;
+
+            using (var db = databaseFactory.GetInstance())
+                pool = await db.GetMatchmakingPoolAsync(poolId);
+
+            if (pool == null)
+                throw new InvalidStateException($"Pool not found: {poolId}");
+
             MatchmakingQueueUser user = new MatchmakingQueueUser(state.ConnectionId)
             {
                 UserId = state.UserId
             };
 
             using (var db = databaseFactory.GetInstance())
-                user.Rank = (int)await db.GetUserPPAsync(state.UserId, state.Settings.RulesetId);
+                user.Rank = (int)await db.GetUserPPAsync(state.UserId, pool.ruleset_id);
 
-            MatchmakingQueue queue = queues.GetOrAdd(state.Settings, _ => new MatchmakingQueue
-            {
-                RulesetId = state.Settings.RulesetId
-            });
-
+            MatchmakingQueue queue = poolQueues.GetOrAdd(poolId, _ => new MatchmakingQueue(pool));
             await processBundle(queue.Add(user));
         }
 
         public async Task RemoveFromQueueAsync(MatchmakingClientState state)
         {
-            foreach ((_, MatchmakingQueue queue) in queues)
+            foreach ((_, MatchmakingQueue queue) in poolQueues)
                 await processBundle(queue.Remove(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
@@ -102,13 +106,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             // Immediately notify the incoming user of their intent to join the match.
             await hub.Clients.Client(state.ConnectionId).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.JoiningMatch());
 
-            foreach ((_, MatchmakingQueue queue) in queues)
+            foreach ((_, MatchmakingQueue queue) in poolQueues)
                 await processBundle(queue.MarkInvitationAccepted(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
         public async Task DeclineInvitationAsync(MatchmakingClientState state)
         {
-            foreach ((_, MatchmakingQueue queue) in queues)
+            foreach ((_, MatchmakingQueue queue) in poolQueues)
                 await processBundle(queue.MarkInvitationDeclined(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
@@ -126,7 +130,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     SentrySdk.CaptureException(ex);
                 }
 
-                foreach ((_, MatchmakingQueue queue) in queues)
+                foreach ((_, MatchmakingQueue queue) in poolQueues)
                 {
                     try
                     {
@@ -134,7 +138,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, "Failed to update the matchmaking queue for ruleset {rulesetId}.", queue.RulesetId);
+                        logger.LogError(ex, "Failed to update the matchmaking queue for pool {poolId}.", queue.Pool.id);
                         SentrySdk.CaptureException(ex);
                     }
                 }
@@ -148,7 +152,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             if (DateTimeOffset.Now - lastLobbyUpdateTime < lobby_update_rate)
                 return;
 
-            MatchmakingQueueUser[] users = queues.Values.SelectMany(queue => queue.GetAllUsers()).ToArray();
+            MatchmakingQueueUser[] users = poolQueues.Values.SelectMany(queue => queue.GetAllUsers()).ToArray();
             Random.Shared.Shuffle(users);
             queuedUsersSample = users.Take(50).Select(u => u.UserId).ToArray();
 
@@ -190,7 +194,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         MatchType = MatchType.Matchmaking,
                         Password = password
                     },
-                    Playlist = await queryPlaylistItems(bundle.Queue.RulesetId)
+                    Playlist = await queryPlaylistItems(bundle.Queue.Pool)
                 });
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
@@ -200,17 +204,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
         }
 
-        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(int rulesetId)
+        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool)
         {
             using (var db = databaseFactory.GetInstance())
             {
-                matchmaking_pool pool = (await db.GetMatchmakingPoolsAsync(rulesetId)).Last();
                 matchmaking_pool_beatmap[] beatmaps = await db.GetMatchmakingPoolBeatmapsAsync(pool.id);
                 return beatmaps.Select(b => new MultiplayerPlaylistItem
                 {
                     BeatmapID = b.beatmap_id,
                     BeatmapChecksum = b.checksum!,
-                    RulesetID = rulesetId,
+                    RulesetID = pool.ruleset_id,
                     StarRating = b.difficultyrating,
                 }).ToArray();
             }

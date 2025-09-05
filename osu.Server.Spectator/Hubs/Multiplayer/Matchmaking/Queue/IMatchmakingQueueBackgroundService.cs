@@ -28,7 +28,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// Adds a user to the matchmaking queue.
         /// </summary>
-        Task AddToQueueAsync(MatchmakingClientState state);
+        Task AddToQueueAsync(MatchmakingClientState state, int poolId);
 
         /// <summary>
         /// Removes a user from the matchmaking queue.

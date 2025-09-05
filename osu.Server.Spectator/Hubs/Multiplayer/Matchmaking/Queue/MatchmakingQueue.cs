@@ -4,11 +4,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
     public class MatchmakingQueue
     {
+        /// <summary>
+        /// The pool this queue corresponds to.
+        /// </summary>
+        public readonly matchmaking_pool Pool;
+
         /// <summary>
         /// The required room size.
         /// </summary>
@@ -18,11 +24,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// The time before users are automatically removed from the queue if they haven't accepted the invitation.
         /// </summary>
         public TimeSpan InviteTimeout { get; set; } = TimeSpan.FromSeconds(30);
-
-        /// <summary>
-        /// The ruleset ID for this queue.
-        /// </summary>
-        public int RulesetId { get; set; }
 
         /// <summary>
         /// All users active in the matchmaking queue.
@@ -38,6 +39,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// A running counter for the next group ID.
         /// </summary>
         private uint nextGroupId = 1;
+
+        public MatchmakingQueue(matchmaking_pool pool)
+        {
+            Pool = pool;
+        }
 
         /// <summary>
         /// Determines whether a given user is in the matchmaking queue.
