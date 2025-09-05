@@ -24,12 +24,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// The rate at which the matchmaking queue is updated.
         /// </summary>
-        private static readonly TimeSpan queue_update_rate = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan queue_update_rate = AppSettings.MatchmakingQueueUpdateRate;
 
         /// <summary>
-        /// The rate at which actively searching users are sent periodic status updates.
+        /// The rate at which users are sent lobby status updates.
         /// </summary>
-        private static readonly TimeSpan periodic_update_rate = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan lobby_update_rate = AppSettings.MatchmakingLobbyUpdateRate;
 
         private const string lobby_users_group = "matchmaking-lobby-users";
 
@@ -149,7 +149,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private async Task updateLobby()
         {
-            if (DateTimeOffset.Now - lastLobbyUpdateTime < periodic_update_rate)
+            if (DateTimeOffset.Now - lastLobbyUpdateTime < lobby_update_rate)
                 return;
 
             MatchmakingQueueUser[] users = poolQueues.Values.SelectMany(queue => queue.GetAllUsers()).ToArray();

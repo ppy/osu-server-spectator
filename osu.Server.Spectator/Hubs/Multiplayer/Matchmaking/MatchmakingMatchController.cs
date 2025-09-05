@@ -135,7 +135,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             switch (state.Stage)
             {
                 case MatchmakingStage.WaitingForClientsJoin:
-                    if (++joinedUserCount == room_size)
+                    if (++joinedUserCount >= room_size)
                         await stageRoundWarmupTime(room);
                     break;
             }
