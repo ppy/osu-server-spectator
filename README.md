@@ -32,3 +32,5 @@ For advanced testing purposes.
 | `MATCHMAKING_ROOM_SIZE` | The size of matchmaking rooms.                                                                                                                                                                                                                 | 8 |
 | `MATCHMAKING_ROOM_ROUNDS` | The number of rounds in a matchmaking room.                                                                                                                                                                                                    | 5 |
 | `MATCHMAKING_ALLOW_SKIP` | Whether users are allowed to skip matchmaking stages.                                                                                                                                                                                          | false | 
+| `MATCHMAKING_LOBBY_UPDATE_RATE` | The rate (in seconds) at which to update the matchmaking lobby | 5 |
+| `MATCHMAKING_QUEUE_UPDATE_RATE` | The rate (in seconds) at which to update the matchmaking queues | 1 |
