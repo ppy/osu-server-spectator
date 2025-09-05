@@ -225,10 +225,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private IEnumerable<MatchmakingQueueUser[]> groupAvailableUsers()
         {
-            return matchmakingUsers
-                   .Where(u => u.Group == null)
-                   .OrderByDescending(u => u.Rank)
-                   .Chunk(RoomSize);
+            IEnumerable<MatchmakingQueueUser> users = matchmakingUsers
+                                                      .Where(u => u.Group == null)
+                                                      .OrderByDescending(u => u.Rank);
+
+            return RoomSize > 0
+                ? users.Chunk(RoomSize)
+                : [users.ToArray()];
         }
     }
 }
