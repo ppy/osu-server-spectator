@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
@@ -16,6 +17,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
     /// <summary>
     /// Abstract class that implements the logic for a generic multiplayer room.
     /// </summary>
+    [NonController]
     public abstract class StandardMatchController : IMatchController
     {
         public const int HOST_PLAYLIST_LIMIT = 50;
