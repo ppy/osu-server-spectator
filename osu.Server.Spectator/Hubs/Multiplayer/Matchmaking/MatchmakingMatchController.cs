@@ -246,9 +246,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageWaitingForClientsBeatmapDownload(ServerMultiplayerRoom _)
         {
-            long lastPlaylistItem = room.Settings.PlaylistItemId;
             room.Settings.PlaylistItemId = state.CandidateItem;
-            await hub.NotifySettingsChanged(room, lastPlaylistItem != room.Settings.PlaylistItemId);
+            await hub.NotifySettingsChanged(room, true);
 
             if (allUsersReady())
                 await stageGameplayWarmupTime(room);
