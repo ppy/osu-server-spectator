@@ -246,17 +246,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageWaitingForClientsBeatmapDownload(ServerMultiplayerRoom _)
         {
-            long lastPlaylistItem = room.Settings.PlaylistItemId;
             room.Settings.PlaylistItemId = state.CandidateItem;
-            await hub.NotifySettingsChanged(room, lastPlaylistItem != room.Settings.PlaylistItemId);
+            await hub.NotifySettingsChanged(room, true);
 
-            if (allUsersReady())
-                await stageGameplayWarmupTime(room);
-            else
-            {
-                await changeStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
-                await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => anyUsersReady() ? stageGameplayWarmupTime(room) : stageWaitingForClientsBeatmapDownload(room));
-            }
+            await changeStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+            await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => anyUsersReady() ? stageGameplayWarmupTime(room) : stageWaitingForClientsBeatmapDownload(room));
         }
 
         private async Task stageGameplayWarmupTime(ServerMultiplayerRoom _)
