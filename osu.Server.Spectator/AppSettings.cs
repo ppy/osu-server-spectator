@@ -46,6 +46,7 @@ namespace osu.Server.Spectator
         public static bool MatchmakingRoomAllowSkip { get; }
         public static TimeSpan MatchmakingLobbyUpdateRate { get; }
         public static TimeSpan MatchmakingQueueUpdateRate { get; }
+        public static TimeSpan MatchmakingMinimumTimeInQueue { get; }
 
         static AppSettings()
         {
@@ -83,6 +84,9 @@ namespace osu.Server.Spectator
             MatchmakingQueueUpdateRate = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_UPDATE_RATE"), out int mmQueueUpdateRate)
                 ? TimeSpan.FromSeconds(mmQueueUpdateRate)
                 : TimeSpan.FromSeconds(1);
+            MatchmakingMinimumTimeInQueue = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_MINIMUM_TIME_IN_QUEUE"), out int mmMinimumTimeInQueue)
+                ? TimeSpan.FromSeconds(mmMinimumTimeInQueue)
+                : TimeSpan.FromSeconds(10);
         }
     }
 }

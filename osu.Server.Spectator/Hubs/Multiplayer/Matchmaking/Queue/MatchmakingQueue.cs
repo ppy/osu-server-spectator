@@ -26,6 +26,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public TimeSpan InviteTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
+        /// The minimum time users must sit in the queue before they're matched.
+        /// </summary>
+        public TimeSpan MinimumQueueTime { get; set; } = AppSettings.MatchmakingMinimumTimeInQueue;
+
+        /// <summary>
         /// All users active in the matchmaking queue.
         /// </summary>
         private readonly HashSet<MatchmakingQueueUser> matchmakingUsers = new HashSet<MatchmakingQueueUser>();
@@ -78,7 +83,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             lock (queueLock)
             {
                 if (matchmakingUsers.Add(user))
+                {
+                    user.QueueEnterTime = DateTimeOffset.Now;
                     bundle.AddedUsers.Add(user);
+                }
             }
 
             return bundle;
@@ -233,6 +241,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
             IEnumerable<MatchmakingQueueUser> users = matchmakingUsers
                                                       .Where(u => u.Group == null)
+                                                      .Where(u => DateTimeOffset.Now - u.QueueEnterTime > MinimumQueueTime)
                                                       .OrderByDescending(u => u.Rank);
 
             return RoomSize > 0

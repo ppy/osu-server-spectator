@@ -21,6 +21,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public int UserId { get; init; }
 
         /// <summary>
+        /// The time at which this user entered the matchmaking queue.
+        /// </summary>
+        public DateTimeOffset QueueEnterTime { get; set; }
+
+        /// <summary>
         /// The time at which this user was invited to the matchmaking room.
         /// </summary>
         public DateTimeOffset InviteStartTime { get; set; }
