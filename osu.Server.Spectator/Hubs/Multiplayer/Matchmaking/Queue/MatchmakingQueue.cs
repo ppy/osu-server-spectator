@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Internal;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
@@ -26,17 +27,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public TimeSpan InviteTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
+        /// The system clock.
+        /// </summary>
+        public ISystemClock Clock { get; set; } = new SystemClock();
+
+        /// <summary>
         /// The initial ELO search radius.
         /// </summary>
-        private const double elo_search_radius_start = 20;
+        public double EloInitialSearchRadius { get; set; } = AppSettings.MatchmakingEloInitialRadius;
 
         /// <summary>
         /// The amount of time (in seconds) before each doubling of the ELO search radius.
         /// </summary>
-        /// <remarks>
-        /// The search will start at 20 ELO difference and double every 15 seconds. After 90 seconds it will cover all possible users.
-        /// </remarks>
-        private const double elo_search_radius_double = 15;
+        public double EloSearchRadiusIncreaseTime { get; set; } = AppSettings.MatchmakingEloRadiusIncreaseTime;
 
         /// <summary>
         /// All users active in the matchmaking queue.
@@ -92,7 +95,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 if (matchmakingUsers.Add(user))
                 {
-                    user.SearchStartTime = DateTimeOffset.Now;
+                    user.SearchStartTime = Clock.UtcNow;
                     bundle.AddedUsers.Add(user);
                 }
             }
@@ -189,7 +192,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                     foreach (var user in users)
                     {
-                        user.InviteStartTime = DateTimeOffset.Now;
+                        user.InviteStartTime = Clock.UtcNow;
                         user.Group = group;
                     }
 
@@ -200,7 +203,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 foreach (var user in matchmakingUsers.Where(u => u.Group != null && !u.InviteAccepted))
                 {
-                    if (DateTimeOffset.Now - user.InviteStartTime > InviteTimeout)
+                    if (Clock.UtcNow - user.InviteStartTime > InviteTimeout)
                         timedOutUsers.Add(user);
                 }
 
@@ -309,8 +312,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 double distance = Math.Min(leftDistance, rightDistance);
 
-                TimeSpan searchTime = DateTimeOffset.Now - pivotUser.SearchStartTime;
-                double searchRadius = elo_search_radius_start * Math.Pow(2, searchTime.TotalSeconds / elo_search_radius_double);
+                TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
+                double searchRadius = EloInitialSearchRadius * Math.Pow(2, searchTime.TotalSeconds / EloSearchRadiusIncreaseTime);
 
                 if (distance > searchRadius)
                     break;

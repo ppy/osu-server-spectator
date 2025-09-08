@@ -47,6 +47,22 @@ namespace osu.Server.Spectator
         public static TimeSpan MatchmakingLobbyUpdateRate { get; }
         public static TimeSpan MatchmakingQueueUpdateRate { get; }
 
+        /// <summary>
+        /// The initial ELO search radius.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to 20.
+        /// </remarks>
+        public static double MatchmakingEloInitialRadius { get; } = 20;
+
+        /// <summary>
+        /// The amount of time (in seconds) before each doubling of the ELO search radius.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to doubling every 15 seconds. After 90 seconds it will cover all possible users.
+        /// </remarks>
+        public static double MatchmakingEloRadiusIncreaseTime { get; } = 15;
+
         static AppSettings()
         {
             SaveReplays = Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
@@ -83,6 +99,12 @@ namespace osu.Server.Spectator
             MatchmakingQueueUpdateRate = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_UPDATE_RATE"), out int mmQueueUpdateRate)
                 ? TimeSpan.FromSeconds(mmQueueUpdateRate)
                 : TimeSpan.FromSeconds(1);
+            MatchmakingEloInitialRadius = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ELO_INITIAL_RADIUS"), out int mmEloInitialRadius)
+                ? mmEloInitialRadius
+                : MatchmakingEloInitialRadius;
+            MatchmakingEloRadiusIncreaseTime = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ELO_RADIUS_INCREASE_TIME"), out int mmEloRadiusIncreaseTime)
+                ? mmEloRadiusIncreaseTime
+                : MatchmakingEloRadiusIncreaseTime;
         }
     }
 }
