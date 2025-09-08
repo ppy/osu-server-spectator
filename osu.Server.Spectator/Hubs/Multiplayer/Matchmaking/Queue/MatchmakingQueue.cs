@@ -26,6 +26,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public TimeSpan InviteTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
+        /// The initial ELO search radius.
+        /// </summary>
+        private const double elo_search_radius_start = 20;
+
+        /// <summary>
+        /// The amount of time (in seconds) before each doubling of the ELO search radius.
+        /// </summary>
+        /// <remarks>
+        /// The search will start at 20 ELO difference and double every 15 seconds. After 90 seconds it will cover all possible users.
+        /// </remarks>
+        private const double elo_search_radius_double = 15;
+
+        /// <summary>
         /// All users active in the matchmaking queue.
         /// </summary>
         private readonly HashSet<MatchmakingQueueUser> matchmakingUsers = new HashSet<MatchmakingQueueUser>();
@@ -78,7 +91,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             lock (queueLock)
             {
                 if (matchmakingUsers.Add(user))
+                {
+                    user.SearchStartTime = DateTimeOffset.Now;
                     bundle.AddedUsers.Add(user);
+                }
             }
 
             return bundle;
@@ -164,7 +180,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             lock (queueLock)
             {
-                foreach (MatchmakingQueueUser[] users in groupAvailableUsers())
+                foreach (MatchmakingQueueUser[] users in matchUsers())
                 {
                     if (users.Length < RoomSize)
                         break;
@@ -229,15 +245,80 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             return bundle;
         }
 
-        private IEnumerable<MatchmakingQueueUser[]> groupAvailableUsers()
+        /// <summary>
+        /// Forms <see cref="RoomSize"/> groups of users of similar ELO.
+        /// </summary>
+        private IEnumerable<MatchmakingQueueUser[]> matchUsers()
         {
-            IEnumerable<MatchmakingQueueUser> users = matchmakingUsers
-                                                      .Where(u => u.Group == null)
-                                                      .OrderByDescending(u => u.Rank);
+            List<MatchmakingQueueUser> availableUsers = matchmakingUsers.Where(u => u.Group == null)
+                                                                        .OrderBy(u => u.Rating.Mu)
+                                                                        .ToList();
 
-            return RoomSize > 0
-                ? users.Chunk(RoomSize)
-                : [users.ToArray()];
+            if (availableUsers.Count < RoomSize)
+                return [];
+
+            List<MatchmakingQueueUser[]> results = new List<MatchmakingQueueUser[]>();
+
+            for (int i = 0; i < availableUsers.Count; i++)
+            {
+                HashSet<MatchmakingQueueUser> matches = findMatchesForUser(availableUsers, i);
+
+                if (matches.Count < RoomSize)
+                    continue;
+
+                availableUsers.RemoveAll(matches.Contains);
+                results.Add(matches.ToArray());
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Finds up to <see cref="RoomSize"/> users within a similar ELO of a given user.
+        /// </summary>
+        /// <param name="users">The users in the matchmaking queue.</param>
+        /// <param name="pivotIndex">The index of the user in <paramref name="users"/> to match.</param>
+        /// <returns></returns>
+        private HashSet<MatchmakingQueueUser> findMatchesForUser(IReadOnlyList<MatchmakingQueueUser> users, int pivotIndex)
+        {
+            const double uncertainty = 0;
+
+            // Gradually expand a search from the pivot user until the ELO search radius is exhausted.
+
+            MatchmakingQueueUser pivotUser = users[pivotIndex];
+            HashSet<MatchmakingQueueUser> result = [pivotUser];
+
+            int leftIndex = pivotIndex - 1;
+            int rightIndex = pivotIndex + 1;
+
+            while (result.Count < RoomSize)
+            {
+                MatchmakingQueueUser? leftUser = leftIndex < 0 ? null : users[leftIndex];
+                MatchmakingQueueUser? rightUser = rightIndex >= users.Count ? null : users[rightIndex];
+
+                if (leftUser == null && rightUser == null)
+                    break;
+
+                double leftDistance = leftUser != null
+                    ? Math.Abs(Math.Abs(pivotUser.Rating.Mu - leftUser.Rating.Mu) - (pivotUser.Rating.Sig - leftUser.Rating.Sig) * uncertainty)
+                    : double.MaxValue;
+
+                double rightDistance = rightUser != null
+                    ? Math.Abs(Math.Abs(pivotUser.Rating.Mu - rightUser.Rating.Mu) - (pivotUser.Rating.Sig - rightUser.Rating.Sig) * uncertainty)
+                    : double.MaxValue;
+
+                double distance = Math.Min(leftDistance, rightDistance);
+
+                TimeSpan searchTime = DateTimeOffset.Now - pivotUser.SearchStartTime;
+                double searchRadius = elo_search_radius_start * Math.Pow(2, searchTime.TotalSeconds / elo_search_radius_double);
+
+                if (distance > searchRadius)
+                    break;
+
+                result.Add(leftDistance < rightDistance ? users[leftIndex--] : users[rightIndex++]);
+            }
+
+            return result;
         }
     }
 }

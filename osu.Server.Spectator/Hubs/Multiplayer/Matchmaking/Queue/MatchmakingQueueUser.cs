@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
@@ -11,14 +12,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
     public class MatchmakingQueueUser : IEquatable<MatchmakingQueueUser>
     {
         /// <summary>
-        /// This user's rank.
+        /// This user's rating.
         /// </summary>
-        public int Rank { get; set; }
+        public EloRating Rating { get; set; }
 
         /// <summary>
         /// This user's ID.
         /// </summary>
         public int UserId { get; init; }
+
+        /// <summary>
+        /// The time at which this user started searching for a match.
+        /// </summary>
+        public DateTimeOffset SearchStartTime { get; set; }
 
         /// <summary>
         /// The time at which this user was invited to the matchmaking room.

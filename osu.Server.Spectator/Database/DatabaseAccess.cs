@@ -649,7 +649,7 @@ namespace osu.Server.Spectator.Database
             })).ToArray();
         }
 
-        public async Task<matchmaking_user_stats> GetMatchmakingUserStatsAsync(int userId, int rulesetId)
+        public async Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, int rulesetId)
         {
             var connection = await getConnectionAsync();
 
@@ -657,11 +657,7 @@ namespace osu.Server.Spectator.Database
             {
                 UserId = userId,
                 RulesetId = rulesetId
-            }) ?? new matchmaking_user_stats
-            {
-                user_id = (uint)userId,
-                ruleset_id = (ushort)rulesetId
-            };
+            });
         }
 
         public async Task UpdateMatchmakingUserStatsAsync(matchmaking_user_stats stats)
