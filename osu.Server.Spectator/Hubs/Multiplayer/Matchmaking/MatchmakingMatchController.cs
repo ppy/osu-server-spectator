@@ -303,7 +303,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
                 foreach (var user in state.Users.OrderBy(u => u.Placement))
                 {
-                    matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserId, rulesetId);
+                    matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserId, rulesetId) ?? new matchmaking_user_stats
+                    {
+                        user_id = (uint)user.UserId,
+                        ruleset_id = (ushort)rulesetId
+                    };
 
                     if (user.Placement == 1)
                         stats.first_placements++;
