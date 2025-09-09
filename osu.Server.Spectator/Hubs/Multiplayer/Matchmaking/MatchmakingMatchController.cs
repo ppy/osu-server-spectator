@@ -344,7 +344,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private bool anyUsersReady()
         {
-            return room.Users.All(u => u.State == MultiplayerUserState.Ready);
+            return room.Users.Any(u => u.State == MultiplayerUserState.Ready);
         }
 
         public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
