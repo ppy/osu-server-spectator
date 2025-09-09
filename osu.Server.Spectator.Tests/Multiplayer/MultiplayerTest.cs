@@ -280,16 +280,22 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         protected void InitialiseRoom(long roomId)
+            => InitialiseRoom(roomId, 1);
+
+        protected void InitialiseRoom(long roomId, int playlistItemCount)
         {
             if (playlistItems.All(i => i.room_id != roomId))
             {
-                playlistItems.Add(new multiplayer_playlist_item
+                for (int i = 0; i < playlistItemCount; i++)
                 {
-                    id = ++currentItemId,
-                    room_id = roomId,
-                    beatmap_id = 1234,
-                    owner_id = int.Parse(Hub.Context.UserIdentifier!)
-                });
+                    playlistItems.Add(new multiplayer_playlist_item
+                    {
+                        id = ++currentItemId,
+                        room_id = roomId,
+                        beatmap_id = 1234,
+                        owner_id = int.Parse(Hub.Context.UserIdentifier!)
+                    });
+                }
             }
         }
     }
