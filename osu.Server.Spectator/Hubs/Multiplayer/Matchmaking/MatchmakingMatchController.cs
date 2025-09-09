@@ -174,7 +174,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             }
         }
 
-        public Task SkipToNextRound()
+        public Task SkipToNextStage()
         {
             if (!AppSettings.MatchmakingRoomAllowSkip)
                 throw new InvalidStateException("Skipping matchmaking rounds is not allowed.");
