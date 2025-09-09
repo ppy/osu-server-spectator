@@ -277,7 +277,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
 
-            await updateUserStats();
+            if (state.CurrentRound == total_rounds)
+                await updateUserStats();
 
             await changeStage(MatchmakingStage.ResultsDisplaying);
 
