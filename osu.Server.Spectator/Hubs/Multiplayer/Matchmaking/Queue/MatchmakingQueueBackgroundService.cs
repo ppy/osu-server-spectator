@@ -85,7 +85,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     const int min_elo = 1400;
                     const int max_elo = 1600;
 
-                    // Estimate ELO from PP.
+                    // Estimate Elo from PP.
                     double pp = await db.GetUserPPAsync(state.UserId, pool.ruleset_id);
                     double eloEstimate = min_elo + pp / 25000 * (max_elo - min_elo);
 

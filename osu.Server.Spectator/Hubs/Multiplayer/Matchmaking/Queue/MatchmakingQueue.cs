@@ -32,14 +32,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public ISystemClock Clock { get; set; } = new SystemClock();
 
         /// <summary>
-        /// The initial ELO search radius.
+        /// The initial rating search radius.
         /// </summary>
-        public double EloInitialSearchRadius { get; set; } = AppSettings.MatchmakingEloInitialRadius;
+        public double RatingInitialSearchRadius { get; set; } = AppSettings.MatchmakingRatingInitialRadius;
 
         /// <summary>
-        /// The amount of time (in seconds) before each doubling of the ELO search radius.
+        /// The amount of time (in seconds) before each doubling of the rating search radius.
         /// </summary>
-        public double EloSearchRadiusIncreaseTime { get; set; } = AppSettings.MatchmakingEloRadiusIncreaseTime;
+        public double RatingSearchRadiusIncreaseTime { get; set; } = AppSettings.MatchmakingRatingRadiusIncreaseTime;
 
         /// <summary>
         /// All users active in the matchmaking queue.
@@ -249,7 +249,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
-        /// Forms <see cref="RoomSize"/> groups of users of similar ELO.
+        /// Forms <see cref="RoomSize"/> groups of users of similar rating.
         /// </summary>
         private IEnumerable<MatchmakingQueueUser[]> matchUsers()
         {
@@ -277,7 +277,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
-        /// Finds up to <see cref="RoomSize"/> users within a similar ELO of a given user.
+        /// Finds up to <see cref="RoomSize"/> users within a similar rating of a given user.
         /// </summary>
         /// <param name="users">The users in the matchmaking queue.</param>
         /// <param name="pivotIndex">The index of the user in <paramref name="users"/> to match.</param>
@@ -286,7 +286,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
             const double uncertainty = 0;
 
-            // Gradually expand a search from the pivot user until the ELO search radius is exhausted.
+            // Gradually expand a search from the pivot user until the rating search radius is exhausted.
 
             MatchmakingQueueUser pivotUser = users[pivotIndex];
             HashSet<MatchmakingQueueUser> result = [pivotUser];
@@ -313,7 +313,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 double distance = Math.Min(leftDistance, rightDistance);
 
                 TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
-                double searchRadius = EloInitialSearchRadius * Math.Pow(2, searchTime.TotalSeconds / EloSearchRadiusIncreaseTime);
+                double searchRadius = RatingInitialSearchRadius * Math.Pow(2, searchTime.TotalSeconds / RatingSearchRadiusIncreaseTime);
 
                 if (distance > searchRadius)
                     break;

@@ -110,14 +110,14 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         }
 
         [Fact]
-        public void UsersAtDifferentEloEventuallyFindEachOther()
+        public void UsersAtDifferentRatingsEventuallyFindEachOther()
         {
             CustomSystemClock clock = new CustomSystemClock();
 
             queue.RoomSize = 2;
             queue.Clock = clock;
-            queue.EloInitialSearchRadius = 100;
-            queue.EloSearchRadiusIncreaseTime = 10;
+            queue.RatingInitialSearchRadius = 100;
+            queue.RatingSearchRadiusIncreaseTime = 10;
 
             queue.Add(new MatchmakingQueueUser("1")
             {
@@ -148,8 +148,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             queue.RoomSize = 2;
             queue.Clock = clock;
-            queue.EloInitialSearchRadius = 100;
-            queue.EloSearchRadiusIncreaseTime = 10;
+            queue.RatingInitialSearchRadius = 100;
+            queue.RatingSearchRadiusIncreaseTime = 10;
 
             queue.Add(new MatchmakingQueueUser("1")
             {

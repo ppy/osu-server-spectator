@@ -48,20 +48,20 @@ namespace osu.Server.Spectator
         public static TimeSpan MatchmakingQueueUpdateRate { get; }
 
         /// <summary>
-        /// The initial ELO search radius.
+        /// The initial rating search radius.
         /// </summary>
         /// <remarks>
         /// Defaults to 20.
         /// </remarks>
-        public static double MatchmakingEloInitialRadius { get; } = 20;
+        public static double MatchmakingRatingInitialRadius { get; } = 20;
 
         /// <summary>
-        /// The amount of time (in seconds) before each doubling of the ELO search radius.
+        /// The amount of time (in seconds) before each doubling of the rating search radius.
         /// </summary>
         /// <remarks>
         /// Defaults to doubling every 15 seconds. After 90 seconds it will cover all possible users.
         /// </remarks>
-        public static double MatchmakingEloRadiusIncreaseTime { get; } = 15;
+        public static double MatchmakingRatingRadiusIncreaseTime { get; } = 15;
 
         static AppSettings()
         {
@@ -99,12 +99,12 @@ namespace osu.Server.Spectator
             MatchmakingQueueUpdateRate = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_UPDATE_RATE"), out int mmQueueUpdateRate)
                 ? TimeSpan.FromSeconds(mmQueueUpdateRate)
                 : TimeSpan.FromSeconds(1);
-            MatchmakingEloInitialRadius = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ELO_INITIAL_RADIUS"), out int mmEloInitialRadius)
-                ? mmEloInitialRadius
-                : MatchmakingEloInitialRadius;
-            MatchmakingEloRadiusIncreaseTime = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ELO_RADIUS_INCREASE_TIME"), out int mmEloRadiusIncreaseTime)
-                ? mmEloRadiusIncreaseTime
-                : MatchmakingEloRadiusIncreaseTime;
+            MatchmakingRatingInitialRadius = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_INITIAL_RADIUS"), out int mmRatingInitialRadius)
+                ? mmRatingInitialRadius
+                : MatchmakingRatingInitialRadius;
+            MatchmakingRatingRadiusIncreaseTime = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_RADIUS_INCREASE_TIME"), out int mmRatingRadiusIncreaseTime)
+                ? mmRatingRadiusIncreaseTime
+                : MatchmakingRatingRadiusIncreaseTime;
         }
     }
 }
