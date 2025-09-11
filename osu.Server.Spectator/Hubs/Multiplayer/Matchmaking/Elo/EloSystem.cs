@@ -1,5 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
+//
+// Portions of this file are adapted from Elo-MMR (https://github.com/EbTech/Elo-MMR)
+// See THIRD_PARTY_LICENCES in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
