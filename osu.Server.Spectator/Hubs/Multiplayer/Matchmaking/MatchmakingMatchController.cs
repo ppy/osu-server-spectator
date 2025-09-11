@@ -175,13 +175,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             }
         }
 
-        public Task SkipToNextRound()
+        public void SkipToNextStage(out Task countdownTask)
         {
             if (!AppSettings.MatchmakingRoomAllowSkip)
                 throw new InvalidStateException("Skipping matchmaking rounds is not allowed.");
 
-            _ = room.SkipToEndOfCountdown(room.FindCountdownOfType<MatchmakingStageCountdown>());
-            return Task.CompletedTask;
+            countdownTask = room.SkipToEndOfCountdown(room.FindCountdownOfType<MatchmakingStageCountdown>());
         }
 
         public async Task ToggleSelectionAsync(MultiplayerRoomUser user, long playlistItemId)
@@ -278,7 +277,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
 
-            await updateUserStats();
+            if (state.CurrentRound == total_rounds)
+                await updateUserStats();
 
             await changeStage(MatchmakingStage.ResultsDisplaying);
 
@@ -364,7 +364,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private bool anyUsersReady()
         {
-            return room.Users.All(u => u.State == MultiplayerUserState.Ready);
+            return room.Users.Any(u => u.State == MultiplayerUserState.Ready);
         }
 
         public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
