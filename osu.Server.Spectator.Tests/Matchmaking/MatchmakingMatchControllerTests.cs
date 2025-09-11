@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                     });
 
             Database.Setup(db => db.GetMatchmakingUserStatsAsync(It.IsAny<int>(), It.IsAny<int>()))
-                    .Returns<int, int>((userId, rulesetId) => Task.FromResult(new matchmaking_user_stats
+                    .Returns<int, int>((userId, rulesetId) => Task.FromResult<matchmaking_user_stats?>(new matchmaking_user_stats
                     {
                         user_id = (uint)userId,
                         ruleset_id = (ushort)rulesetId
