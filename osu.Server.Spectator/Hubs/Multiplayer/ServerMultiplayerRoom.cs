@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,46 +12,39 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
+using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
-        private readonly IMultiplayerHubContext hub;
-
-        private MatchTypeImplementation matchTypeImplementation;
-
-        public MatchTypeImplementation MatchTypeImplementation
+        public IMatchController Controller
         {
-            get => matchTypeImplementation;
-            set
-            {
-                if (matchTypeImplementation == value)
-                    return;
-
-                matchTypeImplementation = value;
-
-                foreach (var u in Users)
-                    matchTypeImplementation.HandleUserJoined(u);
-            }
+            get => matchController ?? throw new InvalidOperationException("Room not initialised.");
+            private set => matchController = value;
         }
 
-        public readonly MultiplayerQueue Queue;
+        private readonly IMultiplayerHubContext hub;
+        private readonly IDatabaseFactory dbFactory;
+        private IMatchController? matchController;
 
-        public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub)
+        public ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
             : base(roomId)
         {
             this.hub = hub;
-
-            // just to ensure non-null.
-            matchTypeImplementation = createTypeImplementation(MatchType.HeadToHead);
-            Queue = new MultiplayerQueue(this, hub);
+            this.dbFactory = dbFactory;
         }
 
-        public async Task Initialise(IDatabaseFactory dbFactory)
+        public async Task Initialise()
         {
-            ChangeMatchType(Settings.MatchType);
-            await Queue.Initialise(dbFactory);
+            using (var db = dbFactory.GetInstance())
+            {
+                foreach (var item in await db.GetAllPlaylistItemsAsync(RoomID))
+                    Playlist.Add(item.ToMultiplayerPlaylistItem());
+            }
+
+            await ChangeMatchType(Settings.MatchType);
         }
 
         /// <summary>
@@ -69,30 +63,43 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        public void ChangeMatchType(MatchType type) => MatchTypeImplementation = createTypeImplementation(type);
-
-        public void AddUser(MultiplayerRoomUser user)
-        {
-            Users.Add(user);
-            MatchTypeImplementation.HandleUserJoined(user);
-        }
-
-        public void RemoveUser(MultiplayerRoomUser user)
-        {
-            Users.Remove(user);
-            MatchTypeImplementation.HandleUserLeft(user);
-        }
-
-        private MatchTypeImplementation createTypeImplementation(MatchType type)
+        [MemberNotNull(nameof(Controller))]
+        public Task ChangeMatchType(MatchType type)
         {
             switch (type)
             {
+                case MatchType.Matchmaking:
+                    return ChangeMatchType(new MatchmakingMatchController(this, hub, dbFactory));
+
                 case MatchType.TeamVersus:
-                    return new TeamVersus(this, hub);
+                    return ChangeMatchType(new TeamVersusMatchController(this, hub, dbFactory));
 
                 default:
-                    return new HeadToHead(this, hub);
+                    return ChangeMatchType(new HeadToHeadMatchController(this, hub, dbFactory));
             }
+        }
+
+        [MemberNotNull(nameof(Controller))]
+        public async Task ChangeMatchType(IMatchController controller)
+        {
+            Controller = controller;
+
+            await Controller.Initialise();
+
+            foreach (var u in Users)
+                await Controller.HandleUserJoined(u);
+        }
+
+        public async Task AddUser(MultiplayerRoomUser user)
+        {
+            Users.Add(user);
+            await Controller.HandleUserJoined(user);
+        }
+
+        public async Task RemoveUser(MultiplayerRoomUser user)
+        {
+            Users.Remove(user);
+            await Controller.HandleUserLeft(user);
         }
 
         #region Countdowns
@@ -137,11 +144,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 // Notify users that the countdown has finished (or cancelled) and run the continuation.
                 // Note: The room must be re-retrieved rather than using our own instance to enforce single-thread access.
-                using (var roomUsage = await hub.GetRoom(RoomID))
+                using (var roomUsage = await hub.TryGetRoom(RoomID))
                 {
                     try
                     {
-                        if (roomUsage.Item == null)
+                        if (roomUsage?.Item == null)
                             return;
 
                         if (countdownInfo.StopSource.IsCancellationRequested)

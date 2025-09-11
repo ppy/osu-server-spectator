@@ -49,6 +49,31 @@ namespace osu.Server.Spectator
 
         #endregion
 
+        public static int BanchoBotUserId { get; }
+
+        public static int MatchmakingRoomSize { get; set; }
+        public static int MatchmakingRoomRounds { get; set; }
+        public static bool MatchmakingRoomAllowSkip { get; set; }
+        public static TimeSpan MatchmakingLobbyUpdateRate { get; }
+        public static TimeSpan MatchmakingQueueUpdateRate { get; }
+
+        /// <summary>
+        /// The initial rating search radius.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to 20.
+        /// </remarks>
+        public static double MatchmakingRatingInitialRadius { get; } = 20;
+
+        /// <summary>
+        /// The amount of time (in seconds) before each doubling of the rating search radius.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to doubling every 15 seconds. After 90 seconds it will cover all possible users.
+        /// </remarks>
+        public static double MatchmakingRatingRadiusIncreaseTime { get; } = 15;
+
+
         static AppSettings()
         {
             SaveReplays = Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
@@ -82,6 +107,26 @@ namespace osu.Server.Spectator
             JwtAccessTokenExpireMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_ACCESS_TOKEN_EXPIRE_MINUTES") ?? "1440");
             OsuClientId = int.Parse(Environment.GetEnvironmentVariable("OSU_CLIENT_ID") ?? "5");
             UseLegacyRsaAuth = Environment.GetEnvironmentVariable("USE_LEGACY_RSA_AUTH") == "1";
+
+
+            BanchoBotUserId = int.TryParse(Environment.GetEnvironmentVariable("BANCHO_BOT_USER_ID"), out int id) ? id : 3;
+
+            MatchmakingRoomSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_SIZE"), out int mmSize) ? mmSize : 8;
+            MatchmakingRoomRounds = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_ROUNDS"), out int mmRounds) ? mmRounds : 8;
+            MatchmakingRoomAllowSkip = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ALLOW_SKIP"), out bool mmAllowSkip) && mmAllowSkip;
+            MatchmakingLobbyUpdateRate = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_LOBBY_UPDATE_RATE"), out int mmLobbyUpdateRate)
+                ? TimeSpan.FromSeconds(mmLobbyUpdateRate)
+                : TimeSpan.FromSeconds(5);
+            MatchmakingQueueUpdateRate = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_UPDATE_RATE"), out int mmQueueUpdateRate)
+                ? TimeSpan.FromSeconds(mmQueueUpdateRate)
+                : TimeSpan.FromSeconds(1);
+            MatchmakingRatingInitialRadius = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_INITIAL_RADIUS"), out int mmRatingInitialRadius)
+                ? mmRatingInitialRadius
+                : MatchmakingRatingInitialRadius;
+            MatchmakingRatingRadiusIncreaseTime = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_RADIUS_INCREASE_TIME"), out int mmRatingRadiusIncreaseTime)
+                ? mmRatingRadiusIncreaseTime
+                : MatchmakingRatingRadiusIncreaseTime;
+
         }
     }
 }

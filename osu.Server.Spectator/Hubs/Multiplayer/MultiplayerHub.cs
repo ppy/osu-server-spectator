@@ -5,9 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MessagePack;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
@@ -16,18 +17,15 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Services;
 using StackExchange.Redis;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
+    public partial class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
-        private static readonly JsonSerializerSettings json_settings = new JsonSerializerSettings
-        {
-            // explicitly use Auto here as we are not interested in the top level type being conveyed to the user.
-            TypeNameHandling = TypeNameHandling.Auto,
-        };
+        private static readonly MessagePackSerializerOptions message_pack_options = new MessagePackSerializerOptions(new SignalRUnionWorkaroundResolver());
 
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
         protected readonly MultiplayerHubContext HubContext;
@@ -35,6 +33,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly ChatFilters chatFilters;
         private readonly ISharedInterop sharedInterop;
         private readonly MultiplayerEventLogger multiplayerEventLogger;
+        private readonly IMatchmakingQueueBackgroundService matchmakingQueueService;
 
         public MultiplayerHub(
             ILoggerFactory loggerFactory,
@@ -45,13 +44,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             IHubContext<MultiplayerHub> hubContext,
             ISharedInterop sharedInterop,
             MultiplayerEventLogger multiplayerEventLogger,
-            IConnectionMultiplexer redis)
+            IMatchmakingQueueBackgroundService matchmakingQueueService)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
             this.sharedInterop = sharedInterop;
             this.multiplayerEventLogger = multiplayerEventLogger;
+            this.matchmakingQueueService = matchmakingQueueService;
 
             Rooms = rooms;
             HubContext = new MultiplayerHubContext(hubContext, rooms, users, loggerFactory, databaseFactory, multiplayerEventLogger, redis);
@@ -79,7 +79,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't join a room when restricted.");
             }
 
-            string roomJson;
+            byte[] roomBytes;
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -139,11 +139,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, Context.GetUserId(), roomId);
 
-                        // because match type implementations may send subsequent information via Users collection hooks,
+                        // because match controllers may send subsequent information via Users collection hooks,
                         // inform clients before adding user to the room.
                         await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
 
-                        room.AddUser(roomUser);
+                        await room.AddUser(roomUser);
                         room.UpdateForRetrieval();
 
                         await addDatabaseUser(room, roomUser);
@@ -182,7 +182,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         throw;
                     }
 
-                    roomJson = JsonConvert.SerializeObject(room, json_settings);
+                    roomBytes = MessagePackSerializer.Serialize<MultiplayerRoom>(room, message_pack_options);
                 }
             }
 
@@ -198,7 +198,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await multiplayerEventLogger.LogPlayerJoinedAsync(roomId, Context.GetUserId());
 
-            return JsonConvert.DeserializeObject<MultiplayerRoom>(roomJson, json_settings) ?? throw new InvalidOperationException();
+            return MessagePackSerializer.Deserialize<MultiplayerRoom>(roomBytes);
         }
 
         /// <summary>
@@ -225,12 +225,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 if (databaseRoom.ends_at != null && databaseRoom.ends_at < DateTimeOffset.Now)
                     throw new InvalidStateException("Match has already ended.");
-                //打印两个id
-                Log($"Database room user_id: {databaseRoom.host_id}, Context user_id: {Context.GetUserId()}");
-                if (databaseRoom.host_id != Context.GetUserId())
+
+                if (databaseRoom.type != database_match_type.matchmaking && databaseRoom.user_id != Context.GetUserId())
                     throw new InvalidOperationException("Non-host is attempting to join match before host");
 
-                var room = new ServerMultiplayerRoom(roomId, HubContext)
+                var room = new ServerMultiplayerRoom(roomId, HubContext, databaseFactory)
                 {
                     ChannelID = databaseRoom.channel_id,
                     Settings = new MultiplayerRoomSettings
@@ -244,7 +243,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     }
                 };
 
-                await room.Initialise(databaseFactory);
+                await room.Initialise();
 
                 return room;
             }
@@ -421,7 +420,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 {
                     // If a client triggered `Idle` (ie. un-readying) before they received the `WaitingForLoad` message from the match starting.
                     case MultiplayerUserState.Idle:
-                        if (isGameplayState(user.State))
+                        if (IsGameplayState(user.State))
                             return;
 
                         break;
@@ -429,7 +428,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     // If a client a triggered gameplay state before they received the `Idle` message from their gameplay being aborted.
                     case MultiplayerUserState.Loaded:
                     case MultiplayerUserState.ReadyForGameplay:
-                        if (!isGameplayState(user.State))
+                        if (!IsGameplayState(user.State))
                             return;
 
                         break;
@@ -448,7 +447,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     await Clients.Caller.LoadRequested();
                 }
 
-                await updateRoomStateIfRequired(room);
+                await HubContext.UpdateRoomStateIfRequired(room);
             }
         }
 
@@ -559,7 +558,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         break;
 
                     default:
-                        room.MatchTypeImplementation.HandleUserRequest(user, request);
+                        await room.Controller.HandleUserRequest(user, request);
                         break;
                 }
             }
@@ -606,7 +605,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 await Clients.Group(GetGroupId(room.RoomID)).GameplayAborted(GameplayAbortReason.HostAbortedTheMatch);
 
-                await updateRoomStateIfRequired(room);
+                await HubContext.UpdateRoomStateIfRequired(room);
             }
         }
 
@@ -623,11 +622,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                if (!isGameplayState(user.State))
+                if (!IsGameplayState(user.State))
                     throw new InvalidStateException("Cannot abort gameplay while not in a gameplay state");
 
                 await HubContext.ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
-                await updateRoomStateIfRequired(room);
+                await HubContext.UpdateRoomStateIfRequired(room);
             }
         }
 
@@ -645,10 +644,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
-                await room.Queue.AddItem(item, user);
-                Log(room, $"Item ID {item.ID} added at slot {room.Queue.UpcomingItems.TakeWhile(i => i != item).Count() + 1} (of {room.Playlist.Count})");
+                await room.Controller.AddPlaylistItem(item, user);
 
-                await updateRoomStateIfRequired(room);
+                await HubContext.UpdateRoomStateIfRequired(room);
             }
         }
 
@@ -666,7 +664,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Editing playlist item {item.ID} for beatmap {item.BeatmapID}");
-                await room.Queue.EditItem(item, user);
+                await room.Controller.EditPlaylistItem(item, user);
             }
         }
 
@@ -684,9 +682,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
                 Log(room, $"Removing playlist item {playlistItemId}");
-                await room.Queue.RemoveItem(playlistItemId, user);
+                await room.Controller.RemovePlaylistItem(playlistItemId, user);
 
-                await updateRoomStateIfRequired(room);
+                await HubContext.UpdateRoomStateIfRequired(room);
             }
         }
 
@@ -735,19 +733,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 if (previousSettings.MatchType != settings.MatchType)
                 {
-                    room.ChangeMatchType(settings.MatchType);
-                    Log(room, $"Switching room ruleset to {room.MatchTypeImplementation}");
+                    await room.ChangeMatchType(settings.MatchType);
+                    Log(room, $"Switching room ruleset to {room.Controller}");
                 }
 
-                if (previousSettings.QueueMode != settings.QueueMode)
-                {
-                    await room.Queue.UpdateFromQueueModeChange();
-                    Log(room, $"Switching queue mode to {settings.QueueMode}");
-                }
-
+                await room.Controller.HandleSettingsChanged();
                 await HubContext.NotifySettingsChanged(room, false);
 
-                await updateRoomStateIfRequired(room);
+                await HubContext.UpdateRoomStateIfRequired(room);
             }
         }
 
@@ -797,6 +790,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
             await base.CleanUpState(state);
+            await matchmakingQueueService.RemoveFromQueueAsync(new MatchmakingClientState(state));
             await leaveRoom(state, true);
         }
 
@@ -806,61 +800,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
 
             await updateDatabaseHost(room);
-        }
-
-        /// <summary>
-        /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.
-        /// </summary>
-        private async Task updateRoomStateIfRequired(ServerMultiplayerRoom room)
-        {
-            //check whether a room state change is required.
-            switch (room.State)
-            {
-                case MultiplayerRoomState.Open:
-                    if (room.Settings.AutoStartEnabled)
-                    {
-                        bool shouldHaveCountdown = !room.Queue.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
-
-                        if (shouldHaveCountdown && !room.ActiveCountdowns.Any(c => c is MatchStartCountdown))
-                            await room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, HubContext.StartMatch);
-                    }
-
-                    break;
-
-                case MultiplayerRoomState.WaitingForLoad:
-                    int countGameplayUsers = room.Users.Count(u => isGameplayState(u.State));
-                    int countReadyUsers = room.Users.Count(u => u.State == MultiplayerUserState.ReadyForGameplay);
-
-                    // Attempt to start gameplay when no more users need to change states. If all users have aborted, this will abort the match.
-                    if (countReadyUsers == countGameplayUsers)
-                        await HubContext.StartOrStopGameplay(room);
-
-                    break;
-
-                case MultiplayerRoomState.Playing:
-                    if (room.Users.All(u => u.State != MultiplayerUserState.Playing))
-                    {
-                        bool anyUserFinishedPlay = false;
-
-                        foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.FinishedPlay))
-                        {
-                            anyUserFinishedPlay = true;
-                            await HubContext.ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Results);
-                        }
-
-                        await HubContext.ChangeRoomState(room, MultiplayerRoomState.Open);
-                        await Clients.Group(GetGroupId(room.RoomID)).ResultsReady();
-
-                        if (anyUserFinishedPlay)
-                            await multiplayerEventLogger.LogGameCompletedAsync(room.RoomID, room.GetCurrentItem()!.ID);
-                        else
-                            await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.GetCurrentItem()!.ID);
-
-                        await room.Queue.FinishCurrentItem();
-                    }
-
-                    break;
-            }
         }
 
         /// <summary>
@@ -874,7 +813,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             switch (newState)
             {
                 case MultiplayerUserState.Idle:
-                    if (isGameplayState(oldState))
+                    if (IsGameplayState(oldState))
                         throw new InvalidStateException("Cannot return to idle without aborting gameplay.");
 
                     // any non-gameplay state can return to idle.
@@ -884,7 +823,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (oldState != MultiplayerUserState.Idle)
                         throw new InvalidStateChangeException(oldState, newState);
 
-                    if (room.Queue.CurrentItem.Expired)
+                    if (room.Controller.CurrentItem.Expired)
                         throw new InvalidStateException("Cannot ready up while all items have been played.");
 
                     break;
@@ -930,7 +869,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        private static bool isGameplayState(MultiplayerUserState state)
+        public static bool IsGameplayState(MultiplayerUserState state)
         {
             switch (state)
             {
@@ -989,7 +928,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (user == null)
                 throw new InvalidStateException("User was not in the expected room.");
 
-            room.RemoveUser(user);
+            await room.RemoveUser(user);
             await removeDatabaseUser(room, user);
 
             try
@@ -1013,7 +952,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 return;
             }
 
-            await updateRoomStateIfRequired(room);
+            await HubContext.UpdateRoomStateIfRequired(room);
 
             // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
             if (room.Host?.Equals(user) == true)

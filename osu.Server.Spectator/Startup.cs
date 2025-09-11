@@ -2,8 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
-using System.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -12,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using osu.Game.Online;
 using osu.Server.Spectator.Authentication;
 using osu.Server.Spectator.Extensions;
@@ -76,18 +73,6 @@ namespace osu.Server.Spectator
                         // https://github.com/dotnet/aspnetcore/issues/30096 ("it's definitely broken")
                         // https://github.com/dotnet/aspnetcore/issues/7298 (current tracking issue, though weirdly described as a javascript client issue)
                         options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS;
-                    })
-                    .AddNewtonsoftJsonProtocol(options =>
-                    {
-                        options.PayloadSerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-
-                        // This is required to make derived class serialisation work.
-                        // It is a safe alternative to `TypeNameHandling.Auto`, and the only viable solution
-                        // due to various means of making `TypeNameHandling.Auto` safe not working on root classes.
-                        options.PayloadSerializerSettings.Converters = new List<JsonConverter>
-                        {
-                            new SignalRDerivedTypeWorkaroundJsonConverter(),
-                        };
                     });
 
             services.AddHubEntities()

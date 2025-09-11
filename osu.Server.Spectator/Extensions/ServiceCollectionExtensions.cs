@@ -7,6 +7,7 @@ using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
 using osu.Server.Spectator.Hubs.Metadata;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Hubs.Spectator;
 using osu.Server.Spectator.Services;
 using osu.Server.Spectator.Storage;
@@ -34,7 +35,9 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<ChatFilters>()
                                     .AddSingleton<IDailyChallengeUpdater, DailyChallengeUpdater>()
                                     .AddHostedService<IDailyChallengeUpdater>(ctx => ctx.GetRequiredService<IDailyChallengeUpdater>())
-                                    .AddSingleton<MultiplayerEventLogger>();
+                                    .AddSingleton<MultiplayerEventLogger>()
+                                    .AddSingleton<IMatchmakingQueueBackgroundService, MatchmakingQueueBackgroundService>()
+                                    .AddHostedService<IMatchmakingQueueBackgroundService>(ctx => ctx.GetRequiredService<IMatchmakingQueueBackgroundService>());
         }
 
         /// <summary>

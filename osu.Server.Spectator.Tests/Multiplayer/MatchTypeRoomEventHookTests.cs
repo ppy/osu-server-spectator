@@ -19,7 +19,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task NewUserJoinedTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object)
+            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
             {
                 Playlist =
                 {
@@ -31,21 +31,21 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
 
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
-            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
-            room.MatchTypeImplementation = typeImplementation.Object;
+            Mock<IMatchController> controller = new Mock<IMatchController>();
+            await room.ChangeMatchType(controller.Object);
 
-            room.AddUser(new MultiplayerRoomUser(1));
+            await room.AddUser(new MultiplayerRoomUser(1));
 
-            typeImplementation.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Once());
+            controller.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
 
         [Fact]
         public async Task UserLeavesTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object)
+            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
             {
                 Playlist =
                 {
@@ -57,24 +57,24 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
 
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             var user = new MultiplayerRoomUser(1);
 
-            room.AddUser(user);
+            await room.AddUser(user);
 
-            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
-            room.MatchTypeImplementation = typeImplementation.Object;
+            Mock<IMatchController> controller = new Mock<IMatchController>();
+            await room.ChangeMatchType(controller.Object);
 
-            room.RemoveUser(user);
-            typeImplementation.Verify(m => m.HandleUserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once());
+            await room.RemoveUser(user);
+            controller.Verify(m => m.HandleUserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
 
         [Fact]
         public async Task TypeChangeTriggersInitialJoins()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object)
+            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
             {
                 Playlist =
                 {
@@ -86,18 +86,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 }
             };
 
-            await room.Initialise(DatabaseFactory.Object);
+            await room.Initialise();
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
-                room.AddUser(new MultiplayerRoomUser(i));
+                await room.AddUser(new MultiplayerRoomUser(i));
 
             // change the match type
-            Mock<MatchTypeImplementation> typeImplementation = new Mock<MatchTypeImplementation>(room, hub.Object);
-            room.MatchTypeImplementation = typeImplementation.Object;
+            Mock<IMatchController> controller = new Mock<IMatchController>();
+            await room.ChangeMatchType(controller.Object);
 
             // ensure the match type received hook events for all already joined users.
-            typeImplementation.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Exactly(5));
+            controller.Verify(m => m.HandleUserJoined(It.IsAny<MultiplayerRoomUser>()), Times.Exactly(5));
         }
     }
 }
