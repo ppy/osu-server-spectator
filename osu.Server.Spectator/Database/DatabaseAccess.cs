@@ -585,11 +585,11 @@ namespace osu.Server.Spectator.Database
 
         /// <summary>
         /// Retrieves the <see cref="SoloScore.id">ID</see> and <see cref="SoloScore.total_score">total score</see> for passing scores on a playlist item.
-        /// Retrieves the passing score ids and total scores on a playlist item.
         /// </summary>
+        /// <param name="roomId">The room ID.</param>
         /// <param name="playlistItemId">The playlist item.</param>
         /// <param name="afterScoreId">The score ID after which to retrieve.</param>
-        public async Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0)
+        public async Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long roomId, long playlistItemId, ulong afterScoreId = 0)
         {
             var connection = await getConnectionAsync();
 
@@ -645,7 +645,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             await connection.ExecuteAsync(
-                "UPDATE `phpbb_users` SET `user_allow_viewonline` = @visible WHERE `user_id` = @userId",
+                "UPDATE `lazer_users` SET `is_active` = @visible WHERE `id` = @userId",
                 new
                 {
                     visible = visible,
@@ -655,21 +655,25 @@ namespace osu.Server.Spectator.Database
 
         public async Task<float> GetUserPPAsync(int userId, int rulesetId)
         {
-            string statsTable = rulesetId switch
+            var connection = await getConnectionAsync();
+            
+            // 使用 lazer_user_statistics 表存储按模式分类的用户统计数据
+            string gameMode = rulesetId switch
             {
-                0 => "osu_user_stats",
-                1 => "osu_user_stats_taiko",
-                2 => "osu_user_stats_fruits",
-                3 => "osu_user_stats_mania",
+                0 => "osu",
+                1 => "taiko", 
+                2 => "fruits",
+                3 => "mania",
                 _ => throw new ArgumentOutOfRangeException(nameof(rulesetId), rulesetId, null)
             };
-
-            var connection = await getConnectionAsync();
-
-            return await connection.QuerySingleOrDefaultAsync<float>($"SELECT `rank_score` FROM {statsTable} WHERE `user_id` = @userId", new
-            {
-                userId = userId
-            });
+            
+            // 从 lazer_user_statistics 表获取用户在指定模式下的PP值
+            var ppValue = await connection.QuerySingleOrDefaultAsync<float?>(
+                "SELECT pp FROM lazer_user_statistics WHERE user_id = @userId AND mode = @gameMode", 
+                new { userId = userId, gameMode = gameMode });
+            
+            // 如果该模式下没有PP数据，返回0（表示用户在该模式下没有成绩）
+            return ppValue ?? 0;
         }
 
         public async Task<matchmaking_pool[]> GetActiveMatchmakingPoolsAsync()
@@ -693,9 +697,10 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return (await connection.QueryAsync<matchmaking_pool_beatmap>("SELECT p.*, b.checksum, b.difficultyrating FROM `matchmaking_pool_beatmaps` p "
-                                                                          + "JOIN `osu_beatmaps` b ON p.beatmap_id = b.beatmap_id "
-                                                                          + "WHERE p.pool_id = @PoolId", new
+            // g0v0-server 使用 beatmaps 表而不是 osu_beatmaps 表
+            return (await connection.QueryAsync<matchmaking_pool_beatmap>("SELECT p.*, b.checksum, b.difficulty_rating as difficultyrating FROM `matchmaking_pool_beatmaps` p "
+                                                                          + "JOIN `beatmaps` b ON p.beatmap_id = b.id "
+                                                                          + "WHERE p.pool_id = @PoolId AND b.deleted_at IS NULL", new
             {
                 PoolId = poolId
             })).ToArray();
@@ -716,6 +721,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
+            // 现在 g0v0-server 的 matchmaking_user_stats 表已经有 created_at 和 updated_at 字段
             await connection.ExecuteAsync("INSERT INTO `matchmaking_user_stats` (`user_id`, `ruleset_id`, `first_placements`, `total_points`, `elo_data`, `created_at`, `updated_at`) "
                                           + "VALUES (@UserId, @RulesetId, @FirstPlacements, @TotalPoints, @EloData, NOW(), NOW()) "
                                           + "ON DUPLICATE KEY UPDATE "
