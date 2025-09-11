@@ -75,24 +75,41 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public async Task AddToQueueAsync(MatchmakingClientState state, int poolId)
         {
-            matchmaking_pool? pool;
-
             using (var db = databaseFactory.GetInstance())
-                pool = await db.GetMatchmakingPoolAsync(poolId);
-
-            if (pool == null)
-                throw new InvalidStateException($"Pool not found: {poolId}");
-
-            MatchmakingQueueUser user = new MatchmakingQueueUser(state.ConnectionId)
             {
-                UserId = state.UserId
-            };
+                matchmaking_pool pool = await db.GetMatchmakingPoolAsync(poolId) ?? throw new InvalidStateException($"Pool not found: {poolId}");
+                matchmaking_user_stats? stats = await db.GetMatchmakingUserStatsAsync(state.UserId, pool.ruleset_id);
 
-            using (var db = databaseFactory.GetInstance())
-                user.Rank = (int)await db.GetUserPPAsync(state.UserId, pool.ruleset_id);
+                if (stats == null)
+                {
+                    const int min_elo = 1400;
+                    const int max_elo = 1600;
 
-            MatchmakingQueue queue = poolQueues.GetOrAdd(poolId, _ => new MatchmakingQueue(pool));
-            await processBundle(queue.Add(user));
+                    // Estimate Elo from PP.
+                    double pp = await db.GetUserPPAsync(state.UserId, pool.ruleset_id);
+                    double eloEstimate = min_elo + pp / 25000 * (max_elo - min_elo);
+
+                    await db.UpdateMatchmakingUserStatsAsync(stats = new matchmaking_user_stats
+                    {
+                        user_id = (uint)state.UserId,
+                        ruleset_id = (ushort)pool.ruleset_id,
+                        EloData =
+                        {
+                            NormalFactor = { Mu = eloEstimate },
+                            ApproximatePosterior = { Mu = eloEstimate }
+                        }
+                    });
+                }
+
+                MatchmakingQueueUser user = new MatchmakingQueueUser(state.ConnectionId)
+                {
+                    UserId = state.UserId,
+                    Rating = stats.EloData.ApproximatePosterior
+                };
+
+                MatchmakingQueue queue = poolQueues.GetOrAdd(poolId, _ => new MatchmakingQueue(pool));
+                await processBundle(queue.Add(user));
+            }
         }
 
         public async Task RemoveFromQueueAsync(MatchmakingClientState state)

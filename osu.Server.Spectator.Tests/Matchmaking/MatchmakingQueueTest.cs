@@ -3,7 +3,9 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Internal;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using Xunit;
 
@@ -105,6 +107,69 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Equal("2", bundle.RemovedUsers[0].Identifier);
             Assert.Single(bundle.AddedUsers);
             Assert.Equal("1", bundle.AddedUsers[0].Identifier);
+        }
+
+        [Fact]
+        public void UsersAtDifferentRatingsEventuallyFindEachOther()
+        {
+            CustomSystemClock clock = new CustomSystemClock();
+
+            queue.RoomSize = 2;
+            queue.Clock = clock;
+            queue.RatingInitialSearchRadius = 100;
+            queue.RatingSearchRadiusIncreaseTime = 10;
+
+            queue.Add(new MatchmakingQueueUser("1")
+            {
+                Rating = new EloRating(1300, 350)
+            });
+
+            queue.Add(new MatchmakingQueueUser("2")
+            {
+                Rating = new EloRating(1700, 350)
+            });
+
+            var bundle = queue.Update();
+            Assert.Empty(bundle.FormedGroups);
+
+            clock.UtcNow += TimeSpan.FromSeconds(10);
+            bundle = queue.Update();
+            Assert.Empty(bundle.FormedGroups);
+
+            clock.UtcNow += TimeSpan.FromSeconds(10);
+            bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+        }
+
+        [Fact]
+        public void UserWaitingForALongTimeMatchesQuickly()
+        {
+            CustomSystemClock clock = new CustomSystemClock();
+
+            queue.RoomSize = 2;
+            queue.Clock = clock;
+            queue.RatingInitialSearchRadius = 100;
+            queue.RatingSearchRadiusIncreaseTime = 10;
+
+            queue.Add(new MatchmakingQueueUser("1")
+            {
+                Rating = new EloRating(1300, 350)
+            });
+
+            clock.UtcNow += TimeSpan.FromSeconds(20);
+
+            queue.Add(new MatchmakingQueueUser("2")
+            {
+                Rating = new EloRating(1700, 350)
+            });
+
+            var bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+        }
+
+        private class CustomSystemClock : ISystemClock
+        {
+            public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;
         }
     }
 }

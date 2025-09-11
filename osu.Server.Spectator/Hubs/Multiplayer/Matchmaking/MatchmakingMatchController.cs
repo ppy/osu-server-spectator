@@ -12,6 +12,7 @@ using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
@@ -297,17 +298,35 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             using (var db = dbFactory.GetInstance())
             {
-                foreach (var user in state.Users)
+                List<matchmaking_user_stats> userStats = [];
+                List<EloPlayer> eloStandings = [];
+
+                foreach (var user in state.Users.OrderBy(u => u.Placement))
                 {
-                    matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserId, rulesetId);
+                    matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserId, rulesetId) ?? new matchmaking_user_stats
+                    {
+                        user_id = (uint)user.UserId,
+                        ruleset_id = (ushort)rulesetId
+                    };
 
                     if (user.Placement == 1)
                         stats.first_placements++;
-
                     stats.total_points += (uint)user.Points;
 
-                    await db.UpdateMatchmakingUserStatsAsync(stats);
+                    userStats.Add(stats);
+                    eloStandings.Add(stats.EloData);
                 }
+
+                EloContest eloContest = new EloContest(DateTimeOffset.Now, eloStandings.ToArray());
+                EloSystem eloSystem = new EloSystem
+                {
+                    MaxHistory = 10
+                };
+
+                eloSystem.RecordContest(eloContest);
+
+                foreach (var stats in userStats)
+                    await db.UpdateMatchmakingUserStatsAsync(stats);
             }
         }
 
