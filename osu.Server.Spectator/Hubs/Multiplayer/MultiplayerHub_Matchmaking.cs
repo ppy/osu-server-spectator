@@ -70,7 +70,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                await ((MatchmakingMatchController)room.Controller).ToggleSelectionAsync(user, playlistItemId);
+                // 检查控制器类型，只有 MatchmakingMatchController 才支持切换选择
+                if (room.Controller is MatchmakingMatchController matchmakingController)
+                {
+                    await matchmakingController.ToggleSelectionAsync(user, playlistItemId);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"ToggleSelection is only supported for matchmaking rooms, but found controller type: {room.Controller.GetType().Name}");
+                }
             }
         }
 
@@ -87,7 +95,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                ((MatchmakingMatchController)room.Controller).SkipToNextStage(out _);
+                // 检查控制器类型，只有 MatchmakingMatchController 才支持跳过阶段
+                if (room.Controller is MatchmakingMatchController matchmakingController)
+                {
+                    matchmakingController.SkipToNextStage(out _);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"SkipToNextStage is only supported for matchmaking rooms, but found controller type: {room.Controller.GetType().Name}");
+                }
             }
         }
     }
