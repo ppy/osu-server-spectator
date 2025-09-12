@@ -210,7 +210,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 DogStatsd.Increment($"{statsd_prefix}.groups_completed");
                 foreach (var user in group.Users)
-                    DogStatsd.Timer($"{statsd_prefix}.queue_wait_time", (user.SearchStartTime - DateTimeOffset.Now).TotalMilliseconds);
+                    DogStatsd.Timer($"{statsd_prefix}.queue_wait_time", (DateTimeOffset.Now - user.SearchStartTime).TotalMilliseconds);
 
                 string password = Guid.NewGuid().ToString();
                 long roomId = await sharedInterop.CreateRoomAsync(AppSettings.BanchoBotUserId, new MultiplayerRoom(0)
