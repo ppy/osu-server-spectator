@@ -14,6 +14,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
     [Serializable]
     public class EloPlayer
     {
+        [JsonProperty("initial_rating")]
+        public EloRating InitialRating;
+
         [JsonProperty("contest_count")]
         public int ContestCount;
 
