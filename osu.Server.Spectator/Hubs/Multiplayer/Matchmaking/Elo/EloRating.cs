@@ -22,6 +22,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
         {
         }
 
+        public EloRating(double mu)
+        {
+            Mu = mu;
+        }
+
         public EloRating(double mu, double sig)
         {
             Mu = mu;
