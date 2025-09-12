@@ -14,20 +14,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
     [Serializable]
     public class EloPlayer
     {
+        [JsonProperty("initial_rating")]
+        public EloRating InitialRating { get; set; }
+
         [JsonProperty("contest_count")]
-        public int ContestCount;
+        public int ContestCount { get; set; }
 
         [JsonProperty("last_contest_time")]
-        public DateTimeOffset? LastContestTime;
+        public DateTimeOffset? LastContestTime { get; set; }
 
         [JsonProperty("normal_factor")]
-        public EloRating NormalFactor = new EloRating();
+        public EloRating NormalFactor { get; set; } = new EloRating();
 
         [JsonProperty("approximate_posterior")]
-        public EloRating ApproximatePosterior = new EloRating();
+        public EloRating ApproximatePosterior { get; set; } = new EloRating();
 
         [JsonProperty("logistic_factors")]
-        public List<EloTanhTerm> LogisticFactors = [];
+        public List<EloTanhTerm> LogisticFactors { get; set; } = [];
 
         // https://github.com/EbTech/Elo-MMR/blob/f6f83bb2c54bf173e60a9e8614065e8d168a349b/multi-skill/src/systems/common/player.rs#L139
         public void AddNoiseBest(double sigNoise, double transferSpeed)

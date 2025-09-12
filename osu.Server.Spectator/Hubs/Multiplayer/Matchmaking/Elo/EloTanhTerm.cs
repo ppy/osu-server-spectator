@@ -18,10 +18,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
         public double Mu { get; set; }
 
         [JsonProperty("warg")]
-        public double Warg;
+        public double Warg { get; set; }
 
         [JsonProperty("wout")]
-        public double Wout;
+        public double Wout { get; set; }
 
         // https://github.com/EbTech/Elo-MMR/blob/f6f83bb2c54bf173e60a9e8614065e8d168a349b/multi-skill/src/systems/common/mod.rs#L46
         public EloTanhTerm(EloRating rating)
