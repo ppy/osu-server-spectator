@@ -237,7 +237,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 pickIds = pickIds.Concat(availablePicks.Take(remainderPickCount)).ToArray();
             }
 
-            state.CandidateItems = pickIds;
+            state.CandidateItems = pickIds.Distinct().ToArray();
             state.CandidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
 
             await changeStage(MatchmakingStage.ServerBeatmapFinalised);
