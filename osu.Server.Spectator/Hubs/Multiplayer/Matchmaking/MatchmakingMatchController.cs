@@ -111,6 +111,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await startCountdown(TimeSpan.FromSeconds(stage_waiting_for_clients_join_time), stageRoundWarmupTime);
         }
 
+        public Task<bool> UserCanJoin(int userId)
+            => Task.FromResult(state.Users.UserDictionary.ContainsKey(userId));
+
         public Task HandleSettingsChanged()
         {
             return Task.CompletedTask;

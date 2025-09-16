@@ -14,6 +14,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         Task Initialise();
 
+        /// <summary>
+        /// Tests whether a given user is eligible to join the room.
+        /// </summary>
+        /// <param name="userId">The user requesting to join.</param>
+        /// <returns>Whether the user is eligible to join the room.</returns>
+        Task<bool> UserCanJoin(int userId);
+
         Task HandleSettingsChanged();
 
         Task HandleGameplayCompleted();

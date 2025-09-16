@@ -52,6 +52,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             await updateCurrentItem();
         }
 
+        public Task<bool> UserCanJoin(int userId)
+            => Task.FromResult(true);
+
         /// <summary>
         /// Updates the queue as a result of a change in the queueing mode.
         /// </summary>
