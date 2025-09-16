@@ -14,7 +14,6 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
-using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
@@ -91,51 +90,28 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 // add the user to the room.
                 var roomUser = new MultiplayerRoomUser(Context.GetUserId());
 
-                // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
-                bool newRoomFetchStarted = false;
-
                 using (var roomUsage = await Rooms.GetForUse(roomId, true))
                 {
+                    // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
+                    bool newRoomFetchStarted = roomUsage.Item == null;
                     ServerMultiplayerRoom? room = null;
 
                     try
                     {
-                        if (roomUsage.Item == null)
+                        room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, HubContext, databaseFactory);
+
+                        // this is a sanity check to keep *rooms* in a good state.
+                        // in theory the connection clean-up code should handle this correctly.
+                        if (room.Users.Any(u => u.UserID == roomUser.UserID))
+                            throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
+
+                        if (!string.IsNullOrEmpty(room.Settings.Password))
                         {
-                            newRoomFetchStarted = true;
-
-                            // the requested room is not yet tracked by this server.
-                            room = await retrieveRoom(roomId);
-
-                            if (!string.IsNullOrEmpty(room.Settings.Password))
-                            {
-                                if (room.Settings.Password != password)
-                                    throw new InvalidPasswordException();
-                            }
-
-                            // the above call will only succeed if this user is the host.
-                            room.Host = roomUser;
-
-                            // mark the room active - and wait for confirmation of this operation from the database - before adding the user to the room.
-                            await markRoomActive(room);
-
-                            roomUsage.Item = room;
+                            if (room.Settings.Password != password)
+                                throw new InvalidPasswordException();
                         }
-                        else
-                        {
-                            room = roomUsage.Item;
 
-                            // this is a sanity check to keep *rooms* in a good state.
-                            // in theory the connection clean-up code should handle this correctly.
-                            if (room.Users.Any(u => u.UserID == roomUser.UserID))
-                                throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
-
-                            if (!string.IsNullOrEmpty(room.Settings.Password))
-                            {
-                                if (room.Settings.Password != password)
-                                    throw new InvalidPasswordException();
-                            }
-                        }
+                        room.Host ??= roomUser;
 
                         userUsage.Item = new MultiplayerClientState(Context.ConnectionId, Context.GetUserId(), roomId);
 
@@ -199,65 +175,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerEventLogger.LogPlayerJoinedAsync(roomId, Context.GetUserId());
 
             return MessagePackSerializer.Deserialize<MultiplayerRoom>(roomBytes);
-        }
-
-        /// <summary>
-        /// Attempt to retrieve and construct a room from the database backend, based on a room ID specification.
-        /// This will check the database backing to ensure things are in a consistent state.
-        /// It should only be called by the room's host, before any other user has joined (and will throw if not).
-        /// </summary>
-        /// <param name="roomId">The proposed room ID.</param>
-        /// <exception cref="InvalidOperationException">If anything is wrong with this request.</exception>
-        private async Task<ServerMultiplayerRoom> retrieveRoom(long roomId)
-        {
-            Log($"Retrieving room {roomId} from database");
-
-            using (var db = databaseFactory.GetInstance())
-            {
-                // TODO: this call should be transactional, and mark the room as managed by this server instance.
-                // This will allow for other instances to know not to reinitialise the room if the host arrives there.
-                // Alternatively, we can move lobby retrieval away from osu-web and not require this in the first place.
-                // Needs further discussion and consideration either way.
-                var databaseRoom = await db.GetRealtimeRoomAsync(roomId);
-
-                if (databaseRoom == null)
-                    throw new InvalidOperationException("Specified match does not exist.");
-
-                if (databaseRoom.ends_at != null && databaseRoom.ends_at < DateTimeOffset.Now)
-                    throw new InvalidStateException("Match has already ended.");
-
-                if (databaseRoom.type != database_match_type.matchmaking && databaseRoom.user_id != Context.GetUserId())
-                    throw new InvalidOperationException("Non-host is attempting to join match before host");
-
-                var room = new ServerMultiplayerRoom(roomId, HubContext, databaseFactory)
-                {
-                    ChannelID = databaseRoom.channel_id,
-                    Settings = new MultiplayerRoomSettings
-                    {
-                        Name = databaseRoom.name,
-                        Password = databaseRoom.password,
-                        MatchType = databaseRoom.type.ToMatchType(),
-                        QueueMode = databaseRoom.queue_mode.ToQueueMode(),
-                        AutoStartDuration = TimeSpan.FromSeconds(databaseRoom.auto_start_duration),
-                        AutoSkip = databaseRoom.auto_skip
-                    }
-                };
-
-                await room.Initialise();
-
-                return room;
-            }
-        }
-
-        /// <summary>
-        /// Marks a room active at the database, implying the host has joined and this server is now in control of the room's lifetime.
-        /// </summary>
-        private async Task markRoomActive(ServerMultiplayerRoom room)
-        {
-            Log(room, "Host marking room active");
-
-            using (var db = databaseFactory.GetInstance())
-                await db.MarkRoomActiveAsync(room);
         }
 
         public async Task LeaveRoom()
