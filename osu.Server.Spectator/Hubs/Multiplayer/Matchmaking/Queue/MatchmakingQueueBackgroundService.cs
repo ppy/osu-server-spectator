@@ -17,6 +17,7 @@ using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
+using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Services;
 using Sentry;
 using StatsdClient;
@@ -43,15 +44,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly IHubContext<MultiplayerHub> hub;
         private readonly ISharedInterop sharedInterop;
         private readonly IDatabaseFactory databaseFactory;
+        private readonly EntityStore<ServerMultiplayerRoom> rooms;
+        private readonly IMultiplayerHubContext hubContext;
         private readonly ILogger logger;
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
 
-        public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory)
+        public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
+                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
             this.databaseFactory = databaseFactory;
+            this.rooms = rooms;
+            this.hubContext = hubContext;
 
             logger = loggerFactory.CreateLogger(nameof(MatchmakingQueueBackgroundService));
         }
@@ -221,6 +227,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     },
                     Playlist = await queryPlaylistItems(bundle.Queue.Pool, group.Users.Select(u => u.Rating).ToArray())
                 });
+
+                // Initialise the room and users
+                using (var roomUsage = await rooms.GetForUse(roomId, true))
+                    roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, hubContext, databaseFactory, group.Users.Select(u => u.UserId).ToArray());
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
