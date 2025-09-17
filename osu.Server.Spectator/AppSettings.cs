@@ -74,7 +74,7 @@ namespace osu.Server.Spectator
             SharedInteropDomain = Environment.GetEnvironmentVariable("SHARED_INTEROP_DOMAIN") ?? "http://localhost:8000";
             SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;
 
-            SentryDsn = Environment.GetEnvironmentVariable("SP_SENTRY_DSN") ?? null;
+            SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN") ?? null;
 
             // JWT Authentication Settings
             JwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? "your_jwt_secret_here";
