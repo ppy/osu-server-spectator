@@ -135,6 +135,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task HandleUserJoined(MultiplayerRoomUser user)
         {
+            if (!state.Users.UserDictionary.ContainsKey(user.UserID))
+                throw new InvalidStateException("User is not eligible for this matchmaking room.");
+
             switch (state.Stage)
             {
                 case MatchmakingStage.WaitingForClientsJoin:
