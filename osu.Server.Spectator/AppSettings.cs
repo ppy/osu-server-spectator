@@ -87,10 +87,10 @@ namespace osu.Server.Spectator
             TrackBuildUserCounts = Environment.GetEnvironmentVariable("TRACK_BUILD_USER_COUNTS") == "1";
 
             ServerPort = Environment.GetEnvironmentVariable("SERVER_PORT") ?? "8086";
-            RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "192.168.0.226";
+            RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "192.168.10.152";
             DataDogAgentHost = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? "localhost";
 
-            DatabaseHost = Environment.GetEnvironmentVariable("MYSQL_HOST") ?? Environment.GetEnvironmentVariable("DB_HOST") ?? "192.168.0.226";
+            DatabaseHost = Environment.GetEnvironmentVariable("MYSQL_HOST") ?? Environment.GetEnvironmentVariable("DB_HOST") ?? "192.168.10.152";
             DatabaseUser = Environment.GetEnvironmentVariable("MYSQL_USER") ?? Environment.GetEnvironmentVariable("DB_USER") ?? "osu_api";
             DatabasePassword = Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ?? Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "osu_password";
             DatabaseName = Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? Environment.GetEnvironmentVariable("DB_NAME") ?? "osu_api";

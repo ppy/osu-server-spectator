@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
@@ -135,11 +136,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task HandleUserJoined(MultiplayerRoomUser user)
         {
+            // Debug log: User joined
+            System.Diagnostics.Debug.WriteLine($"[MatchmakingMatchController] HandleUserJoined: User {user.UserID} joined. Current stage: {state.Stage}, joinedUserCount: {joinedUserCount}, room_size: {room_size}");
+            
             switch (state.Stage)
             {
                 case MatchmakingStage.WaitingForClientsJoin:
+                    System.Diagnostics.Debug.WriteLine($"[MatchmakingMatchController] In WaitingForClientsJoin stage. Incrementing joinedUserCount from {joinedUserCount} to {joinedUserCount + 1}");
                     if (++joinedUserCount >= room_size)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[MatchmakingMatchController] Room is full ({joinedUserCount}/{room_size}). Starting round warmup stage.");
                         await stageRoundWarmupTime(room);
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[MatchmakingMatchController] Room not full yet ({joinedUserCount}/{room_size}). Waiting for more players.");
+                    }
+                    break;
+                    
+                default:
+                    System.Diagnostics.Debug.WriteLine($"[MatchmakingMatchController] User joined but not in WaitingForClientsJoin stage. Current stage: {state.Stage}");
                     break;
             }
         }
