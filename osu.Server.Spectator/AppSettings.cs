@@ -102,14 +102,14 @@ namespace osu.Server.Spectator
             SentryDsn = Environment.GetEnvironmentVariable("SP_SENTRY_DSN") ?? null;
 
             // JWT Authentication Settings
-            JwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? "your_jwt_secret_here";
+            JwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? "8f43e5d6288cac7eef53c8814ed90b7494206b64f118a4d210e563202f06ad6b"; //记得修改
             JwtAlgorithm = Environment.GetEnvironmentVariable("JWT_ALGORITHM") ?? "HS256";
             JwtAccessTokenExpireMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_ACCESS_TOKEN_EXPIRE_MINUTES") ?? "1440");
             OsuClientId = int.Parse(Environment.GetEnvironmentVariable("OSU_CLIENT_ID") ?? "5");
             UseLegacyRsaAuth = Environment.GetEnvironmentVariable("USE_LEGACY_RSA_AUTH") == "1";
 
 
-            BanchoBotUserId = int.TryParse(Environment.GetEnvironmentVariable("BANCHO_BOT_USER_ID"), out int id) ? id : 3;
+            BanchoBotUserId = int.TryParse(Environment.GetEnvironmentVariable("BANCHO_BOT_USER_ID"), out int id) ? id : 2;
 
             MatchmakingRoomSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_SIZE"), out int mmSize) ? mmSize : 2;
             MatchmakingRoomRounds = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_ROUNDS"), out int mmRounds) ? mmRounds : 8;

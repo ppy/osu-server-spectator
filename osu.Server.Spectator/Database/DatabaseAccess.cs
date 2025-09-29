@@ -572,6 +572,12 @@ namespace osu.Server.Spectator.Database
         /// <param name="playlistItemId">The playlist item.</param>
         public async Task<IEnumerable<SoloScore>> GetAllScoresForPlaylistItem(long playlistItemId)
         {
+            // TODO: 临时修复 - multiplayer_score_links 表不存在，返回空结果
+            // 原始查询需要 multiplayer_score_links 表，但该表在数据库中不存在
+            // 暂时返回空集合以避免异常
+            return await Task.FromResult(Enumerable.Empty<SoloScore>());
+            
+            /*
             var connection = await getConnectionAsync();
 
             return (await connection.QueryAsync<SoloScore>(
@@ -581,6 +587,7 @@ namespace osu.Server.Spectator.Database
                 {
                     playlistItemId = playlistItemId
                 }));
+            */
         }
 
         /// <summary>
