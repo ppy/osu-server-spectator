@@ -66,7 +66,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
                 EloPlayer player = contest.Standings[i];
 
                 int index = i;
-                double muPerf = SolveNewton(x => ComputeLikelihoodSum(x, tanhTerms, index, index));
+                double muPerf = Math.Min(contest.PerformanceCeiling, SolveNewton(x => ComputeLikelihoodSum(x, tanhTerms, index, index)));
                 double weight = computeWeight(contest.Weight, player.ContestCount);
                 double sigPerf = computeSigPerf(weight);
                 player.UpdatePerformance(contest.Time, new EloRating(muPerf, sigPerf), MaxHistory);

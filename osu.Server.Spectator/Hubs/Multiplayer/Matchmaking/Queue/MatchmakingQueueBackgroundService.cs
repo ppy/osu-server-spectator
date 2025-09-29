@@ -16,6 +16,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Services;
 using Sentry;
+using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
@@ -32,6 +33,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private static readonly TimeSpan lobby_update_rate = AppSettings.MatchmakingLobbyUpdateRate;
 
         private const string lobby_users_group = "matchmaking-lobby-users";
+        private const string statsd_prefix = "matchmaking";
 
         private readonly ConcurrentDictionary<int, MatchmakingQueue> poolQueues = new ConcurrentDictionary<int, MatchmakingQueue>();
 
@@ -40,7 +42,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly IDatabaseFactory databaseFactory;
         private readonly ILogger logger;
 
-        private int[] queuedUsersSample = [];
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory)
@@ -170,12 +171,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 return;
 
             MatchmakingQueueUser[] users = poolQueues.Values.SelectMany(queue => queue.GetAllUsers()).ToArray();
+            DogStatsd.Counter($"{statsd_prefix}.users_queued", users.Length);
+
             Random.Shared.Shuffle(users);
-            queuedUsersSample = users.Take(50).Select(u => u.UserId).ToArray();
+            int[] usersSample = users.Take(50).Select(u => u.UserId).ToArray();
 
             await hub.Clients.Group(lobby_users_group).SendAsync(nameof(IMatchmakingClient.MatchmakingLobbyStatusChanged), new MatchmakingLobbyStatus
             {
-                UsersInQueue = queuedUsersSample
+                UsersInQueue = usersSample
             });
 
             lastLobbyUpdateTime = DateTimeOffset.Now;
@@ -194,6 +197,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             foreach (var group in bundle.FormedGroups)
             {
+                DogStatsd.Increment($"{statsd_prefix}.groups_formed");
+
                 foreach (var user in group.Users)
                     await hub.Groups.AddToGroupAsync(user.Identifier, group.Identifier, CancellationToken.None);
 
@@ -203,6 +208,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             foreach (var group in bundle.CompletedGroups)
             {
+                DogStatsd.Increment($"{statsd_prefix}.groups_completed");
+                foreach (var user in group.Users)
+                    DogStatsd.Timer($"{statsd_prefix}.queue_wait_time", (DateTimeOffset.Now - user.SearchStartTime).TotalMilliseconds);
+
                 string password = Guid.NewGuid().ToString();
                 long roomId = await sharedInterop.CreateRoomAsync(AppSettings.BanchoBotUserId, new MultiplayerRoom(0)
                 {
