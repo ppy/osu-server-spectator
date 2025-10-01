@@ -14,6 +14,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 using osu.Server.Spectator.Services;
 using Sentry;
 using StatsdClient;
@@ -96,8 +97,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         ruleset_id = (ushort)pool.ruleset_id,
                         EloData =
                         {
-                            NormalFactor = { Mu = eloEstimate },
-                            ApproximatePosterior = { Mu = eloEstimate }
+                            InitialRating = new EloRating(eloEstimate),
+                            NormalFactor = new EloRating(eloEstimate),
+                            ApproximatePosterior = new EloRating(eloEstimate)
                         }
                     });
                 }

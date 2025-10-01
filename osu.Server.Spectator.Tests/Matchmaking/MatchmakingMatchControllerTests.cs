@@ -242,6 +242,15 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 Assert.Single(((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
         }
 
+        [Fact]
+        public async Task CanNotInvitePlayersToRoom()
+        {
+            Database.Setup(d => d.GetUserRelation(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new phpbb_zebra { friend = true });
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.InvitePlayer(USER_ID_2));
+        }
+
         private async Task verifyStage(MatchmakingStage stage)
         {
             using (var room = await Rooms.GetForUse(ROOM_ID))
