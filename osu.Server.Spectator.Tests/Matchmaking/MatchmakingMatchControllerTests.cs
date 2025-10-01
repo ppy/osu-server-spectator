@@ -212,6 +212,36 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Receiver.Verify(u => u.PlaylistItemChanged(It.IsAny<MultiplayerPlaylistItem>()), Times.Exactly(2));
         }
 
+        /// <summary>
+        /// Tests that when multiple users pick the same candidate playlist item, it's only included once in the final selection.
+        /// </summary>
+        [Fact]
+        public async Task DuplicateCandidateIncludedOnce()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            await gotoStage(MatchmakingStage.UserBeatmapSelect);
+
+            long playlistItemId;
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                playlistItemId = room.Item!.Playlist.First().ID;
+
+            // Both users select the same playlist item
+            SetUserContext(ContextUser);
+            await Hub.MatchmakingToggleSelection(playlistItemId);
+            SetUserContext(ContextUser2);
+            await Hub.MatchmakingToggleSelection(playlistItemId);
+
+            await gotoStage(MatchmakingStage.ServerBeatmapFinalised);
+
+            // Check that only one item appears in the candidates.
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                Assert.Single(((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
+        }
+
         [Fact]
         public async Task CanNotInvitePlayersToRoom()
         {
