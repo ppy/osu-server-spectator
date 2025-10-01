@@ -321,6 +321,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
+                if (room.Settings.MatchType == MatchType.Matchmaking)
+                    throw new InvalidStateException("Can't invite players to matchmaking rooms.");
+
                 await Clients.User(userId.ToString()).Invited(user.UserId, room.RoomID, room.Settings.Password);
             }
         }
