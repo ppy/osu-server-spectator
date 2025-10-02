@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using osu.Game.Online.Matchmaking;
+using osu.Game.Online.Matchmaking.Events;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
@@ -128,9 +129,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await stageResultsDisplaying();
         }
 
-        public Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
+        public async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
         {
-            return Task.CompletedTask;
+            switch (request)
+            {
+                case MatchmakingAvatarActionRequest avatarAction:
+                    await hub.NotifyNewMatchEvent(room, new MatchmakingAvatarActionEvent
+                    {
+                        UserId = user.UserID,
+                        Action = avatarAction.Action
+                    });
+                    break;
+            }
         }
 
         public async Task HandleUserJoined(MultiplayerRoomUser user)
