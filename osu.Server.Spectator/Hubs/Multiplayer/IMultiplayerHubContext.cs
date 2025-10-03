@@ -1,8 +1,10 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -147,5 +149,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         Task NotifyMatchmakingItemSelected(ServerMultiplayerRoom room, int userId, long playlistItemId);
 
         Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId);
+
+        void Log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information);
+
+        void Error(MultiplayerRoomUser? user, string message, Exception exception);
     }
 }

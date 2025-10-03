@@ -32,6 +32,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected const long ROOM_ID = 8888;
         protected const long ROOM_ID_2 = 9999;
 
+        protected IMultiplayerHubContext HubContext { get; }
         protected TestMultiplayerHub Hub { get; }
         protected EntityStore<ServerMultiplayerRoom> Rooms { get; }
         protected EntityStore<MultiplayerClientState> UserStates { get; }
@@ -138,15 +139,25 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>()))
                     .Returns<int, MultiplayerRoom>((_, room) => Task.FromResult(room.RoomID));
 
+            MultiplayerEventLogger eventLogger = new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object);
+
+            HubContext = new MultiplayerHubContext(
+                hubContext.Object,
+                Rooms,
+                UserStates,
+                loggerFactoryMock.Object,
+                DatabaseFactory.Object,
+                eventLogger);
+
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,
                 Rooms,
                 UserStates,
                 DatabaseFactory.Object,
                 new ChatFilters(DatabaseFactory.Object),
-                hubContext.Object,
+                HubContext,
                 LegacyIO.Object,
-                new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object),
+                eventLogger,
                 new Mock<IMatchmakingQueueBackgroundService>().Object);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
