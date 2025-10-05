@@ -148,13 +148,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
         // https://github.com/EbTech/Elo-MMR/blob/f6f83bb2c54bf173e60a9e8614065e8d168a349b/multi-skill/src/systems/simple_elo_mmr.rs#L118-L127
         public static (double, double) ComputeLikelihoodSum(double x, EloTanhTerm[] tanhTerms, int low, int high)
         {
-            var itr1 = tanhTerms[..low].Select(t => evalLess(t, x));
-            var itr2 = tanhTerms[low..(high + 1)].Select(t => evalEqual(t, x));
-            var itr3 = tanhTerms[(high + 1)..].Select(t => evalGreater(t, x));
+            double s = 0;
+            double sp = 0;
 
-            (double, double)[] combined = [..itr1, ..itr2, ..itr3];
+            for (int i = 0; i < tanhTerms.Length; i++)
+            {
+                (double s, double sp) value;
 
-            return combined.Aggregate<(double, double), (double, double)>((0, 0), (acc, v) => (acc.Item1 + v.Item1, acc.Item2 + v.Item2));
+                if (i < low)
+                    value = evalLess(tanhTerms[i], x);
+                else if (i <= high)
+                    value = evalEqual(tanhTerms[i], x);
+                else
+                    value = evalGreater(tanhTerms[i], x);
+
+                s += value.s;
+                sp += value.sp;
+            }
+
+            return (s, sp);
 
             static (double, double) evalLess(EloTanhTerm term, double x)
             {
