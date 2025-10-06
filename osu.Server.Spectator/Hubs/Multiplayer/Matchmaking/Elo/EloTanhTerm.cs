@@ -43,7 +43,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
         {
             double z = (x - Mu) * Warg;
             double val = -Math.Tanh(z) * Wout;
-            double valPrime = -Math.Pow(Math.Cosh(z), 2) * Warg * Wout;
+            double valPrime = -Math.Pow(Math.Cosh(z), -2) * Warg * Wout;
             return (val, valPrime);
         }
     }

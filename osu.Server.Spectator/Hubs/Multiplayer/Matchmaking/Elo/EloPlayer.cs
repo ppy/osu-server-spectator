@@ -43,8 +43,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
             ApproximatePosterior = newPosterior;
 
             double weightNormOld = Math.Pow(NormalFactor.Sig, -2);
-            double weightFromNormOld = transferSpeed * weightNormOld;
-            double weightFromTransfer = (1 - transfer) * (weightNormOld + LogisticFactors.Aggregate<EloTanhTerm, double>(0, (acc, f) => acc + f.GetWeight()));
+            double weightFromNormOld = transfer * weightNormOld;
+            double weightFromTransfer = (1 - transfer) * (weightNormOld + LogisticFactors.Sum(f => f.GetWeight()));
             double weightTotal = weightFromNormOld + weightFromTransfer;
 
             NormalFactor = new EloRating
