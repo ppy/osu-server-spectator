@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
 {
