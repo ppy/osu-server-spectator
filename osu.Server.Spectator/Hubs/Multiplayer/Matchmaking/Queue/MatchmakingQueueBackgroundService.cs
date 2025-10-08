@@ -232,7 +232,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)
         {
             MatchmakingBeatmapSelector selector = await MatchmakingBeatmapSelector.Initialise(pool, databaseFactory);
-            return selector.GetAppropriateBeatmaps(ratings).Select(b => new MultiplayerPlaylistItem
+            matchmaking_pool_beatmap[] items = selector.GetAppropriateBeatmaps(ratings);
+
+            using (var db = databaseFactory.GetInstance())
+                await db.IncrementMatchmakingSelectionCount(items);
+
+            return items.Select(b => new MultiplayerPlaylistItem
             {
                 BeatmapID = b.beatmap_id,
                 BeatmapChecksum = b.checksum!,
