@@ -11,9 +11,12 @@ namespace osu.Server.Spectator.Database.Models
     public class matchmaking_pool_beatmap
     {
         // matchmaking_pool_beatmaps
+        public int id { get; set; }
         public int pool_id { get; set; }
         public int beatmap_id { get; set; }
         public string mods { get; set; } = string.Empty;
+        public int rating { get; set; }
+        public int selection_count { get; set; }
 
         // osu_beatmaps
         public string? checksum { get; set; }
