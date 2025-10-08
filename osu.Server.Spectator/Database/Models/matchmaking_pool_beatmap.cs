@@ -4,11 +4,12 @@
 // ReSharper disable InconsistentNaming (matches database table)
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace osu.Server.Spectator.Database.Models
 {
     [Serializable]
-    public class matchmaking_pool_beatmap
+    public class matchmaking_pool_beatmap : IEquatable<matchmaking_pool_beatmap>
     {
         // matchmaking_pool_beatmaps
         public int id { get; set; }
@@ -21,5 +22,16 @@ namespace osu.Server.Spectator.Database.Models
         // osu_beatmaps
         public string? checksum { get; set; }
         public double difficultyrating { get; set; }
+
+        public bool Equals(matchmaking_pool_beatmap? other)
+            => other != null
+               && id == other.id;
+
+        public override bool Equals(object? obj)
+            => obj is matchmaking_pool_beatmap other && Equals(other);
+
+        [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
+        public override int GetHashCode()
+            => id.GetHashCode();
     }
 }

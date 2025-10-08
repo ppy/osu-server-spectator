@@ -219,7 +219,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         MatchType = MatchType.Matchmaking,
                         Password = password
                     },
-                    Playlist = await queryPlaylistItems(bundle.Queue.Pool)
+                    Playlist = await queryPlaylistItems(bundle.Queue.Pool, group.Users.Select(u => u.Rating).ToArray())
                 });
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
@@ -229,19 +229,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
         }
 
-        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool)
+        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)
         {
-            using (var db = databaseFactory.GetInstance())
+            MatchmakingBeatmapSelector selector = await MatchmakingBeatmapSelector.Initialise(pool, databaseFactory);
+            return selector.GetAppropriateBeatmaps(ratings).Select(b => new MultiplayerPlaylistItem
             {
-                matchmaking_pool_beatmap[] beatmaps = await db.GetMatchmakingPoolBeatmapsAsync(pool.id);
-                return beatmaps.Select(b => new MultiplayerPlaylistItem
-                {
-                    BeatmapID = b.beatmap_id,
-                    BeatmapChecksum = b.checksum!,
-                    RulesetID = pool.ruleset_id,
-                    StarRating = b.difficultyrating,
-                }).ToArray();
-            }
+                BeatmapID = b.beatmap_id,
+                BeatmapChecksum = b.checksum!,
+                RulesetID = pool.ruleset_id,
+                StarRating = b.difficultyrating,
+            }).ToArray();
         }
     }
 }

@@ -63,6 +63,11 @@ namespace osu.Server.Spectator
         /// </remarks>
         public static double MatchmakingRatingRadiusIncreaseTime { get; } = 15;
 
+        /// <summary>
+        /// The total number of beatmaps per matchmaking room.
+        /// </summary>
+        public static int MatchmakingPoolSize { get; set; } = 50;
+
         static AppSettings()
         {
             SaveReplays = Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
@@ -105,6 +110,7 @@ namespace osu.Server.Spectator
             MatchmakingRatingRadiusIncreaseTime = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_RADIUS_INCREASE_TIME"), out int mmRatingRadiusIncreaseTime)
                 ? mmRatingRadiusIncreaseTime
                 : MatchmakingRatingRadiusIncreaseTime;
+            MatchmakingPoolSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_POOL_SIZE"), out int mmPoolSize) ? mmPoolSize : MatchmakingPoolSize;
         }
     }
 }
