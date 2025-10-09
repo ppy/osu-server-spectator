@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Database.Models
         public int id { get; set; }
         public int pool_id { get; set; }
         public int beatmap_id { get; set; }
-        public string mods { get; set; } = string.Empty;
+        public string? mods { get; set; }
         public int rating { get; set; }
         public int selection_count { get; set; }
 

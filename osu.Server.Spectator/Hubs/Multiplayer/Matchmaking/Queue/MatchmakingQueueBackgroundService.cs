@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -243,6 +245,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 BeatmapChecksum = b.checksum!,
                 RulesetID = pool.ruleset_id,
                 StarRating = b.difficultyrating,
+                RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(b.mods ?? string.Empty) ?? [],
             }).ToArray();
         }
     }
