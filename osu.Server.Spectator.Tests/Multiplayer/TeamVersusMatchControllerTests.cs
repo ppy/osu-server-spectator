@@ -20,18 +20,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UserRequestsValidTeamChange(int team)
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
-            {
-                Playlist =
-                {
-                    new MultiplayerPlaylistItem
-                    {
-                        BeatmapID = 3333,
-                        BeatmapChecksum = "3333"
-                    },
-                }
-            };
-            await room.Initialise();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object);
 
             var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object);
 
@@ -56,18 +45,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UserRequestsInvalidTeamChange(int team)
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
-            {
-                Playlist =
-                {
-                    new MultiplayerPlaylistItem
-                    {
-                        BeatmapID = 3333,
-                        BeatmapChecksum = "3333"
-                    },
-                }
-            };
-            await room.Initialise();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object);
+
             var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object);
 
             // change the match type
@@ -92,18 +71,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task NewUsersAssignedToTeamWithFewerUsers()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
-            {
-                Playlist =
-                {
-                    new MultiplayerPlaylistItem
-                    {
-                        BeatmapID = 3333,
-                        BeatmapChecksum = "3333"
-                    },
-                }
-            };
-            await room.Initialise();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object);
 
             // change the match type
             await room.ChangeMatchType(MatchType.TeamVersus);
@@ -133,18 +101,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task InitialUsersAssignedToTeamsEqually()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
-            {
-                Playlist =
-                {
-                    new MultiplayerPlaylistItem
-                    {
-                        BeatmapID = 3333,
-                        BeatmapChecksum = "3333"
-                    },
-                }
-            };
-            await room.Initialise();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -164,18 +121,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task StateMaintainedBetweenRulesetSwitch()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
-            {
-                Playlist =
-                {
-                    new MultiplayerPlaylistItem
-                    {
-                        BeatmapID = 3333,
-                        BeatmapChecksum = "3333"
-                    },
-                }
-            };
-            await room.Initialise();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object);
 
             await room.ChangeMatchType(MatchType.TeamVersus);
 
