@@ -84,12 +84,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 if (stats == null)
                 {
-                    const int min_elo = 1400;
-                    const int max_elo = 1600;
-
-                    // Estimate Elo from PP.
+                    // Estimate initial elo from PP.
                     double pp = await db.GetUserPPAsync(state.UserId, pool.ruleset_id);
-                    double eloEstimate = min_elo + pp / 25000 * (max_elo - min_elo);
+                    double eloEstimate = -4000 + 600 * Math.Log(pp + 4000);
 
                     await db.UpdateMatchmakingUserStatsAsync(stats = new matchmaking_user_stats
                     {
@@ -222,7 +219,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         MatchType = MatchType.Matchmaking,
                         Password = password
                     },
-                    Playlist = await queryPlaylistItems(bundle.Queue.Pool)
+                    Playlist = await queryPlaylistItems(bundle.Queue.Pool, group.Users.Select(u => u.Rating).ToArray())
                 });
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
@@ -232,19 +229,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
         }
 
-        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool)
+        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)
         {
+            MatchmakingBeatmapSelector selector = await MatchmakingBeatmapSelector.Initialise(pool, databaseFactory);
+            matchmaking_pool_beatmap[] items = selector.GetAppropriateBeatmaps(ratings);
+
             using (var db = databaseFactory.GetInstance())
+                await db.IncrementMatchmakingSelectionCount(items);
+
+            return items.Select(b => new MultiplayerPlaylistItem
             {
-                matchmaking_pool_beatmap[] beatmaps = await db.GetMatchmakingPoolBeatmapsAsync(pool.id);
-                return beatmaps.Select(b => new MultiplayerPlaylistItem
-                {
-                    BeatmapID = b.beatmap_id,
-                    BeatmapChecksum = b.checksum!,
-                    RulesetID = pool.ruleset_id,
-                    StarRating = b.difficultyrating,
-                }).ToArray();
-            }
+                BeatmapID = b.beatmap_id,
+                BeatmapChecksum = b.checksum!,
+                RulesetID = pool.ruleset_id,
+                StarRating = b.difficultyrating,
+            }).ToArray();
         }
     }
 }
