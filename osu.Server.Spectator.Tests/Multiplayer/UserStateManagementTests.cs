@@ -191,6 +191,57 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Database.Verify(db => db.LogRoomEventAsync(It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_completed")), Times.Never);
         }
 
+        [Fact]
+        public async Task HostAbortingGameplayAfterStartLogsGameAsAbortedAndExpiresPlaylistItem()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            await MarkCurrentUserReadyAndAvailable();
+
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
+            await Hub.StartMatch();
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.WaitingForLoad, room.Item.State);
+            }
+
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Loaded);
+            await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.Playing, room.Item.State);
+                Assert.Collection(room.Item.Users.Select(u => u.State).ToArray(),
+                    state => Assert.Equal(MultiplayerUserState.Playing, state),
+                    state => Assert.Equal(MultiplayerUserState.Playing, state));
+            }
+
+            await Hub.AbortMatch();
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
+            }
+
+            Database.Verify(db => db.MarkPlaylistItemAsPlayedAsync(ROOM_ID, It.IsAny<long>()), Times.Once);
+            Database.Verify(db => db.LogRoomEventAsync(It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_started")), Times.Once);
+            Database.Verify(db => db.LogRoomEventAsync(It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_aborted")), Times.Once);
+            Database.Verify(db => db.LogRoomEventAsync(It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_completed")), Times.Never);
+        }
+
         [Theory]
         [InlineData(null)]
         [InlineData(DownloadState.Unknown)]
