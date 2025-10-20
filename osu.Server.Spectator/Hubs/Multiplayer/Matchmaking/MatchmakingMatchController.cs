@@ -29,17 +29,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// <summary>
         /// Duration users are given to view standings at the round start screen.
         /// </summary>
-        private const int stage_round_start_time = 10;
+        private const int stage_round_start_time = 20;
 
         /// <summary>
         /// Duration users are given to pick their beatmap.
         /// </summary>
-        private const int stage_user_picks_time = 20;
+        private const int stage_user_picks_time = 60;
 
         /// <summary>
         /// Duration before the beatmap is revealed to users (should approximate client animation time).
         /// </summary>
-        private const int stage_select_beatmap_time = 5;
+        private const int stage_select_beatmap_time = 7;
 
         /// <summary>
         /// Duration users are given to download the beatmap before they're excluded from the match.
