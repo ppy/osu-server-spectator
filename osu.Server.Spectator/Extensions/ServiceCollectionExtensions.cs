@@ -37,7 +37,8 @@ namespace osu.Server.Spectator.Extensions
                                     .AddHostedService<IDailyChallengeUpdater>(ctx => ctx.GetRequiredService<IDailyChallengeUpdater>())
                                     .AddSingleton<MultiplayerEventLogger>()
                                     .AddSingleton<IMatchmakingQueueBackgroundService, MatchmakingQueueBackgroundService>()
-                                    .AddHostedService<IMatchmakingQueueBackgroundService>(ctx => ctx.GetRequiredService<IMatchmakingQueueBackgroundService>());
+                                    .AddHostedService<IMatchmakingQueueBackgroundService>(ctx => ctx.GetRequiredService<IMatchmakingQueueBackgroundService>())
+                                    .AddSingleton<IMultiplayerHubContext, MultiplayerHubContext>();
         }
 
         /// <summary>

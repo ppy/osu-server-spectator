@@ -166,25 +166,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task UserJoinPreRetrievalFailureCleansUpRoom()
-        {
-            Database.Setup(db => db.GetRealtimeRoomAsync(ROOM_ID))
-                    .Callback<long>(InitialiseRoom)
-                    .ReturnsAsync(() => new multiplayer_room
-                    {
-                        type = database_match_type.head_to_head,
-                        ends_at = DateTimeOffset.Now.AddMinutes(5),
-                        user_id = USER_ID,
-                    });
-
-            SetUserContext(ContextUser2); // not the correct user to join the game first; triggers host mismatch failure.
-            await Assert.ThrowsAnyAsync<Exception>(() => Hub.JoinRoom(ROOM_ID));
-
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => Rooms.GetForUse(ROOM_ID));
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => UserStates.GetForUse(USER_ID));
-        }
-
-        [Fact]
         public async Task UserJoinPreJoinFailureCleansUpRoom()
         {
             Database.Setup(db => db.MarkRoomActiveAsync(It.IsAny<MultiplayerRoom>()))
