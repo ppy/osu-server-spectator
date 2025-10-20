@@ -141,7 +141,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     });
                 }
 
-                DogStatsd.Increment($"{statsd_prefix}.messages.room.delivered", tags: [multiplayerLookup.Value.roomID.ToString()]);
+                DogStatsd.Increment($"{statsd_prefix}.messages.room.delivered");
             }
             catch (Exception ex)
             {
@@ -207,10 +207,12 @@ namespace osu.Server.Spectator.Hubs.Spectator
             lock (multiplayerRoomSubscriptions)
             {
                 if (!multiplayerRoomSubscriptions.TryGetValue(roomId, out var existing))
+                {
                     multiplayerRoomSubscriptions[roomId] = existing = new MultiplayerRoomSubscription(roomId, metadataHubContext);
+                    DogStatsd.Gauge($"{statsd_prefix}.subscriptions.room.total", multiplayerRoomSubscriptions.Count);
+                }
 
                 existing.AddUser(userId);
-                DogStatsd.Gauge($"{statsd_prefix}.subscriptions.room.total", existing.UserIds.Count, tags: [roomId.ToString()]);
             }
         }
 
@@ -224,7 +226,8 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 subscription.RemoveUser(userId);
                 if (subscription.UserIds.Count == 0)
                     multiplayerRoomSubscriptions.Remove(roomId);
-                DogStatsd.Gauge($"{statsd_prefix}.subscriptions.room.total", subscription.UserIds.Count, tags: [roomId.ToString()]);
+
+                DogStatsd.Gauge($"{statsd_prefix}.subscriptions.room.total", multiplayerRoomSubscriptions.Count);
             }
 
             return Task.CompletedTask;
@@ -234,11 +237,8 @@ namespace osu.Server.Spectator.Hubs.Spectator
         {
             lock (multiplayerRoomSubscriptions)
             {
-                foreach (var (roomId, subscription) in multiplayerRoomSubscriptions)
-                {
+                foreach (var subscription in multiplayerRoomSubscriptions.Values)
                     subscription.RemoveUser(userId);
-                    DogStatsd.Gauge($"{statsd_prefix}.subscriptions.room.total", subscription.UserIds.Count, tags: [roomId.ToString()]);
-                }
 
                 long[] emptySubscriptions = multiplayerRoomSubscriptions.Where(kv => kv.Value.UserIds.Count == 0)
                                                                         .Select(kv => kv.Key)
@@ -246,6 +246,8 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                 foreach (long key in emptySubscriptions)
                     multiplayerRoomSubscriptions.Remove(key);
+
+                DogStatsd.Gauge($"{statsd_prefix}.subscriptions.room.total", multiplayerRoomSubscriptions.Count);
             }
 
             return Task.CompletedTask;
