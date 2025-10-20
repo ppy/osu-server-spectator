@@ -172,7 +172,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 return;
 
             MatchmakingQueueUser[] users = poolQueues.Values.SelectMany(queue => queue.GetAllUsers()).ToArray();
-            DogStatsd.Counter($"{statsd_prefix}.users_queued", users.Length);
+            DogStatsd.Gauge($"{statsd_prefix}.users_queued", users.Length);
 
             Random.Shared.Shuffle(users);
             int[] usersSample = users.Take(50).Select(u => u.UserId).ToArray();
