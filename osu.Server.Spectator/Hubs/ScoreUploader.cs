@@ -83,6 +83,7 @@ namespace osu.Server.Spectator.Hubs
                 using var db = databaseFactory.GetInstance();
 
                 var item = await channel.Reader.ReadAsync(cancellationToken);
+                bool itemProcessed = true;
 
                 try
                 {
@@ -92,49 +93,50 @@ namespace osu.Server.Spectator.Hubs
                     {
                         // Score is not ready yet - enqueue for the next attempt.
                         await channel.Writer.WriteAsync(item, cancellationToken);
+                        itemProcessed = false;
                         continue;
                     }
 
-                    try
+                    if (dbScore == null)
                     {
-                        if (dbScore == null)
-                        {
-                            logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
-                            DogStatsd.Increment($"{statsd_prefix}.timed_out");
-                            continue;
-                        }
-
-                        if (!dbScore.passed)
-                            continue;
-
-                        if (dbScore.build_id != null)
-                        {
-                            var build = await memoryCache.GetOrCreateAsync($"{nameof(osu_build)}#{dbScore.build_id}",
-                                async _ =>
-                                {
-                                    using (var conn = databaseFactory.GetInstance())
-                                        return await conn.GetBuildByIdAsync(dbScore.build_id.Value);
-                                });
-                            item.Score.ScoreInfo.ClientVersion = build?.version ?? string.Empty;
-                        }
-
-                        item.Score.ScoreInfo.OnlineID = (long)dbScore.id;
-                        item.Score.ScoreInfo.Passed = dbScore.passed;
-
-                        await scoreStorage.WriteAsync(item);
-                        await db.MarkScoreHasReplay(item.Score);
-                        DogStatsd.Increment($"{statsd_prefix}.uploaded");
+                        logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
+                        DogStatsd.Increment($"{statsd_prefix}.timed_out");
+                        continue;
                     }
-                    finally
+
+                    if (!dbScore.passed)
+                        continue;
+
+                    if (dbScore.build_id != null)
                     {
-                        item.Dispose();
-                        Interlocked.Decrement(ref remainingUsages);
+                        var build = await memoryCache.GetOrCreateAsync($"{nameof(osu_build)}#{dbScore.build_id}",
+                            async _ =>
+                            {
+                                using (var conn = databaseFactory.GetInstance())
+                                    return await conn.GetBuildByIdAsync(dbScore.build_id.Value);
+                            });
+                        item.Score.ScoreInfo.ClientVersion = build?.version ?? string.Empty;
                     }
+
+                    item.Score.ScoreInfo.OnlineID = (long)dbScore.id;
+                    item.Score.ScoreInfo.Passed = dbScore.passed;
+
+                    await scoreStorage.WriteAsync(item);
+                    await db.MarkScoreHasReplay(item.Score);
+                    DogStatsd.Increment($"{statsd_prefix}.uploaded");
                 }
                 catch (Exception e)
                 {
                     logger.LogError(e, "Error during score upload");
                     DogStatsd.Increment($"{statsd_prefix}.failed");
+                }
+                finally
+                {
+                    if (itemProcessed)
+                    {
+                        item.Dispose();
+                        Interlocked.Decrement(ref remainingUsages);
+                    }
                 }
             }
         }
