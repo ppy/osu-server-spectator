@@ -224,10 +224,12 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     return Task.CompletedTask;
 
                 subscription.RemoveUser(userId);
-                if (subscription.UserIds.Count == 0)
-                    multiplayerRoomSubscriptions.Remove(roomId);
 
-                DogStatsd.Gauge($"{statsd_prefix}.subscriptions.room.total", multiplayerRoomSubscriptions.Count);
+                if (subscription.UserIds.Count == 0)
+                {
+                    multiplayerRoomSubscriptions.Remove(roomId);
+                    DogStatsd.Gauge($"{statsd_prefix}.subscriptions.room.total", multiplayerRoomSubscriptions.Count);
+                }
             }
 
             return Task.CompletedTask;
