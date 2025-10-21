@@ -198,8 +198,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             foreach (var group in bundle.FormedGroups)
             {
-                DogStatsd.Increment($"{statsd_prefix}.groups_formed");
-
                 foreach (var user in group.Users)
                     await hub.Groups.AddToGroupAsync(user.Identifier, group.Identifier, CancellationToken.None);
 
@@ -209,7 +207,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             foreach (var group in bundle.CompletedGroups)
             {
-                DogStatsd.Increment($"{statsd_prefix}.groups_completed");
                 foreach (var user in group.Users)
                     DogStatsd.Timer($"{statsd_prefix}.queue_wait_time", (DateTimeOffset.Now - user.SearchStartTime).TotalMilliseconds, tags: [$"queue:{bundle.Queue.Pool.name}"]);
 
