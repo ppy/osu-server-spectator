@@ -171,9 +171,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             if (DateTimeOffset.Now - lastLobbyUpdateTime < lobby_update_rate)
                 return;
 
-            MatchmakingQueueUser[] users = poolQueues.Values.SelectMany(queue => queue.GetAllUsers()).ToArray();
-            DogStatsd.Gauge($"{statsd_prefix}.users_queued", users.Length);
+            foreach ((_, MatchmakingQueue queue) in poolQueues)
+                DogStatsd.Gauge($"{statsd_prefix}.users_queued", queue.Count, tags: [$"queue:{queue.Pool.name}"]);
 
+            MatchmakingQueueUser[] users = poolQueues.Values.SelectMany(queue => queue.GetAllUsers()).ToArray();
             Random.Shared.Shuffle(users);
             int[] usersSample = users.Take(50).Select(u => u.UserId).ToArray();
 
