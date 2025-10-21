@@ -172,7 +172,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 return;
 
             foreach ((_, MatchmakingQueue queue) in poolQueues)
-                DogStatsd.Gauge($"{statsd_prefix}.users_queued", queue.Count, tags: [$"queue:{queue.Pool.name}"]);
+                DogStatsd.Gauge($"{statsd_prefix}.queue.users", queue.Count, tags: [$"queue:{queue.Pool.name}"]);
 
             MatchmakingQueueUser[] users = poolQueues.Values.SelectMany(queue => queue.GetAllUsers()).ToArray();
             Random.Shared.Shuffle(users);
@@ -209,7 +209,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             foreach (var group in bundle.CompletedGroups)
             {
                 foreach (var user in group.Users)
-                    DogStatsd.Timer($"{statsd_prefix}.queue_wait_time", (DateTimeOffset.Now - user.SearchStartTime).TotalMilliseconds, tags: [$"queue:{bundle.Queue.Pool.name}"]);
+                    DogStatsd.Timer($"{statsd_prefix}.queue.duration", (DateTimeOffset.Now - user.SearchStartTime).TotalMilliseconds, tags: [$"queue:{bundle.Queue.Pool.name}"]);
 
                 string password = Guid.NewGuid().ToString();
                 long roomId = await sharedInterop.CreateRoomAsync(AppSettings.BanchoBotUserId, new MultiplayerRoom(0)
