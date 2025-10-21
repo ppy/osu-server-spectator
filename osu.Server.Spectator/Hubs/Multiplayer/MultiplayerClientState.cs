@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public void ClearRoom()
         {
             if (CurrentRoomID == null)
-                throw new InvalidOperationException("User is not in a room.");
+                return;
 
             CurrentRoomID = null;
             DogStatsd.Gauge($"{MultiplayerHub.STATSD_PREFIX}.users", Interlocked.Decrement(ref countUsersInRooms));
