@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
@@ -82,7 +81,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.True(room.Item?.Users.All(u => u.UserID != USER_ID_2));
 
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => UserStates.GetForUse(USER_ID_2));
+            using (var user = await UserStates.GetForUse(USER_ID_2))
+                Assert.Null(user.Item!.CurrentRoomID);
         }
 
         [Fact]

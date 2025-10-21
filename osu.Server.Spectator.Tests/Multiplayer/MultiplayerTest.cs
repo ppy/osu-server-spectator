@@ -177,6 +177,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             Clients.Setup(clients => clients.Client(userId.ToString())).Returns(client.Object);
             Clients.Setup(clients => clients.User(userId.ToString())).Returns(client.Object);
+
+            // Create the new state for the user by invoking OnConnectedAsync().
+            var lastContext = Hub.Context;
+            SetUserContext(context);
+            Hub.OnConnectedAsync().Wait();
+            Hub.Context = lastContext;
         }
 
         /// <summary>
