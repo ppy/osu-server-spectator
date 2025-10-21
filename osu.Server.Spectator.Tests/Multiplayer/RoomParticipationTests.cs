@@ -63,8 +63,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.JoinRoom(ROOM_ID));
 
-            // ensure no state was left behind.
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => UserStates.GetForUse(USER_ID));
+            using (var user = await UserStates.GetForUse(USER_ID))
+                Assert.Null(user.Item!.CurrentRoomID);
         }
 
         [Fact]
@@ -79,8 +79,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.JoinRoom(ROOM_ID));
 
-            // ensure no state was left behind.
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => UserStates.GetForUse(USER_ID));
+            using (var user = await UserStates.GetForUse(USER_ID))
+                Assert.Null(user.Item!.CurrentRoomID);
         }
 
         [Fact]
@@ -133,8 +133,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.LeaveRoom();
 
-            // ensure no state was left behind.
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => UserStates.GetForUse(USER_ID));
+            using (var user = await UserStates.GetForUse(USER_ID))
+                Assert.Null(user.Item!.CurrentRoomID);
         }
 
         [Fact]
@@ -181,7 +181,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAnyAsync<Exception>(() => Hub.JoinRoom(ROOM_ID));
 
             await Assert.ThrowsAsync<KeyNotFoundException>(() => Rooms.GetForUse(ROOM_ID));
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => UserStates.GetForUse(USER_ID));
+
+            using (var user = await UserStates.GetForUse(USER_ID))
+                Assert.Null(user.Item!.CurrentRoomID);
         }
 
         [Fact]
@@ -193,7 +195,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAnyAsync<Exception>(() => Hub.JoinRoom(ROOM_ID));
 
             await Assert.ThrowsAsync<KeyNotFoundException>(() => Rooms.GetForUse(ROOM_ID));
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => UserStates.GetForUse(USER_ID));
+
+            using (var user = await UserStates.GetForUse(USER_ID))
+                Assert.Null(user.Item!.CurrentRoomID);
         }
 
         [Fact]
@@ -205,7 +209,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Assert.ThrowsAnyAsync<Exception>(() => Hub.JoinRoom(ROOM_ID));
 
             await Assert.ThrowsAsync<KeyNotFoundException>(() => Rooms.GetForUse(ROOM_ID));
-            await Assert.ThrowsAsync<KeyNotFoundException>(() => UserStates.GetForUse(USER_ID));
+
+            using (var user = await UserStates.GetForUse(USER_ID))
+                Assert.Null(user.Item!.CurrentRoomID);
         }
     }
 }
