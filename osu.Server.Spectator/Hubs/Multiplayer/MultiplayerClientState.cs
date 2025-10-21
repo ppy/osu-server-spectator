@@ -3,13 +3,14 @@
 
 using System;
 using Newtonsoft.Json;
+using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     [Serializable]
     public class MultiplayerClientState : ClientState
     {
-        public long? CurrentRoomID;
+        public long? CurrentRoomID { get; private set; }
 
         [JsonConstructor]
         public MultiplayerClientState(in string connectionId, in int userId)
@@ -17,9 +18,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
         }
 
+        public void SetRoom(long roomId)
+        {
+            if (CurrentRoomID != null)
+                throw new InvalidOperationException("User is already in a room.");
+
+            CurrentRoomID = roomId;
+            DogStatsd.Increment($"{MultiplayerHub.STATSD_PREFIX}.users");
+        }
+
         public void ClearRoom()
         {
+            if (CurrentRoomID == null)
+                throw new InvalidOperationException("User is not in a room.");
+
             CurrentRoomID = null;
+            DogStatsd.Decrement($"{MultiplayerHub.STATSD_PREFIX}.users");
         }
     }
 }
