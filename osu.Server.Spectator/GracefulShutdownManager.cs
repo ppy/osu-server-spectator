@@ -53,8 +53,7 @@ namespace osu.Server.Spectator
             dependentStores.Add(connectionStateStore);
             dependentStores.Add(metadataClientStore);
 
-            // Importantly, we don't care to block `MultiplayerClientState` stores because they can only be created
-            // if a `ServerMultiplayerRoom` is first in existence.
+            // Importantly, we don't block on `MultiplayerClientState` because they're only relevant as long as a `ServerMultiplayerRoom` exists in the first place.
             // More so, we want to allow these states to be created so existing rooms can continue to function until they are disbanded.
 
             hostApplicationLifetime.ApplicationStopping.Register(shutdownSafely);
