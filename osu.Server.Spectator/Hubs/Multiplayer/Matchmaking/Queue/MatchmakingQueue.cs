@@ -62,6 +62,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
+        /// Retrieves the count of users in this queue.
+        /// </summary>
+        public int Count
+        {
+            get
+            {
+                lock (queueLock)
+                    return matchmakingUsers.Count;
+            }
+        }
+
+        /// <summary>
         /// Determines whether a given user is in the matchmaking queue.
         /// When a user is in the queue, they could either be waiting to be matched up or waiting for their group to be complete.
         /// </summary>
@@ -76,7 +88,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// Retrieves all users currently in the matchmaking queue.
         /// </summary>
-        /// <returns></returns>
         public MatchmakingQueueUser[] GetAllUsers()
         {
             lock (queueLock)
