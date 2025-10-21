@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Threading;
 using Newtonsoft.Json;
 using StatsdClient;
 
@@ -10,6 +11,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     [Serializable]
     public class MultiplayerClientState : ClientState
     {
+        private static int countUsersInRooms;
+
         public long? CurrentRoomID { get; private set; }
 
         [JsonConstructor]
@@ -24,7 +27,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 throw new InvalidOperationException("User is already in a room.");
 
             CurrentRoomID = roomId;
-            DogStatsd.Increment($"{MultiplayerHub.STATSD_PREFIX}.users");
+            DogStatsd.Gauge($"{MultiplayerHub.STATSD_PREFIX}.users", Interlocked.Increment(ref countUsersInRooms));
         }
 
         public void ClearRoom()
@@ -33,7 +36,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 throw new InvalidOperationException("User is not in a room.");
 
             CurrentRoomID = null;
-            DogStatsd.Decrement($"{MultiplayerHub.STATSD_PREFIX}.users");
+            DogStatsd.Gauge($"{MultiplayerHub.STATSD_PREFIX}.users", Interlocked.Decrement(ref countUsersInRooms));
         }
     }
 }
