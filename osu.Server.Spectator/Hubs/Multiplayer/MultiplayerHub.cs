@@ -25,6 +25,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public partial class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
+        public const string STATSD_PREFIX = "multiplayer";
+
         private static readonly MessagePackSerializerOptions message_pack_options = new MessagePackSerializerOptions(new SignalRUnionWorkaroundResolver());
 
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
@@ -144,7 +146,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             }
                         }
 
-                        userUsage.Item.CurrentRoomID = roomId;
+                        userUsage.Item.SetRoom(roomId);
 
                         // because match controllers may send subsequent information via Users collection hooks,
                         // inform clients before adding user to the room.
