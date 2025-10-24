@@ -8,38 +8,38 @@ namespace osu.Server.Spectator
     public static class AppSettings
     {
         public static bool SaveReplays { get; set; }
-        public static int ReplayUploaderConcurrency { get; set; }
+        public static int ReplayUploaderConcurrency { get; set; } = 1;
 
         #region For use with FileScoreStorage
 
-        public static string ReplaysPath { get; set; }
+        public static string ReplaysPath { get; set; } = "replays";
 
         #endregion
 
         #region For use with S3ScoreStorage
 
-        public static string S3Key { get; }
-        public static string S3Secret { get; }
-        public static string ReplaysBucket { get; }
+        public static string S3Key { get; } = string.Empty;
+        public static string S3Secret { get; } = string.Empty;
+        public static string ReplaysBucket { get; } = string.Empty;
 
         #endregion
 
         public static bool TrackBuildUserCounts { get; set; }
 
-        public static string ServerPort { get; set; }
-        public static string RedisHost { get; }
-        public static string DataDogAgentHost { get; set; }
+        public static int ServerPort { get; set; } = 80;
+        public static string RedisHost { get; } = "localhost";
+        public static string DataDogAgentHost { get; set; } = "localhost";
 
-        public static string DatabaseHost { get; }
-        public static string DatabaseUser { get; }
-        public static string DatabasePort { get; }
+        public static string DatabaseHost { get; } = "localhost";
+        public static string DatabaseUser { get; } = "osuweb";
+        public static int DatabasePort { get; } = 3306;
 
-        public static string SharedInteropDomain { get; }
-        public static string SharedInteropSecret { get; }
+        public static string SharedInteropDomain { get; } = "http://localhost:8080";
+        public static string SharedInteropSecret { get; } = string.Empty;
 
         public static string? SentryDsn { get; }
 
-        public static int BanchoBotUserId { get; }
+        public static int BanchoBotUserId { get; } = 3;
 
         public static int MatchmakingRoomSize { get; set; } = 8;
         public static int MatchmakingRoomRounds { get; set; } = 5;
@@ -70,30 +70,30 @@ namespace osu.Server.Spectator
 
         static AppSettings()
         {
-            SaveReplays = Environment.GetEnvironmentVariable("SAVE_REPLAYS") == "1";
-            ReplayUploaderConcurrency = int.Parse(Environment.GetEnvironmentVariable("REPLAY_UPLOAD_THREADS") ?? "1");
+            SaveReplays = bool.TryParse(Environment.GetEnvironmentVariable("SAVE_REPLAYS"), out bool saveReplays) ? saveReplays : SaveReplays;
+            ReplayUploaderConcurrency = int.TryParse(Environment.GetEnvironmentVariable("REPLAY_UPLOAD_THREADS"), out int uploaderConcurrency) ? uploaderConcurrency : ReplayUploaderConcurrency;
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ReplayUploaderConcurrency);
 
-            ReplaysPath = Environment.GetEnvironmentVariable("REPLAYS_PATH") ?? "replays";
-            S3Key = Environment.GetEnvironmentVariable("S3_KEY") ?? string.Empty;
-            S3Secret = Environment.GetEnvironmentVariable("S3_SECRET") ?? string.Empty;
-            ReplaysBucket = Environment.GetEnvironmentVariable("REPLAYS_BUCKET") ?? string.Empty;
-            TrackBuildUserCounts = Environment.GetEnvironmentVariable("TRACK_BUILD_USER_COUNTS") == "1";
+            ReplaysPath = Environment.GetEnvironmentVariable("REPLAYS_PATH") ?? ReplaysPath;
+            S3Key = Environment.GetEnvironmentVariable("S3_KEY") ?? S3Key;
+            S3Secret = Environment.GetEnvironmentVariable("S3_SECRET") ?? S3Secret;
+            ReplaysBucket = Environment.GetEnvironmentVariable("REPLAYS_BUCKET") ?? ReplaysBucket;
+            TrackBuildUserCounts = bool.TryParse(Environment.GetEnvironmentVariable("TRACK_BUILD_USER_COUNTS"), out bool trackBuildUserCounts) ? trackBuildUserCounts : TrackBuildUserCounts;
 
-            ServerPort = Environment.GetEnvironmentVariable("SERVER_PORT") ?? "80";
-            RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "localhost";
-            DataDogAgentHost = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? "localhost";
+            ServerPort = int.TryParse(Environment.GetEnvironmentVariable("SERVER_PORT"), out int serverPort) ? serverPort : ServerPort;
+            RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? RedisHost;
+            DataDogAgentHost = Environment.GetEnvironmentVariable("DD_AGENT_HOST") ?? DataDogAgentHost;
 
-            DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-            DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? "osuweb";
-            DatabasePort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
+            DatabaseHost = Environment.GetEnvironmentVariable("DB_HOST") ?? DatabaseHost;
+            DatabaseUser = Environment.GetEnvironmentVariable("DB_USER") ?? DatabaseUser;
+            DatabasePort = int.TryParse(Environment.GetEnvironmentVariable("DB_PORT"), out int databasePort) ? databasePort : DatabasePort;
 
-            SharedInteropDomain = Environment.GetEnvironmentVariable("SHARED_INTEROP_DOMAIN") ?? "http://localhost:8080";
-            SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? string.Empty;
+            SharedInteropDomain = Environment.GetEnvironmentVariable("SHARED_INTEROP_DOMAIN") ?? SharedInteropDomain;
+            SharedInteropSecret = Environment.GetEnvironmentVariable("SHARED_INTEROP_SECRET") ?? SharedInteropSecret;
 
             SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
 
-            BanchoBotUserId = int.TryParse(Environment.GetEnvironmentVariable("BANCHO_BOT_USER_ID"), out int id) ? id : 3;
+            BanchoBotUserId = int.TryParse(Environment.GetEnvironmentVariable("BANCHO_BOT_USER_ID"), out int banchoBotUserId) ? banchoBotUserId : BanchoBotUserId;
 
             MatchmakingRoomSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_SIZE"), out int mmSize)
                 ? mmSize
