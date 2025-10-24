@@ -154,9 +154,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             }
         }
 
-        public Task HandleUserLeft(MultiplayerRoomUser user)
+        public async Task HandleUserLeft(MultiplayerRoomUser user)
         {
-            return Task.CompletedTask;
+            await updateStageFromUserStateChange();
         }
 
         public Task AddPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
@@ -176,13 +176,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task HandleUserStateChanged(MultiplayerRoomUser user)
         {
-            switch (state.Stage)
-            {
-                case MatchmakingStage.WaitingForClientsBeatmapDownload:
-                    if (allUsersReady())
-                        await stageGameplayWarmupTime(room);
-                    break;
-            }
+            await updateStageFromUserStateChange();
         }
 
         public void SkipToNextStage(out Task countdownTask)
@@ -365,6 +359,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 Stage = state.Stage,
                 TimeRemaining = duration
             }, continuation);
+        }
+
+        private async Task updateStageFromUserStateChange()
+        {
+            switch (state.Stage)
+            {
+                case MatchmakingStage.WaitingForClientsBeatmapDownload:
+                    if (allUsersReady())
+                        await stageGameplayWarmupTime(room);
+                    break;
+            }
         }
 
         private bool allUsersReady()
