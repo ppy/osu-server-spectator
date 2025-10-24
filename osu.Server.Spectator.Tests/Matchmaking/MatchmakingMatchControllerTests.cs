@@ -251,6 +251,31 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.InvitePlayer(USER_ID_2));
         }
 
+        /// <summary>
+        /// Tests that the stage advances when users leave, particularly in the case where the server is waiting on one to download the beatmap.
+        /// </summary>
+        [Fact]
+        public async Task StageAdvancesWhenUsersLeaveDuringDownload()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            // Ready up the first user.
+            SetUserContext(ContextUser);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+
+            // Quit the second user.
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+
+            await verifyStage(MatchmakingStage.GameplayWarmupTime);
+        }
+
         private async Task verifyStage(MatchmakingStage stage)
         {
             using (var room = await Rooms.GetForUse(ROOM_ID))
