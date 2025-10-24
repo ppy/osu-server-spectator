@@ -99,7 +99,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             this.dbFactory = dbFactory;
 
             room.MatchState = state = new MatchmakingRoomState();
-            room.Settings.PlaylistItemId = room.Playlist[0].ID;
+            room.Settings.PlaylistItemId = room.Playlist[Random.Shared.Next(0, room.Playlist.Count)].ID;
 
             // Todo: This should be retrieved from the room creation parameters instead.
             rulesetId = CurrentItem.RulesetID;
