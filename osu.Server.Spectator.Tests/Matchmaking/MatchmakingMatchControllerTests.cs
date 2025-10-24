@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
@@ -274,6 +275,57 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await Hub.LeaveRoom();
 
             await verifyStage(MatchmakingStage.GameplayWarmupTime);
+        }
+
+        /// <summary>
+        /// Tests that only the user beatmap picks will be the candidate items, when there are any user picks.
+        /// </summary>
+        [Fact]
+        public async Task UserPicksUsedForRandomSelection()
+        {
+            CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
+
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(contextUser3);
+            await Hub.JoinRoom(ROOM_ID);
+
+            long[] userPickIds;
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                userPickIds = room.Item!.Playlist.Take(2).Select(i => i.ID).ToArray();
+
+            await gotoStage(MatchmakingStage.UserBeatmapSelect);
+
+            // Players 1 and 2 select a beatmap, player 3 doesn't.
+            SetUserContext(ContextUser);
+            await Hub.MatchmakingToggleSelection(userPickIds[0]);
+            SetUserContext(ContextUser2);
+            await Hub.MatchmakingToggleSelection(userPickIds[1]);
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                Assert.Equal(userPickIds, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
+        }
+
+        /// <summary>
+        /// Tests that when no user picks a beatmap, the server will select one beatmap at random.
+        /// </summary>
+        [Fact]
+        public async Task NoUserPicksServerSelectsBeatmap()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                Assert.Equal(1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems.Length);
         }
 
         private async Task verifyStage(MatchmakingStage stage)
