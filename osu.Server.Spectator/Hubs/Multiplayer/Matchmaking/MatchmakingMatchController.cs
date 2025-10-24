@@ -232,13 +232,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task stageServerBeatmapFinalised(ServerMultiplayerRoom _)
         {
             long[] pickIds = userPicks.Values.ToArray();
-            int remainderPickCount = room.Users.Count - pickIds.Length;
 
-            if (remainderPickCount > 0)
+            // When there are no picks, select ONE beatmap at random to be played.
+            if (pickIds.Length == 0)
             {
-                long[] availablePicks = room.Playlist.Where(item => !item.Expired && !pickIds.Contains(item.ID)).Select(i => i.ID).ToArray();
-                Random.Shared.Shuffle(availablePicks);
-                pickIds = pickIds.Concat(availablePicks.Take(remainderPickCount)).ToArray();
+                long[] availableItems = room.Playlist.Where(item => !item.Expired && !pickIds.Contains(item.ID)).Select(i => i.ID).ToArray();
+                pickIds = Random.Shared.GetItems(availableItems, 1);
             }
 
             state.CandidateItems = pickIds.Distinct().ToArray();

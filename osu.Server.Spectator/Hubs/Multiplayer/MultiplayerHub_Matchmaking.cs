@@ -60,7 +60,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task MatchmakingToggleSelection(long playlistItemId)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
-            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item!))
             {
                 var room = roomUsage.Item;
                 if (room == null)
@@ -77,7 +77,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task MatchmakingSkipToNextStage()
         {
             using (var userUsage = await GetOrCreateLocalUserState())
-            using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+            using (var roomUsage = await getLocalUserRoom(userUsage.Item!))
             {
                 var room = roomUsage.Item;
                 if (room == null)
