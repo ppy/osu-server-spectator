@@ -325,7 +325,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
-                Assert.Equal(1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems.Length);
+                Assert.Single(((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
         }
 
         private async Task verifyStage(MatchmakingStage stage)
