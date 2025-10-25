@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +36,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// Duration users are given to pick their beatmap.
         /// </summary>
         private const int stage_user_picks_time = 40;
+
+        /// <summary>
+        /// Duration for the user beatmap selection stage when all users have picked a beatmap.
+        /// </summary>
+        private const int stage_user_picks_time_fast = 5;
 
         /// <summary>
         /// Duration before the beatmap is revealed to users (should approximate client animation time).
@@ -210,6 +216,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             userPicks[user.UserID] = playlistItemId;
             await hub.NotifyMatchmakingItemSelected(room, user.UserID, playlistItemId);
+
+            // Fast-forward the countdown if all players have made a selection.
+            if (userPicks.Count == room.Users.Count)
+            {
+                MatchmakingStageCountdown? countdown = room.FindCountdownOfType<MatchmakingStageCountdown>();
+                Debug.Assert(countdown != null);
+
+                if (room.GetCountdownRemainingTime(countdown) <= TimeSpan.FromSeconds(stage_user_picks_time_fast))
+                    return;
+
+                await room.StopCountdown(countdown);
+                await startCountdown(TimeSpan.FromSeconds(stage_user_picks_time_fast), stageServerBeatmapFinalised);
+            }
         }
 
         private async Task stageRoundWarmupTime(ServerMultiplayerRoom _)
