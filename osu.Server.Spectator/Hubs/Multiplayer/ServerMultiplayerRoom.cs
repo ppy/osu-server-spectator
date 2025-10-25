@@ -239,6 +239,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public MultiplayerCountdown? FindCountdownById(int countdownId)
             => ActiveCountdowns.SingleOrDefault(c => c.ID == countdownId);
 
+        /// <summary>
+        /// Retrieves the remaining time for a countdown.
+        /// </summary>
+        /// <param name="countdown">The countdown.</param>
+        /// <returns>The remaining time.</returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public TimeSpan GetCountdownRemainingTime(MultiplayerCountdown? countdown)
+        {
+            if (countdown == null || !trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo))
+                return TimeSpan.Zero;
+
+            TimeSpan elapsed = DateTimeOffset.Now - countdownInfo.StartTime;
+            return elapsed >= countdownInfo.Duration ? TimeSpan.Zero : countdownInfo.Duration - elapsed;
+        }
+
         private class CountdownInfo : IDisposable
         {
             public readonly MultiplayerCountdown Countdown;
