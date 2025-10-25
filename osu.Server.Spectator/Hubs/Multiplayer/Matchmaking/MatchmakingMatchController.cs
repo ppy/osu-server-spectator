@@ -162,6 +162,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task HandleUserLeft(MultiplayerRoomUser user)
         {
+            userPicks.Remove(user.UserID);
             await updateStageFromUserStateChange();
         }
 
