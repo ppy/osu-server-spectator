@@ -178,7 +178,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     });
 
             SetUserContext(ContextUser2); // not the correct user to join the game first; triggers host mismatch failure.
-            await Assert.ThrowsAnyAsync<Exception>(() => Hub.JoinRoom(ROOM_ID));
+            await Assert.ThrowsAnyAsync<Exception>(() => Hub.JoinRoomExplicit(ROOM_ID));
 
             await Assert.ThrowsAsync<KeyNotFoundException>(() => Rooms.GetForUse(ROOM_ID));
 
