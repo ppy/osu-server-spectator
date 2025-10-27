@@ -307,7 +307,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 List<matchmaking_user_stats> userStats = [];
                 List<EloPlayer> eloStandings = [];
 
-                foreach (var user in state.Users.OrderBy(u => u.Placement))
+                foreach (var user in state.Users.Where(u => u.Points > 0).OrderBy(u => u.Placement))
                 {
                     matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserId, rulesetId) ?? new matchmaking_user_stats
                     {
