@@ -67,12 +67,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
         {
-            Log($"{Context.GetUserId()} creating room");
+            Log("Attempting to create room");
+
+            using (var db = databaseFactory.GetInstance())
+            {
+                if (await db.IsUserRestrictedAsync(Context.GetUserId()))
+                    throw new InvalidStateException("Can't join a room when restricted.");
+            }
 
             long roomId = await sharedInterop.CreateRoomAsync(Context.GetUserId(), room);
             await multiplayerEventLogger.LogRoomCreatedAsync(roomId, Context.GetUserId());
 
-            return await JoinRoomWithPassword(roomId, room.Settings.Password);
+            return await joinOrCreateRoom(roomId, room.Settings.Password, true);
         }
 
         public Task<MultiplayerRoom> JoinRoom(long roomId) => JoinRoomWithPassword(roomId, string.Empty);
@@ -87,6 +93,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't join a room when restricted.");
             }
 
+            return await joinOrCreateRoom(roomId, password, false);
+        }
+
+        private async Task<MultiplayerRoom> joinOrCreateRoom(long roomId, string password, bool isNewRoom)
+        {
             byte[] roomBytes;
 
             using (var userUsage = await GetOrCreateLocalUserState())
@@ -98,10 +109,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 var roomUser = new MultiplayerRoomUser(Context.GetUserId());
 
-                using (var roomUsage = await Rooms.GetForUse(roomId, true))
+                using (var roomUsage = await Rooms.GetForUse(roomId, isNewRoom))
                 {
-                    // track whether this join necessitated starting the process of fetching the room and adding it to the room store.
-                    bool newRoomFetchStarted = roomUsage.Item == null;
                     ServerMultiplayerRoom? room = null;
 
                     try
@@ -145,7 +154,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                                 // this will handle closing the room if this was the only user.
                                 await leaveRoom(userUsage.Item, roomUsage, false);
                             }
-                            else if (newRoomFetchStarted)
+                            else if (isNewRoom)
                             {
                                 if (room != null)
                                 {
