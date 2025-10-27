@@ -328,6 +328,15 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 Assert.Single(((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
         }
 
+        [Fact]
+        public async Task IneligibleUserCanNotJoinRoom()
+        {
+            CreateUser(4, out Mock<HubCallerContext> contextUser4, out _);
+
+            SetUserContext(contextUser4);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.JoinRoom(ROOM_ID));
+        }
+
         private async Task verifyStage(MatchmakingStage stage)
         {
             using (var room = await Rooms.GetForUse(ROOM_ID))
