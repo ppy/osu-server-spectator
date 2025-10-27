@@ -218,18 +218,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             userPicks[user.UserID] = playlistItemId;
             await hub.NotifyMatchmakingItemSelected(room, user.UserID, playlistItemId);
 
+            await checkCanFastForwardBeatmapSelection();
+        }
+
+        private async Task checkCanFastForwardBeatmapSelection()
+        {
+            Debug.Assert(state.Stage == MatchmakingStage.UserBeatmapSelect);
+
             // Fast-forward the countdown if all players have made a selection.
-            if (userPicks.Count == room.Users.Count)
-            {
-                MatchmakingStageCountdown? countdown = room.FindCountdownOfType<MatchmakingStageCountdown>();
-                Debug.Assert(countdown != null);
+            if (userPicks.Count != room.Users.Count)
+                return;
 
-                if (room.GetCountdownRemainingTime(countdown) <= TimeSpan.FromSeconds(stage_user_picks_time_fast))
-                    return;
+            MatchmakingStageCountdown? countdown = room.FindCountdownOfType<MatchmakingStageCountdown>();
+            Debug.Assert(countdown != null);
 
-                await room.StopCountdown(countdown);
-                await startCountdown(TimeSpan.FromSeconds(stage_user_picks_time_fast), stageServerBeatmapFinalised);
-            }
+            if (room.GetCountdownRemainingTime(countdown) <= TimeSpan.FromSeconds(stage_user_picks_time_fast))
+                return;
+
+            await room.StopCountdown(countdown);
+            await startCountdown(TimeSpan.FromSeconds(stage_user_picks_time_fast), stageServerBeatmapFinalised);
         }
 
         private async Task stageRoundWarmupTime(ServerMultiplayerRoom _)
@@ -387,6 +394,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 case MatchmakingStage.WaitingForClientsBeatmapDownload:
                     if (allUsersReady())
                         await stageGameplayWarmupTime(room);
+                    break;
+
+                case MatchmakingStage.UserBeatmapSelect:
+                    await checkCanFastForwardBeatmapSelection();
                     break;
             }
         }
