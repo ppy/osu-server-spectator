@@ -433,10 +433,21 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleAsync<osu_build?>("SELECT `build_id`, `version`, `hash`, `users` FROM `osu_builds` WHERE `build_id` = @BuildId",
+            return await connection.QuerySingleAsync<osu_build?>("SELECT `build_id`, `version`, `hash`, `users`, `allow_bancho` FROM `osu_builds` WHERE `build_id` = @BuildId",
                 new
                 {
                     BuildId = buildId
+                });
+        }
+
+        public async Task<osu_build?> GetBuildByHashAsync(string hash)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<osu_build?>("SELECT `build_id`, `version`, `hash`, `users`, `allow_bancho` FROM `osu_builds` WHERE `hash` = UNHEX(@Hash)",
+                new
+                {
+                    Hash = hash
                 });
         }
 
@@ -445,9 +456,9 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QueryAsync<osu_build>(
-                "SELECT `build_id`, `version`, `hash`, `users` "
+                "SELECT `build_id`, `version`, `hash`, `users`, `allow_bancho` "
                 + "FROM `osu_builds` "
-                + "WHERE stream_id IN (7, 17) AND allow_bancho = 1");
+                + "WHERE `stream_id` IN (7, 17) AND `allow_bancho` = 1");
         }
 
         public async Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync()
@@ -455,7 +466,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QueryAsync<osu_build>(
-                "SELECT `build_id`, `version`, `hash`, `users` "
+                "SELECT `build_id`, `version`, `hash`, `users`, `allow_bancho` "
                 + "FROM `osu_builds` "
                 // Should match checks in BuildUserCountUpdater.build_version_regex.
                 + "WHERE `stream_id` IS NULL AND (`version` LIKE '%-lazer-%' OR `version` LIKE '%-tachyon-%') AND `allow_bancho` = 1");
