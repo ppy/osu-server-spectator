@@ -109,73 +109,81 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 var roomUser = new MultiplayerRoomUser(Context.GetUserId());
 
-                using (var roomUsage = await Rooms.GetForUse(roomId, isNewRoom))
+                try
                 {
-                    ServerMultiplayerRoom? room = null;
-
-                    try
+                    using (var roomUsage = await Rooms.GetForUse(roomId, isNewRoom))
                     {
-                        room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, HubContext, databaseFactory);
+                        ServerMultiplayerRoom? room = null;
 
-                        // this is a sanity check to keep *rooms* in a good state.
-                        // in theory the connection clean-up code should handle this correctly.
-                        if (room.Users.Any(u => u.UserID == roomUser.UserID))
-                            throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
-
-                        if (!string.IsNullOrEmpty(room.Settings.Password))
-                        {
-                            if (room.Settings.Password != password)
-                                throw new InvalidPasswordException();
-                        }
-
-                        room.Host ??= roomUser;
-
-                        userUsage.Item.SetRoom(roomId);
-
-                        // because match controllers may send subsequent information via Users collection hooks,
-                        // inform clients before adding user to the room.
-                        await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
-
-                        await room.AddUser(roomUser);
-                        room.UpdateForRetrieval();
-
-                        await addDatabaseUser(room, roomUser);
-                        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
-
-                        Log(room, "User joined");
-                    }
-                    catch
-                    {
                         try
                         {
-                            if (userUsage.Item.CurrentRoomID != null)
-                            {
-                                // the user was joined to the room, so we can run the standard leaveRoom method.
-                                // this will handle closing the room if this was the only user.
-                                await leaveRoom(userUsage.Item, roomUsage, false);
-                            }
-                            else if (isNewRoom)
-                            {
-                                if (room != null)
-                                {
-                                    // the room was retrieved and associated to the usage, but something failed before the user (host) could join.
-                                    // for now, let's mark the room as ended if this happens.
-                                    await endDatabaseMatch(room);
-                                }
+                            room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, HubContext, databaseFactory);
 
-                                roomUsage.Destroy();
+                            // this is a sanity check to keep *rooms* in a good state.
+                            // in theory the connection clean-up code should handle this correctly.
+                            if (room.Users.Any(u => u.UserID == roomUser.UserID))
+                                throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
+
+                            if (!string.IsNullOrEmpty(room.Settings.Password))
+                            {
+                                if (room.Settings.Password != password)
+                                    throw new InvalidPasswordException();
                             }
+
+                            room.Host ??= roomUser;
+
+                            userUsage.Item.SetRoom(roomId);
+
+                            // because match controllers may send subsequent information via Users collection hooks,
+                            // inform clients before adding user to the room.
+                            await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
+
+                            await room.AddUser(roomUser);
+                            room.UpdateForRetrieval();
+
+                            await addDatabaseUser(room, roomUser);
+                            await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
+
+                            Log(room, "User joined");
                         }
-                        finally
+                        catch
                         {
-                            // no matter how we end up cleaning up the room, ensure the user's state is cleared.
-                            userUsage.Item.ClearRoom();
+                            try
+                            {
+                                if (userUsage.Item.CurrentRoomID != null)
+                                {
+                                    // the user was joined to the room, so we can run the standard leaveRoom method.
+                                    // this will handle closing the room if this was the only user.
+                                    await leaveRoom(userUsage.Item, roomUsage, false);
+                                }
+                                else if (isNewRoom)
+                                {
+                                    if (room != null)
+                                    {
+                                        // the room was retrieved and associated to the usage, but something failed before the user (host) could join.
+                                        // for now, let's mark the room as ended if this happens.
+                                        await endDatabaseMatch(room);
+                                    }
+
+                                    roomUsage.Destroy();
+                                }
+                            }
+                            finally
+                            {
+                                // no matter how we end up cleaning up the room, ensure the user's state is cleared.
+                                userUsage.Item.ClearRoom();
+                            }
+
+                            throw;
                         }
 
-                        throw;
+                        roomBytes = MessagePackSerializer.Serialize<MultiplayerRoom>(room, message_pack_options);
                     }
-
-                    roomBytes = MessagePackSerializer.Serialize<MultiplayerRoom>(room, message_pack_options);
+                }
+                catch (KeyNotFoundException ex)
+                {
+                    Error("Dropping attempt to join room before the host.", ex);
+                    throw new InvalidStateException("Failed to join the room, please try again.");
                 }
             }
 
