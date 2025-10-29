@@ -334,8 +334,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             else
             {
                 await ChangeRoomState(room, MultiplayerRoomState.Open);
-                await room.Controller.HandleGameplayCompleted();
                 await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
+                await room.Controller.HandleGameplayCompleted();
             }
         }
 

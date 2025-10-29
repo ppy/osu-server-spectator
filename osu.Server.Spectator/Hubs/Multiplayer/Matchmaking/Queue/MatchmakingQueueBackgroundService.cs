@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -39,6 +40,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private const string lobby_users_group = "matchmaking-lobby-users";
         private const string statsd_prefix = "matchmaking";
+        private static string queue_ban_start_time(int userId) => $"matchmaking-ban-start-time:{userId}";
 
         private readonly ConcurrentDictionary<int, MatchmakingQueue> poolQueues = new ConcurrentDictionary<int, MatchmakingQueue>();
 
@@ -48,17 +50,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly IMultiplayerHubContext hubContext;
         private readonly ILogger logger;
+        private readonly IMemoryCache memoryCache;
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
-                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext)
+                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
             this.databaseFactory = databaseFactory;
             this.rooms = rooms;
             this.hubContext = hubContext;
+            this.memoryCache = memoryCache;
 
             logger = loggerFactory.CreateLogger(nameof(MatchmakingQueueBackgroundService));
         }
@@ -113,7 +117,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 MatchmakingQueueUser user = new MatchmakingQueueUser(state.ConnectionId)
                 {
                     UserId = state.UserId,
-                    Rating = stats.EloData.ApproximatePosterior
+                    Rating = stats.EloData.ApproximatePosterior,
+                    QueueBanStartTime = memoryCache.Get<DateTimeOffset?>(queue_ban_start_time(state.UserId)) ?? DateTimeOffset.MinValue
                 };
 
                 MatchmakingQueue queue = poolQueues.GetOrAdd(poolId, _ => new MatchmakingQueue(pool));
@@ -195,6 +200,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)
         {
+            foreach (var user in bundle.DeclinedUsers)
+            {
+                // Right now this will just delay the user from being included in matchmaking for a set period.
+                // This will be silent to users affected (see `MatchmakingQueue.matchUsers`).
+                //
+                // TODO: we should probably let the players know that they have been penalised.
+                memoryCache.Set(queue_ban_start_time(user.UserId), bundle.Queue.Clock.UtcNow);
+            }
+
             foreach (var user in bundle.RemovedUsers)
                 await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueLeft));
 
