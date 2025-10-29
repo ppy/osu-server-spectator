@@ -12,9 +12,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
     public class MatchmakingQueue
     {
         /// <summary>
-        /// The pool this queue corresponds to.
+        /// The pool for this queue.
         /// </summary>
-        public readonly matchmaking_pool Pool;
+        public matchmaking_pool Pool { get; private set; }
 
         /// <summary>
         /// The time before users are automatically removed from the queue if they haven't accepted the invitation.
@@ -71,6 +71,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 lock (queueLock)
                     return matchmakingUsers.Count;
             }
+        }
+
+        /// <summary>
+        /// Refreshes this <see cref="MatchmakingQueue"/> with a new pool.
+        /// </summary>
+        /// <param name="pool">The new pool.</param>
+        public void Refresh(matchmaking_pool pool)
+        {
+            lock (queueLock)
+                Pool = pool;
         }
 
         /// <summary>
