@@ -34,6 +34,7 @@ For advanced testing purposes.
 | `MATCHMAKING_ALLOW_SKIP` | Whether users are allowed to skip matchmaking stages.                                                                                                                                                                                          | false | 
 | `MATCHMAKING_LOBBY_UPDATE_RATE` | The rate (in seconds) at which to update the matchmaking lobby                                                                                                                                                                                 | 5 |
 | `MATCHMAKING_QUEUE_UPDATE_RATE` | The rate (in seconds) at which to update the matchmaking queues                                                                                                                                                                                | 1 |
+| `MATCHMAKING_QUEUE_BAN_DURATION` | The duration (in seconds) for which players are temporarily banned from the matchmaking queue after declining an invitation.                                                                                                                  | 60 |
 | `MATCHMAKING_RATING_INITIAL_RADIUS` | The initial ELO search radius. | 20 |
 | `MATCHMAKING_RATING_RADIUS_INCREASE_TIME` | The amount of time (in seconds) before each doubling of the ELO search radius. | 15 |
 | `MATCHMAKING_POOL_SIZE` | The number of beatmaps per matchmaking room. | 50 |
