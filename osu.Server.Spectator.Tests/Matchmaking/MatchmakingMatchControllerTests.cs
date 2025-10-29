@@ -148,11 +148,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 // Check that the standings were updated.
                 using (var room = await Rooms.GetForUse(ROOM_ID))
                 {
-                    Assert.Equal(15 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID].Points);
-                    Assert.Equal(1, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID].Placement);
+                    Assert.Equal(15 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID).Points);
+                    Assert.Equal(1, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID).Placement);
 
-                    Assert.Equal(12 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID_2].Points);
-                    Assert.Equal(2, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID_2].Placement);
+                    Assert.Equal(12 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID_2).Points);
+                    Assert.Equal(2, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID_2).Placement);
                 }
 
                 Receiver.Invocations.Clear();
