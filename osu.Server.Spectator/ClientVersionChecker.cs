@@ -58,10 +58,17 @@ namespace osu.Server.Spectator
 
             var build = await memoryCache.GetOrCreateAsync(cacheKeyForBuild(hash), async entry =>
             {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+                osu_build? build;
 
                 using (var db = databaseFactory.GetInstance())
-                    return await db.GetBuildByHashAsync(hash);
+                    build = await db.GetBuildByHashAsync(hash);
+
+                if (build == null)
+                    entry.Dispose();
+                else
+                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+
+                return build;
             });
 
             return build?.allow_bancho == true;
