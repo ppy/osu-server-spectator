@@ -32,6 +32,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public DateTimeOffset InviteStartTime { get; set; }
 
         /// <summary>
+        /// The time at which this user was temporarily banned from the matchmaking queue for declining an invitation.
+        /// </summary>
+        public DateTimeOffset QueueBanStartTime { get; set; } = DateTimeOffset.MinValue;
+
+        /// <summary>
         /// Whether this user has accepted the matchmaking room invitation.
         /// </summary>
         public bool InviteAccepted { get; set; }

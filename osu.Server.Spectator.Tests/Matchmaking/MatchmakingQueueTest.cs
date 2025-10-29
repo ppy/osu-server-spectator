@@ -167,6 +167,35 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Single(bundle.FormedGroups);
         }
 
+        [Fact]
+        public void TemporarilyBannedUserExcludedFromQueue()
+        {
+            CustomSystemClock clock = new CustomSystemClock();
+
+            queue.RoomSize = 2;
+            queue.Clock = clock;
+            queue.BanDuration = TimeSpan.FromMinutes(1);
+
+            queue.Add(new MatchmakingQueueUser("1"));
+            queue.Add(new MatchmakingQueueUser("2")
+            {
+                QueueBanStartTime = clock.UtcNow
+            });
+
+            var bundle = queue.Update();
+            Assert.Empty(bundle.FormedGroups);
+
+            clock.UtcNow += TimeSpan.FromSeconds(30);
+
+            bundle = queue.Update();
+            Assert.Empty(bundle.FormedGroups);
+
+            clock.UtcNow += TimeSpan.FromSeconds(45);
+
+            bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+        }
+
         private class CustomSystemClock : ISystemClock
         {
             public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;

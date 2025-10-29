@@ -42,6 +42,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public double RatingSearchRadiusIncreaseTime { get; set; } = AppSettings.MatchmakingRatingRadiusIncreaseTime;
 
         /// <summary>
+        /// The duration for which users are temporarily banned from the matchmaking queue after declining an invitation.
+        /// </summary>
+        public TimeSpan BanDuration { get; set; } = AppSettings.MatchmakingQueueBanDuration;
+
+        /// <summary>
         /// All users active in the matchmaking queue.
         /// </summary>
         private readonly HashSet<MatchmakingQueueUser> matchmakingUsers = new HashSet<MatchmakingQueueUser>();
