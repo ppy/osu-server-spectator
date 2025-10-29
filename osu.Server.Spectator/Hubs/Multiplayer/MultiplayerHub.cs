@@ -180,9 +180,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         roomBytes = MessagePackSerializer.Serialize<MultiplayerRoom>(room, message_pack_options);
                     }
                 }
-                catch (KeyNotFoundException ex)
+                catch (KeyNotFoundException)
                 {
-                    Error("Dropping attempt to join room before the host.", ex);
+                    Log("Dropping attempt to join room before the host.", LogLevel.Error);
                     throw new InvalidStateException("Failed to join the room, please try again.");
                 }
             }
