@@ -339,14 +339,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         if (targetUserUsage.Item.CurrentRoomID == null)
                             throw new InvalidOperationException();
 
-                        try
-                        {
-                            await leaveRoom(targetUserUsage.Item, roomUsage, true);
-                        }
-                        finally
-                        {
-                            targetUserUsage.Item.ClearRoom();
-                        }
+                        await leaveRoom(targetUserUsage.Item, roomUsage, true);
                     }
                 }
             }
