@@ -866,7 +866,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
             await base.CleanUpState(state);
-            await matchmakingQueueService.RemoveFromQueueAsync(new MatchmakingClientState(state));
+            await matchmakingQueueService.RemoveFromQueueAsync(state);
             await leaveRoom(state, true);
         }
 

@@ -56,7 +56,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             logger = loggerFactory.CreateLogger(nameof(MatchmakingQueueBackgroundService));
         }
 
-        public bool IsInQueue(MatchmakingClientState state)
+        public bool IsInQueue(MultiplayerClientState state)
         {
             foreach ((_, MatchmakingQueue queue) in poolQueues)
             {
@@ -67,17 +67,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             return false;
         }
 
-        public async Task AddToLobbyAsync(MatchmakingClientState state)
+        public async Task AddToLobbyAsync(MultiplayerClientState state)
         {
             await hub.Groups.AddToGroupAsync(state.ConnectionId, lobby_users_group);
         }
 
-        public async Task RemoveFromLobbyAsync(MatchmakingClientState state)
+        public async Task RemoveFromLobbyAsync(MultiplayerClientState state)
         {
             await hub.Groups.RemoveFromGroupAsync(state.ConnectionId, lobby_users_group);
         }
 
-        public async Task AddToQueueAsync(MatchmakingClientState state, int poolId)
+        public async Task AddToQueueAsync(MultiplayerClientState state, int poolId)
         {
             using (var db = databaseFactory.GetInstance())
             {
@@ -114,13 +114,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
         }
 
-        public async Task RemoveFromQueueAsync(MatchmakingClientState state)
+        public async Task RemoveFromQueueAsync(MultiplayerClientState state)
         {
             foreach ((_, MatchmakingQueue queue) in poolQueues)
                 await processBundle(queue.Remove(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
-        public async Task AcceptInvitationAsync(MatchmakingClientState state)
+        public async Task AcceptInvitationAsync(MultiplayerClientState state)
         {
             // Immediately notify the incoming user of their intent to join the match.
             await hub.Clients.Client(state.ConnectionId).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.JoiningMatch());
@@ -129,7 +129,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 await processBundle(queue.MarkInvitationAccepted(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
-        public async Task DeclineInvitationAsync(MatchmakingClientState state)
+        public async Task DeclineInvitationAsync(MultiplayerClientState state)
         {
             foreach ((_, MatchmakingQueue queue) in poolQueues)
                 await processBundle(queue.MarkInvitationDeclined(new MatchmakingQueueUser(state.ConnectionId)));
