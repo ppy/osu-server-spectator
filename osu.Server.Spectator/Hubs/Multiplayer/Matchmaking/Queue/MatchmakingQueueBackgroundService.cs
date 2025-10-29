@@ -195,7 +195,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)
         {
             foreach (var user in bundle.DeclinedUsers)
+            {
+                // Right now this will just delay the user from being included in matchmaking for a set period.
+                // This will be silent to users affected (see `MatchmakingQueue.matchUsers`).
+                //
+                // TODO: we should probably let the players know that they have been penalised.
                 memoryCache.Set(queue_ban_start_time(user.UserId), bundle.Queue.Clock.UtcNow);
+            }
 
             foreach (var user in bundle.RemovedUsers)
                 await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueLeft));
