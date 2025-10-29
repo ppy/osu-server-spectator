@@ -243,6 +243,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 foreach (var user in users)
                 {
                     matchmakingUsers.Remove(user);
+
+                    if (user.Group != null)
+                        bundle.DeclinedUsers.Add(user);
+
                     bundle.RemovedUsers.Add(user);
                 }
 

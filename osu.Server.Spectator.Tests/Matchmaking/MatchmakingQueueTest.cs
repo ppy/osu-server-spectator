@@ -85,6 +85,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             bundle = queue.MarkInvitationDeclined(new MatchmakingQueueUser("1"));
             Assert.Single(bundle.RemovedUsers);
             Assert.Equal("1", bundle.RemovedUsers[0].Identifier);
+            Assert.Single(bundle.DeclinedUsers);
+            Assert.Equal("1", bundle.DeclinedUsers[0].Identifier);
             Assert.Single(bundle.AddedUsers);
             Assert.Equal("2", bundle.AddedUsers[0].Identifier);
         }
@@ -105,6 +107,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             var bundle = queue.Update();
             Assert.Single(bundle.RemovedUsers);
             Assert.Equal("2", bundle.RemovedUsers[0].Identifier);
+            Assert.Single(bundle.DeclinedUsers);
+            Assert.Equal("2", bundle.DeclinedUsers[0].Identifier);
             Assert.Single(bundle.AddedUsers);
             Assert.Equal("1", bundle.AddedUsers[0].Identifier);
         }

@@ -31,9 +31,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public readonly List<MatchmakingQueueUser> AddedUsers = [];
 
         /// <summary>
-        /// Users that have left the queue.
+        /// Users that have left the queue, either by requesting to leave the queue or declining an invitation.
         /// </summary>
         public readonly List<MatchmakingQueueUser> RemovedUsers = [];
+
+        /// <summary>
+        /// Users that have declined the queue. The contents of this array are duplicated into <see cref="RemovedUsers"/>.
+        /// </summary>
+        public readonly List<MatchmakingQueueUser> DeclinedUsers = [];
 
         public MatchmakingQueueUpdateBundle(MatchmakingQueue queue)
         {
@@ -46,6 +51,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             CompletedGroups.AddRange(other.CompletedGroups);
             AddedUsers.AddRange(other.AddedUsers);
             RemovedUsers.AddRange(other.RemovedUsers);
+            DeclinedUsers.AddRange(other.DeclinedUsers);
         }
     }
 }
