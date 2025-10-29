@@ -270,6 +270,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private IEnumerable<MatchmakingQueueUser[]> matchUsers()
         {
             List<MatchmakingQueueUser> availableUsers = matchmakingUsers.Where(u => u.Group == null)
+                                                                        .Where(u => Clock.UtcNow - u.QueueBanStartTime > BanDuration)
                                                                         .OrderBy(u => u.Rating.Mu)
                                                                         .ToList();
 
