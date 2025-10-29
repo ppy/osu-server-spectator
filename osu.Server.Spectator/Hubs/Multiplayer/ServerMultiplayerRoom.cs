@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
-using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -85,30 +84,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 hub.Log(room, null, "Marking room active");
                 await db.MarkRoomActiveAsync(room);
-            }
-
-            return room;
-        }
-
-        /// <summary>
-        /// <see cref="InitialiseAsync">Initialises</see> a matchmaking room with the given eligible user IDs.
-        /// </summary>
-        /// <param name="roomId">The room identifier.</param>
-        /// <param name="hub">The multiplayer hub context.</param>
-        /// <param name="dbFactory">The database factory.</param>
-        /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
-        /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
-        public static async Task<ServerMultiplayerRoom> InitialiseMatchmakingRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, int[] eligibleUserIds)
-        {
-            ServerMultiplayerRoom room = await InitialiseAsync(roomId, hub, dbFactory);
-
-            if (room.MatchState is not MatchmakingRoomState matchmakingState)
-                throw new InvalidOperationException("Failed to initialise the matchmaking room.");
-
-            // Initialise each user (this object doesn't have a .Add() method).
-            foreach (int user in eligibleUserIds)
-            {
-                MatchmakingUser _ = matchmakingState.Users[user];
             }
 
             return room;
