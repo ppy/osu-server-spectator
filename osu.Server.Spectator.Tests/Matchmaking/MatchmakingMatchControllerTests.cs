@@ -12,12 +12,13 @@ using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Tests.Multiplayer;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Matchmaking
 {
-    public class MatchmakingMatchControllerTests : MultiplayerTest
+    public class MatchmakingMatchControllerTests : MultiplayerTest, IAsyncLifetime
     {
         public MatchmakingMatchControllerTests()
         {
@@ -40,6 +41,12 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                         user_id = (uint)userId,
                         ruleset_id = (ushort)rulesetId
                     }));
+        }
+
+        public async Task InitializeAsync()
+        {
+            using (var room = await Rooms.GetForUse(ROOM_ID, true))
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, [USER_ID, USER_ID_2, 3]);
         }
 
         [Fact]
@@ -141,11 +148,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 // Check that the standings were updated.
                 using (var room = await Rooms.GetForUse(ROOM_ID))
                 {
-                    Assert.Equal(15 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID].Points);
-                    Assert.Equal(1, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID].Placement);
+                    Assert.Equal(15 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID).Points);
+                    Assert.Equal(1, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID).Placement);
 
-                    Assert.Equal(12 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID_2].Points);
-                    Assert.Equal(2, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID_2].Placement);
+                    Assert.Equal(12 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID_2).Points);
+                    Assert.Equal(2, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID_2).Placement);
                 }
 
                 Receiver.Invocations.Clear();
@@ -328,6 +335,15 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 Assert.Single(((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
         }
 
+        [Fact]
+        public async Task IneligibleUserCanNotJoinRoom()
+        {
+            CreateUser(4, out Mock<HubCallerContext> contextUser4, out _);
+
+            SetUserContext(contextUser4);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.JoinRoom(ROOM_ID));
+        }
+
         private async Task verifyStage(MatchmakingStage stage)
         {
             using (var room = await Rooms.GetForUse(ROOM_ID))
@@ -407,6 +423,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                         throw new ArgumentOutOfRangeException(nameof(stage));
                 }
             }
+        }
+
+        public Task DisposeAsync()
+        {
+            return Task.CompletedTask;
         }
     }
 }

@@ -14,10 +14,12 @@ using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
+using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Services;
 using Sentry;
 using StatsdClient;
@@ -45,17 +47,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly IHubContext<MultiplayerHub> hub;
         private readonly ISharedInterop sharedInterop;
         private readonly IDatabaseFactory databaseFactory;
+        private readonly EntityStore<ServerMultiplayerRoom> rooms;
+        private readonly IMultiplayerHubContext hubContext;
         private readonly ILogger logger;
         private readonly IMemoryCache memoryCache;
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
-                                                 IMemoryCache memoryCache)
+                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
             this.databaseFactory = databaseFactory;
+            this.rooms = rooms;
+            this.hubContext = hubContext;
             this.memoryCache = memoryCache;
 
             logger = loggerFactory.CreateLogger(nameof(MatchmakingQueueBackgroundService));
@@ -237,11 +243,37 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     Playlist = await queryPlaylistItems(bundle.Queue.Pool, group.Users.Select(u => u.Rating).ToArray())
                 });
 
+                // Initialise the room and users
+                using (var roomUsage = await rooms.GetForUse(roomId, true))
+                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, group.Users.Select(u => u.UserId).ToArray());
+
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
                 foreach (var user in group.Users)
                     await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
             }
+        }
+
+        /// <summary>
+        /// Initialises a matchmaking room with the given eligible user IDs.
+        /// </summary>
+        /// <param name="roomId">The room identifier.</param>
+        /// <param name="hub">The multiplayer hub context.</param>
+        /// <param name="dbFactory">The database factory.</param>
+        /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
+        /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
+        public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, int[] eligibleUserIds)
+        {
+            ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory);
+
+            if (room.MatchState is not MatchmakingRoomState matchmakingState)
+                throw new InvalidOperationException("Failed to initialise the matchmaking room.");
+
+            // Initialise each user (this object doesn't have a .Add() method).
+            foreach (int user in eligibleUserIds)
+                matchmakingState.Users.GetOrAdd(user);
+
+            return room;
         }
 
         private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)
