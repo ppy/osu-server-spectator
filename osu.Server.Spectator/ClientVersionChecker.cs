@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Metadata;
@@ -49,13 +50,17 @@ namespace osu.Server.Spectator
             if (string.IsNullOrEmpty(hash))
                 return false;
 
-            var build = await memoryCache.GetOrCreateAsync(hash, async _ =>
+            var build = await memoryCache.GetOrCreateAsync(cacheKeyForBuild(hash), async entry =>
             {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+
                 using (var db = databaseFactory.GetInstance())
                     return await db.GetBuildByHashAsync(hash);
             });
 
             return build?.allow_bancho == true;
         }
+
+        private static string cacheKeyForBuild(string buildHash) => $"{nameof(osu_build)}#{buildHash}";
     }
 }
