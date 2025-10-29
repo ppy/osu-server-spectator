@@ -48,6 +48,11 @@ namespace osu.Server.Spectator
         public static TimeSpan MatchmakingQueueUpdateRate { get; } = TimeSpan.FromSeconds(1);
 
         /// <summary>
+        /// The duration for which users are temporarily banned from the matchmaking queue after declining an invitation.
+        /// </summary>
+        public static TimeSpan MatchmakingQueueBanDuration { get; } = TimeSpan.FromMinutes(1);
+
+        /// <summary>
         /// The initial rating search radius.
         /// </summary>
         /// <remarks>
@@ -114,6 +119,10 @@ namespace osu.Server.Spectator
             MatchmakingQueueUpdateRate = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_UPDATE_RATE"), out int mmQueueUpdateRate)
                 ? TimeSpan.FromSeconds(mmQueueUpdateRate)
                 : MatchmakingQueueUpdateRate;
+
+            MatchmakingQueueBanDuration = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_BAN_DURATION"), out int mmQueueBanDuration)
+                ? TimeSpan.FromSeconds(mmQueueBanDuration)
+                : MatchmakingQueueBanDuration;
 
             MatchmakingRatingInitialRadius = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_INITIAL_RADIUS"), out int mmRatingInitialRadius)
                 ? mmRatingInitialRadius

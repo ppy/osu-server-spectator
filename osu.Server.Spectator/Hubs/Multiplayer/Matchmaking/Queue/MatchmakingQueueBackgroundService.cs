@@ -7,16 +7,19 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
+using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Services;
 using Sentry;
 using StatsdClient;
@@ -37,21 +40,29 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private const string lobby_users_group = "matchmaking-lobby-users";
         private const string statsd_prefix = "matchmaking";
+        private static string queue_ban_start_time(int userId) => $"matchmaking-ban-start-time:{userId}";
 
         private readonly ConcurrentDictionary<int, MatchmakingQueue> poolQueues = new ConcurrentDictionary<int, MatchmakingQueue>();
 
         private readonly IHubContext<MultiplayerHub> hub;
         private readonly ISharedInterop sharedInterop;
         private readonly IDatabaseFactory databaseFactory;
+        private readonly EntityStore<ServerMultiplayerRoom> rooms;
+        private readonly IMultiplayerHubContext hubContext;
         private readonly ILogger logger;
+        private readonly IMemoryCache memoryCache;
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
 
-        public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory)
+        public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
+                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
             this.databaseFactory = databaseFactory;
+            this.rooms = rooms;
+            this.hubContext = hubContext;
+            this.memoryCache = memoryCache;
 
             logger = loggerFactory.CreateLogger(nameof(MatchmakingQueueBackgroundService));
         }
@@ -106,7 +117,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 MatchmakingQueueUser user = new MatchmakingQueueUser(state.ConnectionId)
                 {
                     UserId = state.UserId,
-                    Rating = stats.EloData.ApproximatePosterior
+                    Rating = stats.EloData.ApproximatePosterior,
+                    QueueBanStartTime = memoryCache.Get<DateTimeOffset?>(queue_ban_start_time(state.UserId)) ?? DateTimeOffset.MinValue
                 };
 
                 MatchmakingQueue queue = poolQueues.GetOrAdd(poolId, _ => new MatchmakingQueue(pool));
@@ -188,6 +200,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)
         {
+            foreach (var user in bundle.DeclinedUsers)
+            {
+                // Right now this will just delay the user from being included in matchmaking for a set period.
+                // This will be silent to users affected (see `MatchmakingQueue.matchUsers`).
+                //
+                // TODO: we should probably let the players know that they have been penalised.
+                memoryCache.Set(queue_ban_start_time(user.UserId), bundle.Queue.Clock.UtcNow);
+            }
+
             foreach (var user in bundle.RemovedUsers)
                 await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueLeft));
 
@@ -222,11 +243,37 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     Playlist = await queryPlaylistItems(bundle.Queue.Pool, group.Users.Select(u => u.Rating).ToArray())
                 });
 
+                // Initialise the room and users
+                using (var roomUsage = await rooms.GetForUse(roomId, true))
+                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, group.Users.Select(u => u.UserId).ToArray());
+
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
                 foreach (var user in group.Users)
                     await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
             }
+        }
+
+        /// <summary>
+        /// Initialises a matchmaking room with the given eligible user IDs.
+        /// </summary>
+        /// <param name="roomId">The room identifier.</param>
+        /// <param name="hub">The multiplayer hub context.</param>
+        /// <param name="dbFactory">The database factory.</param>
+        /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
+        /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
+        public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, int[] eligibleUserIds)
+        {
+            ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory);
+
+            if (room.MatchState is not MatchmakingRoomState matchmakingState)
+                throw new InvalidOperationException("Failed to initialise the matchmaking room.");
+
+            // Initialise each user (this object doesn't have a .Add() method).
+            foreach (int user in eligibleUserIds)
+                matchmakingState.Users.GetOrAdd(user);
+
+            return room;
         }
 
         private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)
