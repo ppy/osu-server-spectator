@@ -14,7 +14,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void OnlyEasyBeatmaps()
         {
-            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
+            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     id = i,
@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void OnlyAverageBeatmaps()
         {
-            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
+            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     id = i,
@@ -54,7 +54,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void OnlyHardBeatmaps()
         {
-            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
+            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     id = i,
@@ -74,7 +74,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void WideSelection()
         {
-            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
+            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     id = i,
