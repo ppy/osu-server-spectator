@@ -330,7 +330,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             if (anyUserPlaying)
+            {
                 await ChangeRoomState(room, MultiplayerRoomState.Playing);
+
+                foreach (var user in room.Users)
+                    user.VotedToSkip = false;
+            }
             else
             {
                 await ChangeRoomState(room, MultiplayerRoomState.Open);
@@ -399,6 +404,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId)
         {
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemDeselected), userId, playlistItemId);
+        }
+
+        public async Task CheckVotesToSkipPassed(ServerMultiplayerRoom room)
+        {
+            int countVotedUsers = room.Users.Count(u => u.State == MultiplayerUserState.Playing && u.VotedToSkip);
+            int countGameplayUsers = room.Users.Count(u => u.State == MultiplayerUserState.Playing);
+
+            if (countVotedUsers >= Math.Ceiling(countGameplayUsers / 2f))
+                await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.VoteToSkipPassed));
         }
 
         public void Log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)
