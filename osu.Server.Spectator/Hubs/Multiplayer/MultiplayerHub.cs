@@ -217,15 +217,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (userUsage.Item.CurrentRoomID == null)
                     return;
 
-                try
-                {
-                    roomId = userUsage.Item.CurrentRoomID.Value;
-                    await leaveRoom(userUsage.Item, false);
-                }
-                finally
-                {
-                    userUsage.Item.ClearRoom();
-                }
+                roomId = userUsage.Item.CurrentRoomID.Value;
+                await leaveRoom(userUsage.Item, false);
             }
 
             await multiplayerEventLogger.LogPlayerLeftAsync(roomId, Context.GetUserId());
@@ -346,14 +339,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         if (targetUserUsage.Item.CurrentRoomID == null)
                             throw new InvalidOperationException();
 
-                        try
-                        {
-                            await leaveRoom(targetUserUsage.Item, roomUsage, true);
-                        }
-                        finally
-                        {
-                            targetUserUsage.Item.ClearRoom();
-                        }
+                        await leaveRoom(targetUserUsage.Item, roomUsage, true);
                     }
                 }
             }
@@ -930,62 +916,69 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (state.CurrentRoomID == null)
                 return;
 
-            var room = roomUsage.Item;
-            if (room == null)
-                throw new InvalidOperationException("Attempted to operate on a null room");
-
-            Log(room, wasKick ? "User kicked" : "User left");
-
-            await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
-
-            var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);
-
-            if (user == null)
-                throw new InvalidStateException("User was not in the expected room.");
-
-            await room.RemoveUser(user);
-            await removeDatabaseUser(room, user);
-
             try
             {
-                // Run in background so we don't hold locks on user/room states.
-                _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID.Value);
+                var room = roomUsage.Item;
+                if (room == null)
+                    throw new InvalidOperationException("Attempted to operate on a null room");
+
+                Log(room, wasKick ? "User kicked" : "User left");
+
+                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
+
+                var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);
+
+                if (user == null)
+                    throw new InvalidStateException("User was not in the expected room.");
+
+                await room.RemoveUser(user);
+                await removeDatabaseUser(room, user);
+
+                try
+                {
+                    // Run in background so we don't hold locks on user/room states.
+                    _ = sharedInterop.RemoveUserFromRoomAsync(state.UserId, state.CurrentRoomID.Value);
+                }
+                catch
+                {
+                    // Errors are logged internally by SharedInterop.
+                }
+
+                // handle closing the room if the only participant is the user which is leaving.
+                if (room.Users.Count == 0)
+                {
+                    await endDatabaseMatch(room);
+
+                    // only destroy the usage after the database operation succeeds.
+                    Log(room, "Stopping tracking of room (all users left).");
+                    roomUsage.Destroy();
+                    return;
+                }
+
+                await HubContext.UpdateRoomStateIfRequired(room);
+
+                // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
+                if (room.Host?.Equals(user) == true)
+                {
+                    // there *has* to still be at least one user in the room (see user check above).
+                    var newHost = room.Users.First();
+
+                    await setNewHost(room, newHost);
+                }
+
+                if (wasKick)
+                {
+                    // the target user has already been removed from the group, so send the message to them separately.
+                    await Clients.Client(state.ConnectionId).UserKicked(user);
+                    await Clients.Group(GetGroupId(room.RoomID)).UserKicked(user);
+                }
+                else
+                    await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
             }
-            catch
+            finally
             {
-                // Errors are logged internally by SharedInterop.
+                state.ClearRoom();
             }
-
-            // handle closing the room if the only participant is the user which is leaving.
-            if (room.Users.Count == 0)
-            {
-                await endDatabaseMatch(room);
-
-                // only destroy the usage after the database operation succeeds.
-                Log(room, "Stopping tracking of room (all users left).");
-                roomUsage.Destroy();
-                return;
-            }
-
-            await HubContext.UpdateRoomStateIfRequired(room);
-
-            // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
-            if (room.Host?.Equals(user) == true)
-            {
-                // there *has* to still be at least one user in the room (see user check above).
-                var newHost = room.Users.First();
-
-                await setNewHost(room, newHost);
-            }
-
-            if (wasKick)
-            {
-                // the target user has already been removed from the group, so send the message to them separately.
-                await Clients.Client(state.ConnectionId).UserKicked(user);
-                await Clients.Group(GetGroupId(room.RoomID)).UserKicked(user);
-            }
-            else
-                await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
         }
 
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => Rooms.GetForUse(roomId);
