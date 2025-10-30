@@ -21,7 +21,6 @@ using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Services;
-using Sentry;
 using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
@@ -159,7 +158,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Failed to update the matchmaking lobby.");
-                    SentrySdk.CaptureException(ex);
                 }
 
                 try
@@ -169,7 +167,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Failed to refresh the matchmaking queue.");
-                    SentrySdk.CaptureException(ex);
                 }
 
                 foreach ((_, MatchmakingQueue queue) in poolQueues)
@@ -181,7 +178,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to update the matchmaking queue for pool {poolId}.", queue.Pool.id);
-                        SentrySdk.CaptureException(ex);
                     }
                 }
 
