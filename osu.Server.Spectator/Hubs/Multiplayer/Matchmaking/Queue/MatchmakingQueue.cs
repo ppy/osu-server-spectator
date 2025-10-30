@@ -12,14 +12,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
     public class MatchmakingQueue
     {
         /// <summary>
-        /// The pool this queue corresponds to.
+        /// The pool for this queue.
         /// </summary>
-        public readonly matchmaking_pool Pool;
-
-        /// <summary>
-        /// The required room size.
-        /// </summary>
-        public int RoomSize { get; set; } = AppSettings.MatchmakingRoomSize;
+        public matchmaking_pool Pool { get; private set; }
 
         /// <summary>
         /// The time before users are automatically removed from the queue if they haven't accepted the invitation.
@@ -76,6 +71,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 lock (queueLock)
                     return matchmakingUsers.Count;
             }
+        }
+
+        /// <summary>
+        /// Refreshes this <see cref="MatchmakingQueue"/> with a new pool.
+        /// </summary>
+        /// <param name="pool">The new pool.</param>
+        public void Refresh(matchmaking_pool pool)
+        {
+            lock (queueLock)
+                Pool = pool;
         }
 
         /// <summary>
@@ -201,7 +206,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 foreach (MatchmakingQueueUser[] users in matchUsers())
                 {
-                    if (users.Length < RoomSize)
+                    if (users.Length < Pool.lobby_size)
                         break;
 
                     MatchmakingQueueGroup group = new MatchmakingQueueGroup($"matchmaking-{nextGroupId++}", users);
@@ -269,7 +274,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
-        /// Forms <see cref="RoomSize"/> groups of users of similar rating.
+        /// Forms <see cref="matchmaking_pool.lobby_size"/> groups of users of similar rating.
         /// </summary>
         private IEnumerable<MatchmakingQueueUser[]> matchUsers()
         {
@@ -278,7 +283,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                                                         .OrderBy(u => u.Rating.Mu)
                                                                         .ToList();
 
-            if (availableUsers.Count < RoomSize)
+            if (availableUsers.Count < Pool.lobby_size)
                 return [];
 
             List<MatchmakingQueueUser[]> results = new List<MatchmakingQueueUser[]>();
@@ -287,7 +292,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 HashSet<MatchmakingQueueUser> matches = findMatchesForUser(availableUsers, i);
 
-                if (matches.Count < RoomSize)
+                if (matches.Count < Pool.lobby_size)
                     continue;
 
                 availableUsers.RemoveAll(matches.Contains);
@@ -298,7 +303,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
-        /// Finds up to <see cref="RoomSize"/> users within a similar rating of a given user.
+        /// Finds up to <see cref="matchmaking_pool.lobby_size"/> users within a similar rating of a given user.
         /// </summary>
         /// <param name="users">The users in the matchmaking queue.</param>
         /// <param name="pivotIndex">The index of the user in <paramref name="users"/> to match.</param>
@@ -315,7 +320,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             int leftIndex = pivotIndex - 1;
             int rightIndex = pivotIndex + 1;
 
-            while (result.Count < RoomSize)
+            while (result.Count < Pool.lobby_size)
             {
                 MatchmakingQueueUser? leftUser = leftIndex < 0 ? null : users[leftIndex];
                 MatchmakingQueueUser? rightUser = rightIndex >= users.Count ? null : users[rightIndex];
