@@ -251,7 +251,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task VoteToSkip()
         {
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
-            CreateUser(4, out Mock<HubCallerContext> contextUser4, out _);
 
             // Join all users.
             await Hub.JoinRoom(ROOM_ID);
@@ -262,14 +261,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(contextUser3);
             await Hub.JoinRoom(ROOM_ID);
             await MarkCurrentUserReadyAndAvailable();
-            SetUserContext(contextUser4);
-            await Hub.JoinRoom(ROOM_ID);
-            await MarkCurrentUserReadyAndAvailable();
 
             // Start gameplay
             SetUserContext(ContextUser);
             await Hub.StartMatch();
-            await LoadGameplay(ContextUser, ContextUser2, contextUser3, contextUser4);
+            await LoadGameplay(ContextUser, ContextUser2, contextUser3);
 
             // User 1 skips
             SetUserContext(ContextUser);
@@ -299,6 +295,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task VoteToSkipUpdatesOnLeave()
         {
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
+            CreateUser(4, out Mock<HubCallerContext> contextUser4, out _);
 
             // Join all users.
             await Hub.JoinRoom(ROOM_ID);
@@ -309,16 +306,25 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(contextUser3);
             await Hub.JoinRoom(ROOM_ID);
             await MarkCurrentUserReadyAndAvailable();
+            SetUserContext(contextUser4);
+            await Hub.JoinRoom(ROOM_ID);
+            await MarkCurrentUserReadyAndAvailable();
 
             // Start gameplay
             SetUserContext(ContextUser);
             await Hub.StartMatch();
-            await LoadGameplay(ContextUser, ContextUser2, contextUser3);
+            await LoadGameplay(ContextUser, ContextUser2, contextUser3, contextUser4);
 
             // User 1 skips
             SetUserContext(ContextUser);
             await Hub.VoteToSkip();
             Receiver.Verify(r => r.UserVotedToSkip(USER_ID), Times.Once);
+            Receiver.Verify(r => r.VoteToSkipPassed(), Times.Never);
+
+            // User 2 skips
+            SetUserContext(ContextUser2);
+            await Hub.VoteToSkip();
+            Receiver.Verify(r => r.UserVotedToSkip(USER_ID_2), Times.Once);
             Receiver.Verify(r => r.VoteToSkipPassed(), Times.Never);
 
             // User 3 leaves
