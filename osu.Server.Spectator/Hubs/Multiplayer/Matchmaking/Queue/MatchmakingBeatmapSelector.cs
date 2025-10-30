@@ -41,22 +41,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="ratings">The lobby user ratings.</param>
         public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(EloRating[] ratings)
         {
-            double muMin = ratings.Min(r => r.Mu);
-            double muMax = ratings.Max(r => r.Mu);
-            double muAvg = ratings.Sum(r => r.Mu) / ratings.Length;
-            // 80 is a sane value that ensures the window expands. It is equal to EloSystem.SigLimit.
-            double sigAvg = Math.Max(80, Math.Sqrt(ratings.Sum(r => Math.Pow(r.Sig, 2))) / ratings.Length);
+            double muAvg = ratings.Average(r => r.Mu);
+            // 80 is a sane non-zero default value. It is equal to EloSystem.SigLimit.
+            double muSig = Math.Max(80, Math.Sqrt(ratings.Average(v => Math.Pow(v.Mu - muAvg, 2))));
 
             List<matchmaking_pool_beatmap> result = [];
 
             // 25% of beatmaps will be easy for the lobby.
-            result.AddRange(collectBeatmaps(beatmaps.Where(b => b.rating <= muMin), PoolSize / 4, muAvg, sigAvg));
+            result.AddRange(collectBeatmaps(beatmaps, PoolSize / 4, muAvg - muSig, muSig));
 
             // 25% of beatmaps will be hard for the lobby.
-            result.AddRange(collectBeatmaps(beatmaps.Where(b => b.rating >= muMax).Except(result), PoolSize / 4, muAvg, sigAvg));
+            result.AddRange(collectBeatmaps(beatmaps.Except(result), PoolSize / 4, muAvg + muSig, muSig));
 
             // The rest will be of average difficulty.
-            result.AddRange(collectBeatmaps(beatmaps.Except(result), PoolSize - result.Count, muAvg, sigAvg));
+            result.AddRange(collectBeatmaps(beatmaps.Except(result), PoolSize - result.Count, muAvg, muSig));
 
             return result.ToArray();
         }
