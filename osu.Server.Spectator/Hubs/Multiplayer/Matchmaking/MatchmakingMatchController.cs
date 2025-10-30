@@ -73,11 +73,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private const int stage_room_end_time = 120;
 
         /// <summary>
-        /// The room size.
-        /// </summary>
-        private static readonly int room_size = AppSettings.MatchmakingRoomSize;
-
-        /// <summary>
         /// The total number of rounds.
         /// </summary>
         private static readonly int total_rounds = AppSettings.MatchmakingRoomRounds;
@@ -157,7 +152,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             switch (state.Stage)
             {
                 case MatchmakingStage.WaitingForClientsJoin:
-                    if (++joinedUserCount >= room_size)
+                    if (++joinedUserCount >= state.Users.Count)
                         await stageRoundWarmupTime(room);
                     break;
             }

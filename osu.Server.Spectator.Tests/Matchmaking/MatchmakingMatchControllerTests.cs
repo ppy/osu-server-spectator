@@ -22,7 +22,6 @@ namespace osu.Server.Spectator.Tests.Matchmaking
     {
         public MatchmakingMatchControllerTests()
         {
-            AppSettings.MatchmakingRoomSize = 2;
             AppSettings.MatchmakingRoomRounds = 2;
             AppSettings.MatchmakingRoomAllowSkip = true;
 
@@ -46,7 +45,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         public async Task InitializeAsync()
         {
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, [USER_ID, USER_ID_2, 3]);
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, [USER_ID, USER_ID_2]);
         }
 
         [Fact]
@@ -291,6 +290,9 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         public async Task UserPicksUsedForRandomSelection()
         {
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID, true))
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, [USER_ID, USER_ID_2, 3]);
 
             await Hub.JoinRoom(ROOM_ID);
 

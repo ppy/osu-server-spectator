@@ -21,7 +21,6 @@ using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Services;
-using Sentry;
 using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
@@ -53,6 +52,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly IMemoryCache memoryCache;
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
+        private DateTimeOffset lastQueueRefreshTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
                                                  EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache)
@@ -158,7 +158,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Failed to update the matchmaking lobby.");
-                    SentrySdk.CaptureException(ex);
+                }
+
+                try
+                {
+                    await refreshQueues();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to refresh the matchmaking queue.");
                 }
 
                 foreach ((_, MatchmakingQueue queue) in poolQueues)
@@ -170,7 +178,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to update the matchmaking queue for pool {poolId}.", queue.Pool.id);
-                        SentrySdk.CaptureException(ex);
                     }
                 }
 
@@ -196,6 +203,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             });
 
             lastLobbyUpdateTime = DateTimeOffset.Now;
+        }
+
+        private async Task refreshQueues()
+        {
+            if (DateTimeOffset.Now - lastQueueRefreshTime < TimeSpan.FromMinutes(1))
+                return;
+
+            using (var db = databaseFactory.GetInstance())
+            {
+                foreach ((_, MatchmakingQueue queue) in poolQueues)
+                {
+                    matchmaking_pool? newPool = await db.GetMatchmakingPoolAsync(queue.Pool.id);
+                    queue.Refresh(newPool ?? queue.Pool);
+                }
+            }
+
+            lastQueueRefreshTime = DateTimeOffset.Now;
         }
 
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)

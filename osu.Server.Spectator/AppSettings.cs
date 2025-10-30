@@ -41,7 +41,6 @@ namespace osu.Server.Spectator
 
         public static int BanchoBotUserId { get; } = 3;
 
-        public static int MatchmakingRoomSize { get; set; } = 8;
         public static int MatchmakingRoomRounds { get; set; } = 5;
         public static bool MatchmakingRoomAllowSkip { get; set; }
         public static TimeSpan MatchmakingLobbyUpdateRate { get; } = TimeSpan.FromSeconds(5);
@@ -99,10 +98,6 @@ namespace osu.Server.Spectator
             SentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
 
             BanchoBotUserId = int.TryParse(Environment.GetEnvironmentVariable("BANCHO_BOT_USER_ID"), out int banchoBotUserId) ? banchoBotUserId : BanchoBotUserId;
-
-            MatchmakingRoomSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_SIZE"), out int mmSize)
-                ? mmSize
-                : MatchmakingRoomSize;
 
             MatchmakingRoomRounds = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_ROUNDS"), out int mmRounds)
                 ? mmRounds

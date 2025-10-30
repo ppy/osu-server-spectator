@@ -16,6 +16,7 @@ namespace osu.Server.Spectator.Database.Models
         public int variant_id { get; set; }
         public string name { get; set; } = string.Empty;
         public bool active { get; set; }
+        public int lobby_size { get; set; }
 
         public MatchmakingPool ToMatchmakingPool() => new MatchmakingPool
         {
