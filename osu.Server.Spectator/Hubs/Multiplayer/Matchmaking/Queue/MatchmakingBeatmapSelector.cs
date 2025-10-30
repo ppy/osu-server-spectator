@@ -15,12 +15,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
     {
         public int PoolSize { get; set; } = AppSettings.MatchmakingPoolSize;
 
-        private readonly matchmaking_pool pool;
         private readonly matchmaking_pool_beatmap[] beatmaps;
 
-        public MatchmakingBeatmapSelector(matchmaking_pool pool, matchmaking_pool_beatmap[] beatmaps)
+        public MatchmakingBeatmapSelector(matchmaking_pool_beatmap[] beatmaps)
         {
-            this.pool = pool;
             this.beatmaps = beatmaps;
         }
 
@@ -32,7 +30,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public static async Task<MatchmakingBeatmapSelector> Initialise(matchmaking_pool pool, IDatabaseFactory dbFactory)
         {
             using var db = dbFactory.GetInstance();
-            return new MatchmakingBeatmapSelector(pool, await db.GetMatchmakingPoolBeatmapsAsync(pool.id));
+
+            matchmaking_pool_beatmap[] beatmaps = await db.GetMatchmakingPoolBeatmapsAsync(pool.id);
+            foreach (var b in beatmaps)
+                b.rating ??= (int)Math.Round(800 + 150 * b.difficultyrating);
+
+            return new MatchmakingBeatmapSelector(beatmaps);
         }
 
         /// <summary>
@@ -96,7 +99,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     double windowSig = ratingSig * (iteration + 1);
 
-                    matchmaking_pool_beatmap[] windowItems = available.Where(b => Math.Abs(b.rating - ratingMu) <= windowSig).ToArray();
+                    matchmaking_pool_beatmap[] windowItems = available.Where(b => Math.Abs((b.rating ?? 1500) - ratingMu) <= windowSig).ToArray();
                     Random.Shared.Shuffle(windowItems);
 
                     foreach (matchmaking_pool_beatmap item in windowItems.Take(itemsToAdd))
