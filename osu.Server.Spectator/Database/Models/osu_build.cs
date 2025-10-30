@@ -14,5 +14,6 @@ namespace osu.Server.Spectator.Database.Models
         public string? version { get; set; }
         public byte[]? hash { get; set; }
         public uint users { get; set; }
+        public bool allow_bancho { get; set; }
     }
 }
