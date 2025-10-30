@@ -32,8 +32,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             using var db = dbFactory.GetInstance();
 
             matchmaking_pool_beatmap[] beatmaps = await db.GetMatchmakingPoolBeatmapsAsync(pool.id);
+
             foreach (var b in beatmaps)
+            {
+                // Todo: This default rating is only accurate for NoMod beatmaps.
                 b.rating ??= (int)Math.Round(800 + 150 * b.difficultyrating);
+            }
 
             return new MatchmakingBeatmapSelector(beatmaps);
         }
