@@ -202,7 +202,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await multiplayerEventLogger.LogPlayerJoinedAsync(roomId, Context.GetUserId());
 
-            return MessagePackSerializer.Deserialize<MultiplayerRoom>(roomBytes);
+            return MessagePackSerializer.Deserialize<MultiplayerRoom>(roomBytes, message_pack_options);
         }
 
         public async Task LeaveRoom()
