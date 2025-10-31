@@ -149,16 +149,16 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.PlaylistItemChanged(item);
         }
 
-        public virtual async Task UserVotedToSkip(int userId)
+        public virtual async Task UserVotedToSkipIntro(int userId)
         {
             foreach (var c in Clients.OfType<IMultiplayerClient>())
-                await c.UserVotedToSkip(userId);
+                await c.UserVotedToSkipIntro(userId);
         }
 
-        public virtual async Task VoteToSkipPassed()
+        public virtual async Task VoteToSkipIntroPassed()
         {
             foreach (var c in Clients.OfType<IMultiplayerClient>())
-                await c.VoteToSkipPassed();
+                await c.VoteToSkipIntroPassed();
         }
 
         public virtual async Task MatchmakingQueueJoined()

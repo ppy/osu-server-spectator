@@ -612,7 +612,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        public async Task VoteToSkip()
+        public async Task VoteToSkipIntro()
         {
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -631,11 +631,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (room.State != MultiplayerRoomState.Playing)
                         throw new InvalidStateException("Cannot skip while not in a gameplay state");
 
-                    if (user.VotedToSkip)
+                    if (user.VotedToSkipIntro)
                         return;
 
-                    user.VotedToSkip = true;
-                    await Clients.Group(GetGroupId(room.RoomID)).UserVotedToSkip(user.UserID);
+                    user.VotedToSkipIntro = true;
+                    await Clients.Group(GetGroupId(room.RoomID)).UserVotedToSkipIntro(user.UserID);
                     await HubContext.CheckVotesToSkipPassed(room);
                 }
             }

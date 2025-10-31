@@ -244,7 +244,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task CanNotVoteToSkipOutsideOfGameplay()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.VoteToSkip());
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.VoteToSkipIntro());
         }
 
         [Fact]
@@ -269,26 +269,26 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // User 1 skips
             SetUserContext(ContextUser);
-            await Hub.VoteToSkip();
-            Receiver.Verify(r => r.UserVotedToSkip(USER_ID), Times.Once);
-            Receiver.Verify(r => r.VoteToSkipPassed(), Times.Never);
+            await Hub.VoteToSkipIntro();
+            Receiver.Verify(r => r.UserVotedToSkipIntro(USER_ID), Times.Once);
+            Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Never);
 
             // User 1 skips again (should be a no-op)
-            await Hub.VoteToSkip();
-            Receiver.Verify(r => r.UserVotedToSkip(USER_ID), Times.Once);
-            Receiver.Verify(r => r.VoteToSkipPassed(), Times.Never);
+            await Hub.VoteToSkipIntro();
+            Receiver.Verify(r => r.UserVotedToSkipIntro(USER_ID), Times.Once);
+            Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Never);
 
             // User 2 skips
             SetUserContext(ContextUser2);
-            await Hub.VoteToSkip();
-            Receiver.Verify(r => r.UserVotedToSkip(USER_ID_2), Times.Once);
-            Receiver.Verify(r => r.VoteToSkipPassed(), Times.Once);
+            await Hub.VoteToSkipIntro();
+            Receiver.Verify(r => r.UserVotedToSkipIntro(USER_ID_2), Times.Once);
+            Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Once);
 
             // User 3 skips (additional messages should be a no-op for clients)
             SetUserContext(contextUser3);
-            await Hub.VoteToSkip();
-            Receiver.Verify(r => r.UserVotedToSkip(3), Times.Once);
-            Receiver.Verify(r => r.VoteToSkipPassed(), Times.Exactly(2));
+            await Hub.VoteToSkipIntro();
+            Receiver.Verify(r => r.UserVotedToSkipIntro(3), Times.Once);
+            Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Exactly(2));
         }
 
         [Fact]
@@ -317,21 +317,21 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // User 1 skips
             SetUserContext(ContextUser);
-            await Hub.VoteToSkip();
-            Receiver.Verify(r => r.UserVotedToSkip(USER_ID), Times.Once);
-            Receiver.Verify(r => r.VoteToSkipPassed(), Times.Never);
+            await Hub.VoteToSkipIntro();
+            Receiver.Verify(r => r.UserVotedToSkipIntro(USER_ID), Times.Once);
+            Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Never);
 
             // User 2 skips
             SetUserContext(ContextUser2);
-            await Hub.VoteToSkip();
-            Receiver.Verify(r => r.UserVotedToSkip(USER_ID_2), Times.Once);
-            Receiver.Verify(r => r.VoteToSkipPassed(), Times.Never);
+            await Hub.VoteToSkipIntro();
+            Receiver.Verify(r => r.UserVotedToSkipIntro(USER_ID_2), Times.Once);
+            Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Never);
 
             // User 3 leaves
             SetUserContext(contextUser3);
             await Hub.LeaveRoom();
-            Receiver.Verify(r => r.UserVotedToSkip(3), Times.Never);
-            Receiver.Verify(r => r.VoteToSkipPassed(), Times.Once);
+            Receiver.Verify(r => r.UserVotedToSkipIntro(3), Times.Never);
+            Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Once);
         }
     }
 }
