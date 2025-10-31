@@ -133,6 +133,9 @@ namespace SampleMultiplayerClient
         public Task RemovePlaylistItem(long playlistItemId) =>
             connection.InvokeAsync(nameof(IMultiplayerServer.RemovePlaylistItem), playlistItemId);
 
+        public Task VoteToSkipIntro() =>
+            connection.InvokeAsync(nameof(IMultiplayerServer.VoteToSkipIntro));
+
         public Task InvitePlayer(int userId)
             => connection.InvokeAsync(nameof(IMultiplayerServer.InvitePlayer), userId);
 
@@ -281,6 +284,18 @@ namespace SampleMultiplayerClient
         public Task PlaylistItemChanged(MultiplayerPlaylistItem item)
         {
             Console.WriteLine($"Playlist item changed (id: {item.ID} beatmap: {item.BeatmapID}, ruleset: {item.RulesetID})");
+            return Task.CompletedTask;
+        }
+
+        Task IMultiplayerClient.UserVotedToSkipIntro(int userId)
+        {
+            Console.WriteLine($"User {userId} voted to skip the beatmap intro");
+            return Task.CompletedTask;
+        }
+
+        Task IMultiplayerClient.VoteToSkipIntroPassed()
+        {
+            Console.WriteLine("Vote to skip beatmap intro passed");
             return Task.CompletedTask;
         }
 

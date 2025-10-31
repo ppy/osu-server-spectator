@@ -142,6 +142,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             Users.Remove(user);
             await Controller.HandleUserLeft(user);
+            await hub.CheckVotesToSkipPassed(this);
         }
 
         #region Countdowns
