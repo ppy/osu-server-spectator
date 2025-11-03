@@ -133,7 +133,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                                     throw new InvalidPasswordException();
                             }
 
-                            if (isNewRoom)
+                            if (isNewRoom && room.Settings.MatchType != MatchType.Matchmaking)
                                 room.Host = roomUser;
 
                             userUsage.Item.SetRoom(roomId);
