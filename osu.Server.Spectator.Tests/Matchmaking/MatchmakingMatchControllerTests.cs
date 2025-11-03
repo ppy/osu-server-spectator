@@ -67,6 +67,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             // Join the first user.
             await Hub.JoinRoom(ROOM_ID);
+            Assert.Null(Rooms.GetEntityUnsafe(ROOM_ID)!.Host);
 
             // Check that the room is waiting for users.
             await verifyStage(MatchmakingStage.WaitingForClientsJoin);
@@ -78,6 +79,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             // Join the second user.
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
+            Assert.Null(Rooms.GetEntityUnsafe(ROOM_ID)!.Host);
 
             for (int i = 1; i <= 2; i++)
             {
