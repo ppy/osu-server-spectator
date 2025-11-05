@@ -97,7 +97,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 // Select a beatmap for both users.
                 long[] selectedPlaylistItems;
                 using (var room = await Rooms.GetForUse(ROOM_ID))
-                    selectedPlaylistItems = room.Item!.Playlist.Where(item => !item.Expired).Take(2).Select(item => item.ID).ToArray();
+                    selectedPlaylistItems = room.Item!.Playlist.Where(item => !item.Expired).Skip(3).Take(2).Select(item => item.ID).ToArray();
                 SetUserContext(ContextUser);
                 await Hub.MatchmakingToggleSelection(selectedPlaylistItems[0]);
                 SetUserContext(ContextUser2);
@@ -126,6 +126,10 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 await gotoNextStage();
                 await verifyStage(MatchmakingStage.Gameplay);
 
+                long playlistItemId;
+                using (var room = await Rooms.GetForUse(ROOM_ID))
+                    playlistItemId = room.Item!.CurrentPlaylistItem.ID;
+
                 // Check that a request to load gameplay was started.
                 Receiver.Verify(u => u.LoadRequested(), Times.Once);
 
@@ -137,11 +141,17 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 await Hub.ChangeState(MultiplayerUserState.Loaded);
                 await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
+                Database.Verify(db => db.LogRoomEventAsync(
+                    It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_started" && ev.playlist_item_id == playlistItemId)), Times.Once);
+
                 // End gameplay for both users
                 SetUserContext(ContextUser);
                 await Hub.AbortGameplay();
                 SetUserContext(ContextUser2);
                 await Hub.AbortGameplay();
+
+                Database.Verify(db => db.LogRoomEventAsync(
+                    It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_aborted" && ev.playlist_item_id == playlistItemId)), Times.Once);
 
                 // Check that the room continued to show the results after gameplay.
                 await verifyStage(MatchmakingStage.ResultsDisplaying);
