@@ -27,16 +27,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public ISystemClock Clock { get; set; } = new SystemClock();
 
         /// <summary>
-        /// The initial rating search radius.
-        /// </summary>
-        public double RatingInitialSearchRadius { get; set; } = AppSettings.MatchmakingRatingInitialRadius;
-
-        /// <summary>
-        /// The amount of time (in seconds) before each doubling of the rating search radius.
-        /// </summary>
-        public double RatingSearchRadiusIncreaseTime { get; set; } = AppSettings.MatchmakingRatingRadiusIncreaseTime;
-
-        /// <summary>
         /// The duration for which users are temporarily banned from the matchmaking queue after declining an invitation.
         /// </summary>
         public TimeSpan BanDuration { get; set; } = AppSettings.MatchmakingQueueBanDuration;
@@ -339,7 +329,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 double distance = Math.Min(leftDistance, rightDistance);
 
                 TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
-                double searchRadius = RatingInitialSearchRadius * Math.Pow(2, searchTime.TotalSeconds / RatingSearchRadiusIncreaseTime);
+                double searchRadius = Pool.rating_search_radius * Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp);
 
                 if (distance > searchRadius)
                     break;

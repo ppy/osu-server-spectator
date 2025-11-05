@@ -52,22 +52,6 @@ namespace osu.Server.Spectator
         public static TimeSpan MatchmakingQueueBanDuration { get; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
-        /// The initial rating search radius.
-        /// </summary>
-        /// <remarks>
-        /// Defaults to 20.
-        /// </remarks>
-        public static double MatchmakingRatingInitialRadius { get; } = 20;
-
-        /// <summary>
-        /// The amount of time (in seconds) before each doubling of the rating search radius.
-        /// </summary>
-        /// <remarks>
-        /// Defaults to doubling every 15 seconds. After 90 seconds it will cover all possible users.
-        /// </remarks>
-        public static double MatchmakingRatingRadiusIncreaseTime { get; } = 15;
-
-        /// <summary>
         /// The total number of beatmaps per matchmaking room.
         /// </summary>
         public static int MatchmakingPoolSize { get; set; } = 50;
@@ -118,14 +102,6 @@ namespace osu.Server.Spectator
             MatchmakingQueueBanDuration = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_BAN_DURATION"), out int mmQueueBanDuration)
                 ? TimeSpan.FromSeconds(mmQueueBanDuration)
                 : MatchmakingQueueBanDuration;
-
-            MatchmakingRatingInitialRadius = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_INITIAL_RADIUS"), out int mmRatingInitialRadius)
-                ? mmRatingInitialRadius
-                : MatchmakingRatingInitialRadius;
-
-            MatchmakingRatingRadiusIncreaseTime = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_RADIUS_INCREASE_TIME"), out int mmRatingRadiusIncreaseTime)
-                ? mmRatingRadiusIncreaseTime
-                : MatchmakingRatingRadiusIncreaseTime;
 
             MatchmakingPoolSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_POOL_SIZE"), out int mmPoolSize)
                 ? mmPoolSize

@@ -120,8 +120,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             queue.Pool.lobby_size = 2;
             queue.Clock = clock;
-            queue.RatingInitialSearchRadius = 100;
-            queue.RatingSearchRadiusIncreaseTime = 10;
+            queue.Pool.rating_search_radius = 100;
+            queue.Pool.rating_search_radius_exp = 10;
 
             queue.Add(new MatchmakingQueueUser("1")
             {
@@ -152,8 +152,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             queue.Pool.lobby_size = 2;
             queue.Clock = clock;
-            queue.RatingInitialSearchRadius = 100;
-            queue.RatingSearchRadiusIncreaseTime = 10;
+            queue.Pool.rating_search_radius = 100;
+            queue.Pool.rating_search_radius_exp = 10;
 
             queue.Add(new MatchmakingQueueUser("1")
             {
