@@ -149,6 +149,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.PlaylistItemChanged(item);
         }
 
+        public virtual async Task UserVotedToSkipIntro(int userId)
+        {
+            foreach (var c in Clients.OfType<IMultiplayerClient>())
+                await c.UserVotedToSkipIntro(userId);
+        }
+
+        public virtual async Task VoteToSkipIntroPassed()
+        {
+            foreach (var c in Clients.OfType<IMultiplayerClient>())
+                await c.VoteToSkipIntroPassed();
+        }
+
         public virtual async Task MatchmakingQueueJoined()
         {
             foreach (var c in Clients.OfType<IMatchmakingClient>())

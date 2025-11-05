@@ -613,6 +613,35 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
+        public async Task VoteToSkipIntro()
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                using (var roomUsage = await getLocalUserRoom(userUsage.Item))
+                {
+                    var room = roomUsage.Item;
+                    if (room == null)
+                        throw new InvalidOperationException("Attempted to operate on a null room");
+
+                    var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
+                    if (user == null)
+                        throw new InvalidOperationException("Local user was not found in the expected room");
+
+                    if (room.State != MultiplayerRoomState.Playing)
+                        throw new InvalidStateException("Cannot skip while not in a gameplay state");
+
+                    if (user.VotedToSkipIntro)
+                        return;
+
+                    user.VotedToSkipIntro = true;
+                    await Clients.Group(GetGroupId(room.RoomID)).UserVotedToSkipIntro(user.UserID);
+                    await HubContext.CheckVotesToSkipPassed(room);
+                }
+            }
+        }
+
         public async Task AddPlaylistItem(MultiplayerPlaylistItem item)
         {
             using (var userUsage = await GetOrCreateLocalUserState())
