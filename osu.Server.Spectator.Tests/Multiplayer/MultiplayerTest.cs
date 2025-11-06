@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Beatmaps;
@@ -36,6 +37,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected TestMultiplayerHub Hub { get; }
         protected EntityStore<ServerMultiplayerRoom> Rooms { get; }
         protected EntityStore<MultiplayerClientState> UserStates { get; }
+        protected MatchmakingQueueBackgroundService MatchmakingBackgroundService { get; }
 
         protected readonly Mock<IDatabaseFactory> DatabaseFactory;
         protected readonly Mock<IDatabaseAccess> Database;
@@ -99,10 +101,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Groups = new Mock<IGroupManager>();
 
             Receiver = new Mock<DelegatingMultiplayerClient> { CallBase = true };
-            Receiver.Setup(c => c.Clients).Returns(getClientsForGroup(ROOM_ID));
+            Receiver.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerHub.GetGroupId(ROOM_ID)));
 
             Receiver2 = new Mock<DelegatingMultiplayerClient> { CallBase = true };
-            Receiver2.Setup(c => c.Clients).Returns(getClientsForGroup(ROOM_ID_2));
+            Receiver2.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerHub.GetGroupId(ROOM_ID_2)));
 
             Caller = new Mock<IMultiplayerClient>();
 
@@ -127,8 +129,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                       connectionIds.Remove(connectionId);
                   });
 
+            // Generic group receiver
+            Clients.Setup(clients => clients.Group(It.IsAny<string>())).Returns<string>(groupName =>
+            {
+                var groupReceiver = new Mock<DelegatingMultiplayerClient> { CallBase = true };
+                groupReceiver.Setup(c => c.Clients).Returns(getClientsForGroup(groupName));
+                return groupReceiver.Object;
+            });
+
+            // Room-specific group receivers
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID))).Returns(Receiver.Object);
             Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2))).Returns(Receiver2.Object);
+
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
             var loggerFactoryMock = new Mock<ILoggerFactory>();
@@ -149,6 +161,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 DatabaseFactory.Object,
                 eventLogger);
 
+            MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
+                hubContext.Object,
+                LegacyIO.Object,
+                DatabaseFactory.Object,
+                loggerFactoryMock.Object,
+                Rooms,
+                HubContext,
+                new MemoryCache(new MemoryCacheOptions()));
+
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,
                 Rooms,
@@ -158,7 +179,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 HubContext,
                 LegacyIO.Object,
                 eventLogger,
-                new Mock<IMatchmakingQueueBackgroundService>().Object);
+                MatchmakingBackgroundService);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 
@@ -167,9 +188,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             SetUserContext(ContextUser);
 
-            IEnumerable<IMultiplayerClient> getClientsForGroup(long roomId)
+            IEnumerable<IMultiplayerClient> getClientsForGroup(string groupName)
             {
-                if (!groupMapping.TryGetValue(MultiplayerHub.GetGroupId(roomId), out var connectionIds))
+                if (!groupMapping.TryGetValue(groupName, out var connectionIds))
                     yield break;
 
                 foreach (var id in connectionIds)

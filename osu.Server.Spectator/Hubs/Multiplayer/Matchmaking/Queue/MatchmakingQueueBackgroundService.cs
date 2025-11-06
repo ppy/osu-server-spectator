@@ -151,37 +151,44 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                try
-                {
-                    await updateLobby();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to update the matchmaking lobby.");
-                }
-
-                try
-                {
-                    await refreshQueues();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to refresh the matchmaking queue.");
-                }
-
-                foreach ((_, MatchmakingQueue queue) in poolQueues)
-                {
-                    try
-                    {
-                        await processBundle(queue.Update());
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Failed to update the matchmaking queue for pool {poolId}.", queue.Pool.id);
-                    }
-                }
-
+                await ExecuteOnceAsync();
                 await Task.Delay(queue_update_rate, stoppingToken);
+            }
+        }
+
+        /// <summary>
+        /// Executes a single update of the queues.
+        /// </summary>
+        public async Task ExecuteOnceAsync()
+        {
+            try
+            {
+                await updateLobby();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to update the matchmaking lobby.");
+            }
+
+            try
+            {
+                await refreshQueues();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to refresh the matchmaking queue.");
+            }
+
+            foreach ((_, MatchmakingQueue queue) in poolQueues)
+            {
+                try
+                {
+                    await processBundle(queue.Update());
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to update the matchmaking queue for pool {poolId}.", queue.Pool.id);
+                }
             }
         }
 
