@@ -45,7 +45,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// <summary>
         /// Duration before the beatmap is revealed to users (should approximate client animation time).
         /// </summary>
-        private const int stage_select_beatmap_time = 7;
+        private const int stage_select_beatmap_time_single_item = 3;
+
+        /// <summary>
+        /// Duration before the beatmap is revealed to users (should approximate client animation time).
+        /// </summary>
+        private const int stage_select_beatmap_time_multiple_items = 7;
 
         /// <summary>
         /// Duration users are given to download the beatmap before they're excluded from the match.
@@ -269,7 +274,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.CandidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
 
             await changeStage(MatchmakingStage.ServerBeatmapFinalised);
-            await startCountdown(TimeSpan.FromSeconds(stage_select_beatmap_time), stageWaitingForClientsBeatmapDownload);
+            await startCountdown(state.CandidateItems.Length == 1
+                    ? TimeSpan.FromSeconds(stage_select_beatmap_time_single_item)
+                    : TimeSpan.FromSeconds(stage_select_beatmap_time_multiple_items),
+                stageWaitingForClientsBeatmapDownload);
         }
 
         private async Task stageWaitingForClientsBeatmapDownload(ServerMultiplayerRoom _)
