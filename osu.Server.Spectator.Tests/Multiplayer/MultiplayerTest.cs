@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Beatmaps;
@@ -36,6 +37,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected TestMultiplayerHub Hub { get; }
         protected EntityStore<ServerMultiplayerRoom> Rooms { get; }
         protected EntityStore<MultiplayerClientState> UserStates { get; }
+        protected MatchmakingQueueBackgroundService MatchmakingBackgroundService { get; }
 
         protected readonly Mock<IDatabaseFactory> DatabaseFactory;
         protected readonly Mock<IDatabaseAccess> Database;
@@ -159,6 +161,15 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 DatabaseFactory.Object,
                 eventLogger);
 
+            MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
+                hubContext.Object,
+                LegacyIO.Object,
+                DatabaseFactory.Object,
+                loggerFactoryMock.Object,
+                Rooms,
+                HubContext,
+                new MemoryCache(new MemoryCacheOptions()));
+
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,
                 Rooms,
@@ -168,7 +179,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 HubContext,
                 LegacyIO.Object,
                 eventLogger,
-                new Mock<IMatchmakingQueueBackgroundService>().Object);
+                MatchmakingBackgroundService);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
 
