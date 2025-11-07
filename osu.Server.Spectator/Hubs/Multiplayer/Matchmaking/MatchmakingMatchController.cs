@@ -202,13 +202,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (state.Stage != MatchmakingStage.UserBeatmapSelect)
                 return;
 
-            MultiplayerPlaylistItem? item = room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
+            if (playlistItemId != -1)
+            {
+                MultiplayerPlaylistItem? item = room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
 
-            if (item == null)
-                throw new InvalidStateException("Selected playlist item is not part of the room!");
+                if (item == null)
+                    throw new InvalidStateException("Selected playlist item is not part of the room!");
 
-            if (item.Expired)
-                throw new InvalidStateException("Selected playlist item is expired!");
+                if (item.Expired)
+                    throw new InvalidStateException("Selected playlist item is expired!");
+            }
 
             if (userPicks.TryGetValue(user.UserID, out long existingPick))
             {
@@ -265,10 +268,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             // When there are no picks, select ONE beatmap at random to be played.
             if (pickIds.Length == 0)
-            {
-                long[] availableItems = room.Playlist.Where(item => !item.Expired && !pickIds.Contains(item.ID)).Select(i => i.ID).ToArray();
-                pickIds = Random.Shared.GetItems(availableItems, 1);
-            }
+                pickIds = Random.Shared.GetItems(room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray(), 1);
 
             state.CandidateItems = pickIds.Distinct().ToArray();
             state.CandidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
@@ -282,7 +282,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageWaitingForClientsBeatmapDownload(ServerMultiplayerRoom _)
         {
-            room.Settings.PlaylistItemId = state.CandidateItem;
+            room.Settings.PlaylistItemId = state.CandidateItem == -1
+                ? Random.Shared.GetItems(room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray(), 1)[0]
+                : state.CandidateItem;
+
             await hub.NotifySettingsChanged(room, true);
 
             await changeStage(MatchmakingStage.WaitingForClientsBeatmapDownload);

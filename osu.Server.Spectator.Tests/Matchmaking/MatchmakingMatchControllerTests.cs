@@ -358,6 +358,26 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await Assert.ThrowsAsync<InvalidStateException>(() => Hub.JoinRoom(ROOM_ID));
         }
 
+        [Fact]
+        public async Task RandomSelection()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            await gotoStage(MatchmakingStage.UserBeatmapSelect);
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                room.Item!.Settings.PlaylistItemId = 0;
+
+            await Hub.MatchmakingToggleSelection(-1);
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.Equal(-1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem);
+                Assert.Equal([-1], ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
+                Assert.True(room.Item!.Settings.PlaylistItemId > 0);
+            }
+        }
+
         private async Task verifyStage(MatchmakingStage stage)
         {
             using (var room = await Rooms.GetForUse(ROOM_ID))
