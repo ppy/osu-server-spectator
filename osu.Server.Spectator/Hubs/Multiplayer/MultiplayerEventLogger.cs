@@ -87,7 +87,61 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             playlist_item_id = playlistItemId,
         });
 
+        /// <summary>
+        /// Records a user joining a matchmaking room.
+        /// </summary>
+        public Task LogMatchmakingRoomCreatedAsync(long roomId, MatchmakingRoomCreatedEventDetail details) => logEvent(new matchmaking_room_event
+        {
+            event_type = "room_created",
+            room_id = roomId,
+            event_detail = JsonConvert.SerializeObject(details)
+        });
+
+        /// <summary>
+        /// Records a user joining a matchmaking room.
+        /// </summary>
+        public Task LogMatchmakingUserJoinAsync(long roomId, int userId) => logEvent(new matchmaking_room_event
+        {
+            event_type = "user_join",
+            room_id = roomId,
+            user_id = userId
+        });
+
+        /// <summary>
+        /// Records a user's individual beatmap selection.
+        /// </summary>
+        public Task LogMatchmakingUserPickAsync(long roomId, int userId, long playlistItemId) => logEvent(new matchmaking_room_event
+        {
+            event_type = "user_pick",
+            room_id = roomId,
+            user_id = userId,
+            playlist_item_id = playlistItemId
+        });
+
+        /// <summary>
+        /// Records the final gameplay beatmap as selected by the server.
+        /// </summary>
+        public Task LogMatchmakingGameplayBeatmapAsync(long roomId, long playlistItemId) => logEvent(new matchmaking_room_event
+        {
+            event_type = "gameplay_beatmap",
+            room_id = roomId,
+            playlist_item_id = playlistItemId
+        });
+
         private async Task logEvent(multiplayer_realtime_room_event ev)
+        {
+            try
+            {
+                using var db = databaseFactory.GetInstance();
+                await db.LogRoomEventAsync(ev);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Failed to log multiplayer room event to database");
+            }
+        }
+
+        private async Task logEvent(matchmaking_room_event ev)
         {
             try
             {

@@ -237,6 +237,11 @@ namespace osu.Server.Spectator.Database
         Task LogRoomEventAsync(multiplayer_realtime_room_event ev);
 
         /// <summary>
+        /// Logs an event that happened in a matchmaking room.
+        /// </summary>
+        Task LogRoomEventAsync(matchmaking_room_event ev);
+
+        /// <summary>
         /// Toggles the user's "hide user presence" website setting.
         /// </summary>
         /// <param name="userId">The user's ID.</param>
