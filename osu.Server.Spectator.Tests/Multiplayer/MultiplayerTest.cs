@@ -41,8 +41,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
         protected readonly Mock<IDatabaseFactory> DatabaseFactory;
         protected readonly Mock<IDatabaseAccess> Database;
-
         protected readonly Mock<ISharedInterop> LegacyIO;
+        protected readonly MultiplayerEventLogger EventLogger;
 
         /// <summary>
         /// A general non-gameplay receiver for the room with ID <see cref="ROOM_ID"/>.
@@ -151,7 +151,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>()))
                     .Returns<int, MultiplayerRoom>((_, room) => Task.FromResult(room.RoomID));
 
-            MultiplayerEventLogger eventLogger = new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object);
+            EventLogger = new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object);
 
             HubContext = new MultiplayerHubContext(
                 hubContext.Object,
@@ -159,7 +159,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 UserStates,
                 loggerFactoryMock.Object,
                 DatabaseFactory.Object,
-                eventLogger);
+                EventLogger);
 
             MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
                 hubContext.Object,
@@ -168,7 +168,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 loggerFactoryMock.Object,
                 Rooms,
                 HubContext,
-                new MemoryCache(new MemoryCacheOptions()));
+                new MemoryCache(new MemoryCacheOptions()),
+                EventLogger);
 
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,
@@ -178,7 +179,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 new ChatFilters(DatabaseFactory.Object),
                 HubContext,
                 LegacyIO.Object,
-                eventLogger,
+                EventLogger,
                 MatchmakingBackgroundService);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
