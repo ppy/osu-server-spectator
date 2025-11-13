@@ -10,6 +10,7 @@ using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
+using osu.Game.Screens.OnlinePlay.Matchmaking.Match.BeatmapSelect;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
@@ -329,7 +330,10 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
                 Assert.Equal(userPickIds, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
+                Assert.Equal(MatchmakingRoomState.RollResultType.Beatmap, ((MatchmakingRoomState)room.Item!.MatchState!).RollType);
+            }
         }
 
         /// <summary>
@@ -367,12 +371,13 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 room.Item!.Settings.PlaylistItemId = 0;
 
-            await Hub.MatchmakingToggleSelection(-1);
+            await Hub.MatchmakingToggleSelection(IMatchmakingPlaylistItem.ID_RANDOM);
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Equal(-1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem);
+                Assert.Equal(MatchmakingRoomState.RollResultType.Random, ((MatchmakingRoomState)room.Item!.MatchState!).RollType);
+                Assert.NotEqual(-1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem);
                 Assert.Equal([-1], ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
                 Assert.True(room.Item!.Settings.PlaylistItemId > 0);
             }
