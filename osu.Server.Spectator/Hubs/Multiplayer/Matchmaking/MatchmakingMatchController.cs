@@ -12,6 +12,7 @@ using osu.Game.Online.Matchmaking.Events;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
+using osu.Game.Screens.OnlinePlay.Matchmaking.Match.BeatmapSelect;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
@@ -202,7 +203,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (state.Stage != MatchmakingStage.UserBeatmapSelect)
                 return;
 
-            if (playlistItemId != -1)
+            if (playlistItemId != IMatchmakingPlaylistItem.ID_RANDOM)
             {
                 MultiplayerPlaylistItem? item = room.Playlist.SingleOrDefault(item => item.ID == playlistItemId);
 
@@ -271,7 +272,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 pickIds = Random.Shared.GetItems(room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray(), 1);
 
             state.CandidateItems = pickIds.Distinct().ToArray();
-            state.CandidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
+
+            long candidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
+
+            switch (candidateItem)
+            {
+                case IMatchmakingPlaylistItem.ID_RANDOM:
+                    state.RollType = MatchmakingRoomState.RollResultType.Random;
+                    state.CandidateItem = Random.Shared.GetItems(room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray(), 1)[0];
+                    break;
+
+                default:
+                    state.RollType = MatchmakingRoomState.RollResultType.Beatmap;
+                    state.CandidateItem = candidateItem;
+                    break;
+            }
 
             await changeStage(MatchmakingStage.ServerBeatmapFinalised);
             await startCountdown(state.CandidateItems.Length == 1
