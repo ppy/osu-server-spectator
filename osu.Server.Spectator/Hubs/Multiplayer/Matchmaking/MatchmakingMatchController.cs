@@ -301,9 +301,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageWaitingForClientsBeatmapDownload(ServerMultiplayerRoom _)
         {
-            room.Settings.PlaylistItemId = state.CandidateItem == -1
-                ? Random.Shared.GetItems(room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray(), 1)[0]
-                : state.CandidateItem;
+            room.Settings.PlaylistItemId = state.CandidateItem;
             await hub.NotifySettingsChanged(room, true);
 
             await eventLogger.LogMatchmakingGameplayBeatmapAsync(room.RoomID, room.Settings.PlaylistItemId);
