@@ -276,7 +276,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 pickIds = Random.Shared.GetItems(room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray(), 1);
 
             state.CandidateItems = pickIds.Distinct().ToArray();
-            state.CandidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
+
+            long candidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
+
+            switch (candidateItem)
+            {
+                case -1:
+                    state.CandidateType = MatchmakingCandidateType.Random;
+                    state.CandidateItem = Random.Shared.GetItems(room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray(), 1)[0];
+                    break;
+
+                default:
+                    state.CandidateType = MatchmakingCandidateType.UserSelection;
+                    state.CandidateItem = candidateItem;
+                    break;
+            }
 
             await changeStage(MatchmakingStage.ServerBeatmapFinalised);
             await startCountdown(state.CandidateItems.Length == 1
