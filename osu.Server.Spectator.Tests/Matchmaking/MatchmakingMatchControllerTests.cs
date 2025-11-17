@@ -329,7 +329,10 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
                 Assert.Equal(userPickIds, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
+                Assert.Equal(MatchmakingCandidateType.UserSelection, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateType);
+            }
         }
 
         /// <summary>
@@ -372,7 +375,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Equal(-1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem);
+                Assert.Equal(MatchmakingCandidateType.Random, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateType);
+                Assert.NotEqual(-1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem);
                 Assert.Equal([-1], ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
                 Assert.True(room.Item!.Settings.PlaylistItemId > 0);
             }
