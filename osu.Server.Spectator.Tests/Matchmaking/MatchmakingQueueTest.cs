@@ -25,6 +25,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Empty(bundle.CompletedGroups);
             Assert.Empty(bundle.AddedUsers);
             Assert.Empty(bundle.RemovedUsers);
+            Assert.Empty(bundle.RecycledGroups);
         }
 
         [Fact]
@@ -39,10 +40,12 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             bundle = queue.Update();
             Assert.Single(bundle.FormedGroups);
             Assert.Single(bundle.FormedGroups[0].Users);
+            Assert.Empty(bundle.RecycledGroups);
 
             bundle = queue.MarkInvitationAccepted(new MatchmakingQueueUser("1"));
             Assert.Single(bundle.CompletedGroups);
             Assert.Single(bundle.CompletedGroups[0].Users);
+            Assert.Empty(bundle.RecycledGroups);
         }
 
         [Fact]
@@ -83,6 +86,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Single(bundle.FormedGroups);
 
             bundle = queue.MarkInvitationDeclined(new MatchmakingQueueUser("1"));
+            Assert.Single(bundle.RecycledGroups);
             Assert.Single(bundle.RemovedUsers);
             Assert.Equal("1", bundle.RemovedUsers[0].Identifier);
             Assert.Single(bundle.DeclinedUsers);
@@ -105,6 +109,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await Task.Delay(TimeSpan.FromSeconds(2));
 
             var bundle = queue.Update();
+            Assert.Single(bundle.RecycledGroups);
             Assert.Single(bundle.RemovedUsers);
             Assert.Equal("2", bundle.RemovedUsers[0].Identifier);
             Assert.Single(bundle.DeclinedUsers);

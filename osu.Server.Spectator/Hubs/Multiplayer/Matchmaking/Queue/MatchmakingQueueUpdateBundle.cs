@@ -26,6 +26,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public readonly List<MatchmakingQueueGroup> CompletedGroups = [];
 
         /// <summary>
+        /// Groups where any players have not accepted their invitations.
+        /// </summary>
+        public readonly List<MatchmakingQueueGroup> RecycledGroups = [];
+
+        /// <summary>
         /// Users that have joined the queue.
         /// </summary>
         public readonly List<MatchmakingQueueUser> AddedUsers = [];
@@ -49,6 +54,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
             FormedGroups.AddRange(other.FormedGroups);
             CompletedGroups.AddRange(other.CompletedGroups);
+            RecycledGroups.AddRange(other.RecycledGroups);
             AddedUsers.AddRange(other.AddedUsers);
             RemovedUsers.AddRange(other.RemovedUsers);
             DeclinedUsers.AddRange(other.DeclinedUsers);

@@ -247,6 +247,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 foreach (var group in users.Where(u => u.Group != null).GroupBy(u => u.Group))
                 {
+                    bundle.RecycledGroups.Add(group.Key!);
+
                     foreach (var user in group.Key!.Users)
                     {
                         if (!matchmakingUsers.Contains(user))
