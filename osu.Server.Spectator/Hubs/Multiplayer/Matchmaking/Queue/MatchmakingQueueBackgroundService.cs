@@ -251,8 +251,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.Searching());
             }
 
+            foreach (var group in bundle.RecycledGroups)
+            {
+                DogStatsd.Increment($"{statsd_prefix}.groups.recycled");
+
+                foreach (var user in group.Users)
+                    await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
+            }
+
             foreach (var group in bundle.FormedGroups)
             {
+                DogStatsd.Increment($"{statsd_prefix}.groups.formed");
+
                 foreach (var user in group.Users)
                     await hub.Groups.AddToGroupAsync(user.Identifier, group.Identifier, CancellationToken.None);
 
@@ -262,6 +272,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             foreach (var group in bundle.CompletedGroups)
             {
+                DogStatsd.Increment($"{statsd_prefix}.groups.completed");
+
                 foreach (var user in group.Users)
                     DogStatsd.Timer($"{statsd_prefix}.queue.duration", (DateTimeOffset.Now - user.SearchStartTime).TotalMilliseconds, tags: [$"queue:{bundle.Queue.Pool.name}"]);
 
