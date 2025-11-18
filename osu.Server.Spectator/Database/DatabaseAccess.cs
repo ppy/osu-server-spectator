@@ -588,6 +588,16 @@ namespace osu.Server.Spectator.Database
                 ev);
         }
 
+        public async Task LogRoomEventAsync(matchmaking_room_event ev)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync(
+                "INSERT INTO `matchmaking_room_events` (`room_id`, `event_type`, `playlist_item_id`, `user_id`, `event_detail`, `created_at`, `updated_at`) "
+                + "VALUES (@room_id, @event_type, @playlist_item_id, @user_id, @event_detail, NOW(), NOW())",
+                ev);
+        }
+
         public async Task ToggleUserPresenceAsync(int userId, bool visible)
         {
             var connection = await getConnectionAsync();
