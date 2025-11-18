@@ -250,7 +250,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
 
             foreach (var group in bundle.RecycledGroups)
+            {
                 DogStatsd.Increment($"{statsd_prefix}.groups.recycled");
+
+                foreach (var user in group.Users)
+                    await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
+            }
 
             foreach (var group in bundle.FormedGroups)
             {
