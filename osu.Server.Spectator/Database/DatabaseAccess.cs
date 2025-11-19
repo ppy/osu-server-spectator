@@ -637,7 +637,7 @@ namespace osu.Server.Spectator.Database
             return (await connection.QueryAsync<matchmaking_pool>("SELECT * FROM `matchmaking_pools` WHERE `active` = 1")).ToArray();
         }
 
-        public async Task<matchmaking_pool?> GetMatchmakingPoolAsync(int poolId)
+        public async Task<matchmaking_pool?> GetMatchmakingPoolAsync(uint poolId)
         {
             var connection = await getConnectionAsync();
 
@@ -647,7 +647,7 @@ namespace osu.Server.Spectator.Database
             });
         }
 
-        public async Task<matchmaking_pool_beatmap[]> GetMatchmakingPoolBeatmapsAsync(int poolId)
+        public async Task<matchmaking_pool_beatmap[]> GetMatchmakingPoolBeatmapsAsync(uint poolId)
         {
             var connection = await getConnectionAsync();
 

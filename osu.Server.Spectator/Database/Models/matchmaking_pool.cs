@@ -11,7 +11,7 @@ namespace osu.Server.Spectator.Database.Models
     [Serializable]
     public class matchmaking_pool
     {
-        public int id { get; set; }
+        public uint id { get; set; }
         public int ruleset_id { get; set; }
         public int variant_id { get; set; }
         public string name { get; set; } = string.Empty;
@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Database.Models
 
         public MatchmakingPool ToMatchmakingPool() => new MatchmakingPool
         {
-            Id = id,
+            Id = (int)id,
             RulesetId = ruleset_id,
             Variant = variant_id,
             Name = name,
