@@ -45,7 +45,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         public async Task InitializeAsync()
         {
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2]);
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2], 0);
         }
 
         [Fact]
@@ -304,7 +304,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2, 3]);
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2, 3], 0);
 
             await Hub.JoinRoom(ROOM_ID);
 
