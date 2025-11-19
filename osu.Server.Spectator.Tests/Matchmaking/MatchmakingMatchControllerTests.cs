@@ -34,11 +34,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                         user_id = int.Parse(Hub.Context.UserIdentifier!),
                     });
 
-            Database.Setup(db => db.GetMatchmakingUserStatsAsync(It.IsAny<int>(), It.IsAny<int>()))
-                    .Returns<int, int>((userId, rulesetId) => Task.FromResult<matchmaking_user_stats?>(new matchmaking_user_stats
+            Database.Setup(db => db.GetMatchmakingUserStatsAsync(It.IsAny<int>(), It.IsAny<uint>()))
+                    .Returns<int, uint>((userId, poolId) => Task.FromResult<matchmaking_user_stats?>(new matchmaking_user_stats
                     {
                         user_id = (uint)userId,
-                        ruleset_id = (ushort)rulesetId
+                        pool_id = poolId
                     }));
         }
 

@@ -258,7 +258,7 @@ namespace osu.Server.Spectator.Database
 
         Task IncrementMatchmakingSelectionCount(matchmaking_pool_beatmap[] beatmaps);
 
-        Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, int rulesetId);
+        Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, uint poolId);
 
         Task UpdateMatchmakingUserStatsAsync(matchmaking_user_stats stats);
     }

@@ -95,7 +95,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             using (var db = databaseFactory.GetInstance())
             {
                 matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)poolId) ?? throw new InvalidStateException($"Pool not found: {poolId}");
-                matchmaking_user_stats? stats = await db.GetMatchmakingUserStatsAsync(state.UserId, pool.ruleset_id);
+                matchmaking_user_stats? stats = await db.GetMatchmakingUserStatsAsync(state.UserId, (uint)poolId);
 
                 if (stats == null)
                 {
@@ -106,7 +106,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     await db.UpdateMatchmakingUserStatsAsync(stats = new matchmaking_user_stats
                     {
                         user_id = (uint)state.UserId,
-                        ruleset_id = (ushort)pool.ruleset_id,
+                        pool_id = pool.id,
                         EloData =
                         {
                             InitialRating = new EloRating(eloEstimate),
