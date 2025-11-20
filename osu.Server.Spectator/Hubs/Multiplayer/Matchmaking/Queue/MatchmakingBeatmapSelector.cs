@@ -48,13 +48,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(EloRating[] ratings)
         {
             return ratings.SelectMany(r =>
-                              beatmaps.OrderByDescending(b =>
+                          {
+                              // 80 is a safe value that is the lower limit of EloSystem.
+                              double ratingSig = Math.Max(80, r.Sig);
+                              return beatmaps.OrderByDescending(b =>
                               {
                                   double beatmapRating = b.rating ?? 1500;
-                                  // The clamp acts to both prevent division-by-zero and to give all beatmaps a chance.
-                                  double weight = Math.Clamp(Math.Exp(-Math.Pow(beatmapRating - r.Mu, 2) / (2 * r.Sig * r.Sig)), 0.1, 1);
+                                  // The clamp attempts to ensure all beatmaps are given some chance of being selected.
+                                  double weight = Math.Clamp(Math.Exp(-Math.Pow(beatmapRating - r.Mu, 2) / (2 * ratingSig * ratingSig)), 0.1, 1);
                                   return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
-                              }).Take(PoolSize))
+                              }).Take(PoolSize);
+                          })
                           .OrderBy(_ => Random.Shared.NextDouble())
                           .Take(PoolSize)
                           .ToArray();
