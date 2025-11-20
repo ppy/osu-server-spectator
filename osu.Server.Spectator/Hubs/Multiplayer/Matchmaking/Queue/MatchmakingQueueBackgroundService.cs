@@ -94,8 +94,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
             using (var db = databaseFactory.GetInstance())
             {
-                matchmaking_pool pool = await db.GetMatchmakingPoolAsync(poolId) ?? throw new InvalidStateException($"Pool not found: {poolId}");
-                matchmaking_user_stats? stats = await db.GetMatchmakingUserStatsAsync(state.UserId, pool.ruleset_id);
+                matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)poolId) ?? throw new InvalidStateException($"Pool not found: {poolId}");
+                matchmaking_user_stats? stats = await db.GetMatchmakingUserStatsAsync(state.UserId, (uint)poolId);
 
                 if (stats == null)
                 {
@@ -106,7 +106,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     await db.UpdateMatchmakingUserStatsAsync(stats = new matchmaking_user_stats
                     {
                         user_id = (uint)state.UserId,
-                        ruleset_id = (ushort)pool.ruleset_id,
+                        pool_id = pool.id,
                         EloData =
                         {
                             InitialRating = new EloRating(eloEstimate),
@@ -290,7 +290,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
-                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, group.Users.Select(u => u.UserId).ToArray());
+                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id);
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
@@ -299,7 +299,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 await eventLogger.LogMatchmakingRoomCreatedAsync(roomId, new MatchmakingRoomCreatedEventDetail
                 {
-                    pool_id = bundle.Queue.Pool.id
+                    pool_id = (int)bundle.Queue.Pool.id
                 });
             }
         }
@@ -312,18 +312,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="dbFactory">The database factory.</param>
         /// <param name="eventLogger">The event logger.</param>
         /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
+        /// <param name="poolId">The pool ID.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
         public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger,
-                                                                            int[] eligibleUserIds)
+                                                                            int[] eligibleUserIds, uint poolId)
         {
             ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventLogger);
 
             if (room.MatchState is not MatchmakingRoomState matchmakingState)
-                throw new InvalidOperationException("Failed to initialise the matchmaking room.");
+                throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid state).");
 
-            // Initialise each user (this object doesn't have a .Add() method).
             foreach (int user in eligibleUserIds)
                 matchmakingState.Users.GetOrAdd(user);
+
+            if (room.Controller is not MatchmakingMatchController matchmakingController)
+                throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid controller).");
+
+            matchmakingController.PoolId = poolId;
 
             return room;
         }

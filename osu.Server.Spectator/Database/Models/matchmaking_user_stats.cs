@@ -13,7 +13,7 @@ namespace osu.Server.Spectator.Database.Models
     public class matchmaking_user_stats
     {
         public uint user_id { get; set; }
-        public ushort ruleset_id { get; set; }
+        public uint pool_id { get; set; }
         public uint first_placements { get; set; }
         public uint total_points { get; set; }
 

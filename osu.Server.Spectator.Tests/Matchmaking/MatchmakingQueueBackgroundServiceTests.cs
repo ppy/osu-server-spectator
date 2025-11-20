@@ -14,8 +14,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
     {
         public MatchmakingQueueBackgroundServiceTests()
         {
-            Database.Setup(db => db.GetMatchmakingPoolAsync(It.IsAny<int>()))
-                    .Returns<int>(id => Task.FromResult<matchmaking_pool?>(new matchmaking_pool
+            Database.Setup(db => db.GetMatchmakingPoolAsync(It.IsAny<uint>()))
+                    .Returns<uint>(id => Task.FromResult<matchmaking_pool?>(new matchmaking_pool
                     {
                         id = id,
                         name = $"pool-{id}",

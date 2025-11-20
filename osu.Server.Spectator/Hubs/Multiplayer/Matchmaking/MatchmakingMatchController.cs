@@ -89,13 +89,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public MultiplayerPlaylistItem CurrentItem => room.CurrentPlaylistItem;
 
+        public uint PoolId { get; set; }
+
         private readonly ServerMultiplayerRoom room;
         private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
         private readonly MultiplayerEventLogger eventLogger;
         private readonly MatchmakingRoomState state;
         private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
-        private readonly int rulesetId;
 
         private int joinedUserCount;
 
@@ -108,9 +109,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             room.MatchState = state = new MatchmakingRoomState();
             room.Settings.PlaylistItemId = room.Playlist[Random.Shared.Next(0, room.Playlist.Count)].ID;
-
-            // Todo: This should be retrieved from the room creation parameters instead.
-            rulesetId = CurrentItem.RulesetID;
         }
 
         public async Task Initialise()
@@ -350,10 +348,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
                 foreach (var user in state.Users.Where(u => u.Points > 0).OrderBy(u => u.Placement))
                 {
-                    matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserId, rulesetId) ?? new matchmaking_user_stats
+                    matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserId, PoolId) ?? new matchmaking_user_stats
                     {
                         user_id = (uint)user.UserId,
-                        ruleset_id = (ushort)rulesetId
+                        pool_id = PoolId
                     };
 
                     if (user.Placement == 1)
