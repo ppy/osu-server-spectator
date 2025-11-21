@@ -331,7 +331,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.Equal(userPickIds, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
-                Assert.Equal(MatchmakingCandidateType.UserSelection, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateType);
+                Assert.True(((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem > 0);
             }
         }
 
@@ -375,9 +375,9 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
-                Assert.Equal(MatchmakingCandidateType.Random, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateType);
-                Assert.NotEqual(-1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem);
                 Assert.Equal([-1], ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
+                Assert.Equal(-1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem);
+                Assert.NotEqual(-1, ((MatchmakingRoomState)room.Item!.MatchState!).GameplayItem);
                 Assert.True(room.Item!.Settings.PlaylistItemId > 0);
             }
         }
