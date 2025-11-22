@@ -277,6 +277,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.CandidateItems = pickIds.Distinct().ToArray();
             state.CandidateItem = pickIds[Random.Shared.Next(0, pickIds.Length)];
+            state.GameplayItem = state.CandidateItem == -1
+                ? Random.Shared.GetItems(room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray(), 1)[0]
+                : state.CandidateItem;
 
             await changeStage(MatchmakingStage.ServerBeatmapFinalised);
             await startCountdown(state.CandidateItems.Length == 1
@@ -287,9 +290,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageWaitingForClientsBeatmapDownload(ServerMultiplayerRoom _)
         {
-            room.Settings.PlaylistItemId = state.CandidateItem == -1
-                ? Random.Shared.GetItems(room.Playlist.Where(item => !item.Expired).Select(i => i.ID).ToArray(), 1)[0]
-                : state.CandidateItem;
+            // The settings playlist item controls various components by the client such as download tracking,
+            // so it is set as late as possible to not inedvertently reveal it before animations are complete.
+            room.Settings.PlaylistItemId = state.GameplayItem;
             await hub.NotifySettingsChanged(room, true);
 
             await eventLogger.LogMatchmakingGameplayBeatmapAsync(room.RoomID, room.Settings.PlaylistItemId);
