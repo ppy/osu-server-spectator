@@ -60,6 +60,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                               }).Take(PoolSize);
                           })
                           .OrderBy(_ => Random.Shared.NextDouble())
+                          .Distinct()
                           .Take(PoolSize)
                           .ToArray();
         }
