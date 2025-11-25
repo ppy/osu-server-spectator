@@ -42,6 +42,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private static string queue_ban_start_time(int userId) => $"matchmaking-ban-start-time:{userId}";
 
         private readonly ConcurrentDictionary<int, MatchmakingQueue> poolQueues = new ConcurrentDictionary<int, MatchmakingQueue>();
+        private readonly ConcurrentDictionary<uint, MatchmakingBeatmapSelector> poolSelectors = new ConcurrentDictionary<uint, MatchmakingBeatmapSelector>();
 
         private readonly IHubContext<MultiplayerHub> hub;
         private readonly ISharedInterop sharedInterop;
@@ -54,6 +55,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
         private DateTimeOffset lastQueueRefreshTime = DateTimeOffset.UnixEpoch;
+        private DateTimeOffset lastPoolRefreshTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
                                                  EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache, MultiplayerEventLogger eventLogger)
@@ -181,6 +183,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 logger.LogError(ex, "Failed to refresh the matchmaking queue.");
             }
 
+            await refreshPools();
+
             foreach ((_, MatchmakingQueue queue) in poolQueues)
             {
                 try
@@ -229,6 +233,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
 
             lastQueueRefreshTime = DateTimeOffset.Now;
+        }
+
+        private Task refreshPools()
+        {
+            if (DateTimeOffset.Now - lastPoolRefreshTime < TimeSpan.FromMinutes(5))
+                return Task.CompletedTask;
+
+            poolSelectors.Clear();
+
+            lastPoolRefreshTime = DateTimeOffset.Now;
+            return Task.CompletedTask;
         }
 
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)
@@ -335,7 +350,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)
         {
-            MatchmakingBeatmapSelector selector = await MatchmakingBeatmapSelector.Initialise(pool, databaseFactory);
+            if (!poolSelectors.TryGetValue(pool.id, out MatchmakingBeatmapSelector? selector))
+                poolSelectors[pool.id] = selector = await MatchmakingBeatmapSelector.Initialise(pool, databaseFactory);
+
             matchmaking_pool_beatmap[] items = selector.GetAppropriateBeatmaps(ratings);
 
             return items.Select(b => new MultiplayerPlaylistItem
