@@ -338,9 +338,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             MatchmakingBeatmapSelector selector = await MatchmakingBeatmapSelector.Initialise(pool, databaseFactory);
             matchmaking_pool_beatmap[] items = selector.GetAppropriateBeatmaps(ratings);
 
-            using (var db = databaseFactory.GetInstance())
-                await db.IncrementMatchmakingSelectionCount(items);
-
             return items.Select(b => new MultiplayerPlaylistItem
             {
                 BeatmapID = b.beatmap_id,
