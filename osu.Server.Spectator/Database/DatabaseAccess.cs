@@ -659,6 +659,27 @@ namespace osu.Server.Spectator.Database
             })).ToArray();
         }
 
+        public async Task<database_beatmap[]> GetMatchmakingGlobalPoolBeatmapsAsync(int rulesetId, int variant)
+        {
+            var connection = await getConnectionAsync();
+
+            string variantString = string.Empty;
+
+            if (rulesetId == 3)
+                variantString = "AND diff_size = @Variant";
+
+            return (await connection.QueryAsync<database_beatmap>("SELECT beatmap_id, checksum, difficultyrating FROM `osu_beatmaps` "
+                                                                  + "WHERE playmode = @RulesetId "
+                                                                  + "AND approved BETWEEN 1 AND 2 "
+                                                                  + "AND hit_length BETWEEN 60 AND 240 "
+                                                                  + variantString,
+                new
+                {
+                    RulesetId = rulesetId,
+                    Variant = variant
+                })).ToArray();
+        }
+
         public async Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, uint poolId)
         {
             var connection = await getConnectionAsync();
