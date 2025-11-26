@@ -134,6 +134,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
+        /// Clears the matchmaking queue, removing all users.
+        /// </summary>
+        public MatchmakingQueueUpdateBundle Clear()
+        {
+            var bundle = new MatchmakingQueueUpdateBundle(this);
+
+            lock (queueLock)
+            {
+                if (matchmakingUsers.Count == 0)
+                    return bundle;
+
+                bundle.Append(markInvitationDeclined(matchmakingUsers.ToArray()));
+            }
+
+            return bundle;
+        }
+
+        /// <summary>
         /// Marks a user as having accepted their invitation to the match.
         /// Groups are formed when all players have accepted their invitations.
         /// </summary>

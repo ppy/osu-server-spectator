@@ -228,7 +228,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 foreach ((_, MatchmakingQueue queue) in poolQueues)
                 {
                     matchmaking_pool? newPool = await db.GetMatchmakingPoolAsync(queue.Pool.id);
-                    queue.Refresh(newPool ?? queue.Pool);
+
+                    if (newPool?.active != true)
+                        await processBundle(queue.Clear());
+                    else
+                        queue.Refresh(newPool);
                 }
             }
 
