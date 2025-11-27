@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
     public class EloPlayer
     {
         [JsonProperty("initial_rating")]
-        public EloRating InitialRating { get; set; }
+        public EloRating InitialRating { get; set; } = new EloRating();
 
         [JsonProperty("contest_count")]
         public int ContestCount { get; set; }
