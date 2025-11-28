@@ -205,6 +205,19 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Single(bundle.FormedGroups);
         }
 
+        [Fact]
+        public void ClearedUsersNotMarkedAsDeclined()
+        {
+            queue.Pool.lobby_size = 1;
+            queue.Add(new MatchmakingQueueUser("1"));
+
+            var bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+
+            bundle = queue.Clear();
+            Assert.Empty(bundle.DeclinedUsers);
+        }
+
         private class CustomSystemClock : ISystemClock
         {
             public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;
