@@ -127,7 +127,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 if (!matchmakingUsers.TryGetValue(user, out user!))
                     return bundle;
 
-                bundle.Append(markInvitationDeclined([user]));
+                bundle.Append(removeFromQueue([user], true));
+            }
+
+            return bundle;
+        }
+
+        /// <summary>
+        /// Clears the matchmaking queue, removing all users.
+        /// </summary>
+        public MatchmakingQueueUpdateBundle Clear()
+        {
+            var bundle = new MatchmakingQueueUpdateBundle(this);
+
+            lock (queueLock)
+            {
+                if (matchmakingUsers.Count == 0)
+                    return bundle;
+
+                bundle.Append(removeFromQueue(matchmakingUsers.ToArray(), false));
             }
 
             return bundle;
@@ -179,7 +197,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 if (!matchmakingUsers.TryGetValue(user, out user!))
                     return bundle;
 
-                bundle.Append(markInvitationDeclined([user]));
+                bundle.Append(removeFromQueue([user], true));
             }
 
             return bundle;
@@ -218,18 +236,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         timedOutUsers.Add(user);
                 }
 
-                bundle.Append(markInvitationDeclined(timedOutUsers));
+                bundle.Append(removeFromQueue(timedOutUsers, true));
             }
 
             return bundle;
         }
 
         /// <summary>
-        /// Marks users as having declined their invitation to the match.
-        /// All other users in their respective groups will be returned to the matchmaking queue.
+        /// Removes one or more users from the queue.
         /// </summary>
-        /// <param name="users">The users to mark as having declined their invitation.</param>
-        private MatchmakingQueueUpdateBundle markInvitationDeclined(IList<MatchmakingQueueUser> users)
+        /// <param name="users">The users to remove from the queue. This should be used to batch users whenever possible.</param>
+        /// <param name="markAsDeclined">For users have been invited to rooms, whether to mark them as having declined their invitations.</param>
+        private MatchmakingQueueUpdateBundle removeFromQueue(IList<MatchmakingQueueUser> users, bool markAsDeclined)
         {
             var bundle = new MatchmakingQueueUpdateBundle(this);
 
@@ -239,7 +257,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     matchmakingUsers.Remove(user);
 
-                    if (user.Group != null)
+                    if (user.Group != null && markAsDeclined)
                         bundle.DeclinedUsers.Add(user);
 
                     bundle.RemovedUsers.Add(user);

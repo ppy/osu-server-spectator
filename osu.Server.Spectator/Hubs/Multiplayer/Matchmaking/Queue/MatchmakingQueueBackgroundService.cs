@@ -95,6 +95,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             using (var db = databaseFactory.GetInstance())
             {
                 matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)poolId) ?? throw new InvalidStateException($"Pool not found: {poolId}");
+
+                if (!pool.active)
+                    throw new InvalidStateException("The selected matchmaking pool is no longer active.");
+
                 matchmaking_user_stats? stats = await db.GetMatchmakingUserStatsAsync(state.UserId, (uint)poolId);
 
                 if (stats == null)
@@ -224,7 +228,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 foreach ((_, MatchmakingQueue queue) in poolQueues)
                 {
                     matchmaking_pool? newPool = await db.GetMatchmakingPoolAsync(queue.Pool.id);
-                    queue.Refresh(newPool ?? queue.Pool);
+
+                    if (newPool?.active != true)
+                        await processBundle(queue.Clear());
+                    else
+                        queue.Refresh(newPool);
                 }
             }
 
