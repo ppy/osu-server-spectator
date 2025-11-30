@@ -12,10 +12,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public partial class MultiplayerHub : IMatchmakingServer
     {
-        public async Task<MatchmakingPool[]> GetMatchmakingPools()
+        public async Task<MatchmakingPool[]> GetMatchmakingPools(MatchmakingPoolType type)
         {
             using (var db = databaseFactory.GetInstance())
-                return (await db.GetActiveMatchmakingPoolsAsync()).Select(p => p.ToMatchmakingPool()).ToArray();
+            {
+                return (await db.GetActiveMatchmakingPoolsAsync())
+                       .Select(p => p.ToMatchmakingPool())
+                       .Where(p => p.Type == type)
+                       .ToArray();
+            }
         }
 
         public async Task MatchmakingJoinLobby()

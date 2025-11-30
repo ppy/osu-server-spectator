@@ -15,6 +15,7 @@ namespace osu.Server.Spectator.Database.Models
         public int ruleset_id { get; set; }
         public int variant_id { get; set; }
         public string name { get; set; } = string.Empty;
+        public matchmaking_pool_type type { get; set; } = matchmaking_pool_type.quick_play;
         public bool active { get; set; }
 
         /// <summary>
@@ -43,6 +44,7 @@ namespace osu.Server.Spectator.Database.Models
             RulesetId = ruleset_id,
             Variant = variant_id,
             Name = name,
+            Type = type.ToPoolType()
         };
 
         public string DisplayName
