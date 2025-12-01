@@ -5,6 +5,7 @@
 
 using System;
 using osu.Game.Online.Matchmaking;
+using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Database.Models
 {
@@ -41,6 +42,21 @@ namespace osu.Server.Spectator.Database.Models
 
                 case matchmaking_pool_type.ranked_play:
                     return MatchmakingPoolType.RankedPlay;
+
+                default:
+                    throw new ArgumentException($"Unexpected pool type: {type}", nameof(type));
+            }
+        }
+
+        public static MatchType ToMatchType(this matchmaking_pool_type type)
+        {
+            switch (type)
+            {
+                case matchmaking_pool_type.quick_play:
+                    return MatchType.Matchmaking;
+
+                case matchmaking_pool_type.ranked_play:
+                    return MatchType.RankedPlay;
 
                 default:
                     throw new ArgumentException($"Unexpected pool type: {type}", nameof(type));

@@ -309,7 +309,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     Settings =
                     {
-                        MatchType = MatchType.Matchmaking,
+                        MatchType = bundle.Queue.Pool.type.ToMatchType(),
                         Password = password
                     },
                     Playlist = await queryPlaylistItems(bundle.Queue.Pool, group.Users.Select(u => u.Rating).ToArray())
