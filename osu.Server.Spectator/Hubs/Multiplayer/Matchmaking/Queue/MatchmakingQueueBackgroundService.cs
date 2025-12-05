@@ -346,13 +346,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
             ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventLogger);
 
-            if (room.MatchState is not MatchmakingRoomState matchmakingState)
-                throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid state).");
+            if (room.MatchState is MatchmakingRoomState matchmakingState)
+            {
+                foreach (int user in eligibleUserIds)
+                    matchmakingState.Users.GetOrAdd(user);
+            }
 
-            foreach (int user in eligibleUserIds)
-                matchmakingState.Users.GetOrAdd(user);
-
-            if (room.Controller is not MatchmakingMatchController matchmakingController)
+            if (room.Controller is not IMatchmakingMatchController matchmakingController)
                 throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid controller).");
 
             matchmakingController.PoolId = poolId;

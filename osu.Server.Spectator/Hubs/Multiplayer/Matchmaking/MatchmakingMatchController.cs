@@ -22,7 +22,7 @@ using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     [NonController]
-    public class MatchmakingMatchController : IMatchController
+    public class MatchmakingMatchController : IMatchController, IMatchmakingMatchController
     {
         /// <summary>
         /// Duration users are given to enter the room before it automatically starts.

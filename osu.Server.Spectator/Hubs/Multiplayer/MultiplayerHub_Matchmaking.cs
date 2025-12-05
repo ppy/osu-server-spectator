@@ -89,7 +89,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (user == null)
                     throw new InvalidOperationException("Local user was not found in the expected room");
 
-                ((MatchmakingMatchController)room.Controller).SkipToNextStage(out _);
+                ((IMatchmakingMatchController)room.Controller).SkipToNextStage(out _);
             }
         }
     }
