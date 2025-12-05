@@ -659,16 +659,25 @@ namespace osu.Server.Spectator.Database
             })).ToArray();
         }
 
-        public async Task IncrementMatchmakingSelectionCount(matchmaking_pool_beatmap[] beatmaps)
+        public async Task<database_beatmap[]> GetMatchmakingGlobalPoolBeatmapsAsync(int rulesetId, int variant)
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE matchmaking_pool_beatmaps "
-                                          + "SET selection_count = selection_count + 1 "
-                                          + "WHERE id IN @ItemIDs", new
-            {
-                ItemIDs = beatmaps.Select(b => b.id).ToArray()
-            });
+            string variantString = string.Empty;
+
+            if (rulesetId == 3)
+                variantString = "AND diff_size = @Variant";
+
+            return (await connection.QueryAsync<database_beatmap>("SELECT beatmap_id, checksum, difficultyrating FROM `osu_beatmaps` "
+                                                                  + "WHERE playmode = @RulesetId "
+                                                                  + "AND approved BETWEEN 1 AND 2 "
+                                                                  + "AND hit_length BETWEEN 60 AND 240 "
+                                                                  + variantString,
+                new
+                {
+                    RulesetId = rulesetId,
+                    Variant = variant
+                })).ToArray();
         }
 
         public async Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, uint poolId)

@@ -25,13 +25,15 @@ namespace osu.Server.Spectator.Database.Models
 
         public bool Equals(matchmaking_pool_beatmap? other)
             => other != null
-               && id == other.id;
+               && id == other.id
+               && beatmap_id == other.beatmap_id
+               && mods == other.mods;
 
         public override bool Equals(object? obj)
             => obj is matchmaking_pool_beatmap other && Equals(other);
 
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
-            => id.GetHashCode();
+            => HashCode.Combine(id, beatmap_id, mods);
     }
 }
