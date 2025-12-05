@@ -47,22 +47,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="ratings">The lobby user ratings.</param>
         public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(EloRating[] ratings)
         {
-            return ratings.SelectMany(r =>
-                          {
-                              // 80 is a safe value that is the lower limit of EloSystem.
-                              double ratingSig = Math.Max(80, r.Sig);
-                              return beatmaps.OrderByDescending(b =>
-                              {
-                                  double beatmapRating = b.rating ?? 1500;
-                                  // The clamp attempts to ensure all beatmaps are given some chance of being selected.
-                                  double weight = Math.Clamp(Math.Exp(-Math.Pow(beatmapRating - r.Mu, 2) / (2 * ratingSig * ratingSig)), 0.1, 1);
-                                  return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
-                              }).Take(PoolSize);
-                          })
-                          .OrderBy(_ => Random.Shared.NextDouble())
-                          .Distinct()
-                          .Take(PoolSize)
-                          .ToArray();
+            // Pick from maps around the minimum rating.
+            double ratingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
+            // Constant standard deviation to give a wide breadth around mu.
+            const double rating_sig = 200;
+
+            return beatmaps.OrderByDescending(b =>
+                           {
+                               double beatmapRating = b.rating ?? 1500;
+                               // The clamp attempts to ensure all beatmaps are given some chance of being selected.
+                               double weight = Math.Clamp(Math.Exp(-Math.Pow(beatmapRating - ratingMu, 2) / (2 * rating_sig * rating_sig)), 0.1, 1);
+                               return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
+                           })
+                           .Take(PoolSize)
+                           .ToArray();
         }
     }
 }
