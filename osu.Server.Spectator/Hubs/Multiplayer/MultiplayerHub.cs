@@ -819,7 +819,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             await base.CleanUpState(state);
             await matchmakingQueueService.RemoveFromQueueAsync(state);
-            await leaveRoom(state, true);
+            await leaveRoom(state, false);
         }
 
         private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)

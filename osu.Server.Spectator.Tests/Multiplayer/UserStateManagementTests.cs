@@ -545,5 +545,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             UserReceiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Never);
             User2Receiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Never);
         }
+
+        [Fact]
+        public async Task LeaveOnDisconnect()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            await Hub.OnDisconnectedAsync(null);
+
+            Receiver.Verify(r => r.UserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once);
+        }
     }
 }
