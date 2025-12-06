@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             // Pick from maps around the minimum rating.
             double ratingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
             // Constant standard deviation to give a wide breadth around mu.
-            const double rating_sig = 200;
+            const double rating_sig = 100;
 
             return beatmaps.OrderByDescending(b =>
                            {
