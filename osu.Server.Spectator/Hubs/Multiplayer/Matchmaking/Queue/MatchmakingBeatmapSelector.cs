@@ -56,7 +56,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                            {
                                double beatmapRating = b.rating ?? 1500;
                                // The clamp attempts to ensure all beatmaps are given some chance of being selected.
-                               double weight = Math.Clamp(Math.Exp(-Math.Pow(beatmapRating - ratingMu, 2) / (2 * rating_sig * rating_sig)), 0.1, 1);
+                               double weight = Math.Exp(-Math.Pow(beatmapRating - ratingMu, 2) / (2 * rating_sig * rating_sig));
                                return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
                            })
                            .Take(PoolSize)
