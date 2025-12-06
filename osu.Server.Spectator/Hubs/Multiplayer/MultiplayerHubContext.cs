@@ -263,6 +263,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
         }
 
+        public async Task ChangeUserVoteToSkipIntro(ServerMultiplayerRoom room, MultiplayerRoomUser user, bool voted)
+        {
+            if (user.VotedToSkipIntro == voted)
+                return;
+
+            Log(room, user, $"Changing user vote to skip intro => {voted}");
+
+            user.VotedToSkipIntro = voted;
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserVotedToSkipIntro), user.UserID, voted);
+        }
+
         public async Task StartMatch(ServerMultiplayerRoom room)
         {
             if (room.State != MultiplayerRoomState.Open)
@@ -277,6 +288,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await room.Controller.HandleGameplayCompleted();
                 return;
             }
+
+            // This is the very first time users get a "gameplay" state. Reset any properties for the gameplay session.
+            foreach (var user in room.Users)
+                await ChangeUserVoteToSkipIntro(room, user, false);
 
             var readyUsers = room.Users.Where(u =>
                 u.BeatmapAvailability.State == DownloadState.LocallyAvailable
@@ -330,12 +345,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             if (anyUserPlaying)
-            {
                 await ChangeRoomState(room, MultiplayerRoomState.Playing);
-
-                foreach (var user in room.Users)
-                    user.VotedToSkipIntro = false;
-            }
             else
             {
                 await ChangeRoomState(room, MultiplayerRoomState.Open);

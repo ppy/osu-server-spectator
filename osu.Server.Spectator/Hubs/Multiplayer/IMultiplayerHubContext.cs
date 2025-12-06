@@ -134,6 +134,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="newState">The new room state.</param>
         Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState);
 
+        Task ChangeUserVoteToSkipIntro(ServerMultiplayerRoom room, MultiplayerRoomUser user, bool voted);
+
         /// <summary>
         /// Starts a match in a room.
         /// </summary>
