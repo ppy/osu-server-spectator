@@ -113,11 +113,9 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
                 // Ready up both users.
                 SetUserContext(ContextUser);
-                await Hub.ChangeState(MultiplayerUserState.Ready);
-                await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+                await MarkCurrentUserReadyAndAvailable();
                 SetUserContext(ContextUser2);
-                await Hub.ChangeState(MultiplayerUserState.Ready);
-                await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+                await MarkCurrentUserReadyAndAvailable();
 
                 // Check that the room continued to the next stage because all players downloaded the beatmap.
                 await verifyStage(MatchmakingStage.GameplayWarmupTime);
@@ -208,8 +206,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
             // Ready up a single user.
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+            await MarkCurrentUserReadyAndAvailable();
 
             await gotoNextStage();
             await verifyStage(MatchmakingStage.GameplayWarmupTime);
@@ -276,20 +273,29 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task StageAdvancesWhenUsersLeaveDuringDownload()
         {
+            CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID, true))
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2, 3], 0);
+
             await Hub.JoinRoom(ROOM_ID);
 
             SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(contextUser3);
             await Hub.JoinRoom(ROOM_ID);
 
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
-            // Ready up the first user.
+            // Ready up the first and second users.
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
-
-            // Quit the second user.
+            await MarkCurrentUserReadyAndAvailable();
             SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
+            // Quit the third user.
+            SetUserContext(contextUser3);
             await Hub.LeaveRoom();
 
             await verifyStage(MatchmakingStage.GameplayWarmupTime);
@@ -380,6 +386,39 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 Assert.NotEqual(-1, ((MatchmakingRoomState)room.Item!.MatchState!).GameplayItem);
                 Assert.True(room.Item!.Settings.PlaylistItemId > 0);
             }
+        }
+
+        [Fact]
+        public async Task RoomEndsWithSinglePlayer()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.LeaveRoom();
+
+            await verifyStage(MatchmakingStage.Ended);
+        }
+
+        [Fact]
+        public async Task StatsUpdateAfterForcefulEnd()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID).Points = 10;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID_2).Points = 5;
+
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+
+            SetUserContext(ContextUser);
+            await Hub.LeaveRoom();
+
+            Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Exactly(2));
         }
 
         private async Task verifyStage(MatchmakingStage stage)

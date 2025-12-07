@@ -104,6 +104,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
 
         private int joinedUserCount;
+        private bool statsUpdatePending = true;
 
         public MatchmakingMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger)
         {
@@ -172,6 +173,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task HandleUserLeft(MultiplayerRoomUser user)
         {
+            if (room.Users.Count <= 1)
+            {
+                await stageRoomEnd(room);
+                return;
+            }
+
             userPicks.Remove(user.UserID);
             await updateStageFromUserStateChange();
         }
@@ -334,9 +341,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
 
-            if (state.CurrentRound == total_rounds)
-                await updateUserStats();
-
             await changeStage(MatchmakingStage.ResultsDisplaying);
 
             if (state.CurrentRound == total_rounds)
@@ -347,12 +351,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageRoomEnd(ServerMultiplayerRoom _)
         {
+            await updateUserStats();
+
             await changeStage(MatchmakingStage.Ended);
             await startCountdown(TimeSpan.FromSeconds(stage_room_end_time), _ => Task.CompletedTask);
         }
 
         private async Task updateUserStats()
         {
+            if (!statsUpdatePending)
+                return;
+
             using (var db = dbFactory.GetInstance())
             {
                 List<matchmaking_user_stats> userStats = [];
@@ -385,6 +394,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 foreach (var stats in userStats)
                     await db.UpdateMatchmakingUserStatsAsync(stats);
             }
+
+            statsUpdatePending = false;
         }
 
         private async Task returnUsersToRoom(ServerMultiplayerRoom _)
