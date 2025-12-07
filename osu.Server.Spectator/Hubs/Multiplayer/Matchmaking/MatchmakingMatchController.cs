@@ -28,9 +28,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private const int stage_waiting_for_clients_join_time = 60;
 
         /// <summary>
+        /// Duration before the match starts the first round.
+        /// </summary>
+        private const int stage_round_start_time_first = 15;
+
+        /// <summary>
         /// Duration users are given to view standings at the round start screen.
         /// </summary>
-        private const int stage_round_start_time = 15;
+        private const int stage_round_start_time = 5;
 
         /// <summary>
         /// Duration users are given to pick their beatmap.
@@ -253,7 +258,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             await changeStage(MatchmakingStage.RoundWarmupTime);
             await returnUsersToRoom(room);
-            await startCountdown(TimeSpan.FromSeconds(stage_round_start_time), stageUserBeatmapSelect);
+            await startCountdown(
+                state.CurrentRound == 1
+                    ? TimeSpan.FromSeconds(stage_round_start_time_first)
+                    : TimeSpan.FromSeconds(stage_round_start_time),
+                stageUserBeatmapSelect);
         }
 
         private async Task stageUserBeatmapSelect(ServerMultiplayerRoom _)
