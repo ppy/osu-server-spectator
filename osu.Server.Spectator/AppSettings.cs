@@ -88,6 +88,10 @@ namespace osu.Server.Spectator
                 ? mmRounds
                 : MatchmakingRoomRounds;
 
+            MatchmakingHeadToHeadIsBestOf = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_HEAD_TO_HEAD_IS_BESTOF"), out bool mmHeadToHeadIsBestOf)
+                ? mmHeadToHeadIsBestOf
+                : MatchmakingHeadToHeadIsBestOf;
+
             MatchmakingRoomAllowSkip = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ALLOW_SKIP"), out bool mmAllowSkip)
                 ? mmAllowSkip
                 : MatchmakingRoomAllowSkip;
