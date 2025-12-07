@@ -467,7 +467,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 // Only a single player, that is no longer in gameplay
                 || (anyPlayerQuit && room.Users.Count == 1 && state.Stage != MatchmakingStage.Gameplay)
                 // The match has run through to its natural conclusion.
-                || (state.CurrentRound == totalRounds && state.Stage > MatchmakingStage.Gameplay);
+                || (state.CurrentRound == totalRounds && state.Stage > MatchmakingStage.Gameplay)
+                // In head-to-head mode, one player has a score that is unattainable by the other.
+                || (state.Users.Count == 2 && state.Users.Any(u => u.Points >= headToHeadMaxPoints));
         }
 
         public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
