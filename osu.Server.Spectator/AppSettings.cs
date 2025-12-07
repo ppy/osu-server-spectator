@@ -42,6 +42,7 @@ namespace osu.Server.Spectator
         public static int BanchoBotUserId { get; } = 3;
 
         public static int MatchmakingRoomRounds { get; set; } = 5;
+        public static bool MatchmakingHeadToHeadIsBestOf { get; set; } = true;
         public static bool MatchmakingRoomAllowSkip { get; set; }
         public static TimeSpan MatchmakingLobbyUpdateRate { get; } = TimeSpan.FromSeconds(5);
         public static TimeSpan MatchmakingQueueUpdateRate { get; } = TimeSpan.FromSeconds(1);

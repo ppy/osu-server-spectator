@@ -24,6 +24,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         {
             AppSettings.MatchmakingRoomRounds = 2;
             AppSettings.MatchmakingRoomAllowSkip = true;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = false;
 
             Database.Setup(db => db.GetRealtimeRoomAsync(ROOM_ID))
                     .Callback<long>(roomId => InitialiseRoom(roomId, 10))
@@ -490,6 +491,59 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             await verifyStage(MatchmakingStage.Ended);
             Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task HeadToHeadMatchEndsEarlyWhenScoreIsNotAttainable()
+        {
+            AppSettings.MatchmakingRoomRounds = 5;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = true;
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>())).Returns(() => Task.FromResult((IEnumerable<SoloScore>)
+            [
+                new SoloScore
+                {
+                    user_id = USER_ID,
+                    total_score = 10
+                },
+                new SoloScore
+                {
+                    user_id = USER_ID_2,
+                    total_score = 5
+                }
+            ]));
+
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            for (int i = 0; i < 3; i++)
+            {
+                await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+                // Enter gameplay for both users.
+                SetUserContext(ContextUser);
+                await MarkCurrentUserReadyAndAvailable();
+                SetUserContext(ContextUser2);
+                await MarkCurrentUserReadyAndAvailable();
+
+                await gotoStage(MatchmakingStage.Gameplay);
+
+                SetUserContext(ContextUser);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                SetUserContext(ContextUser2);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                await gotoNextStage();
+            }
+
+            await verifyStage(MatchmakingStage.Ended);
         }
 
         private async Task verifyStage(MatchmakingStage stage)
