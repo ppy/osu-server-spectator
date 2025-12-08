@@ -39,5 +39,29 @@ namespace osu.Server.Spectator.Database.Models
             Variant = variant_id,
             Name = name,
         };
+
+        public string DisplayName
+        {
+            get
+            {
+                switch (ruleset_id)
+                {
+                    case 0:
+                        return $"osu! ({name})";
+
+                    case 1:
+                        return $"osu!taiko ({name})";
+
+                    case 2:
+                        return $"osu!catch ({name})";
+
+                    case 3:
+                        return $"osu!mania {variant_id}K ({name})";
+
+                    default:
+                        return name;
+                }
+            }
+        }
     }
 }
