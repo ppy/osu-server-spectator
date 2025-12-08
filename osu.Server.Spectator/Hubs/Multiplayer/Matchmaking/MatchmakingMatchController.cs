@@ -457,9 +457,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             return room.Users.All(u => u.State == MultiplayerUserState.Ready);
         }
 
-        private bool anyUsersReady()
+        private bool hasEnoughUsersForGameplay()
         {
-            return room.Users.Any(u => u.State == MultiplayerUserState.Ready);
+            return
+                // Special case for testing in solo play.
+                (room.Users.Count == 1 && allUsersReady())
+                // Otherwise, always require at least two ready users.
+                || room.Users.Count(u => u.State == MultiplayerUserState.Ready) >= 2;
         }
 
         private bool isMatchComplete()
