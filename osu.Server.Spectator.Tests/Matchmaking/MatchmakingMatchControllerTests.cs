@@ -197,18 +197,34 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         }
 
         [Fact]
-        public async Task GameplayStartsIfAnyUserReady()
+        public async Task GameplayStartsIfAtLeastTwoUsersReady()
         {
-            await Hub.JoinRoom(ROOM_ID);
+            CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
+            using (var room = await Rooms.GetForUse(ROOM_ID, true))
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2, 3], 0);
+
+            await Hub.JoinRoom(ROOM_ID);
             SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(contextUser3);
             await Hub.JoinRoom(ROOM_ID);
 
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
             // Ready up a single user.
+            SetUserContext(ContextUser);
             await MarkCurrentUserReadyAndAvailable();
 
+            // Still waiting...
+            await gotoNextStage();
+            await verifyStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            // Ready up the next user.
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
+            // Now there's enough players for gameplay to start.
             await gotoNextStage();
             await verifyStage(MatchmakingStage.GameplayWarmupTime);
         }
@@ -544,6 +560,27 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             }
 
             await verifyStage(MatchmakingStage.Ended);
+        }
+
+        [Fact]
+        public async Task HeadToHeadMatchRequiresAllUsersDownloaded()
+        {
+            AppSettings.MatchmakingRoomRounds = 5;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = true;
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            // User 1 becomes ready.
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
+
+            // Countdown expires.
+            await gotoNextStage();
+            await verifyStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
         }
 
         private async Task verifyStage(MatchmakingStage stage)
