@@ -333,7 +333,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await eventLogger.LogMatchmakingGameplayBeatmapAsync(room.RoomID, room.Settings.PlaylistItemId);
 
             await changeStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
-            await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => anyUsersReady() ? stageGameplayWarmupTime(room) : stageWaitingForClientsBeatmapDownload(room));
+            await tryAdvanceStage();
+
+            async Task tryAdvanceStage()
+                => await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => hasEnoughUsersForGameplay() ? stageGameplayWarmupTime(room) : tryAdvanceStage());
         }
 
         private async Task stageGameplayWarmupTime(ServerMultiplayerRoom _)
