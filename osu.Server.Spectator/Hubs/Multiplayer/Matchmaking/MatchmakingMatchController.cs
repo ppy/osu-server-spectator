@@ -85,12 +85,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// <summary>
         /// The total number of rounds.
         /// </summary>
-        private static readonly int total_rounds = AppSettings.MatchmakingRoomRounds;
+        private static int totalRounds => AppSettings.MatchmakingRoomRounds;
 
         /// <summary>
         /// The number of points awarded for each placement position (index 0 = #1, index 7 = #8).
         /// </summary>
         private static readonly int[] placement_points = [15, 12, 10, 8, 6, 4, 2, 1];
+
+        /// <summary>
+        /// In head-to-head (1v1) scenarios, the amount of points before the other player has no chance of catching up.
+        /// When there are 5 rounds (the default), this is equivalent to a best-of-3 scenario.
+        /// </summary>
+        private static int headToHeadMaxPoints => placement_points[0] * Math.Max(1, AppSettings.MatchmakingHeadToHeadIsBestOf ? totalRounds / 2 + 1 : totalRounds);
 
         public MultiplayerPlaylistItem CurrentItem => room.CurrentPlaylistItem;
 
@@ -461,7 +467,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 // Only a single player, that is no longer in gameplay
                 || (anyPlayerQuit && room.Users.Count == 1 && state.Stage != MatchmakingStage.Gameplay)
                 // The match has run through to its natural conclusion.
-                || (state.CurrentRound == total_rounds && state.Stage > MatchmakingStage.Gameplay);
+                || (state.CurrentRound == totalRounds && state.Stage > MatchmakingStage.Gameplay)
+                // In head-to-head mode, one player has a score that is unattainable by the other.
+                || (state.Users.Count == 2 && state.Users.Any(u => u.Points >= headToHeadMaxPoints));
         }
 
         public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
