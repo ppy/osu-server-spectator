@@ -136,23 +136,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             using (var db = dbFactory.GetInstance())
             {
+                await db.WaitForRoomScoreSubmissionComplete(CurrentItem.ID);
+
                 // Expire and let clients know that the current item has finished.
                 await db.MarkPlaylistItemAsPlayedAsync(room.RoomID, CurrentItem.ID);
                 room.Playlist[room.Playlist.IndexOf(CurrentItem)] = (await db.GetPlaylistItemAsync(room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem();
                 await hub.NotifyPlaylistItemChanged(room, CurrentItem, true);
-            }
 
-            Dictionary<int, SoloScore> scores = new Dictionary<int, SoloScore>();
-
-            using (var db = dbFactory.GetInstance())
-            {
+                // Update the room results with the player scores.
+                Dictionary<int, SoloScore> scores = new Dictionary<int, SoloScore>();
                 foreach (var score in await db.GetAllScoresForPlaylistItem(CurrentItem.ID))
                     scores[(int)score.user_id] = score;
+                state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
+
+                await stageResultsDisplaying();
             }
-
-            state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
-
-            await stageResultsDisplaying();
         }
 
         public async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)

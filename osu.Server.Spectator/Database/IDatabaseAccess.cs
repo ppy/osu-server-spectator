@@ -209,6 +209,12 @@ namespace osu.Server.Spectator.Database
         Task<(long roomID, long playlistItemID)?> GetMultiplayerRoomIdForScoreAsync(long scoreId);
 
         /// <summary>
+        /// Waits for all score submissions on a given playlist item to complete, up to a maximum of 10 seconds.
+        /// </summary>
+        /// <param name="playlistItemId">The playlist item.</param>
+        Task WaitForRoomScoreSubmissionComplete(long playlistItemId);
+
+        /// <summary>
         /// Retrieve all scores for a specified playlist item.
         /// </summary>
         /// <param name="playlistItemId">The playlist item.</param>
