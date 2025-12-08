@@ -421,6 +421,77 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Exactly(2));
         }
 
+        [Fact]
+        public async Task StatsUpdatesIfAllPlayersLeaveDuringGameplay()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID).Points = 10;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID_2).Points = 5;
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            // Enter gameplay for both users.
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
+            await gotoStage(MatchmakingStage.Gameplay);
+
+            // Leave both users.
+            SetUserContext(ContextUser);
+            await Hub.LeaveRoom();
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+
+            Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task MatchDoesNotEndDuringGameplay()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID).Points = 10;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID_2).Points = 5;
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            // Enter gameplay for both users.
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
+            await gotoStage(MatchmakingStage.Gameplay);
+
+            // Leave user 2.
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+
+            // Match should still be "ongoing".
+            await verifyStage(MatchmakingStage.Gameplay);
+            Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Never);
+
+            SetUserContext(ContextUser);
+            await Hub.AbortGameplay();
+
+            await verifyStage(MatchmakingStage.ResultsDisplaying);
+            await gotoNextStage();
+
+            await verifyStage(MatchmakingStage.Ended);
+            Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Exactly(2));
+        }
+
         private async Task verifyStage(MatchmakingStage stage)
         {
             using (var room = await Rooms.GetForUse(ROOM_ID))

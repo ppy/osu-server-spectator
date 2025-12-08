@@ -104,6 +104,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
 
         private int joinedUserCount;
+        private bool anyPlayerQuit;
         private bool statsUpdatePending = true;
 
         public MatchmakingMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger)
@@ -141,6 +142,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 await hub.NotifyPlaylistItemChanged(room, CurrentItem, true);
             }
 
+            Dictionary<int, SoloScore> scores = new Dictionary<int, SoloScore>();
+
+            using (var db = dbFactory.GetInstance())
+            {
+                foreach (var score in await db.GetAllScoresForPlaylistItem(CurrentItem.ID))
+                    scores[(int)score.user_id] = score;
+            }
+
+            state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
+
             await stageResultsDisplaying();
         }
 
@@ -173,7 +184,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task HandleUserLeft(MultiplayerRoomUser user)
         {
-            if (room.Users.Count <= 1)
+            anyPlayerQuit = true;
+
+            if (isMatchComplete())
             {
                 await stageRoomEnd(room);
                 return;
@@ -331,19 +344,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private async Task stageResultsDisplaying()
         {
-            Dictionary<int, SoloScore> scores = new Dictionary<int, SoloScore>();
-
-            using (var db = dbFactory.GetInstance())
-            {
-                foreach (var score in await db.GetAllScoresForPlaylistItem(CurrentItem.ID))
-                    scores[(int)score.user_id] = score;
-            }
-
-            state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
-
             await changeStage(MatchmakingStage.ResultsDisplaying);
 
-            if (state.CurrentRound == total_rounds)
+            if (isMatchComplete())
                 await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoomEnd);
             else
                 await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoundWarmupTime);
@@ -448,6 +451,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private bool anyUsersReady()
         {
             return room.Users.Any(u => u.State == MultiplayerUserState.Ready);
+        }
+
+        private bool isMatchComplete()
+        {
+            return
+                // No more players left in the room
+                room.Users.Count == 0
+                // Only a single player, that is no longer in gameplay
+                || (anyPlayerQuit && room.Users.Count == 1 && state.Stage != MatchmakingStage.Gameplay)
+                // The match has run through to its natural conclusion.
+                || (state.CurrentRound == total_rounds && state.Stage > MatchmakingStage.Gameplay);
         }
 
         public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
