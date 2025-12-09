@@ -11,7 +11,7 @@
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.3" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="9.0.3" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.3" />
-        <PackageReference Include="ppy.osu.Game" Version="2025.1121.0" />
+        <PackageReference Include="ppy.osu.Game" Version="2025.1209.0" />
     </ItemGroup>
 
 </Project>
