@@ -629,14 +629,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (user == null)
                         throw new InvalidOperationException("Local user was not found in the expected room");
 
-                    if (room.State != MultiplayerRoomState.Playing)
+                    if (!IsGameplayState(user.State))
                         throw new InvalidStateException("Cannot skip while not in a gameplay state");
 
-                    if (user.VotedToSkipIntro)
-                        return;
-
-                    user.VotedToSkipIntro = true;
-                    await Clients.Group(GetGroupId(room.RoomID)).UserVotedToSkipIntro(user.UserID);
+                    await HubContext.ChangeUserVoteToSkipIntro(room, user, true);
                     await HubContext.CheckVotesToSkipPassed(room);
                 }
             }
