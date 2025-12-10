@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Extensions.Logging;
@@ -498,6 +499,32 @@ namespace osu.Server.Spectator.Database
                 + "ON `multiplayer_score_links`.`playlist_item_id` = `multiplayer_playlist_items`.`id` "
                 + "WHERE `multiplayer_score_links`.`score_id` = @scoreId",
                 new { scoreId = scoreId });
+        }
+
+        public async Task WaitForRoomScoreSubmissionComplete(long playlistItemId)
+        {
+            var connection = await getConnectionAsync();
+
+            int tokenCount = await connection.QuerySingleAsync<int>("SELECT COUNT(*) FROM `score_tokens` WHERE playlist_item_id = @playlistItemId", new
+            {
+                playlistItemId = playlistItemId
+            });
+
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+            {
+                while (!cts.IsCancellationRequested)
+                {
+                    int scoreCount = await connection.QuerySingleAsync<int>("SELECT COUNT(*) FROM `multiplayer_score_links` WHERE playlist_item_id = @playlistItemId", new
+                    {
+                        playlistItemId = playlistItemId
+                    });
+
+                    if (scoreCount == tokenCount)
+                        return;
+                }
+
+                logger.Log(LogLevel.Warning, $"Score submission for playlist item {playlistItemId} did not complete in the allotted time period (10 seconds)!");
+            }
         }
 
         /// <summary>
