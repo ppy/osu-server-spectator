@@ -546,6 +546,59 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await verifyStage(MatchmakingStage.Ended);
         }
 
+        [Fact]
+        public async Task BestOfFullRounds()
+        {
+            AppSettings.MatchmakingRoomRounds = 5;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = true;
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            for (int i = 0; i < 5; i++)
+            {
+                int i2 = i;
+                Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>())).Returns(() => Task.FromResult((IEnumerable<SoloScore>)
+                [
+                    new SoloScore
+                    {
+                        user_id = USER_ID,
+                        total_score = i2 < 2 ? 10u : 5u
+                    },
+                    new SoloScore
+                    {
+                        user_id = USER_ID_2,
+                        total_score = i2 < 2 ? 5u : 10u
+                    }
+                ]));
+
+                await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+                // Enter gameplay for both users.
+                SetUserContext(ContextUser);
+                await MarkCurrentUserReadyAndAvailable();
+                SetUserContext(ContextUser2);
+                await MarkCurrentUserReadyAndAvailable();
+
+                await gotoStage(MatchmakingStage.Gameplay);
+
+                SetUserContext(ContextUser);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                SetUserContext(ContextUser2);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                await gotoNextStage();
+            }
+
+            await verifyStage(MatchmakingStage.Ended);
+        }
+
         private async Task verifyStage(MatchmakingStage stage)
         {
             using (var room = await Rooms.GetForUse(ROOM_ID))
