@@ -186,7 +186,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             anyPlayerQuit = true;
 
-            if (isMatchComplete())
+            // Mark users that leave the match early as having abandoned the match.
+            if (hasGameplayRoundsRemaining())
+            {
+                state.Users.GetOrAdd(user.UserID).AbandonedAt = DateTimeOffset.UtcNow;
+                state.RecordScores([], placement_points); // Empty update to adjust placements.
+                await hub.NotifyMatchRoomStateChanged(room);
+            }
+
+            // Attempt to conclude the match in advance so users don't have to keep playing rounds by themselves.
+            if (canConcludeMatch())
             {
                 await stageRoomEnd(room);
                 return;
@@ -346,7 +355,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             await changeStage(MatchmakingStage.ResultsDisplaying);
 
-            if (isMatchComplete())
+            if (canConcludeMatch())
                 await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoomEnd);
             else
                 await startCountdown(TimeSpan.FromSeconds(stage_round_end_time), stageRoundWarmupTime);
@@ -386,7 +395,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     eloStandings.Add(stats.EloData);
                 }
 
-                EloContest eloContest = new EloContest(DateTimeOffset.Now, eloStandings.ToArray());
+                EloContest eloContest = new EloContest(DateTimeOffset.Now, eloStandings.ToArray())
+                {
+                    Weight = Math.Pow(0.5, state.Users.Count(u => u.AbandonedAt != null))
+                };
+
                 EloSystem eloSystem = new EloSystem
                 {
                     MaxHistory = 10
@@ -453,19 +466,39 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             return room.Users.Any(u => u.State == MultiplayerUserState.Ready);
         }
 
-        private bool isMatchComplete()
+        /// <summary>
+        /// Whether the match can be transitioned into a <see cref="MatchmakingStage.Ended">concluded</see> state,
+        /// provided that it is no longer necessary for any users to keep playing.
+        /// </summary>
+        private bool canConcludeMatch()
         {
             return
-                // No more players left in the room
-                room.Users.Count == 0
-                // Only a single player, that is no longer in gameplay
-                || (anyPlayerQuit && room.Users.Count == 1 && state.Stage != MatchmakingStage.Gameplay)
-                // The match has run through to its natural conclusion.
-                || (state.CurrentRound == totalRounds && state.Stage > MatchmakingStage.Gameplay)
-                // In head-to-head mode, one player has a score that is unattainable by the other.
-                || hasAnyBestOfWinner();
+                // Gameplay has concluded.
+                !hasGameplayRoundsRemaining()
+                // Only a single player remains, that is no longer in gameplay.
+                || (anyPlayerQuit && room.Users.Count == 1 && state.Stage != MatchmakingStage.Gameplay);
         }
 
+        /// <summary>
+        /// Whether there are still gameplay rounds to be played.
+        /// If <c>true</c>, users leaving the match will receive an abandon penalty.
+        /// </summary>
+        private bool hasGameplayRoundsRemaining()
+        {
+            return
+                // The room has not been terminated early.
+                state.Stage != MatchmakingStage.Ended
+                // Users are remaining in the room.
+                && room.Users.Count > 0
+                // The room has not yet run through to its natural conclusion.
+                && (state.CurrentRound < totalRounds || state.Stage <= MatchmakingStage.Gameplay)
+                // In best-of mode, a winner has not been decided yet.
+                && !hasAnyBestOfWinner();
+        }
+
+        /// <summary>
+        /// Whether any user has won a head-to-head matchup using the best-of win condition.
+        /// </summary>
         private bool hasAnyBestOfWinner()
         {
             if (state.Users.Count != 2 || !AppSettings.MatchmakingHeadToHeadIsBestOf)
