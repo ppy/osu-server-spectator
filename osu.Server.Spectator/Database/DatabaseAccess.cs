@@ -44,6 +44,16 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task<int[]> GetUsersInGroupsAsync(int[] groupIds)
+        {
+            var connection = await getConnectionAsync();
+
+            return (await connection.QueryAsync<int>("SELECT DISTINCT `user_id` FROM `phpbb_user_group` WHERE `group_id` IN @groupIds", new
+            {
+                groupIds = groupIds
+            })).ToArray();
+        }
+
         public async Task<bool> IsUserRestrictedAsync(int userId)
         {
             var connection = await getConnectionAsync();

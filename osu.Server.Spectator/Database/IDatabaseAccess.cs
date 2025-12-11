@@ -30,6 +30,11 @@ namespace osu.Server.Spectator.Database
         Task<string?> GetUsernameAsync(int userId);
 
         /// <summary>
+        /// Returns the IDs of all users in groups with the given <see cref="groupIds"/>.
+        /// </summary>
+        Task<int[]> GetUsersInGroupsAsync(int[] groupIds);
+
+        /// <summary>
         /// Returns the <see cref="multiplayer_room"/> with the given <paramref name="roomId"/>.
         /// </summary>
         Task<multiplayer_room?> GetRoomAsync(long roomId);

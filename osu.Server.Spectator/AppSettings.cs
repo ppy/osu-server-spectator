@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Linq;
 
 namespace osu.Server.Spectator
 {
@@ -26,6 +27,7 @@ namespace osu.Server.Spectator
 
         public static bool TrackBuildUserCounts { get; set; }
         public static bool ClientCheckVersion { get; set; }
+        public static int[] ClientCheckVersionExemptGroups { get; set; }
 
         public static int ServerPort { get; set; } = 80;
         public static string RedisHost { get; } = "localhost";
@@ -70,6 +72,16 @@ namespace osu.Server.Spectator
             ReplaysBucket = Environment.GetEnvironmentVariable("REPLAYS_BUCKET") ?? ReplaysBucket;
             TrackBuildUserCounts = bool.TryParse(Environment.GetEnvironmentVariable("TRACK_BUILD_USER_COUNTS"), out bool trackBuildUserCounts) ? trackBuildUserCounts : TrackBuildUserCounts;
             ClientCheckVersion = bool.TryParse(Environment.GetEnvironmentVariable("CLIENT_CHECK_VERSION"), out bool clientCheckVersion) ? clientCheckVersion : ClientCheckVersion;
+
+            ClientCheckVersionExemptGroups = Environment.GetEnvironmentVariable("CLIENT_CHECK_VERSION_EXEMPT_GROUPS")?.Split(',')
+                                                        .Select(id =>
+                                                        {
+                                                            bool parsed = int.TryParse(id, out int result);
+                                                            return (parsed, result);
+                                                        })
+                                                        .Where(res => res.parsed)
+                                                        .Select(res => res.result)
+                                                        .ToArray() ?? [];
 
             ServerPort = int.TryParse(Environment.GetEnvironmentVariable("SERVER_PORT"), out int serverPort) ? serverPort : ServerPort;
             RedisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? RedisHost;

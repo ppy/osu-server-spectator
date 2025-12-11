@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
@@ -51,6 +52,17 @@ namespace osu.Server.Spectator
             if (!AppSettings.ClientCheckVersion)
                 return true;
 
+            HashSet<int> exemptUsers = await memoryCache.GetOrCreateAsync<HashSet<int>>(cache_key_for_exempt_users, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1);
+
+                using (var db = databaseFactory.GetInstance())
+                    return new HashSet<int>(await db.GetUsersInGroupsAsync(AppSettings.ClientCheckVersionExemptGroups));
+            }) ?? [];
+
+            if (exemptUsers.Contains(callerContext.GetUserId()))
+                return true;
+
             string? hash = memoryCache.Get<string?>(cacheKeyForClientHash(callerContext.ConnectionId));
 
             if (string.IsNullOrEmpty(hash))
@@ -76,5 +88,6 @@ namespace osu.Server.Spectator
 
         private static string cacheKeyForClientHash(string connectionId) => $"{HubClientConnector.VERSION_HASH_HEADER}#{connectionId}";
         private static string cacheKeyForBuild(string buildHash) => $"{nameof(osu_build)}#{buildHash}";
+        private const string cache_key_for_exempt_users = $"{nameof(ClientVersionChecker)}#exempt_users";
     }
 }
