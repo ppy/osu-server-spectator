@@ -548,6 +548,21 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
+        public async Task PlaylistItemsWithScoreTokenInDatabaseCannotBeRemoved()
+        {
+            Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
+            Database.Setup(d => d.AnyScoreTokenExistsFor(1)).ReturnsAsync(true);
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
+
+            await MarkCurrentUserReadyAndAvailable();
+            await Hub.StartMatch();
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.RemovePlaylistItem(1));
+        }
+
+        [Fact]
         public async Task CurrentlyPlayingItemsCannotBeChangedOrRemoved()
         {
             Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });

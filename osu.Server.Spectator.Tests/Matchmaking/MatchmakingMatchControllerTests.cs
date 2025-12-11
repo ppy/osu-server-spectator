@@ -583,6 +583,206 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await verifyStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
         }
 
+        [Fact]
+        public async Task BestOfFullRounds()
+        {
+            AppSettings.MatchmakingRoomRounds = 5;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = true;
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            for (int i = 0; i < 5; i++)
+            {
+                int i2 = i;
+                Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>())).Returns(() => Task.FromResult((IEnumerable<SoloScore>)
+                [
+                    new SoloScore
+                    {
+                        user_id = USER_ID,
+                        total_score = i2 < 2 ? 10u : 5u
+                    },
+                    new SoloScore
+                    {
+                        user_id = USER_ID_2,
+                        total_score = i2 < 2 ? 5u : 10u
+                    }
+                ]));
+
+                await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+                // Enter gameplay for both users.
+                SetUserContext(ContextUser);
+                await MarkCurrentUserReadyAndAvailable();
+                SetUserContext(ContextUser2);
+                await MarkCurrentUserReadyAndAvailable();
+
+                await gotoStage(MatchmakingStage.Gameplay);
+
+                SetUserContext(ContextUser);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                SetUserContext(ContextUser2);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                await gotoNextStage();
+            }
+
+            await verifyStage(MatchmakingStage.Ended);
+        }
+
+        [Fact]
+        public async Task AbandonPenaltyOnEarlyQuit()
+        {
+            CreateUser(3, out var contextUser3, out _);
+
+            using (var roomUsage = await Rooms.GetForUse(ROOM_ID, true))
+                roomUsage.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2, 3], 0);
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(contextUser3);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            var roomState = (MatchmakingRoomState)room.MatchState!;
+
+            await gotoStage(MatchmakingStage.UserBeatmapSelect);
+
+            // Player 1 quits during beatmap selection, and receives an abandon penalty.
+            SetUserContext(ContextUser);
+            await Hub.LeaveRoom();
+            Assert.NotNull(roomState.Users.GetOrAdd(USER_ID).AbandonedAt);
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+            SetUserContext(contextUser3);
+            await MarkCurrentUserReadyAndAvailable();
+
+            await gotoStage(MatchmakingStage.Gameplay);
+
+            // Player 2 quits during gameplay, and receives an abandon penalty.
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+            Assert.NotNull(roomState.Users.GetOrAdd(USER_ID_2).AbandonedAt);
+
+            // Player 3 is the last player to quit, and doesn't receive an abandon penalty.
+            SetUserContext(contextUser3);
+            await Hub.LeaveRoom();
+            Assert.Null(roomState.Users.GetOrAdd(3).AbandonedAt);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task NoAbandonPenaltyOnQuitInConclusoryState(bool isBestOf)
+        {
+            int totalRounds;
+
+            if (isBestOf)
+            {
+                AppSettings.MatchmakingRoomRounds = 3;
+                AppSettings.MatchmakingHeadToHeadIsBestOf = true;
+                totalRounds = 2;
+            }
+            else
+            {
+                AppSettings.MatchmakingRoomRounds = 1;
+                totalRounds = 1;
+            }
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>())).Returns(() => Task.FromResult((IEnumerable<SoloScore>)
+            [
+                new SoloScore
+                {
+                    user_id = USER_ID,
+                    total_score = 10
+                },
+                new SoloScore
+                {
+                    user_id = USER_ID_2,
+                    total_score = 5
+                }
+            ]));
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            var roomState = (MatchmakingRoomState)room.MatchState!;
+
+            for (int i = 0; i < totalRounds; i++)
+            {
+                await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+                SetUserContext(ContextUser);
+                await MarkCurrentUserReadyAndAvailable();
+                SetUserContext(ContextUser2);
+                await MarkCurrentUserReadyAndAvailable();
+
+                await gotoStage(MatchmakingStage.Gameplay);
+
+                SetUserContext(ContextUser);
+                await Hub.AbortGameplay();
+                SetUserContext(ContextUser2);
+                await Hub.AbortGameplay();
+
+                await verifyStage(MatchmakingStage.ResultsDisplaying);
+            }
+
+            // User 1 leaves, doesn't receive abandon penalty.
+            SetUserContext(ContextUser);
+            await Hub.LeaveRoom();
+            Assert.Null(roomState.Users.GetOrAdd(USER_ID).AbandonedAt);
+
+            // User 2 leaves, doesn't receive abandon penalty.
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+            Assert.Null(roomState.Users.GetOrAdd(USER_ID_2).AbandonedAt);
+        }
+
+        [Fact]
+        public async Task HeadToHeadWithoutBestOfRequiresAllRoundsComplete()
+        {
+            AppSettings.MatchmakingRoomRounds = 3;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = false;
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            for (int i = 0; i < 3; i++)
+            {
+                await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+                SetUserContext(ContextUser);
+                await MarkCurrentUserReadyAndAvailable();
+                SetUserContext(ContextUser2);
+                await MarkCurrentUserReadyAndAvailable();
+
+                await gotoStage(MatchmakingStage.Gameplay);
+
+                SetUserContext(ContextUser);
+                await Hub.AbortGameplay();
+                SetUserContext(ContextUser2);
+                await Hub.AbortGameplay();
+
+                await verifyStage(MatchmakingStage.ResultsDisplaying);
+            }
+
+            await gotoNextStage();
+            await verifyStage(MatchmakingStage.Ended);
+        }
+
         private async Task verifyStage(MatchmakingStage stage)
         {
             using (var room = await Rooms.GetForUse(ROOM_ID))
