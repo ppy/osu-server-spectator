@@ -336,7 +336,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await eventLogger.LogMatchmakingGameplayBeatmapAsync(room.RoomID, room.Settings.PlaylistItemId);
 
             await changeStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
-            await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => anyUsersReady() ? stageGameplayWarmupTime(room) : stageWaitingForClientsBeatmapDownload(room));
+            await tryAdvanceStage();
+
+            async Task tryAdvanceStage()
+                => await startCountdown(TimeSpan.FromSeconds(stage_prepare_beatmap_time), _ => hasEnoughUsersForGameplay() ? stageGameplayWarmupTime(room) : tryAdvanceStage());
         }
 
         private async Task stageGameplayWarmupTime(ServerMultiplayerRoom _)
@@ -461,9 +464,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             return room.Users.All(u => u.State == MultiplayerUserState.Ready);
         }
 
-        private bool anyUsersReady()
+        private bool hasEnoughUsersForGameplay()
         {
-            return room.Users.Any(u => u.State == MultiplayerUserState.Ready);
+            return
+                // Special case for testing in solo play.
+                (room.Users.Count == 1 && allUsersReady())
+                // Otherwise, always require at least two ready users.
+                || room.Users.Count(u => u.State == MultiplayerUserState.Ready) >= 2;
         }
 
         /// <summary>
