@@ -209,6 +209,11 @@ namespace osu.Server.Spectator.Database
         Task<(long roomID, long playlistItemID)?> GetMultiplayerRoomIdForScoreAsync(long scoreId);
 
         /// <summary>
+        /// Returns whether there has been any score token issued that is associated with the given <paramref name="playlistItemId"/>.
+        /// </summary>
+        Task<bool> AnyScoreTokenExistsFor(long playlistItemId);
+
+        /// <summary>
         /// Retrieve all scores for a specified playlist item.
         /// </summary>
         /// <param name="playlistItemId">The playlist item.</param>
