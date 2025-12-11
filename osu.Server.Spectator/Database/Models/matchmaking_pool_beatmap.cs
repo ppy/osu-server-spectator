@@ -12,8 +12,8 @@ namespace osu.Server.Spectator.Database.Models
     public class matchmaking_pool_beatmap : IEquatable<matchmaking_pool_beatmap>
     {
         // matchmaking_pool_beatmaps
-        public int id { get; set; }
-        public int pool_id { get; set; }
+        public uint id { get; set; }
+        public uint pool_id { get; set; }
         public int beatmap_id { get; set; }
         public string? mods { get; set; }
         public int? rating { get; set; }
