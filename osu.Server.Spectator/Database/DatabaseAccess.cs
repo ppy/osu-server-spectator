@@ -500,6 +500,17 @@ namespace osu.Server.Spectator.Database
                 new { scoreId = scoreId });
         }
 
+        public async Task<bool> AnyScoreTokenExistsFor(long playlistItemId)
+        {
+            var connection = await getConnectionAsync();
+
+            var scoreTokenCount = await connection.QuerySingleAsync<long>(
+                "SELECT COUNT(1) FROM `score_tokens` WHERE `playlist_item_id` = @playlistItemId",
+                new { playlistItemId = playlistItemId });
+
+            return scoreTokenCount > 0;
+        }
+
         /// <summary>
         /// Retrieves ALL score data for scores on a playlist item.
         /// </summary>

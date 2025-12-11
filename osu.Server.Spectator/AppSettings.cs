@@ -42,6 +42,7 @@ namespace osu.Server.Spectator
         public static int BanchoBotUserId { get; } = 3;
 
         public static int MatchmakingRoomRounds { get; set; } = 5;
+        public static bool MatchmakingHeadToHeadIsBestOf { get; set; } = true;
         public static bool MatchmakingRoomAllowSkip { get; set; }
         public static TimeSpan MatchmakingLobbyUpdateRate { get; } = TimeSpan.FromSeconds(5);
         public static TimeSpan MatchmakingQueueUpdateRate { get; } = TimeSpan.FromSeconds(1);
@@ -86,6 +87,10 @@ namespace osu.Server.Spectator
             MatchmakingRoomRounds = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_ROUNDS"), out int mmRounds)
                 ? mmRounds
                 : MatchmakingRoomRounds;
+
+            MatchmakingHeadToHeadIsBestOf = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_HEAD_TO_HEAD_IS_BESTOF"), out bool mmHeadToHeadIsBestOf)
+                ? mmHeadToHeadIsBestOf
+                : MatchmakingHeadToHeadIsBestOf;
 
             MatchmakingRoomAllowSkip = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ALLOW_SKIP"), out bool mmAllowSkip)
                 ? mmAllowSkip

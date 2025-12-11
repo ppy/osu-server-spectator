@@ -249,6 +249,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
             using (var db = dbFactory.GetInstance())
             {
+                if (await db.AnyScoreTokenExistsFor(playlistItemId))
+                    throw new InvalidStateException("Attempted to remove an item which has already been played.");
+
                 await db.RemovePlaylistItemAsync(room.RoomID, playlistItemId);
 
                 room.Playlist.Remove(item);
