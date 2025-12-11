@@ -44,6 +44,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     database_beatmap[] globalBeatmaps = await db.GetMatchmakingGlobalPoolBeatmapsAsync(pool.ruleset_id, pool.variant_id);
                     beatmaps = globalBeatmaps.Select(b => new matchmaking_pool_beatmap
                     {
+                        pool_id = pool.id,
                         beatmap_id = b.beatmap_id,
                         checksum = b.checksum,
                         difficultyrating = b.difficultyrating

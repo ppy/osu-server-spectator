@@ -245,7 +245,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private Task refreshPools()
         {
-            if (DateTimeOffset.Now - lastPoolRefreshTime < TimeSpan.FromMinutes(5))
+            if (DateTimeOffset.Now - lastPoolRefreshTime < TimeSpan.FromHours(1))
                 return Task.CompletedTask;
 
             poolSelectors.Clear();
