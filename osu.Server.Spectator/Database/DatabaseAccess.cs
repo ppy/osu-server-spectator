@@ -677,12 +677,19 @@ namespace osu.Server.Spectator.Database
             string variantString = string.Empty;
 
             if (rulesetId == 3)
-                variantString = "AND diff_size = @Variant";
+                variantString = "AND b.diff_size = @Variant";
 
-            return (await connection.QueryAsync<database_beatmap>("SELECT beatmap_id, checksum, difficultyrating FROM `osu_beatmaps` "
-                                                                  + "WHERE playmode = @RulesetId "
-                                                                  + "AND approved BETWEEN 1 AND 2 "
-                                                                  + "AND hit_length BETWEEN 60 AND 240 "
+            // - From the featured artist listing
+            // - Non-converted beatmaps
+            // - Ranked status
+            // - Between 1 and 4 minutes in length
+            // - With the correct keymode (if mania)
+            return (await connection.QueryAsync<database_beatmap>("SELECT b.beatmap_id, b.checksum, b.difficultyrating FROM `osu_beatmaps` b "
+                                                                  + "JOIN `osu_beatmapsets` s ON s.beatmapset_id = b.beatmapset_id "
+                                                                  + "WHERE s.track_id IS NOT NULL "
+                                                                  + "AND b.playmode = @RulesetId "
+                                                                  + "AND b.approved BETWEEN 1 AND 2 "
+                                                                  + "AND b.hit_length BETWEEN 60 AND 240 "
                                                                   + variantString,
                 new
                 {
