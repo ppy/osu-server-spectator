@@ -42,27 +42,16 @@ namespace osu.Server.Spectator
 
         public static int BanchoBotUserId { get; } = 3;
 
-        public static int MatchmakingRoomSize { get; set; } = 8;
         public static int MatchmakingRoomRounds { get; set; } = 5;
+        public static bool MatchmakingHeadToHeadIsBestOf { get; set; } = true;
         public static bool MatchmakingRoomAllowSkip { get; set; }
         public static TimeSpan MatchmakingLobbyUpdateRate { get; } = TimeSpan.FromSeconds(5);
         public static TimeSpan MatchmakingQueueUpdateRate { get; } = TimeSpan.FromSeconds(1);
 
         /// <summary>
-        /// The initial rating search radius.
+        /// The duration for which users are temporarily banned from the matchmaking queue after declining an invitation.
         /// </summary>
-        /// <remarks>
-        /// Defaults to 20.
-        /// </remarks>
-        public static double MatchmakingRatingInitialRadius { get; } = 20;
-
-        /// <summary>
-        /// The amount of time (in seconds) before each doubling of the rating search radius.
-        /// </summary>
-        /// <remarks>
-        /// Defaults to doubling every 15 seconds. After 90 seconds it will cover all possible users.
-        /// </remarks>
-        public static double MatchmakingRatingRadiusIncreaseTime { get; } = 15;
+        public static TimeSpan MatchmakingQueueBanDuration { get; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
         /// The total number of beatmaps per matchmaking room.
@@ -97,13 +86,13 @@ namespace osu.Server.Spectator
 
             BanchoBotUserId = int.TryParse(Environment.GetEnvironmentVariable("BANCHO_BOT_USER_ID"), out int banchoBotUserId) ? banchoBotUserId : BanchoBotUserId;
 
-            MatchmakingRoomSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_SIZE"), out int mmSize)
-                ? mmSize
-                : MatchmakingRoomSize;
-
             MatchmakingRoomRounds = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ROOM_ROUNDS"), out int mmRounds)
                 ? mmRounds
                 : MatchmakingRoomRounds;
+
+            MatchmakingHeadToHeadIsBestOf = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_HEAD_TO_HEAD_IS_BESTOF"), out bool mmHeadToHeadIsBestOf)
+                ? mmHeadToHeadIsBestOf
+                : MatchmakingHeadToHeadIsBestOf;
 
             MatchmakingRoomAllowSkip = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_ALLOW_SKIP"), out bool mmAllowSkip)
                 ? mmAllowSkip
@@ -117,13 +106,9 @@ namespace osu.Server.Spectator
                 ? TimeSpan.FromSeconds(mmQueueUpdateRate)
                 : MatchmakingQueueUpdateRate;
 
-            MatchmakingRatingInitialRadius = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_INITIAL_RADIUS"), out int mmRatingInitialRadius)
-                ? mmRatingInitialRadius
-                : MatchmakingRatingInitialRadius;
-
-            MatchmakingRatingRadiusIncreaseTime = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RATING_RADIUS_INCREASE_TIME"), out int mmRatingRadiusIncreaseTime)
-                ? mmRatingRadiusIncreaseTime
-                : MatchmakingRatingRadiusIncreaseTime;
+            MatchmakingQueueBanDuration = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_BAN_DURATION"), out int mmQueueBanDuration)
+                ? TimeSpan.FromSeconds(mmQueueBanDuration)
+                : MatchmakingQueueBanDuration;
 
             MatchmakingPoolSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_POOL_SIZE"), out int mmPoolSize)
                 ? mmPoolSize

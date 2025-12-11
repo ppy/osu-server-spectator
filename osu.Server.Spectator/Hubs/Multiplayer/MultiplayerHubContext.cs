@@ -108,14 +108,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task UnreadyAllUsers(ServerMultiplayerRoom room, bool resetBeatmapAvailability)
         {
-            log(room, null, "Unreadying all users");
+            Log(room, null, "Unreadying all users");
 
             foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
                 await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
 
             if (resetBeatmapAvailability)
             {
-                log(room, null, "Resetting all users' beatmap availability");
+                Log(room, null, "Resetting all users' beatmap availability");
 
                 foreach (var user in room.Users)
                     await ChangeAndBroadcastUserBeatmapAvailability(room, user, new BeatmapAvailability(DownloadState.Unknown));
@@ -178,7 +178,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (user.BeatmapId == beatmapId && user.RulesetId == rulesetId)
                 return;
 
-            log(room, user, $"User style changing from (b:{user.BeatmapId}, r:{user.RulesetId}) to (b:{beatmapId}, r:{rulesetId})");
+            Log(room, user, $"User style changing from (b:{user.BeatmapId}, r:{user.RulesetId}) to (b:{beatmapId}, r:{rulesetId})");
 
             if (rulesetId < 0 || rulesetId > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
                 throw new InvalidStateException("Attempted to select an unsupported ruleset.");
@@ -233,7 +233,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
         {
-            log(room, user, $"User state changed from {user.State} to {state}");
+            Log(room, user, $"User state changed from {user.State} to {state}");
 
             user.State = state;
 
@@ -254,13 +254,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
         {
-            log(room, null, $"Room state changing from {room.State} to {newState}");
+            Log(room, null, $"Room state changing from {room.State} to {newState}");
 
             room.State = newState;
             using (var db = databaseFactory.GetInstance())
                 await db.UpdateRoomStatusAsync(room);
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
+        }
+
+        public async Task ChangeUserVoteToSkipIntro(ServerMultiplayerRoom room, MultiplayerRoomUser user, bool voted)
+        {
+            if (user.VotedToSkipIntro == voted)
+                return;
+
+            Log(room, user, $"Changing user vote to skip intro => {voted}");
+
+            user.VotedToSkipIntro = voted;
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserVotedToSkipIntro), user.UserID, voted);
         }
 
         public async Task StartMatch(ServerMultiplayerRoom room)
@@ -277,6 +288,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await room.Controller.HandleGameplayCompleted();
                 return;
             }
+
+            // This is the very first time users get a "gameplay" state. Reset any properties for the gameplay session.
+            foreach (var user in room.Users)
+                await ChangeUserVoteToSkipIntro(room, user, false);
 
             var readyUsers = room.Users.Where(u =>
                 u.BeatmapAvailability.State == DownloadState.LocallyAvailable
@@ -325,7 +340,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 {
                     await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
                     await context.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.GameplayAborted), GameplayAbortReason.LoadTookTooLong);
-                    log(room, user, "Gameplay aborted because this user took too long to load.");
+                    Log(room, user, "Gameplay aborted because this user took too long to load.");
                 }
             }
 
@@ -380,9 +395,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.ResultsReady));
 
                         if (anyUserFinishedPlay)
-                            await multiplayerEventLogger.LogGameCompletedAsync(room.RoomID, room.GetCurrentItem()!.ID);
+                            await multiplayerEventLogger.LogGameCompletedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
                         else
-                            await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.GetCurrentItem()!.ID);
+                            await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
 
                         await room.Controller.HandleGameplayCompleted();
                     }
@@ -401,7 +416,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemDeselected), userId, playlistItemId);
         }
 
-        private void log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)
+        public async Task CheckVotesToSkipPassed(ServerMultiplayerRoom room)
+        {
+            int countVotedUsers = room.Users.Count(u => u.State == MultiplayerUserState.Playing && u.VotedToSkipIntro);
+            int countGameplayUsers = room.Users.Count(u => u.State == MultiplayerUserState.Playing);
+
+            if (countVotedUsers >= countGameplayUsers / 2 + 1)
+                await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.VoteToSkipIntroPassed));
+        }
+
+        public void Log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)
         {
             logger.Log(logLevel, "[user:{userId}] [room:{roomID}] {message}",
                 getLoggableUserIdentifier(user),
@@ -409,7 +433,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 message.Trim());
         }
 
-        private void error(MultiplayerRoomUser? user, string message, Exception exception)
+        public void Error(MultiplayerRoomUser? user, string message, Exception exception)
         {
             logger.LogError(exception, "[user:{userId}] {message}",
                 getLoggableUserIdentifier(user),

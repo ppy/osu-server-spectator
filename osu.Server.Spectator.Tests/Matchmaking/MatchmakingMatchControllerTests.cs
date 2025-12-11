@@ -12,18 +12,19 @@ using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Tests.Multiplayer;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Matchmaking
 {
-    public class MatchmakingMatchControllerTests : MultiplayerTest
+    public class MatchmakingMatchControllerTests : MultiplayerTest, IAsyncLifetime
     {
         public MatchmakingMatchControllerTests()
         {
-            AppSettings.MatchmakingRoomSize = 2;
             AppSettings.MatchmakingRoomRounds = 2;
             AppSettings.MatchmakingRoomAllowSkip = true;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = false;
 
             Database.Setup(db => db.GetRealtimeRoomAsync(ROOM_ID))
                     .Callback<long>(roomId => InitialiseRoom(roomId, 10))
@@ -34,12 +35,18 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                         user_id = int.Parse(Hub.Context.UserIdentifier!),
                     });
 
-            Database.Setup(db => db.GetMatchmakingUserStatsAsync(It.IsAny<int>(), It.IsAny<int>()))
-                    .Returns<int, int>((userId, rulesetId) => Task.FromResult<matchmaking_user_stats?>(new matchmaking_user_stats
+            Database.Setup(db => db.GetMatchmakingUserStatsAsync(It.IsAny<int>(), It.IsAny<uint>()))
+                    .Returns<int, uint>((userId, poolId) => Task.FromResult<matchmaking_user_stats?>(new matchmaking_user_stats
                     {
                         user_id = (uint)userId,
-                        ruleset_id = (ushort)rulesetId
+                        pool_id = poolId
                     }));
+        }
+
+        public async Task InitializeAsync()
+        {
+            using (var room = await Rooms.GetForUse(ROOM_ID, true))
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2], 0);
         }
 
         [Fact]
@@ -61,6 +68,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             // Join the first user.
             await Hub.JoinRoom(ROOM_ID);
+            Assert.Null(Rooms.GetEntityUnsafe(ROOM_ID)!.Host);
 
             // Check that the room is waiting for users.
             await verifyStage(MatchmakingStage.WaitingForClientsJoin);
@@ -72,6 +80,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             // Join the second user.
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
+            Assert.Null(Rooms.GetEntityUnsafe(ROOM_ID)!.Host);
 
             for (int i = 1; i <= 2; i++)
             {
@@ -89,7 +98,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 // Select a beatmap for both users.
                 long[] selectedPlaylistItems;
                 using (var room = await Rooms.GetForUse(ROOM_ID))
-                    selectedPlaylistItems = room.Item!.Playlist.Where(item => !item.Expired).Take(2).Select(item => item.ID).ToArray();
+                    selectedPlaylistItems = room.Item!.Playlist.Where(item => !item.Expired).Skip(3).Take(2).Select(item => item.ID).ToArray();
                 SetUserContext(ContextUser);
                 await Hub.MatchmakingToggleSelection(selectedPlaylistItems[0]);
                 SetUserContext(ContextUser2);
@@ -105,11 +114,9 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
                 // Ready up both users.
                 SetUserContext(ContextUser);
-                await Hub.ChangeState(MultiplayerUserState.Ready);
-                await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+                await MarkCurrentUserReadyAndAvailable();
                 SetUserContext(ContextUser2);
-                await Hub.ChangeState(MultiplayerUserState.Ready);
-                await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+                await MarkCurrentUserReadyAndAvailable();
 
                 // Check that the room continued to the next stage because all players downloaded the beatmap.
                 await verifyStage(MatchmakingStage.GameplayWarmupTime);
@@ -117,6 +124,10 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 // Begin gameplay.
                 await gotoNextStage();
                 await verifyStage(MatchmakingStage.Gameplay);
+
+                long playlistItemId;
+                using (var room = await Rooms.GetForUse(ROOM_ID))
+                    playlistItemId = room.Item!.CurrentPlaylistItem.ID;
 
                 // Check that a request to load gameplay was started.
                 Receiver.Verify(u => u.LoadRequested(), Times.Once);
@@ -129,11 +140,17 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 await Hub.ChangeState(MultiplayerUserState.Loaded);
                 await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
+                Database.Verify(db => db.LogRoomEventAsync(
+                    It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_started" && ev.playlist_item_id == playlistItemId)), Times.Once);
+
                 // End gameplay for both users
                 SetUserContext(ContextUser);
                 await Hub.AbortGameplay();
                 SetUserContext(ContextUser2);
                 await Hub.AbortGameplay();
+
+                Database.Verify(db => db.LogRoomEventAsync(
+                    It.Is<multiplayer_realtime_room_event>(ev => ev.event_type == "game_aborted" && ev.playlist_item_id == playlistItemId)), Times.Once);
 
                 // Check that the room continued to show the results after gameplay.
                 await verifyStage(MatchmakingStage.ResultsDisplaying);
@@ -141,11 +158,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 // Check that the standings were updated.
                 using (var room = await Rooms.GetForUse(ROOM_ID))
                 {
-                    Assert.Equal(15 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID].Points);
-                    Assert.Equal(1, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID].Placement);
+                    Assert.Equal(15 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID).Points);
+                    Assert.Equal(1, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID).Placement);
 
-                    Assert.Equal(12 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID_2].Points);
-                    Assert.Equal(2, ((MatchmakingRoomState)room.Item!.MatchState!).Users[USER_ID_2].Placement);
+                    Assert.Equal(12 * i, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID_2).Points);
+                    Assert.Equal(2, ((MatchmakingRoomState)room.Item!.MatchState!).Users.GetOrAdd(USER_ID_2).Placement);
                 }
 
                 Receiver.Invocations.Clear();
@@ -180,19 +197,34 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         }
 
         [Fact]
-        public async Task GameplayStartsIfAnyUserReady()
+        public async Task GameplayStartsIfAtLeastTwoUsersReady()
         {
-            await Hub.JoinRoom(ROOM_ID);
+            CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
+            using (var room = await Rooms.GetForUse(ROOM_ID, true))
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2, 3], 0);
+
+            await Hub.JoinRoom(ROOM_ID);
             SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(contextUser3);
             await Hub.JoinRoom(ROOM_ID);
 
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
             // Ready up a single user.
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
 
+            // Still waiting...
+            await gotoNextStage();
+            await verifyStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            // Ready up the next user.
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
+            // Now there's enough players for gameplay to start.
             await gotoNextStage();
             await verifyStage(MatchmakingStage.GameplayWarmupTime);
         }
@@ -258,20 +290,29 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task StageAdvancesWhenUsersLeaveDuringDownload()
         {
+            CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID, true))
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2, 3], 0);
+
             await Hub.JoinRoom(ROOM_ID);
 
             SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(contextUser3);
             await Hub.JoinRoom(ROOM_ID);
 
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
-            // Ready up the first user.
+            // Ready up the first and second users.
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
-
-            // Quit the second user.
+            await MarkCurrentUserReadyAndAvailable();
             SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
+            // Quit the third user.
+            SetUserContext(contextUser3);
             await Hub.LeaveRoom();
 
             await verifyStage(MatchmakingStage.GameplayWarmupTime);
@@ -284,6 +325,9 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         public async Task UserPicksUsedForRandomSelection()
         {
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID, true))
+                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2, 3], 0);
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -308,7 +352,10 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
                 Assert.Equal(userPickIds, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
+                Assert.True(((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem > 0);
+            }
         }
 
         /// <summary>
@@ -326,6 +373,414 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.Single(((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
+        }
+
+        [Fact]
+        public async Task IneligibleUserCanNotJoinRoom()
+        {
+            CreateUser(4, out Mock<HubCallerContext> contextUser4, out _);
+
+            SetUserContext(contextUser4);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.JoinRoom(ROOM_ID));
+        }
+
+        [Fact]
+        public async Task RandomSelection()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            await gotoStage(MatchmakingStage.UserBeatmapSelect);
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+                room.Item!.Settings.PlaylistItemId = 0;
+
+            await Hub.MatchmakingToggleSelection(-1);
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.Equal([-1], ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItems);
+                Assert.Equal(-1, ((MatchmakingRoomState)room.Item!.MatchState!).CandidateItem);
+                Assert.NotEqual(-1, ((MatchmakingRoomState)room.Item!.MatchState!).GameplayItem);
+                Assert.True(room.Item!.Settings.PlaylistItemId > 0);
+            }
+        }
+
+        [Fact]
+        public async Task RoomEndsWithSinglePlayer()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.LeaveRoom();
+
+            await verifyStage(MatchmakingStage.Ended);
+        }
+
+        [Fact]
+        public async Task StatsUpdateAfterForcefulEnd()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID).Points = 10;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID_2).Points = 5;
+
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+
+            SetUserContext(ContextUser);
+            await Hub.LeaveRoom();
+
+            Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task StatsUpdatesIfAllPlayersLeaveDuringGameplay()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID).Points = 10;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID_2).Points = 5;
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            // Enter gameplay for both users.
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
+            await gotoStage(MatchmakingStage.Gameplay);
+
+            // Leave both users.
+            SetUserContext(ContextUser);
+            await Hub.LeaveRoom();
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+
+            Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task MatchDoesNotEndDuringGameplay()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID).Points = 10;
+            ((MatchmakingRoomState)room.MatchState!).Users.GetOrAdd(USER_ID_2).Points = 5;
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            // Enter gameplay for both users.
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
+            await gotoStage(MatchmakingStage.Gameplay);
+
+            // Leave user 2.
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+
+            // Match should still be "ongoing".
+            await verifyStage(MatchmakingStage.Gameplay);
+            Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Never);
+
+            SetUserContext(ContextUser);
+            await Hub.AbortGameplay();
+
+            await verifyStage(MatchmakingStage.ResultsDisplaying);
+            await gotoNextStage();
+
+            await verifyStage(MatchmakingStage.Ended);
+            Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task HeadToHeadMatchEndsEarlyWhenScoreIsNotAttainable()
+        {
+            AppSettings.MatchmakingRoomRounds = 5;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = true;
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>())).Returns(() => Task.FromResult((IEnumerable<SoloScore>)
+            [
+                new SoloScore
+                {
+                    user_id = USER_ID,
+                    total_score = 10
+                },
+                new SoloScore
+                {
+                    user_id = USER_ID_2,
+                    total_score = 5
+                }
+            ]));
+
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            for (int i = 0; i < 3; i++)
+            {
+                await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+                // Enter gameplay for both users.
+                SetUserContext(ContextUser);
+                await MarkCurrentUserReadyAndAvailable();
+                SetUserContext(ContextUser2);
+                await MarkCurrentUserReadyAndAvailable();
+
+                await gotoStage(MatchmakingStage.Gameplay);
+
+                SetUserContext(ContextUser);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                SetUserContext(ContextUser2);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                await gotoNextStage();
+            }
+
+            await verifyStage(MatchmakingStage.Ended);
+        }
+
+        [Fact]
+        public async Task HeadToHeadMatchRequiresAllUsersDownloaded()
+        {
+            AppSettings.MatchmakingRoomRounds = 5;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = true;
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            // User 1 becomes ready.
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
+
+            // Countdown expires.
+            await gotoNextStage();
+            await verifyStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+        }
+
+        [Fact]
+        public async Task BestOfFullRounds()
+        {
+            AppSettings.MatchmakingRoomRounds = 5;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = true;
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            for (int i = 0; i < 5; i++)
+            {
+                int i2 = i;
+                Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>())).Returns(() => Task.FromResult((IEnumerable<SoloScore>)
+                [
+                    new SoloScore
+                    {
+                        user_id = USER_ID,
+                        total_score = i2 < 2 ? 10u : 5u
+                    },
+                    new SoloScore
+                    {
+                        user_id = USER_ID_2,
+                        total_score = i2 < 2 ? 5u : 10u
+                    }
+                ]));
+
+                await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+                // Enter gameplay for both users.
+                SetUserContext(ContextUser);
+                await MarkCurrentUserReadyAndAvailable();
+                SetUserContext(ContextUser2);
+                await MarkCurrentUserReadyAndAvailable();
+
+                await gotoStage(MatchmakingStage.Gameplay);
+
+                SetUserContext(ContextUser);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                SetUserContext(ContextUser2);
+                await Hub.ChangeState(MultiplayerUserState.Loaded);
+                await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
+                await Hub.AbortGameplay();
+
+                await gotoNextStage();
+            }
+
+            await verifyStage(MatchmakingStage.Ended);
+        }
+
+        [Fact]
+        public async Task AbandonPenaltyOnEarlyQuit()
+        {
+            CreateUser(3, out var contextUser3, out _);
+
+            using (var roomUsage = await Rooms.GetForUse(ROOM_ID, true))
+                roomUsage.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, [USER_ID, USER_ID_2, 3], 0);
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(contextUser3);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            var roomState = (MatchmakingRoomState)room.MatchState!;
+
+            await gotoStage(MatchmakingStage.UserBeatmapSelect);
+
+            // Player 1 quits during beatmap selection, and receives an abandon penalty.
+            SetUserContext(ContextUser);
+            await Hub.LeaveRoom();
+            Assert.NotNull(roomState.Users.GetOrAdd(USER_ID).AbandonedAt);
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+            SetUserContext(contextUser3);
+            await MarkCurrentUserReadyAndAvailable();
+
+            await gotoStage(MatchmakingStage.Gameplay);
+
+            // Player 2 quits during gameplay, and receives an abandon penalty.
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+            Assert.NotNull(roomState.Users.GetOrAdd(USER_ID_2).AbandonedAt);
+
+            // Player 3 is the last player to quit, and doesn't receive an abandon penalty.
+            SetUserContext(contextUser3);
+            await Hub.LeaveRoom();
+            Assert.Null(roomState.Users.GetOrAdd(3).AbandonedAt);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task NoAbandonPenaltyOnQuitInConclusoryState(bool isBestOf)
+        {
+            int totalRounds;
+
+            if (isBestOf)
+            {
+                AppSettings.MatchmakingRoomRounds = 3;
+                AppSettings.MatchmakingHeadToHeadIsBestOf = true;
+                totalRounds = 2;
+            }
+            else
+            {
+                AppSettings.MatchmakingRoomRounds = 1;
+                totalRounds = 1;
+            }
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>())).Returns(() => Task.FromResult((IEnumerable<SoloScore>)
+            [
+                new SoloScore
+                {
+                    user_id = USER_ID,
+                    total_score = 10
+                },
+                new SoloScore
+                {
+                    user_id = USER_ID_2,
+                    total_score = 5
+                }
+            ]));
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            var roomState = (MatchmakingRoomState)room.MatchState!;
+
+            for (int i = 0; i < totalRounds; i++)
+            {
+                await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+                SetUserContext(ContextUser);
+                await MarkCurrentUserReadyAndAvailable();
+                SetUserContext(ContextUser2);
+                await MarkCurrentUserReadyAndAvailable();
+
+                await gotoStage(MatchmakingStage.Gameplay);
+
+                SetUserContext(ContextUser);
+                await Hub.AbortGameplay();
+                SetUserContext(ContextUser2);
+                await Hub.AbortGameplay();
+
+                await verifyStage(MatchmakingStage.ResultsDisplaying);
+            }
+
+            // User 1 leaves, doesn't receive abandon penalty.
+            SetUserContext(ContextUser);
+            await Hub.LeaveRoom();
+            Assert.Null(roomState.Users.GetOrAdd(USER_ID).AbandonedAt);
+
+            // User 2 leaves, doesn't receive abandon penalty.
+            SetUserContext(ContextUser2);
+            await Hub.LeaveRoom();
+            Assert.Null(roomState.Users.GetOrAdd(USER_ID_2).AbandonedAt);
+        }
+
+        [Fact]
+        public async Task HeadToHeadWithoutBestOfRequiresAllRoundsComplete()
+        {
+            AppSettings.MatchmakingRoomRounds = 3;
+            AppSettings.MatchmakingHeadToHeadIsBestOf = false;
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            for (int i = 0; i < 3; i++)
+            {
+                await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+
+                SetUserContext(ContextUser);
+                await MarkCurrentUserReadyAndAvailable();
+                SetUserContext(ContextUser2);
+                await MarkCurrentUserReadyAndAvailable();
+
+                await gotoStage(MatchmakingStage.Gameplay);
+
+                SetUserContext(ContextUser);
+                await Hub.AbortGameplay();
+                SetUserContext(ContextUser2);
+                await Hub.AbortGameplay();
+
+                await verifyStage(MatchmakingStage.ResultsDisplaying);
+            }
+
+            await gotoNextStage();
+            await verifyStage(MatchmakingStage.Ended);
         }
 
         private async Task verifyStage(MatchmakingStage stage)
@@ -407,6 +862,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                         throw new ArgumentOutOfRangeException(nameof(stage));
                 }
             }
+        }
+
+        public Task DisposeAsync()
+        {
+            return Task.CompletedTask;
         }
     }
 }

@@ -1,8 +1,10 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -132,6 +134,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="newState">The new room state.</param>
         Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState);
 
+        Task ChangeUserVoteToSkipIntro(ServerMultiplayerRoom room, MultiplayerRoomUser user, bool voted);
+
         /// <summary>
         /// Starts a match in a room.
         /// </summary>
@@ -147,5 +151,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         Task NotifyMatchmakingItemSelected(ServerMultiplayerRoom room, int userId, long playlistItemId);
 
         Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId);
+
+        Task CheckVotesToSkipPassed(ServerMultiplayerRoom room);
+
+        void Log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information);
+
+        void Error(MultiplayerRoomUser? user, string message, Exception exception);
     }
 }

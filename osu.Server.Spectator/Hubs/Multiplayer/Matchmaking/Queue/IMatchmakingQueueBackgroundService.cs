@@ -11,38 +11,38 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// Whether a user is in the matchmaking queue.
         /// </summary>
-        bool IsInQueue(MatchmakingClientState state);
+        bool IsInQueue(MultiplayerClientState state);
 
         /// <summary>
         /// Adds a user to the matchmaking lobby.
         /// </summary>
-        Task AddToLobbyAsync(MatchmakingClientState state);
+        Task AddToLobbyAsync(MultiplayerClientState state);
 
         /// <summary>
         /// Remove sa user from the matchmaking lobby.
         /// </summary>
         /// <param name="state"></param>
         /// <returns></returns>
-        Task RemoveFromLobbyAsync(MatchmakingClientState state);
+        Task RemoveFromLobbyAsync(MultiplayerClientState state);
 
         /// <summary>
         /// Adds a user to the matchmaking queue.
         /// </summary>
-        Task AddToQueueAsync(MatchmakingClientState state, int poolId);
+        Task AddToQueueAsync(MultiplayerClientState state, int poolId);
 
         /// <summary>
         /// Removes a user from the matchmaking queue.
         /// </summary>
-        Task RemoveFromQueueAsync(MatchmakingClientState state);
+        Task RemoveFromQueueAsync(MultiplayerClientState state);
 
         /// <summary>
         /// User accepts an invitation.
         /// </summary>
-        Task AcceptInvitationAsync(MatchmakingClientState state);
+        Task AcceptInvitationAsync(MultiplayerClientState state);
 
         /// <summary>
         /// User declines an invitation.
         /// </summary>
-        Task DeclineInvitationAsync(MatchmakingClientState state);
+        Task DeclineInvitationAsync(MultiplayerClientState state);
     }
 }

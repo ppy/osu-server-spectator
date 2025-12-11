@@ -27,6 +27,10 @@ namespace osu.Server.Spectator
         {
             services.AddSignalR(options =>
                     {
+                        // JSON hub protocol is enabled by default, but we use MessagePack.
+                        // Some models are not compatible with the JSON protocol, so we should never negotiate it.
+                        options.SupportedProtocols?.Remove("json");
+
                         options.AddFilter<LoggingHubFilter>();
                         options.AddFilter<ConcurrentConnectionLimiter>();
                         options.AddFilter<ClientVersionChecker>();

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using osu.Game.Online.Matchmaking;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
-using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -21,40 +20,38 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task MatchmakingJoinLobby()
         {
-            using (await GetOrCreateLocalUserState())
-                await matchmakingQueueService.AddToLobbyAsync(new MatchmakingClientState(Context));
+            using (var userUsage = await GetOrCreateLocalUserState())
+                await matchmakingQueueService.AddToLobbyAsync(userUsage.Item!);
         }
 
         public async Task MatchmakingLeaveLobby()
         {
-            using (await GetOrCreateLocalUserState())
-                await matchmakingQueueService.RemoveFromLobbyAsync(new MatchmakingClientState(Context));
+            using (var userUsage = await GetOrCreateLocalUserState())
+                await matchmakingQueueService.RemoveFromLobbyAsync(userUsage.Item!);
         }
 
         public async Task MatchmakingJoinQueue(int poolId)
         {
-            using (await GetOrCreateLocalUserState())
-            {
-                await matchmakingQueueService.AddToQueueAsync(new MatchmakingClientState(Context), poolId);
-            }
+            using (var userUsage = await GetOrCreateLocalUserState())
+                await matchmakingQueueService.AddToQueueAsync(userUsage.Item!, poolId);
         }
 
         public async Task MatchmakingLeaveQueue()
         {
-            using (await GetOrCreateLocalUserState())
-                await matchmakingQueueService.RemoveFromQueueAsync(new MatchmakingClientState(Context));
+            using (var userUsage = await GetOrCreateLocalUserState())
+                await matchmakingQueueService.RemoveFromQueueAsync(userUsage.Item!);
         }
 
         public async Task MatchmakingAcceptInvitation()
         {
-            using (await GetOrCreateLocalUserState())
-                await matchmakingQueueService.AcceptInvitationAsync(new MatchmakingClientState(Context));
+            using (var userUsage = await GetOrCreateLocalUserState())
+                await matchmakingQueueService.AcceptInvitationAsync(userUsage.Item!);
         }
 
         public async Task MatchmakingDeclineInvitation()
         {
-            using (await GetOrCreateLocalUserState())
-                await matchmakingQueueService.DeclineInvitationAsync(new MatchmakingClientState(Context));
+            using (var userUsage = await GetOrCreateLocalUserState())
+                await matchmakingQueueService.DeclineInvitationAsync(userUsage.Item!);
         }
 
         public async Task MatchmakingToggleSelection(long playlistItemId)

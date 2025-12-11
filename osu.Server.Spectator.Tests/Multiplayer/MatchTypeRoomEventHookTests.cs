@@ -4,7 +4,6 @@
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Hubs.Multiplayer;
 using Xunit;
 
@@ -19,19 +18,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task NewUserJoinedTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
-            {
-                Playlist =
-                {
-                    new MultiplayerPlaylistItem
-                    {
-                        BeatmapID = 3333,
-                        BeatmapChecksum = "3333"
-                    },
-                }
-            };
-
-            await room.Initialise();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventLogger);
 
             Mock<IMatchController> controller = new Mock<IMatchController>();
             await room.ChangeMatchType(controller.Object);
@@ -45,19 +32,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UserLeavesTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
-            {
-                Playlist =
-                {
-                    new MultiplayerPlaylistItem
-                    {
-                        BeatmapID = 3333,
-                        BeatmapChecksum = "3333"
-                    },
-                }
-            };
-
-            await room.Initialise();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventLogger);
 
             var user = new MultiplayerRoomUser(1);
 
@@ -74,19 +49,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task TypeChangeTriggersInitialJoins()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = new ServerMultiplayerRoom(1, hub.Object, DatabaseFactory.Object)
-            {
-                Playlist =
-                {
-                    new MultiplayerPlaylistItem
-                    {
-                        BeatmapID = 3333,
-                        BeatmapChecksum = "3333"
-                    },
-                }
-            };
-
-            await room.Initialise();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventLogger);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)

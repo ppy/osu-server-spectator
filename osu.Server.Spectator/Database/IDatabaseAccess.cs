@@ -214,6 +214,11 @@ namespace osu.Server.Spectator.Database
         Task<(long roomID, long playlistItemID)?> GetMultiplayerRoomIdForScoreAsync(long scoreId);
 
         /// <summary>
+        /// Returns whether there has been any score token issued that is associated with the given <paramref name="playlistItemId"/>.
+        /// </summary>
+        Task<bool> AnyScoreTokenExistsFor(long playlistItemId);
+
+        /// <summary>
         /// Retrieve all scores for a specified playlist item.
         /// </summary>
         /// <param name="playlistItemId">The playlist item.</param>
@@ -242,6 +247,11 @@ namespace osu.Server.Spectator.Database
         Task LogRoomEventAsync(multiplayer_realtime_room_event ev);
 
         /// <summary>
+        /// Logs an event that happened in a matchmaking room.
+        /// </summary>
+        Task LogRoomEventAsync(matchmaking_room_event ev);
+
+        /// <summary>
         /// Toggles the user's "hide user presence" website setting.
         /// </summary>
         /// <param name="userId">The user's ID.</param>
@@ -252,13 +262,13 @@ namespace osu.Server.Spectator.Database
 
         Task<matchmaking_pool[]> GetActiveMatchmakingPoolsAsync();
 
-        Task<matchmaking_pool?> GetMatchmakingPoolAsync(int poolId);
+        Task<matchmaking_pool?> GetMatchmakingPoolAsync(uint poolId);
 
-        Task<matchmaking_pool_beatmap[]> GetMatchmakingPoolBeatmapsAsync(int poolId);
+        Task<matchmaking_pool_beatmap[]> GetMatchmakingPoolBeatmapsAsync(uint poolId);
 
         Task IncrementMatchmakingSelectionCount(matchmaking_pool_beatmap[] beatmaps);
 
-        Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, int rulesetId);
+        Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, uint poolId);
 
         Task UpdateMatchmakingUserStatsAsync(matchmaking_user_stats stats);
     }

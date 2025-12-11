@@ -18,19 +18,20 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void EmptyUpdate()
         {
-            queue.RoomSize = 1;
+            queue.Pool.lobby_size = 1;
 
             var bundle = queue.Update();
             Assert.Empty(bundle.FormedGroups);
             Assert.Empty(bundle.CompletedGroups);
             Assert.Empty(bundle.AddedUsers);
             Assert.Empty(bundle.RemovedUsers);
+            Assert.Empty(bundle.RecycledGroups);
         }
 
         [Fact]
         public void SingleUserRoom()
         {
-            queue.RoomSize = 1;
+            queue.Pool.lobby_size = 1;
 
             var bundle = queue.Add(new MatchmakingQueueUser("1"));
             Assert.Single(bundle.AddedUsers);
@@ -39,16 +40,18 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             bundle = queue.Update();
             Assert.Single(bundle.FormedGroups);
             Assert.Single(bundle.FormedGroups[0].Users);
+            Assert.Empty(bundle.RecycledGroups);
 
             bundle = queue.MarkInvitationAccepted(new MatchmakingQueueUser("1"));
             Assert.Single(bundle.CompletedGroups);
             Assert.Single(bundle.CompletedGroups[0].Users);
+            Assert.Empty(bundle.RecycledGroups);
         }
 
         [Fact]
         public void MultipleUserRoom()
         {
-            queue.RoomSize = 2;
+            queue.Pool.lobby_size = 2;
 
             var bundle = queue.Add(new MatchmakingQueueUser("1"));
             Assert.Single(bundle.AddedUsers);
@@ -74,7 +77,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void DeclineInvitation()
         {
-            queue.RoomSize = 2;
+            queue.Pool.lobby_size = 2;
 
             queue.Add(new MatchmakingQueueUser("1"));
             queue.Add(new MatchmakingQueueUser("2"));
@@ -83,8 +86,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Single(bundle.FormedGroups);
 
             bundle = queue.MarkInvitationDeclined(new MatchmakingQueueUser("1"));
+            Assert.Single(bundle.RecycledGroups);
             Assert.Single(bundle.RemovedUsers);
             Assert.Equal("1", bundle.RemovedUsers[0].Identifier);
+            Assert.Single(bundle.DeclinedUsers);
+            Assert.Equal("1", bundle.DeclinedUsers[0].Identifier);
             Assert.Single(bundle.AddedUsers);
             Assert.Equal("2", bundle.AddedUsers[0].Identifier);
         }
@@ -92,7 +98,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task InviteTimeout()
         {
-            queue.RoomSize = 2;
+            queue.Pool.lobby_size = 2;
             queue.InviteTimeout = TimeSpan.FromSeconds(1);
 
             queue.Add(new MatchmakingQueueUser("1"));
@@ -103,8 +109,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await Task.Delay(TimeSpan.FromSeconds(2));
 
             var bundle = queue.Update();
+            Assert.Single(bundle.RecycledGroups);
             Assert.Single(bundle.RemovedUsers);
             Assert.Equal("2", bundle.RemovedUsers[0].Identifier);
+            Assert.Single(bundle.DeclinedUsers);
+            Assert.Equal("2", bundle.DeclinedUsers[0].Identifier);
             Assert.Single(bundle.AddedUsers);
             Assert.Equal("1", bundle.AddedUsers[0].Identifier);
         }
@@ -114,10 +123,10 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         {
             CustomSystemClock clock = new CustomSystemClock();
 
-            queue.RoomSize = 2;
+            queue.Pool.lobby_size = 2;
             queue.Clock = clock;
-            queue.RatingInitialSearchRadius = 100;
-            queue.RatingSearchRadiusIncreaseTime = 10;
+            queue.Pool.rating_search_radius = 100;
+            queue.Pool.rating_search_radius_exp = 10;
 
             queue.Add(new MatchmakingQueueUser("1")
             {
@@ -146,10 +155,10 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         {
             CustomSystemClock clock = new CustomSystemClock();
 
-            queue.RoomSize = 2;
+            queue.Pool.lobby_size = 2;
             queue.Clock = clock;
-            queue.RatingInitialSearchRadius = 100;
-            queue.RatingSearchRadiusIncreaseTime = 10;
+            queue.Pool.rating_search_radius = 100;
+            queue.Pool.rating_search_radius_exp = 10;
 
             queue.Add(new MatchmakingQueueUser("1")
             {
@@ -165,6 +174,48 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             var bundle = queue.Update();
             Assert.Single(bundle.FormedGroups);
+        }
+
+        [Fact]
+        public void TemporarilyBannedUserExcludedFromQueue()
+        {
+            CustomSystemClock clock = new CustomSystemClock();
+
+            queue.Pool.lobby_size = 2;
+            queue.Clock = clock;
+            queue.BanDuration = TimeSpan.FromMinutes(1);
+
+            queue.Add(new MatchmakingQueueUser("1"));
+            queue.Add(new MatchmakingQueueUser("2")
+            {
+                QueueBanStartTime = clock.UtcNow
+            });
+
+            var bundle = queue.Update();
+            Assert.Empty(bundle.FormedGroups);
+
+            clock.UtcNow += TimeSpan.FromSeconds(30);
+
+            bundle = queue.Update();
+            Assert.Empty(bundle.FormedGroups);
+
+            clock.UtcNow += TimeSpan.FromSeconds(45);
+
+            bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+        }
+
+        [Fact]
+        public void ClearedUsersNotMarkedAsDeclined()
+        {
+            queue.Pool.lobby_size = 1;
+            queue.Add(new MatchmakingQueueUser("1"));
+
+            var bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+
+            bundle = queue.Clear();
+            Assert.Empty(bundle.DeclinedUsers);
         }
 
         private class CustomSystemClock : ISystemClock
