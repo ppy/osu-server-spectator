@@ -87,11 +87,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// </summary>
         private static int totalRounds => AppSettings.MatchmakingRoomRounds;
 
-        /// <summary>
-        /// The number of points awarded for each placement position (index 0 = #1, index 7 = #8).
-        /// </summary>
-        private static readonly int[] placement_points = [15, 12, 10, 8, 6, 4, 2, 1];
-
         public MultiplayerPlaylistItem CurrentItem => room.CurrentPlaylistItem;
 
         public uint PoolId { get; set; }
@@ -150,7 +145,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     scores[(int)score.user_id] = score;
             }
 
-            state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
+            state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placementPointsByRank());
 
             await stageResultsDisplaying();
         }
@@ -190,7 +185,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (hasGameplayRoundsRemaining())
             {
                 state.Users.GetOrAdd(user.UserID).AbandonedAt = DateTimeOffset.UtcNow;
-                state.RecordScores([], placement_points); // Empty update to adjust placements.
+                state.RecordScores([], []); // Empty update to adjust placements.
                 await hub.NotifyMatchRoomStateChanged(room);
             }
 
@@ -503,16 +498,32 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 && !hasAnyBestOfWinner();
         }
 
+        private bool isBestOf()
+        {
+            return state.Users.Count == 2 && AppSettings.MatchmakingHeadToHeadIsBestOf;
+        }
+
         /// <summary>
         /// Whether any user has won a head-to-head matchup using the best-of win condition.
         /// </summary>
         private bool hasAnyBestOfWinner()
         {
-            if (state.Users.Count != 2 || !AppSettings.MatchmakingHeadToHeadIsBestOf)
+            if (!isBestOf())
                 return false;
 
             int requiredWins = totalRounds / 2 + 1;
             return state.Users.Any(u => u.Rounds.Count(r => r.Placement == 1) == requiredWins);
+        }
+
+        /// <summary>
+        /// The number of points awarded for each placement position ([0] = #1, [1] = #2, etc...).
+        /// </summary>
+        private int[] placementPointsByRank()
+        {
+            if (isBestOf())
+                return [1, 0];
+
+            return [15, 12, 10, 8, 6, 4, 2, 1];
         }
 
         public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
