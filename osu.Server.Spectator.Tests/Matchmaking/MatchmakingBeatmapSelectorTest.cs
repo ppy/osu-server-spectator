@@ -17,7 +17,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
-                    id = i,
+                    id = (uint)i,
                     rating = 1000,
                 }).ToArray())
             {
@@ -37,7 +37,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
-                    id = i,
+                    id = (uint)i,
                     rating = 1500,
                 }).ToArray())
             {
@@ -57,7 +57,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
-                    id = i,
+                    id = (uint)i,
                     rating = 2000,
                 }).ToArray())
             {
@@ -77,7 +77,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
-                    id = i,
+                    id = (uint)i,
                     rating = 1000 + i,
                 }).ToArray())
             {

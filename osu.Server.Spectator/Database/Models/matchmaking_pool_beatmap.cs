@@ -12,8 +12,8 @@ namespace osu.Server.Spectator.Database.Models
     public class matchmaking_pool_beatmap : IEquatable<matchmaking_pool_beatmap>
     {
         // matchmaking_pool_beatmaps
-        public int id { get; set; }
-        public int pool_id { get; set; }
+        public uint id { get; set; }
+        public uint pool_id { get; set; }
         public int beatmap_id { get; set; }
         public string? mods { get; set; }
         public int? rating { get; set; }
@@ -25,13 +25,16 @@ namespace osu.Server.Spectator.Database.Models
 
         public bool Equals(matchmaking_pool_beatmap? other)
             => other != null
-               && id == other.id;
+               && id == other.id
+               && pool_id == other.pool_id
+               && beatmap_id == other.beatmap_id
+               && mods == other.mods;
 
         public override bool Equals(object? obj)
             => obj is matchmaking_pool_beatmap other && Equals(other);
 
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
-            => id.GetHashCode();
+            => HashCode.Combine(id, pool_id, beatmap_id, mods);
     }
 }

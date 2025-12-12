@@ -670,16 +670,32 @@ namespace osu.Server.Spectator.Database
             })).ToArray();
         }
 
-        public async Task IncrementMatchmakingSelectionCount(matchmaking_pool_beatmap[] beatmaps)
+        public async Task<database_beatmap[]> GetMatchmakingGlobalPoolBeatmapsAsync(int rulesetId, int variant)
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE matchmaking_pool_beatmaps "
-                                          + "SET selection_count = selection_count + 1 "
-                                          + "WHERE id IN @ItemIDs", new
-            {
-                ItemIDs = beatmaps.Select(b => b.id).ToArray()
-            });
+            string variantString = string.Empty;
+
+            if (rulesetId == 3)
+                variantString = "AND b.diff_size = @Variant";
+
+            // - From the featured artist listing
+            // - Non-converted beatmaps
+            // - Ranked status
+            // - Between 1 and 4 minutes in length
+            // - With the correct keymode (if mania)
+            return (await connection.QueryAsync<database_beatmap>("SELECT b.beatmap_id, b.checksum, b.difficultyrating FROM `osu_beatmaps` b "
+                                                                  + "JOIN `osu_beatmapsets` s ON s.beatmapset_id = b.beatmapset_id "
+                                                                  + "WHERE s.track_id IS NOT NULL "
+                                                                  + "AND b.playmode = @RulesetId "
+                                                                  + "AND b.approved BETWEEN 1 AND 2 "
+                                                                  + "AND b.hit_length BETWEEN 60 AND 240 "
+                                                                  + variantString,
+                new
+                {
+                    RulesetId = rulesetId,
+                    Variant = variant
+                })).ToArray();
         }
 
         public async Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, uint poolId)
