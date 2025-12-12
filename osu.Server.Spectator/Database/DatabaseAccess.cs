@@ -709,6 +709,7 @@ namespace osu.Server.Spectator.Database
                                                                   + "JOIN `osu_beatmapsets` s ON s.beatmapset_id = b.beatmapset_id "
                                                                   + "WHERE s.track_id IS NOT NULL "
                                                                   + "AND b.playmode = @RulesetId "
+                                                                  + "AND b.deleted_at IS NULL "
                                                                   + "AND b.approved BETWEEN 1 AND 2 "
                                                                   + "AND b.hit_length BETWEEN 60 AND 240 "
                                                                   + variantString,
