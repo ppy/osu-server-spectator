@@ -64,13 +64,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             // Pick from maps around the minimum rating.
             double ratingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
             // Constant standard deviation to give a wide breadth around mu.
-            const double rating_sig = 200;
+            const double rating_sig = 100;
 
             return beatmaps.OrderByDescending(b =>
                            {
                                double beatmapRating = b.rating ?? 1500;
                                // The clamp attempts to ensure all beatmaps are given some chance of being selected.
-                               double weight = Math.Clamp(Math.Exp(-Math.Pow(beatmapRating - ratingMu, 2) / (2 * rating_sig * rating_sig)), 0.1, 1);
+                               double weight = Math.Clamp(Math.Exp(-Math.Pow(beatmapRating - ratingMu, 2) / (2 * rating_sig * rating_sig)), 1e-6, 1);
                                return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
                            })
                            .Take(PoolSize)
