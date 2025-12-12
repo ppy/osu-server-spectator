@@ -44,6 +44,16 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task<int[]> GetUsersInGroupsAsync(int[] groupIds)
+        {
+            var connection = await getConnectionAsync();
+
+            return (await connection.QueryAsync<int>("SELECT DISTINCT `user_id` FROM `phpbb_user_group` WHERE `group_id` IN @groupIds", new
+            {
+                groupIds = groupIds
+            })).ToArray();
+        }
+
         public async Task<bool> IsUserRestrictedAsync(int userId)
         {
             var connection = await getConnectionAsync();
@@ -433,10 +443,21 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleAsync<osu_build?>("SELECT `build_id`, `version`, `hash`, `users` FROM `osu_builds` WHERE `build_id` = @BuildId",
+            return await connection.QuerySingleAsync<osu_build?>("SELECT `build_id`, `version`, `hash`, `users`, `allow_bancho` FROM `osu_builds` WHERE `build_id` = @BuildId",
                 new
                 {
                     BuildId = buildId
+                });
+        }
+
+        public async Task<osu_build?> GetBuildByHashAsync(string hash)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<osu_build?>("SELECT `build_id`, `version`, `hash`, `users`, `allow_bancho` FROM `osu_builds` WHERE `hash` = UNHEX(@Hash)",
+                new
+                {
+                    Hash = hash
                 });
         }
 
@@ -445,9 +466,9 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QueryAsync<osu_build>(
-                "SELECT `build_id`, `version`, `hash`, `users` "
+                "SELECT `build_id`, `version`, `hash`, `users`, `allow_bancho` "
                 + "FROM `osu_builds` "
-                + "WHERE stream_id IN (7, 17) AND allow_bancho = 1");
+                + "WHERE `stream_id` IN (7, 17) AND `allow_bancho` = 1");
         }
 
         public async Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync()
@@ -455,7 +476,7 @@ namespace osu.Server.Spectator.Database
             var connection = await getConnectionAsync();
 
             return await connection.QueryAsync<osu_build>(
-                "SELECT `build_id`, `version`, `hash`, `users` "
+                "SELECT `build_id`, `version`, `hash`, `users`, `allow_bancho` "
                 + "FROM `osu_builds` "
                 // Should match checks in BuildUserCountUpdater.build_version_regex.
                 + "WHERE `stream_id` IS NULL AND (`version` LIKE '%-lazer-%' OR `version` LIKE '%-tachyon-%') AND `allow_bancho` = 1");

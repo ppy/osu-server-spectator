@@ -30,6 +30,11 @@ namespace osu.Server.Spectator.Database
         Task<string?> GetUsernameAsync(int userId);
 
         /// <summary>
+        /// Returns the IDs of all users in groups with the given <see cref="groupIds"/>.
+        /// </summary>
+        Task<int[]> GetUsersInGroupsAsync(int[] groupIds);
+
+        /// <summary>
         /// Returns the <see cref="multiplayer_room"/> with the given <paramref name="roomId"/>.
         /// </summary>
         Task<multiplayer_room?> GetRoomAsync(long roomId);
@@ -178,12 +183,17 @@ namespace osu.Server.Spectator.Database
         Task<osu_build?> GetBuildByIdAsync(int buildId);
 
         /// <summary>
-        /// Returns all available main builds from the lazer and tachyon release streams.
+        /// Returns a single build with the given <paramref name="hash"/>, if one exists.
+        /// </summary>
+        Task<osu_build?> GetBuildByHashAsync(string hash);
+
+        /// <summary>
+        /// Returns all available main builds from the lazer and tachyon release streams which support online play (<c>allow_bancho</c>).
         /// </summary>
         Task<IEnumerable<osu_build>> GetAllMainLazerBuildsAsync();
 
         /// <summary>
-        /// Returns all known platform-specifc lazer and tachyon builds.
+        /// Returns all known platform-specifc lazer and tachyon builds which support online play (<c>allow_bancho</c>).
         /// </summary>
         Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync();
 

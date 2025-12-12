@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Extensions.Logging;
-using osu.Game.Online;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
 using osu.Server.QueueProcessor;
@@ -56,19 +55,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
             using (var usage = await GetOrCreateLocalUserState())
             {
-                string? versionHash = null;
-
-                if (Context.GetHttpContext()?.Request.Headers.TryGetValue(HubClientConnector.VERSION_HASH_HEADER, out StringValues headerValue) == true)
-                {
-                    versionHash = headerValue;
-
-                    // The token is 82 chars long, and the clientHash is the first 32 of those.
-                    // See: https://github.com/ppy/osu-web/blob/7be19a0fe0c9fa2f686e4bb686dbc8e9bf7bcf84/app/Libraries/ClientCheck.php#L92
-                    if (versionHash?.Length >= 82)
-                        versionHash = versionHash.Substring(versionHash.Length - 82, 32);
-                }
-
-                usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), versionHash);
+                usage.Item = new MetadataClientState(Context.ConnectionId, Context.GetUserId(), Context.GetVersionHash());
 
                 await logLogin(usage);
                 await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);

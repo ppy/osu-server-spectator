@@ -3,6 +3,8 @@
 
 using System;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Primitives;
+using osu.Game.Online;
 
 namespace osu.Server.Spectator.Extensions
 {
@@ -29,6 +31,29 @@ namespace osu.Server.Spectator.Extensions
         {
             return context.User?.FindFirst(claim => claim.Type == "jti")?.Value
                    ?? throw new InvalidOperationException("Could not retrieve JWT ID claim from token");
+        }
+
+        /// <summary>
+        /// Returns the client version hash for the supplied <paramref name="context"/>, if it is available.
+        /// </summary>
+        /// <remarks>
+        /// This method can only return a valid version hash when called in
+        /// <see cref="Hub.OnConnectedAsync"/> or <see cref="IHubFilter.OnConnectedAsync"/>,
+        /// as only the initial connection HTTP request will contain the client version hash.
+        /// </remarks>
+        public static string? GetVersionHash(this HubCallerContext context)
+        {
+            if (context.GetHttpContext()?.Request.Headers.TryGetValue(HubClientConnector.VERSION_HASH_HEADER, out StringValues headerValue) != true)
+                return null;
+
+            string versionHash = headerValue;
+
+            // The token is 82 chars long, and the clientHash is the first 32 of those.
+            // See: https://github.com/ppy/osu-web/blob/7be19a0fe0c9fa2f686e4bb686dbc8e9bf7bcf84/app/Libraries/ClientCheck.php#L92
+            if (versionHash?.Length >= 82)
+                versionHash = versionHash.Substring(versionHash.Length - 82, 32);
+
+            return versionHash;
         }
     }
 }
