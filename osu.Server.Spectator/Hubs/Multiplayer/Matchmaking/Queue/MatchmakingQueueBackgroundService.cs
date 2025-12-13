@@ -193,6 +193,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 DogStatsd.Gauge($"{statsd_prefix}.queue.users", queue.Count, tags: [$"queue:{queue.Pool.DisplayName}"]);
 
+                foreach (var user in queue.GetAllUsers())
+                    DogStatsd.Histogram($"{statsd_prefix}.queue.users.rating", user.Rating.Mu, tags: [$"queue:{queue.Pool.DisplayName}"]);
+
                 try
                 {
                     await processBundle(queue.Update());
