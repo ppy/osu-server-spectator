@@ -300,6 +300,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 foreach (var user in group.Users)
                     DogStatsd.Timer($"{statsd_prefix}.queue.duration", (DateTimeOffset.Now - user.SearchStartTime).TotalMilliseconds, tags: [$"queue:{bundle.Queue.Pool.DisplayName}"]);
 
+                foreach (double rating in group.DeltaRatings())
+                    DogStatsd.Histogram($"{statsd_prefix}.groups.ratingdelta", rating, tags: [$"queue:{bundle.Queue.Pool.DisplayName}"]);
+
                 string password = Guid.NewGuid().ToString();
                 long roomId = await sharedInterop.CreateRoomAsync(AppSettings.BanchoBotUserId, new MultiplayerRoom(0)
                 {
