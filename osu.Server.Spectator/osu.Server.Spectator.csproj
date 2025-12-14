@@ -36,4 +36,8 @@
         <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeAnalysis\BannedSymbols.txt" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\OpenSkillSharp\OpenSkillSharp\OpenSkillSharp.csproj" />
+    </ItemGroup>
+
 </Project>

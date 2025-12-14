@@ -32,12 +32,5 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
             Mu = mu;
             Sig = sig;
         }
-
-        // https://github.com/EbTech/Elo-MMR/blob/f6f83bb2c54bf173e60a9e8614065e8d168a349b/multi-skill/src/systems/common/mod.rs#L19
-        public EloRating WithNoise(double sigNoise)
-        {
-            double newSig = Math.Sqrt(Sig * Sig + sigNoise * sigNoise);
-            return this with { Sig = newSig };
-        }
     }
 }
