@@ -263,7 +263,7 @@ namespace osu.Server.Spectator.Database
         /// <param name="visible">Whether the user should appear online to other players on the website.</param>
         Task ToggleUserPresenceAsync(int userId, bool visible);
 
-        Task<float> GetUserPPAsync(int userId, int rulesetId);
+        Task<float> GetUserPPAsync(int userId, int rulesetId, int variant);
 
         Task<matchmaking_pool[]> GetActiveMatchmakingPoolsAsync();
 

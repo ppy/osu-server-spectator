@@ -643,14 +643,19 @@ namespace osu.Server.Spectator.Database
                 });
         }
 
-        public async Task<float> GetUserPPAsync(int userId, int rulesetId)
+        public async Task<float> GetUserPPAsync(int userId, int rulesetId, int variant)
         {
             string statsTable = rulesetId switch
             {
                 0 => "osu_user_stats",
                 1 => "osu_user_stats_taiko",
                 2 => "osu_user_stats_fruits",
-                3 => "osu_user_stats_mania",
+                3 => variant switch
+                {
+                    4 => "osu_user_stats_mania_4k",
+                    7 => "osu_user_stats_mania_7k",
+                    _ => "osu_user_stats_mania"
+                },
                 _ => throw new ArgumentOutOfRangeException(nameof(rulesetId), rulesetId, null)
             };
 
