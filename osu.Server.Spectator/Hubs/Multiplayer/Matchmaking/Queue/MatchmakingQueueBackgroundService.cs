@@ -106,7 +106,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 if (stats == null)
                 {
                     // Estimate initial elo from PP.
-                    double pp = await db.GetUserPPAsync(state.UserId, pool.ruleset_id);
+                    double pp = await db.GetUserPPAsync(state.UserId, pool.ruleset_id, pool.variant_id);
                     double eloEstimate = -4000 + 600 * Math.Log(pp + 4000);
 
                     await db.UpdateMatchmakingUserStatsAsync(stats = new matchmaking_user_stats
