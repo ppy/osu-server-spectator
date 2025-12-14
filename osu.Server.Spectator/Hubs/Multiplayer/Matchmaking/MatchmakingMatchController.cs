@@ -385,7 +385,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 PlackettLuce model = new PlackettLuce
                 {
                     Mu = 1500,
-                    Sigma = 350
+                    Sigma = 350,
+                    Beta = 175,
+                    Tau = 3.5,
+                    Gamma = (_, _, _, _, _, _, _) => 1
                 };
 
                 List<matchmaking_user_stats> stats = [];
