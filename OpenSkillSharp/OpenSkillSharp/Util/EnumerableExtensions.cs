@@ -49,4 +49,22 @@ public static class EnumerableExtensions
 
         return (sortedTarget, sortedTenet);
     }
+
+    /// <summary>Returns an enumerable that incorporates the element's index into a tuple.</summary>
+    /// <typeparam name="TSource">The type of the elements of <paramref name="source" />.</typeparam>
+    /// <param name="source">The source enumerable providing the elements.</param>
+    /// <returns>An enumerable that incorporates each element index into a tuple.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source" /> is <see langword="null" />.</exception>
+    public static IEnumerable<(int Index, TSource Item)> Index<TSource>(this IEnumerable<TSource> source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        int index = -1;
+
+        foreach (TSource element in source)
+        {
+            index++;
+            yield return (index, element);
+        }
+    }
 }

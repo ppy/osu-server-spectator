@@ -1,4 +1,5 @@
 using OpenSkillSharp.Rating;
+using OpenSkillSharp.Util;
 
 namespace OpenSkillSharp.Tests.TestingUtil;
 
