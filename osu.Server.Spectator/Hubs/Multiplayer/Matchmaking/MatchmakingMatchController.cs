@@ -387,8 +387,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     Mu = 1500,
                     Sigma = 350,
                     Beta = 175,
-                    Tau = 3.5,
-                    Gamma = (_, _, _, _, _, _, _) => 1
+                    Tau = 3.5
                 };
 
                 List<matchmaking_user_stats> stats = [];
