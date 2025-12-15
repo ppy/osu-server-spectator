@@ -149,4 +149,16 @@ public class PlackettLuceTests
         // Assert
         Assertions.RatingResultsEqual(expectedRatings, results);
     }
+
+    [Fact]
+    public void Rate_AllScoresTied()
+    {
+        PlackettLuce model = new PlackettLuce { Mu = 30, Sigma = 30.0 / 3 };
+
+        ITeam[] teams = [new Team { Players = [model.Rating()] }, new Team { Players = [model.Rating()] }];
+        ITeam[] result = model.Rate(teams, scores: [0, 0]).ToArray();
+
+        Assert.Equal(30, result[0].Players.Single().Mu);
+        Assert.Equal(30, result[1].Players.Single().Mu);
+    }
 }

@@ -40,7 +40,7 @@ public class PlackettLuce : OpenSkillModelBase
                     return (
                         sumOmega: acc.sumOmega + (
                             iTeamIndex == qTeamIndex
-                                ? 1 - (iMuOverCeOverSumQ / rankOccurrences[qTeamIndex])
+                                ? (1 - iMuOverCeOverSumQ) / rankOccurrences[qTeamIndex]
                                 : -1 * iMuOverCeOverSumQ / rankOccurrences[qTeamIndex]
                         ),
                         sumDelta: acc.sumDelta +

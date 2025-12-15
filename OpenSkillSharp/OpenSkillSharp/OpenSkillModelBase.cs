@@ -289,6 +289,7 @@ public abstract class OpenSkillModelBase : IOpenSkillModel
                     double sign = qTeamScore > iTeamScore ? 1D : -1D;
                     return (qTeam.Mu - iTeam.Mu) * (marginFactor - 1) * sign;
                 })
+                .DefaultIfEmpty(0)
                 .Average();
 
             return qTeam.Mu + muAdjustment;
