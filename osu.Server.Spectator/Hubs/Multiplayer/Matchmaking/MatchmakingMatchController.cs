@@ -7,6 +7,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using OpenSkillSharp.Models;
+using OpenSkillSharp.Rating;
+using OpenSkillSharp.Util;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Matchmaking.Events;
 using osu.Game.Online.Multiplayer;
@@ -379,39 +382,43 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             using (var db = dbFactory.GetInstance())
             {
-                List<matchmaking_user_stats> userStats = [];
-                List<EloPlayer> eloStandings = [];
-
-                foreach (var user in state.Users.Where(u => u.Points > 0).OrderBy(u => u.Placement))
+                PlackettLuce model = new PlackettLuce
                 {
-                    matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserId, PoolId) ?? new matchmaking_user_stats
+                    Mu = 1500,
+                    Sigma = 350,
+                    Beta = 175,
+                    Tau = 3.5
+                };
+
+                List<matchmaking_user_stats> stats = [];
+                List<ITeam> teams = [];
+                List<double> ranks = [];
+
+                foreach ((int rankIndex, MatchmakingUser user) in state.Users.Where(u => u.Points > 0).OrderBy(u => u.Placement).Index())
+                {
+                    matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(user.UserId, PoolId) ?? new matchmaking_user_stats
                     {
                         user_id = (uint)user.UserId,
                         pool_id = PoolId
                     };
 
                     if (user.Placement == 1)
-                        stats.first_placements++;
-                    stats.total_points += (uint)user.Points;
+                        userStats.first_placements++;
+                    userStats.total_points += (uint)user.Points;
 
-                    userStats.Add(stats);
-                    eloStandings.Add(stats.EloData);
+                    stats.Add(userStats);
+                    teams.Add(new Team { Players = [model.Rating(userStats.EloData.Rating.Mu, userStats.EloData.Rating.Sig)] });
+                    ranks.Add(rankIndex);
                 }
 
-                EloContest eloContest = new EloContest(DateTimeOffset.Now, eloStandings.ToArray())
+                ITeam[] newRatings = model.Rate(teams, ranks).ToArray();
+
+                for (int i = 0; i < stats.Count; i++)
                 {
-                    Weight = Math.Pow(0.5, state.Users.Count(u => u.AbandonedAt != null))
-                };
-
-                EloSystem eloSystem = new EloSystem
-                {
-                    MaxHistory = 10
-                };
-
-                eloSystem.RecordContest(eloContest);
-
-                foreach (var stats in userStats)
-                    await db.UpdateMatchmakingUserStatsAsync(stats);
+                    stats[i].EloData.ContestCount++;
+                    stats[i].EloData.Rating = new EloRating(newRatings[i].Players.Single().Mu, newRatings[i].Players.Single().Sigma);
+                    await db.UpdateMatchmakingUserStatsAsync(stats[i]);
+                }
             }
 
             statsUpdatePending = false;

@@ -116,8 +116,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         EloData =
                         {
                             InitialRating = new EloRating(eloEstimate),
-                            NormalFactor = new EloRating(eloEstimate),
-                            ApproximatePosterior = new EloRating(eloEstimate)
+                            Rating = new EloRating(eloEstimate)
                         }
                     });
                 }
@@ -125,7 +124,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 MatchmakingQueueUser user = new MatchmakingQueueUser(state.ConnectionId)
                 {
                     UserId = state.UserId,
-                    Rating = stats.EloData.ApproximatePosterior,
+                    Rating = stats.EloData.Rating,
                     QueueBanStartTime = memoryCache.Get<DateTimeOffset?>(queue_ban_start_time(state.UserId)) ?? DateTimeOffset.MinValue
                 };
 
