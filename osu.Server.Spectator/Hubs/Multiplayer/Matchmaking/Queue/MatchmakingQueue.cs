@@ -349,7 +349,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 double distance = Math.Min(leftDistance, rightDistance);
 
                 TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
-                double searchRadius = Pool.rating_search_radius * Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp);
+                double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp));
 
                 if (distance > searchRadius)
                     break;
