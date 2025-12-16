@@ -28,6 +28,11 @@ namespace osu.Server.Spectator.Database.Models
         public int rating_search_radius { get; set; }
 
         /// <summary>
+        /// The maximum search radius.
+        /// </summary>
+        public int rating_search_radius_max { get; set; } = 9999;
+
+        /// <summary>
         /// The amount of time (in seconds) before each doubling of the <see cref="rating_search_radius">rating search radius</see>.
         /// </summary>
         public int rating_search_radius_exp { get; set; }
