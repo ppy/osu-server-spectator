@@ -23,7 +23,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             foreach (var b in beatmaps)
             {
                 // Todo: This default rating is only accurate for NoMod beatmaps.
-                b.rating ??= (int)Math.Round(800 + 150 * b.difficultyrating);
+                b.rating ??= (int)Math.Round(800 + 500 * (Math.Exp(0.16 * b.difficultyrating) - 1));
             }
         }
 
