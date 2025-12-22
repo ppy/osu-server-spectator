@@ -269,9 +269,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// <summary>
         /// A selected card is locked in to play.
         /// </summary>
-        /// <remarks>
-        /// Event flow continues at <see cref="HandleUserStateChanged"/>.
-        /// </remarks>
         private async Task stageFinishSelection(RankedPlayCardItem card)
         {
             activeCard = card;
@@ -283,6 +280,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await eventLogger.LogMatchmakingGameplayBeatmapAsync(room.RoomID, room.Settings.PlaylistItemId);
 
             await changeStage(RankedPlayStage.FinishCardPlay);
+            // Event flow continues at HandleUserStateChanged();
         }
 
         /// <summary>
@@ -297,13 +295,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// <summary>
         /// Gameplay.
         /// </summary>
-        /// <remarks>
-        /// Event flow continues at <see cref="HandleGameplayCompleted"/>.
-        /// </remarks>
         private async Task stageGameplay(ServerMultiplayerRoom _)
         {
             await changeStage(RankedPlayStage.Gameplay);
             await startCountdown(TimeSpan.FromSeconds(stage_gameplay_time), hub.StartMatch);
+            // Event flow continues at HandleGameplayCompleted();
         }
 
         /// <summary>
