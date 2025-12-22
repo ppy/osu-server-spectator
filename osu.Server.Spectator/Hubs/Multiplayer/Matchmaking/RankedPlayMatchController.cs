@@ -7,6 +7,10 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using OpenSkillSharp.Models;
+using OpenSkillSharp.Rating;
+using OpenSkillSharp.Util;
+using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.RankedPlay;
@@ -41,10 +45,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private const int deck_size = player_hand_size * 2 + 1;
 
         public MultiplayerPlaylistItem CurrentItem => room.CurrentPlaylistItem;
-
-        public MultiplayerRoomUser ActivePlayer => room.Users[state.ActivePlayerIndex];
-
-        public RankedPlayUserState ActivePlayerState => (RankedPlayUserState)ActivePlayer.MatchState!;
 
         public uint PoolId { get; set; }
 
@@ -120,7 +120,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             // Remove the active card from play.
             if (activeCard != null)
             {
-                await removeCards(ActivePlayer, [activeCard]);
+                await removeCards(state.ActiveUserId, [activeCard]);
                 activeCard = null;
             }
 
@@ -136,11 +136,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             await eventLogger.LogMatchmakingUserJoinAsync(room.RoomID, user.UserID);
 
-            user.MatchState = new RankedPlayUserState();
-            await hub.NotifyMatchUserStateChanged(room, user);
-
             // Populate the user's initial hand.
-            await addCards(user, player_hand_size);
+            await addCards(user.UserID, player_hand_size);
 
             if (room.Users.Count == room_size)
                 await stageRoundWarmup(room);
@@ -193,13 +190,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (!userCardsDiscarded.Add(user.UserID))
                 throw new InvalidStateException("Cards have already been discarded.");
 
-            var userState = (RankedPlayUserState)user.MatchState!;
-
-            if (!cards.All(userState.Hand.Contains))
+            if (!cards.All(state.Users[user.UserID].Hand.Contains))
                 throw new InvalidStateException("One or more cards were not in the hand.");
 
-            await removeCards(user, cards);
-            await addCards(user, cards.Length);
+            await removeCards(user.UserID, cards);
+            await addCards(user.UserID, cards.Length);
 
             if (userCardsDiscarded.Count == room.Users.Count)
                 await stageFinishDiscard(room);
@@ -210,12 +205,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             if (state.Stage != RankedPlayStage.CardPlay)
                 return;
 
-            if (user.UserID != ActivePlayer.UserID)
+            if (user.UserID != state.ActiveUserId)
                 throw new InvalidStateException("Not the active player.");
 
-            var userState = (RankedPlayUserState)user.MatchState!;
-
-            if (!userState.Hand.Contains(card))
+            if (!state.Users[user.UserID].Hand.Contains(card))
                 throw new InvalidStateException("Card not in the hand.");
 
             await stageFinishSelection(card);
@@ -228,9 +221,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             state.CurrentRound++;
             state.DamageMultiplier = computeDamageMultiplier(state.CurrentRound);
-            state.ActivePlayerIndex = state.CurrentRound == 1
-                ? Random.Shared.Next(room.Users.Count)
-                : (state.ActivePlayerIndex + 1) % room.Users.Count;
+            state.ActiveUserId = state.CurrentRound == 1
+                ? Random.Shared.GetItems(state.Users.Keys.ToArray(), 1).Single()
+                : state.Users.Keys.ToArray().GetNext(state.ActiveUserId);
 
             await changeStage(RankedPlayStage.RoundWarmup);
             await returnUsersToRoom(room);
@@ -263,15 +256,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// </summary>
         private async Task stageCardSelect(ServerMultiplayerRoom _)
         {
-            if (!ActivePlayerState.Hand.Any())
+            if (!state.ActiveUser.Hand.Any())
             {
-                await addCards(ActivePlayer, 1);
-                await stageFinishSelection(ActivePlayerState.Hand.Single());
+                await addCards(state.ActiveUserId, 1);
+                await stageFinishSelection(state.ActiveUser.Hand.Single());
             }
             else
             {
                 await changeStage(RankedPlayStage.CardPlay);
-                await startCountdown(TimeSpan.FromSeconds(stage_select_time), _ => stageFinishSelection(ActivePlayerState.Hand.First()));
+                await startCountdown(TimeSpan.FromSeconds(stage_select_time), _ => stageFinishSelection(state.ActiveUser.Hand.First()));
             }
         }
 
@@ -329,11 +322,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             foreach (var score in scores)
             {
-                var user = room.Users.Single(u => u.UserID == score.user_id);
-                var userState = (RankedPlayUserState)user.MatchState!;
-
-                userState.Life = Math.Max(0, userState.Life - (int)(maxTotalScore - score.total_score));
-                anyPlayerDefeated |= userState.Life == 0;
+                var userInfo = state.Users[(int)score.user_id];
+                userInfo.Life = Math.Max(0, userInfo.Life - (int)(maxTotalScore - score.total_score));
+                anyPlayerDefeated |= userInfo.Life == 0;
             }
 
             if (anyPlayerDefeated)
@@ -364,37 +355,37 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// <summary>
         /// Draws a number of cards for a given user, placing them in their hand.
         /// </summary>
-        /// <param name="user">The user to draw cards for.</param>
+        /// <param name="userId">The user to draw cards for.</param>
         /// <param name="count">The maximum number of cards to draw from the deck.</param>
-        private async Task addCards(MultiplayerRoomUser user, int count)
+        private async Task addCards(int userId, int count)
         {
             RankedPlayCardItem[] cards = deck.Take(count).ToArray();
             deck.RemoveRange(0, cards.Length);
 
-            var userState = (RankedPlayUserState)user.MatchState!;
-            userState.Hand = userState.Hand.Concat(cards).ToArray();
-            await hub.NotifyMatchUserStateChanged(room, user);
-
             foreach (var card in cards)
             {
-                await hub.NotifyRankedPlayCardAdded(room, user, card);
-                await hub.NotifyRankedPlayCardRevealed(room, user, card, itemMap[card]);
+                state.Users[userId].Hand.AddRange(cards);
+                await hub.NotifyRankedPlayCardAdded(room, userId, card);
+                await hub.NotifyRankedPlayCardRevealed(room, userId, card, itemMap[card]);
             }
+
+            await hub.NotifyMatchRoomStateChanged(room);
         }
 
         /// <summary>
         /// Discards cards, removing them from a user's hand.
         /// </summary>
-        /// <param name="user">The user to discard cards from.</param>
+        /// <param name="userId">The user to discard cards from.</param>
         /// <param name="cards">The cards to discard.</param>
-        private async Task removeCards(MultiplayerRoomUser user, RankedPlayCardItem[] cards)
+        private async Task removeCards(int userId, RankedPlayCardItem[] cards)
         {
-            var userState = (RankedPlayUserState)user.MatchState!;
-            userState.Hand = userState.Hand.Except(cards).ToArray();
-            await hub.NotifyMatchUserStateChanged(room, user);
-
             foreach (var card in cards)
-                await hub.NotifyRankedPlayCardRemoved(room, user, card);
+            {
+                state.Users[userId].Hand.Remove(card);
+                await hub.NotifyRankedPlayCardRemoved(room, userId, card);
+            }
+
+            await hub.NotifyMatchRoomStateChanged(room);
         }
 
         /// <summary>
@@ -421,31 +412,39 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             using (var db = dbFactory.GetInstance())
             {
-                List<matchmaking_user_stats> userStats = [];
-                List<EloPlayer> eloStandings = [];
-
-                foreach (var user in room.Users.OrderByDescending(u => ((RankedPlayUserState)u.MatchState!).Life))
+                PlackettLuce model = new PlackettLuce
                 {
-                    matchmaking_user_stats stats = await db.GetMatchmakingUserStatsAsync(user.UserID, PoolId) ?? new matchmaking_user_stats
+                    Mu = 1500,
+                    Sigma = 350,
+                    Beta = 175,
+                    Tau = 3.5
+                };
+
+                List<matchmaking_user_stats> stats = [];
+                List<ITeam> teams = [];
+                List<double> ranks = [];
+
+                foreach ((int rankIndex, (int userId, _)) in state.Users.OrderByDescending(u => u.Value.Life).Index())
+                {
+                    matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(userId, PoolId) ?? new matchmaking_user_stats
                     {
-                        user_id = (uint)user.UserID,
+                        user_id = (uint)userId,
                         pool_id = PoolId
                     };
 
-                    userStats.Add(stats);
-                    eloStandings.Add(stats.EloData);
+                    stats.Add(userStats);
+                    teams.Add(new Team { Players = [model.Rating(userStats.EloData.Rating.Mu, userStats.EloData.Rating.Sig)] });
+                    ranks.Add(rankIndex);
                 }
 
-                EloContest eloContest = new EloContest(DateTimeOffset.Now, eloStandings.ToArray());
-                EloSystem eloSystem = new EloSystem
+                ITeam[] newRatings = model.Rate(teams, ranks).ToArray();
+
+                for (int i = 0; i < stats.Count; i++)
                 {
-                    MaxHistory = 10
-                };
-
-                eloSystem.RecordContest(eloContest);
-
-                foreach (var stats in userStats)
-                    await db.UpdateMatchmakingUserStatsAsync(stats);
+                    stats[i].EloData.ContestCount++;
+                    stats[i].EloData.Rating = new EloRating(newRatings[i].Players.Single().Mu, newRatings[i].Players.Single().Sigma);
+                    await db.UpdateMatchmakingUserStatsAsync(stats[i]);
+                }
             }
 
             statsUpdatePending = false;

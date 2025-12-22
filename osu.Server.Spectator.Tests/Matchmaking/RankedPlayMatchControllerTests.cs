@@ -76,9 +76,9 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             UserReceiver.Invocations.Clear();
 
             await Hub.JoinRoom(ROOM_ID);
-            var userState = (RankedPlayUserState)room.Users[0].MatchState!;
+            var userState = roomState.Users[0];
 
-            Assert.Equal(5, userState.Hand.Length);
+            Assert.Equal(5, userState.Hand.Count);
             UserReceiver.Verify(u => u.RankedPlayCardRevealed(It.IsAny<RankedPlayCardItem>(), It.IsAny<MultiplayerPlaylistItem>()), Times.Exactly(5));
             await verifyStage(RankedPlayStage.WaitForJoin);
 
@@ -89,16 +89,16 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            var userState2 = (RankedPlayUserState)room.Users[1].MatchState!;
+            var userState2 = roomState.Users[1];
 
-            Assert.Equal(5, userState2.Hand.Length);
+            Assert.Equal(5, userState2.Hand.Count);
             UserReceiver.Verify(u => u.RankedPlayCardRevealed(It.IsAny<RankedPlayCardItem>(), It.IsAny<MultiplayerPlaylistItem>()), Times.Never);
             User2Receiver.Verify(u => u.RankedPlayCardRevealed(It.IsAny<RankedPlayCardItem>(), It.IsAny<MultiplayerPlaylistItem>()), Times.Exactly(5));
 
             // Warmup stage.
 
             await verifyStage(RankedPlayStage.RoundWarmup);
-            Assert.True(roomState.ActivePlayerIndex >= 0);
+            Assert.True(roomState.ActiveUserId >= 0);
 
             // Discard stage.
 
@@ -142,10 +142,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             Receiver.Invocations.Clear();
 
-            (Mock<HubCallerContext> context, RankedPlayUserState state, MultiplayerRoomUser user) activePlayer = roomState.ActivePlayerIndex switch
+            (Mock<HubCallerContext> context, RankedPlayUserInfo state, MultiplayerRoomUser user) activePlayer = roomState.ActiveUserId switch
             {
-                0 => (ContextUser, userState, room.Users[0]),
-                _ => (ContextUser2, userState2, room.Users[1]),
+                USER_ID => (ContextUser, userState, room.Users[0]),
+                USER_ID_2 => (ContextUser2, userState2, room.Users[1]),
+                _ => throw new ArgumentOutOfRangeException()
             };
 
             RankedPlayCardItem activeCard = activePlayer.state.Hand[0];
@@ -224,10 +225,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             await gotoStage(RankedPlayStage.CardPlay);
 
-            (Mock<HubCallerContext> context, RankedPlayUserState state) inactivePlayer = roomState.ActivePlayerIndex switch
+            (Mock<HubCallerContext> context, RankedPlayUserInfo state) inactivePlayer = roomState.ActiveUserId switch
             {
-                0 => (ContextUser2, (RankedPlayUserState)room.Users[1].MatchState!),
-                _ => (ContextUser, (RankedPlayUserState)room.Users[0].MatchState!),
+                USER_ID => (ContextUser2, roomState.Users[1]),
+                USER_ID_2 => (ContextUser, roomState.Users[0]),
+                _ => throw new ArgumentOutOfRangeException()
             };
 
             SetUserContext(inactivePlayer.context);

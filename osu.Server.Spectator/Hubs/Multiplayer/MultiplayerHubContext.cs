@@ -426,20 +426,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.VoteToSkipIntroPassed));
         }
 
-        public async Task NotifyRankedPlayCardAdded(ServerMultiplayerRoom room, MultiplayerRoomUser user, RankedPlayCardItem card)
+        public async Task NotifyRankedPlayCardAdded(ServerMultiplayerRoom room, int userId, RankedPlayCardItem card)
         {
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IRankedPlayClient.RankedPlayCardAdded), user.UserID, card);
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IRankedPlayClient.RankedPlayCardAdded), userId, card);
         }
 
-        public async Task NotifyRankedPlayCardRemoved(ServerMultiplayerRoom room, MultiplayerRoomUser user, RankedPlayCardItem card)
+        public async Task NotifyRankedPlayCardRemoved(ServerMultiplayerRoom room, int userId, RankedPlayCardItem card)
         {
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRemoved), user.UserID, card);
+            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRemoved), userId, card);
         }
 
-        public async Task NotifyRankedPlayCardRevealed(ServerMultiplayerRoom room, MultiplayerRoomUser? user, RankedPlayCardItem card, MultiplayerPlaylistItem item)
+        public async Task NotifyRankedPlayCardRevealed(ServerMultiplayerRoom room, int? userId, RankedPlayCardItem card, MultiplayerPlaylistItem item)
         {
-            if (user != null)
-                await context.Clients.User(user.UserID.ToString()).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRevealed), card, item);
+            if (userId != null)
+                await context.Clients.User(userId.Value.ToString()).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRevealed), card, item);
             else
                 await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRevealed), card, item);
         }
