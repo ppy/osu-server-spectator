@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// </summary>
         private const int stage_waiting_for_clients_join_time = 60;
 
-        private const int stage_round_warmup_time = 15;
+        private const int stage_round_warmup_time = 5;
         private const int stage_discard_time = 30;
         private const int stage_finish_discard_time = 10;
         private const int stage_select_time = 30;
