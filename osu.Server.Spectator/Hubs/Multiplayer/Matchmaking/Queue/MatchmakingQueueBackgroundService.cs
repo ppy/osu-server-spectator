@@ -15,6 +15,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
+using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -350,6 +351,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 foreach (int user in eligibleUserIds)
                     matchmakingState.Users.GetOrAdd(user);
+            }
+
+            if (room.MatchState is RankedPlayRoomState rankedPlayState)
+            {
+                foreach (int user in eligibleUserIds)
+                    rankedPlayState.Users[user] = new RankedPlayUserInfo();
             }
 
             if (room.Controller is not IMatchmakingMatchController matchmakingController)
