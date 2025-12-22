@@ -96,10 +96,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         }
 
         public Task<bool> UserCanJoin(int userId)
-        {
-            // Todo: Implement this, somehow...
-            return Task.FromResult(true);
-        }
+            => Task.FromResult(state.Users.ContainsKey(userId));
 
         public Task HandleSettingsChanged()
         {
