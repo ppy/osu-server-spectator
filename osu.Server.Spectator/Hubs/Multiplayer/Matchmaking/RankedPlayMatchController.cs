@@ -319,7 +319,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     scores.Add(new SoloScore { user_id = (uint)userId });
             }
 
-            int maxTotalScore = (int)scores.Select(s => s.total_score).Max();
+            // If all players have 0 resulting score, each shall take 1 point of damage (before multipliers).
+            int maxTotalScore = (int)Math.Max(1, scores.Select(s => s.total_score).Max());
             bool anyPlayerDefeated = false;
 
             foreach (var score in scores)
@@ -334,6 +335,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 anyPlayerDefeated |= userInfo.Life == 0;
             }
 
+            // Todo: This only works for 2 players. This will need to be adjusted if we ever have more.
             if (anyPlayerDefeated)
                 await updateUserStats();
 
