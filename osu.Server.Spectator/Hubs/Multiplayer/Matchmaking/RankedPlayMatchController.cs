@@ -227,13 +227,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             await changeStage(RankedPlayStage.RoundWarmup);
             await returnUsersToRoom(room);
-            await startCountdown(TimeSpan.FromSeconds(stage_round_warmup_time), async _ =>
-            {
-                if (state.CurrentRound == 1)
-                    await stageCardDiscard(room);
-                else
-                    await stageCardSelect(room);
-            });
+
+            if (state.CurrentRound == 1)
+                await startCountdown(TimeSpan.FromSeconds(stage_round_warmup_time), stageCardDiscard);
+            else
+                await stageCardSelect(room);
         }
 
         /// <summary>
