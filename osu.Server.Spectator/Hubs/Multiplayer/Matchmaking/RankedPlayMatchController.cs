@@ -307,9 +307,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// </summary>
         private async Task stageResults()
         {
+            // Collect all scores from the database.
             List<SoloScore> scores = [];
             using (var db = dbFactory.GetInstance())
                 scores.AddRange(await db.GetAllScoresForPlaylistItem(CurrentItem.ID));
+
+            // Add dummy scores for all users that did not play the map.
+            foreach ((int userId, _) in state.Users)
+            {
+                if (scores.All(s => s.user_id != userId))
+                    scores.Add(new SoloScore { user_id = (uint)userId });
+            }
 
             uint maxTotalScore = scores.Select(s => s.total_score).DefaultIfEmpty(0u).Max();
             bool anyPlayerDefeated = false;
