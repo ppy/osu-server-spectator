@@ -168,7 +168,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             {
                 case RankedPlayStage.FinishCardPlay:
                     if (allUsersReady())
-                        await stageGameplayWarmup(room);
+                        await startCountdown(TimeSpan.FromSeconds(5), stageGameplayWarmup);
                     break;
             }
         }
