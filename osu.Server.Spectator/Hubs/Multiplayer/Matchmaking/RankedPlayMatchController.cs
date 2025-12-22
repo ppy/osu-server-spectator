@@ -259,16 +259,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// </summary>
         private async Task stageCardSelect(ServerMultiplayerRoom _)
         {
-            if (!state.ActiveUser.Hand.Any())
-            {
+            if (state.ActiveUser.Hand.Count == 0)
                 await addCards(state.ActiveUserId, 1);
-                await stageFinishSelection(state.ActiveUser.Hand.Single());
-            }
-            else
-            {
-                await changeStage(RankedPlayStage.CardPlay);
-                await startCountdown(TimeSpan.FromSeconds(stage_select_time), _ => stageFinishSelection(state.ActiveUser.Hand.First()));
-            }
+
+            await changeStage(RankedPlayStage.CardPlay);
+            await startCountdown(TimeSpan.FromSeconds(stage_select_time), _ => stageFinishSelection(state.ActiveUser.Hand.First()));
         }
 
         /// <summary>
