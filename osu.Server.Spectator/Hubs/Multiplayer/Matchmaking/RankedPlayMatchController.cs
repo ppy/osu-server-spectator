@@ -319,13 +319,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                     scores.Add(new SoloScore { user_id = (uint)userId });
             }
 
-            uint maxTotalScore = scores.Select(s => s.total_score).DefaultIfEmpty(0u).Max();
+            int maxTotalScore = (int)scores.Select(s => s.total_score).Max();
             bool anyPlayerDefeated = false;
 
             foreach (var score in scores)
             {
+                double damage = maxTotalScore - (int)score.total_score;
+                damage *= state.DamageMultiplier;
+                damage = Math.Ceiling(damage);
+
                 var userInfo = state.Users[(int)score.user_id];
-                userInfo.Life = Math.Max(0, userInfo.Life - (int)(maxTotalScore - score.total_score));
+                userInfo.Life = Math.Max(0, userInfo.Life - (int)damage);
+
                 anyPlayerDefeated |= userInfo.Life == 0;
             }
 
