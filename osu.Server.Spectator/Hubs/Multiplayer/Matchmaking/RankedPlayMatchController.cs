@@ -196,8 +196,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await removeCards(user.UserID, cards);
             await addCards(user.UserID, cards.Length);
 
+            // When both users have finished discarding their cards,
+            // wait for animations to complete before transitioning the stage.
             if (userCardsDiscarded.Count == room.Users.Count)
-                await stageFinishDiscard(room);
+            {
+                await room.StopCountdown(room.FindCountdownOfType<RankedPlayStageCountdown>());
+                await startCountdown(TimeSpan.FromSeconds(3), stageFinishDiscard);
+            }
         }
 
         public async Task PlayCard(MultiplayerRoomUser user, RankedPlayCardItem card)

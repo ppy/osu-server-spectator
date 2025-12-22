@@ -236,9 +236,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// Stops the given countdown, preventing its callback from running.
         /// </summary>
         /// <param name="countdown">The countdown to stop.</param>
-        public async Task StopCountdown(MultiplayerCountdown countdown)
+        public async Task StopCountdown(MultiplayerCountdown? countdown)
         {
-            if (!trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo))
+            if (countdown == null || !trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo))
                 return;
 
             countdownInfo.StopSource.Cancel();
