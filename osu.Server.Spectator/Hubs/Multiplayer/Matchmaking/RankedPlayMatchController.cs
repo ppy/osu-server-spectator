@@ -364,7 +364,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             foreach (var card in cards)
             {
-                state.Users[userId].Hand.AddRange(cards);
+                state.Users[userId].Hand.Add(card);
                 await hub.NotifyRankedPlayCardAdded(room, userId, card);
                 await hub.NotifyRankedPlayCardRevealed(room, userId, card, itemMap[card]);
             }
