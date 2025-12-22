@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 using OpenSkillSharp.Models;
 using OpenSkillSharp.Rating;
 using OpenSkillSharp.Util;
-using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.RankedPlay;
@@ -228,7 +227,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             state.DamageMultiplier = computeDamageMultiplier(state.CurrentRound);
             state.ActiveUserId = state.CurrentRound == 1
                 ? Random.Shared.GetItems(state.Users.Keys.ToArray(), 1).Single()
-                : state.Users.Keys.ToArray().GetNext(state.ActiveUserId);
+                : state.Users.Keys.Concat(state.Users.Keys).SkipWhile(u => u != state.ActiveUserId).Skip(1).First();
 
             await changeStage(RankedPlayStage.RoundWarmup);
             await returnUsersToRoom(room);
