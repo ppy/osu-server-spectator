@@ -18,7 +18,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override RankedPlayStage Stage => RankedPlayStage.RoundWarmup;
 
-        protected override TimeSpan Duration => State.CurrentRound == 1 ? TimeSpan.FromSeconds(5) : TimeSpan.Zero;
+        protected override TimeSpan Duration => State.CurrentRound == 1 ? TimeSpan.FromSeconds(20) : TimeSpan.Zero;
 
         protected override async Task Begin()
         {
