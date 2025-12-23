@@ -14,6 +14,7 @@ using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay;
 using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.RankedPlay;
 using osu.Server.Spectator.Extensions;
-using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
