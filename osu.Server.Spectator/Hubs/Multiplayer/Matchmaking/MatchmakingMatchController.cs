@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using OpenSkillSharp.Models;
 using OpenSkillSharp.Rating;
-using OpenSkillSharp.Util;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Matchmaking.Events;
 using osu.Game.Online.Multiplayer;
@@ -393,8 +392,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 List<matchmaking_user_stats> stats = [];
                 List<ITeam> teams = [];
                 List<double> ranks = [];
+                int rankIndex = -1;
 
-                foreach ((int rankIndex, MatchmakingUser user) in state.Users.Where(u => u.Points > 0).OrderBy(u => u.Placement).Index())
+                foreach (MatchmakingUser user in state.Users.Where(u => u.Points > 0).OrderBy(u => u.Placement))
                 {
                     matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(user.UserId, PoolId) ?? new matchmaking_user_stats
                     {
@@ -408,7 +408,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
                     stats.Add(userStats);
                     teams.Add(new Team { Players = [model.Rating(userStats.EloData.Rating.Mu, userStats.EloData.Rating.Sig)] });
-                    ranks.Add(rankIndex);
+                    ranks.Add(++rankIndex);
                 }
 
                 ITeam[] newRatings = model.Rate(teams, ranks).ToArray();
