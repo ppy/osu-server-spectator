@@ -41,9 +41,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public async Task Enter()
         {
             State.Stage = Stage;
-            await Hub.NotifyMatchRoomStateChanged(Room);
 
             await Begin();
+            await Hub.NotifyMatchRoomStateChanged(Room);
+
             await FinishWithCountdown(Duration);
         }
 
