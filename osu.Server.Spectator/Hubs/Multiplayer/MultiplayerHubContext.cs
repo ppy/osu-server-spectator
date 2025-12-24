@@ -302,7 +302,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
             await ChangeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
-            await context.Clients.Users(room.Users.Select(u => u.UserID.ToString())).SendAsync(nameof(IMultiplayerClient.LoadRequested));
+            foreach (var u in room.Users)
+            {
+                if (u.State == MultiplayerUserState.WaitingForLoad || u.State == MultiplayerUserState.Spectating)
+                    await context.Clients.User(u.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.LoadRequested));
+            }
 
             await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
 
