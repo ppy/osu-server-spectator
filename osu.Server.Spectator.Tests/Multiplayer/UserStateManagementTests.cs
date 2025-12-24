@@ -409,7 +409,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
-        public async Task IdleUsersDoGetLoadRequest()
+        public async Task IdleUsersWithBeatmapReceiveLoadRequest()
         {
             await Hub.JoinRoom(ROOM_ID);
 
@@ -447,6 +447,47 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             {
                 Assert.NotNull(room.Item);
                 Assert.True(room.Item.Users.All(u => u.State == MultiplayerUserState.WaitingForLoad));
+            }
+        }
+
+        [Fact]
+        public async Task IdleUsersWithoutBeatmapDoNotReceiveLoadRequest()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            SetUserContext(ContextUser);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.All(room.Item.Users, u => Assert.Equal(MultiplayerUserState.Idle, u.State));
+            }
+
+            // one user enters a ready state.
+            await MarkCurrentUserReadyAndAvailable();
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Idle);
+                Assert.Single(room.Item.Users, u => u.State == MultiplayerUserState.Ready);
+
+                Assert.Equal(MultiplayerRoomState.Open, room.Item.State);
+            }
+
+            // host requests the start of the match.
+            await Hub.StartMatch();
+
+            UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            User2Receiver.Verify(r => r.LoadRequested(), Times.Never);
+
+            using (var room = await Rooms.GetForUse(ROOM_ID))
+            {
+                Assert.NotNull(room.Item);
+                Assert.True(room.Item.Users.Single(u => u.State == MultiplayerUserState.WaitingForLoad).UserID == USER_ID);
             }
         }
 
