@@ -44,11 +44,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             };
 
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             using (var roomUsage = await Hub.GetRoom(ROOM_ID))
             {
@@ -74,8 +74,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             }
 
             // Check that both users start gameplay - the second user also starts despite being in an idle state.
+            SetUserContext(ContextUser2);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
 
             UserReceiver.Verify(r => r.LoadRequested(), Times.Once);

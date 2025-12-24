@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
 using Xunit;
 
@@ -232,6 +233,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.AbortGameplay();
 
             // Restart gameplay with just host being ready.
+            SetUserContext(ContextUser2);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             SetUserContext(ContextUser);
             await MarkCurrentUserReadyAndAvailable();
             await Hub.StartMatch();
