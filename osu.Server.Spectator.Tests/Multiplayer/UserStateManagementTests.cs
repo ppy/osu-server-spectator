@@ -440,7 +440,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // host requests the start of the match.
             await Hub.StartMatch();
 
-            Receiver.Verify(r => r.LoadRequested(), Times.Once);
+            UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            User2Receiver.Verify(r => r.LoadRequested(), Times.Once);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {

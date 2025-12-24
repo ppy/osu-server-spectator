@@ -41,7 +41,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.StartMatch();
 
             // server requests the all users start loading.
-            Receiver.Verify(r => r.LoadRequested(), Times.Once);
+            UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
             Receiver.Verify(r => r.UserStateChanged(USER_ID, MultiplayerUserState.WaitingForLoad), Times.Once);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
@@ -136,7 +136,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.StartMatch();
 
             // server requests the all users start loading.
-            Receiver.Verify(r => r.LoadRequested(), Times.Once);
+            UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            User2Receiver.Verify(r => r.LoadRequested(), Times.Once);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
