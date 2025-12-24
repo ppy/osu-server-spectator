@@ -295,10 +295,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             foreach (var user in room.Users)
                 await ChangeUserVoteToSkipIntro(room, user, false);
 
-            var readyUsers = room.Users.Where(u =>
-                u.BeatmapAvailability.State == DownloadState.LocallyAvailable
-                && (u.State == MultiplayerUserState.Ready || u.State == MultiplayerUserState.Idle)
-            ).ToArray();
+            var readyUsers = room.Users.Where(u => u.IsReadyForGameplay()).ToArray();
 
             foreach (var u in readyUsers)
                 await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
