@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using OpenSkillSharp.Models;
 using OpenSkillSharp.Rating;
+using osu.Game.Online;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Matchmaking.Events;
 using osu.Game.Online.Multiplayer;
@@ -16,6 +17,7 @@ using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
@@ -472,7 +474,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         private bool allUsersReady()
         {
-            return room.Users.All(u => u.State == MultiplayerUserState.Ready);
+            return room.Users.All(u => u.IsReadyForGameplay());
         }
 
         private bool hasEnoughUsersForGameplay()
@@ -481,7 +483,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 // Special case for testing in solo play.
                 (room.Users.Count == 1 && allUsersReady())
                 // Otherwise, always require at least two ready users.
-                || room.Users.Count(u => u.State == MultiplayerUserState.Ready) >= 2;
+                || room.Users.Count(u => u.IsReadyForGameplay()) >= 2;
         }
 
         /// <summary>

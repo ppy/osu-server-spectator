@@ -250,6 +250,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             user.BeatmapAvailability = newBeatmapAvailability;
 
             await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserBeatmapAvailabilityChanged), user.UserID, user.BeatmapAvailability);
+
+            await room.Controller.HandleUserStateChanged(user);
         }
 
         public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
@@ -293,10 +295,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             foreach (var user in room.Users)
                 await ChangeUserVoteToSkipIntro(room, user, false);
 
-            var readyUsers = room.Users.Where(u =>
-                u.BeatmapAvailability.State == DownloadState.LocallyAvailable
-                && (u.State == MultiplayerUserState.Ready || u.State == MultiplayerUserState.Idle)
-            ).ToArray();
+            var readyUsers = room.Users.Where(u => u.IsReadyForGameplay()).ToArray();
 
             foreach (var u in readyUsers)
                 await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
