@@ -144,15 +144,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 await hub.NotifyPlaylistItemChanged(room, CurrentItem, true);
             }
 
-            Dictionary<int, SoloScore> scores = new Dictionary<int, SoloScore>();
-
+            // Collect all scores from the database.
+            List<SoloScore> scores = [];
             using (var db = dbFactory.GetInstance())
+                scores.AddRange(await db.GetAllScoresForPlaylistItem(CurrentItem.ID));
+
+            // Add dummy scores for all users that did not play the map.
+            foreach ((int userId, _) in state.Users.UserDictionary)
             {
-                foreach (var score in await db.GetAllScoresForPlaylistItem(CurrentItem.ID))
-                    scores[(int)score.user_id] = score;
+                if (scores.All(s => s.user_id != userId))
+                    scores.Add(new SoloScore { user_id = (uint)userId });
             }
 
-            state.RecordScores(scores.Values.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
+            state.RecordScores(scores.Select(s => s.ToScoreInfo()).ToArray(), placement_points);
 
             await stageResultsDisplaying();
         }

@@ -783,6 +783,43 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await verifyStage(MatchmakingStage.Ended);
         }
 
+        [Fact]
+        public async Task MissingScoreIsTreatedAsZero()
+        {
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>())).Returns(() => Task.FromResult((IEnumerable<SoloScore>)
+            [
+                new SoloScore
+                {
+                    user_id = USER_ID,
+                    total_score = 10
+                }
+            ]));
+
+            await Hub.JoinRoom(ROOM_ID);
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            var room = Rooms.GetEntityUnsafe(ROOM_ID)!;
+            var roomState = (MatchmakingRoomState)room.MatchState!;
+
+            await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
+            SetUserContext(ContextUser);
+            await MarkCurrentUserReadyAndAvailable();
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
+            await gotoStage(MatchmakingStage.Gameplay);
+            SetUserContext(ContextUser);
+            await Hub.AbortGameplay();
+            SetUserContext(ContextUser2);
+            await Hub.AbortGameplay();
+
+            await verifyStage(MatchmakingStage.ResultsDisplaying);
+
+            Assert.True(roomState.Users.GetOrAdd(USER_ID).Points > 0);
+            Assert.True(roomState.Users.GetOrAdd(USER_ID_2).Points > 0);
+        }
+
         private async Task verifyStage(MatchmakingStage stage)
         {
             using (var room = await Rooms.GetForUse(ROOM_ID))
