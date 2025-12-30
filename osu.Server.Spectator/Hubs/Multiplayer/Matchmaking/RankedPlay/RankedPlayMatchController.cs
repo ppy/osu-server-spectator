@@ -85,6 +85,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 deck.Add(card);
             }
 
+            State.StarRating = beatmaps.Select(b => b.difficultyrating).DefaultIfEmpty(0).Average();
+
             // Create an initial playlist item for the room. Clients require this to operate correctly.
             using (var db = DbFactory.GetInstance())
             {
@@ -103,6 +105,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                     Rating = (int)Math.Round(user.Rating.Mu)
                 };
             }
+
+            await Hub.NotifyMatchRoomStateChanged(Room);
         }
 
         Task<bool> IMatchController.UserCanJoin(int userId)
