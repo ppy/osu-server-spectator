@@ -130,7 +130,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                     playlistItemId = room.Item!.CurrentPlaylistItem.ID;
 
                 // Check that a request to load gameplay was started.
-                Receiver.Verify(u => u.LoadRequested(), Times.Once);
+                UserReceiver.Verify(u => u.LoadRequested(), Times.Once);
+                User2Receiver.Verify(u => u.LoadRequested(), Times.Once);
 
                 // Start gameplay for both users.
                 SetUserContext(ContextUser);
@@ -166,6 +167,9 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 }
 
                 Receiver.Invocations.Clear();
+                UserReceiver.Invocations.Clear();
+                User2Receiver.Invocations.Clear();
+
                 await gotoNextStage();
             }
 
