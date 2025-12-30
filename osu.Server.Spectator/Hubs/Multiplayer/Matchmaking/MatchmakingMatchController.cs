@@ -173,6 +173,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                         Action = avatarAction.Action
                     });
                     break;
+
+                case MatchmakingCursorPositionRequest cursorPosition:
+                    await hub.NotifyNewMatchEvent(room, new MatchmakingCursorPositionEvent
+                    {
+                        UserId = user.UserID,
+                        X = cursorPosition.X,
+                        Y = cursorPosition.Y,
+                    });
+                    break;
             }
         }
 
