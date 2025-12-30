@@ -14,8 +14,6 @@ using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
-using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -318,7 +316,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
-                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id);
+                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, bundle.Queue.Pool.id, group.Users);
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
@@ -333,39 +331,42 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
-        /// Initialises a matchmaking room with the given eligible user IDs.
+        /// Initialises a matchmaking room with the given eligible users.
         /// </summary>
         /// <param name="roomId">The room identifier.</param>
         /// <param name="hub">The multiplayer hub context.</param>
         /// <param name="dbFactory">The database factory.</param>
         /// <param name="eventLogger">The event logger.</param>
-        /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
         /// <param name="poolId">The pool ID.</param>
+        /// <param name="users">The users who are allowed to join the room.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
         public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger,
-                                                                            int[] eligibleUserIds, uint poolId)
+                                                                            uint poolId, MatchmakingQueueUser[] users)
         {
             ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventLogger);
 
-            if (room.MatchState is MatchmakingRoomState matchmakingState)
-            {
-                foreach (int user in eligibleUserIds)
-                    matchmakingState.Users.GetOrAdd(user);
-            }
-
-            if (room.MatchState is RankedPlayRoomState rankedPlayState)
-            {
-                foreach (int user in eligibleUserIds)
-                    rankedPlayState.Users[user] = new RankedPlayUserInfo();
-            }
-
-            if (room.Controller is not IMatchmakingMatchController matchmakingController)
-                throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid controller).");
-
-            matchmakingController.PoolId = poolId;
+            if (room.Controller is IMatchmakingMatchController matchmakingController)
+                await matchmakingController.Initialise(poolId, users);
 
             return room;
         }
+
+        /// <summary>
+        /// Initialises a matchmaking room with the given eligible users.
+        /// </summary>
+        /// <remarks>
+        /// Only to be used for testing purposes.
+        /// </remarks>
+        /// <param name="roomId">The room identifier.</param>
+        /// <param name="hub">The multiplayer hub context.</param>
+        /// <param name="dbFactory">The database factory.</param>
+        /// <param name="eventLogger">The event logger.</param>
+        /// <param name="poolId">The pool ID.</param>
+        /// <param name="users">The users who are allowed to join the room.</param>
+        /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
+        public static Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger,
+                                                                      uint poolId, int[] users)
+            => InitialiseRoomAsync(roomId, hub, dbFactory, eventLogger, poolId, users.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray());
 
         private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)
         {

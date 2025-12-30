@@ -12,6 +12,7 @@ using osu.Game.Online.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
@@ -24,10 +25,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
         public MultiplayerPlaylistItem CurrentItem => Room.CurrentPlaylistItem;
 
-        /// <summary>
-        /// The active pool.
-        /// </summary>
-        public uint PoolId { get; set; }
+        public uint PoolId { get; private set; }
 
         /// <summary>
         /// Mapping from cards to their associated playlist item.
@@ -77,6 +75,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         {
             await Hub.NotifyMatchRoomStateChanged(Room);
             await GotoStage(RankedPlayStage.WaitForJoin);
+        }
+
+        Task IMatchmakingMatchController.Initialise(uint poolId, MatchmakingQueueUser[] users)
+        {
+            PoolId = poolId;
+
+            foreach (var user in users)
+            {
+                State.Users[user.UserId] = new RankedPlayUserInfo
+                {
+                    Rating = (int)Math.Round(user.Rating.Mu)
+                };
+            }
+
+            return Task.CompletedTask;
         }
 
         Task<bool> IMatchController.UserCanJoin(int userId)

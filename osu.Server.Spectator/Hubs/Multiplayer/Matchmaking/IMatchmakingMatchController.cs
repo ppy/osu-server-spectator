@@ -2,12 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Threading.Tasks;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     public interface IMatchmakingMatchController
     {
-        public uint PoolId { get; set; }
+        Task Initialise(uint poolId, MatchmakingQueueUser[] users);
 
         void SkipToNextStage(out Task countdownTask);
     }

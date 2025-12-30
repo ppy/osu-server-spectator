@@ -18,6 +18,7 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
@@ -97,8 +98,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public MultiplayerPlaylistItem CurrentItem => room.CurrentPlaylistItem;
 
-        public uint PoolId { get; set; }
-
         private readonly ServerMultiplayerRoom room;
         private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
@@ -106,6 +105,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private readonly MatchmakingRoomState state;
         private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
 
+        private uint poolId;
         private int joinedUserCount;
         private bool anyPlayerQuit;
         private bool statsUpdatePending = true;
@@ -125,6 +125,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         {
             await hub.NotifyMatchRoomStateChanged(room);
             await startCountdown(TimeSpan.FromSeconds(stage_waiting_for_clients_join_time), stageRoundWarmupTime);
+        }
+
+        public Task Initialise(uint poolId, MatchmakingQueueUser[] users)
+        {
+            this.poolId = poolId;
+
+            foreach (var user in users)
+                state.Users.GetOrAdd(user.UserId);
+
+            return Task.CompletedTask;
         }
 
         public Task<bool> UserCanJoin(int userId)
@@ -401,10 +411,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
                 foreach (MatchmakingUser user in state.Users.Where(u => u.Points > 0).OrderBy(u => u.Placement))
                 {
-                    matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(user.UserId, PoolId) ?? new matchmaking_user_stats
+                    matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(user.UserId, poolId) ?? new matchmaking_user_stats
                     {
                         user_id = (uint)user.UserId,
-                        pool_id = PoolId
+                        pool_id = poolId
                     };
 
                     if (user.Placement == 1)
