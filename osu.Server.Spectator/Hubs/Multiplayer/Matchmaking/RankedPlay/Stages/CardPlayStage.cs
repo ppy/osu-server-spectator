@@ -29,13 +29,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Finish()
         {
-            playedCard ??= State.ActiveUser.Hand.First();
-            await Hub.NotifyRankedPlayCardRevealed(Room, null, playedCard, Controller.ItemMap[playedCard]);
-            await Hub.NotifyRankedPlayCardPlayed(Room, playedCard);
-
-            Room.Settings.PlaylistItemId = Controller.ItemMap[playedCard].ID;
-            await Hub.NotifySettingsChanged(Room, true);
-
+            await Controller.ActivateCard(playedCard ?? State.ActiveUser.Hand.First());
             await Controller.GotoStage(RankedPlayStage.FinishCardPlay);
         }
 

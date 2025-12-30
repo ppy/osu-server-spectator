@@ -10,11 +10,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
@@ -310,13 +307,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     {
                         MatchType = bundle.Queue.Pool.type.ToMatchType(),
                         Password = password
-                    },
-                    Playlist = await queryPlaylistItems(bundle.Queue.Pool, group.Users.Select(u => u.Rating).ToArray())
+                    }
                 });
+
+                if (!poolSelectors.TryGetValue(bundle.Queue.Pool.id, out MatchmakingBeatmapSelector? beatmapSelector))
+                    poolSelectors[bundle.Queue.Pool.id] = beatmapSelector = await MatchmakingBeatmapSelector.Initialise(bundle.Queue.Pool, databaseFactory);
 
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
-                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, bundle.Queue.Pool.id, group.Users);
+                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, bundle.Queue.Pool.id, group.Users, beatmapSelector);
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
@@ -341,12 +340,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="users">The users who are allowed to join the room.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
         public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger,
-                                                                            uint poolId, MatchmakingQueueUser[] users)
+                                                                            uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector)
         {
             ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventLogger);
 
             if (room.Controller is IMatchmakingMatchController matchmakingController)
-                await matchmakingController.Initialise(poolId, users);
+                await matchmakingController.Initialise(poolId, users, beatmapSelector);
 
             return room;
         }
@@ -365,24 +364,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="users">The users who are allowed to join the room.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
         public static Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger,
-                                                                      uint poolId, int[] users)
-            => InitialiseRoomAsync(roomId, hub, dbFactory, eventLogger, poolId, users.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray());
-
-        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)
-        {
-            if (!poolSelectors.TryGetValue(pool.id, out MatchmakingBeatmapSelector? selector))
-                poolSelectors[pool.id] = selector = await MatchmakingBeatmapSelector.Initialise(pool, databaseFactory);
-
-            matchmaking_pool_beatmap[] items = selector.GetAppropriateBeatmaps(ratings);
-
-            return items.Select(b => new MultiplayerPlaylistItem
-            {
-                BeatmapID = b.beatmap_id,
-                BeatmapChecksum = b.checksum!,
-                RulesetID = pool.ruleset_id,
-                StarRating = b.difficultyrating,
-                RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(b.mods ?? string.Empty) ?? [],
-            }).ToArray();
-        }
+                                                                      uint poolId, int[] users, MatchmakingBeatmapSelector beatmapSelector)
+            => InitialiseRoomAsync(roomId, hub, dbFactory, eventLogger, poolId, users.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray(), beatmapSelector);
     }
 }

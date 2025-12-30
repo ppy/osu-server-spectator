@@ -8,7 +8,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     public interface IMatchmakingMatchController
     {
-        Task Initialise(uint poolId, MatchmakingQueueUser[] users);
+        Task Initialise(uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector);
 
         void SkipToNextStage(out Task countdownTask);
     }

@@ -118,7 +118,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             this.eventLogger = eventLogger;
 
             room.MatchState = state = new MatchmakingRoomState();
-            room.Settings.PlaylistItemId = room.Playlist[Random.Shared.Next(0, room.Playlist.Count)].ID;
         }
 
         public async Task Initialise()
@@ -127,14 +126,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             await startCountdown(TimeSpan.FromSeconds(stage_waiting_for_clients_join_time), stageRoundWarmupTime);
         }
 
-        public Task Initialise(uint poolId, MatchmakingQueueUser[] users)
+        public async Task Initialise(uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector)
         {
             this.poolId = poolId;
 
+            using (var db = dbFactory.GetInstance())
+            {
+                foreach (var beatmap in beatmapSelector.GetAppropriateBeatmaps(users.Select(u => u.Rating).ToArray()))
+                {
+                    MultiplayerPlaylistItem item = beatmap.ToPlaylistItem();
+                    item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                    room.Playlist.Add(item);
+                }
+            }
+
+            room.Settings.PlaylistItemId = room.Playlist[Random.Shared.Next(0, room.Playlist.Count)].ID;
+
             foreach (var user in users)
                 state.Users.GetOrAdd(user.UserId);
-
-            return Task.CompletedTask;
         }
 
         public Task<bool> UserCanJoin(int userId)

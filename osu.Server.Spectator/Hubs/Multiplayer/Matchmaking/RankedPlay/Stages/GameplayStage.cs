@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 
@@ -25,7 +26,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Finish()
         {
-            await Controller.RemoveCards(State.ActiveUserId, [Room.Settings.PlaylistItemId]);
+            Debug.Assert(Controller.LastActivatedCard != null);
+
+            await Controller.RemoveCards(State.ActiveUserId, [Controller.LastActivatedCard]);
             await Controller.GotoStage(RankedPlayStage.Results);
         }
 
