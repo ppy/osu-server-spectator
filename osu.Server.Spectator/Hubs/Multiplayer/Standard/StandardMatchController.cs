@@ -300,7 +300,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         private async Task updateCurrentItem()
         {
             if (room.State != MultiplayerRoomState.Open)
-                throw new InvalidStateException($"Can't update current item when game is being played");
+                throw new InvalidStateException("Can't update current item when game is being played");
 
             // Pick the next non-expired playlist item by playlist order, or default to the most-recently-expired item.
             MultiplayerPlaylistItem nextItem = UpcomingItems.FirstOrDefault() ?? room.Playlist.OrderByDescending(i => i.PlayedAt).First();
@@ -320,7 +320,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         private async Task updatePlaylistOrder(IDatabaseAccess db)
         {
             if (room.State != MultiplayerRoomState.Open)
-                throw new InvalidStateException($"Can't update playlist order when game is being played");
+                throw new InvalidStateException("Can't update playlist order when game is being played");
 
             List<MultiplayerPlaylistItem> orderedActiveItems;
 
