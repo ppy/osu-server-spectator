@@ -14,8 +14,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 {
     public class MultiplayerAllPlayersRoundRobinQueueTests : MultiplayerTest
     {
-        [Fact]
-        public async Task RoundRobinTestWithEditItemDuringGameplay()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task RoundRobinTestWithEditItemDuringGameplay(bool endWithAbort)
         {
             Database.Setup(d => d.GetBeatmapAsync(3333)).ReturnsAsync(new database_beatmap { checksum = "3333" });
 
@@ -93,13 +95,30 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             // required to complete the breakage (runs updatePlaylistOrder).
             await addItem();
 
-            // user 1: 3, 4
+            // user 1: 3, 4, 5
             // user 2:
             //
             // queue: 3 (interleave by user, order by playlist_item_id, OH NOOOO)
 
             await checkCurrentItem(4);
             await checkOrder(4, 3, 5);
+
+            if (endWithAbort)
+            {
+                await Hub.AbortMatch();
+            }
+            else
+            {
+                await FinishGameplay(ContextUser, ContextUser2);
+
+                await Hub.ChangeState(MultiplayerUserState.Idle);
+
+                SetUserContext(ContextUser2);
+                await Hub.ChangeState(MultiplayerUserState.Idle);
+            }
+
+            await checkCurrentItem(3);
+            await checkOrder(3, 5);
         }
 
         [Fact]
