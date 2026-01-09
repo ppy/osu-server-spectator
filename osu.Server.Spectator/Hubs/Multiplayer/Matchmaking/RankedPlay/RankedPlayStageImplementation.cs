@@ -75,6 +75,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             return Task.CompletedTask;
         }
 
+        public virtual async Task HandleUserLeft(MultiplayerRoomUser user)
+        {
+            await KillUser(user);
+            await CloseMatch();
+        }
+
         public virtual Task HandleUserStateChanged(MultiplayerRoomUser user)
         {
             return Task.CompletedTask;
@@ -93,6 +99,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public virtual Task HandlePlayCard(MultiplayerRoomUser user, RankedPlayCardItem card)
         {
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Kills a user, reducing their life points to zero.
+        /// </summary>
+        protected async Task KillUser(MultiplayerRoomUser user)
+        {
+            State.Users[user.UserID].Life = 0;
+            await Hub.NotifyMatchRoomStateChanged(Room);
+        }
+
+        /// <summary>
+        /// Transitions to the ended stage.
+        /// </summary>
+        protected async Task CloseMatch()
+        {
+            await Controller.GotoStage(RankedPlayStage.Ended);
         }
     }
 }

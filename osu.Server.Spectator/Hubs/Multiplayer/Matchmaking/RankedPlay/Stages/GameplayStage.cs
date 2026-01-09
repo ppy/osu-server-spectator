@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
@@ -35,6 +36,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         public override async Task HandleGameplayCompleted()
         {
             await Finish();
+        }
+
+        public override async Task HandleUserLeft(MultiplayerRoomUser user)
+        {
+            // Kill the user but let the match continue to its natural conclusion (via the results stage).
+            await KillUser(user);
         }
     }
 }

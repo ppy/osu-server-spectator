@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Server.Spectator.Database.Models;
 
@@ -19,8 +20,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override RankedPlayStage Stage => RankedPlayStage.Results;
         protected override TimeSpan Duration => TimeSpan.FromSeconds(10);
-
-        private bool anyPlayerDefeated;
 
         protected override async Task Begin()
         {
@@ -47,18 +46,31 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
                 var userInfo = State.Users[(int)score.user_id];
                 userInfo.Life = Math.Max(0, userInfo.Life - (int)damage);
-
-                anyPlayerDefeated |= userInfo.Life == 0;
             }
         }
 
         protected override async Task Finish()
         {
-            // Todo: This only works for 2 players. This will need to be adjusted if we ever have more.
-            if (anyPlayerDefeated)
-                await Controller.GotoStage(RankedPlayStage.Ended);
-            else
+            if (hasGameplayRoundsRemaining())
                 await Controller.GotoStage(RankedPlayStage.RoundWarmup);
+            else
+                await Controller.GotoStage(RankedPlayStage.Ended);
+        }
+
+        public override async Task HandleUserLeft(MultiplayerRoomUser user)
+        {
+            // Allow players to leave early without incurring a loss if they know gameplay won't continue.
+            if (hasGameplayRoundsRemaining())
+                await KillUser(user);
+
+            // Remain in the results stage, which will naturally transition to the ended stage once the countdown expires.
+        }
+
+        private bool hasGameplayRoundsRemaining()
+        {
+            int countPlayersAlive = State.Users.Count(u => u.Value.Life > 0);
+            int countCardsRemaining = Controller.DeckCount + State.Users.Sum(u => u.Value.Hand.Count);
+            return countPlayersAlive > 1 && countCardsRemaining > 0;
         }
     }
 }

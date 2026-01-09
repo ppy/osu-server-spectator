@@ -39,5 +39,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             if (Room.Users.Count == State.Users.Count)
                 await Finish();
         }
+
+        public override async Task HandleUserLeft(MultiplayerRoomUser user)
+        {
+            // Allow users to quit early without incurring a loss, but the match can no longer proceed.
+            await CloseMatch();
+        }
     }
 }

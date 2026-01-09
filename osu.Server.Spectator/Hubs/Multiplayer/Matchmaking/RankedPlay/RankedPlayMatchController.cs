@@ -39,6 +39,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public RankedPlayCardItem? LastActivatedCard { get; private set; }
 
         /// <summary>
+        /// The number of cards in the deck.
+        /// </summary>
+        public int DeckCount => deck.Count;
+
+        /// <summary>
         /// Mapping of cards to their associated effect.
         /// </summary>
         private readonly Dictionary<RankedPlayCardItem, MultiplayerPlaylistItem> cardToEffectMap = [];
@@ -148,7 +153,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
         async Task IMatchController.HandleUserLeft(MultiplayerRoomUser user)
         {
-            await GotoStage(RankedPlayStage.Ended);
+            await stageImplementation.HandleUserLeft(user);
         }
 
         Task IMatchController.AddPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
