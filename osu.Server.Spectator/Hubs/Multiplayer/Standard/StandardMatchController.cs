@@ -198,7 +198,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
                 var existingItem = room.Playlist.SingleOrDefault(i => i.ID == item.ID);
 
-                if (existingItem == CurrentItem)
+                if (ReferenceEquals(existingItem, CurrentItem))
                 {
                     if (room.State != MultiplayerRoomState.Open)
                         throw new InvalidStateException("The current item in the room cannot be edited when currently being played.");
@@ -235,7 +235,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             if (item == null)
                 throw new InvalidStateException("Item does not exist in the room.");
 
-            if (item == CurrentItem)
+            if (ReferenceEquals(item, CurrentItem))
             {
                 // The current item check is only an optimisation for this condition. It is guaranteed for the single item in the room to be the current item.
                 if (UpcomingItems.Count() == 1)
