@@ -25,9 +25,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Begin()
         {
-            // Check if the match has started.
+            foreach ((_, RankedPlayUserInfo user) in State.Users)
+                user.RatingAfter = user.Rating;
+
+            // Forego any rating calculations if the match hasn't started yet.
+            // Naturally, this also means we don't have a winner to crown.
             if (State.CurrentRound == 0)
                 return;
+
+            int maxLife = State.Users.Max(u => u.Value.Life);
+            var winners = State.Users.Where(u => u.Value.Life == maxLife).ToArray();
+            if (winners.Length == 1)
+                State.WinningUserId = winners[0].Key;
 
             using (var db = DbFactory.GetInstance())
             {
@@ -41,10 +50,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
                 List<matchmaking_user_stats> stats = [];
                 List<ITeam> teams = [];
-                List<double> ranks = [];
-                int rankIndex = -1;
+                List<double> scores = [];
 
-                foreach ((int userId, _) in State.Users.OrderByDescending(u => u.Value.Life))
+                foreach ((int userId, RankedPlayUserInfo user) in State.Users)
                 {
                     matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(userId, Controller.PoolId) ?? new matchmaking_user_stats
                     {
@@ -54,16 +62,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
                     stats.Add(userStats);
                     teams.Add(new Team { Players = [model.Rating(userStats.EloData.Rating.Mu, userStats.EloData.Rating.Sig)] });
-                    ranks.Add(++rankIndex);
+                    scores.Add(user.Life);
                 }
 
-                ITeam[] newRatings = model.Rate(teams, ranks).ToArray();
+                IRating[] newRatings = model.Rate(teams, scores: scores).Select(t => t.Players.Single()).ToArray();
 
                 for (int i = 0; i < stats.Count; i++)
                 {
                     stats[i].EloData.ContestCount++;
-                    stats[i].EloData.Rating = new EloRating(newRatings[i].Players.Single().Mu, newRatings[i].Players.Single().Sigma);
+                    stats[i].EloData.Rating = new EloRating(newRatings[i].Mu, newRatings[i].Sigma);
                     await db.UpdateMatchmakingUserStatsAsync(stats[i]);
+
+                    State.Users[(int)stats[i].user_id].RatingAfter = (int)Math.Round(newRatings[i].Mu);
                 }
             }
         }
