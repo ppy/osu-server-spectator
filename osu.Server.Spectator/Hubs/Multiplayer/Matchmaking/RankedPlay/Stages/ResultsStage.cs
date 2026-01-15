@@ -35,8 +35,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                     scores.Add(new SoloScore { user_id = (uint)userId });
             }
 
-            // If all players have 0 resulting score, each shall take 1 point of damage (before multipliers).
-            int maxTotalScore = (int)Math.Max(1, scores.Select(s => s.total_score).Max());
+            int maxTotalScore = (int)scores.Select(s => s.total_score).Max();
 
             foreach (var score in scores)
             {

@@ -53,6 +53,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// </summary>
         protected async Task FinishWithCountdown(TimeSpan duration)
         {
+            // The code below normally serves a second purpose to cancel any existing countdown.
+            await Room.StopCountdown(Room.FindCountdownOfType<RankedPlayStageCountdown>());
+
+            if (duration < TimeSpan.Zero || duration == TimeSpan.MaxValue)
+                return;
+
             await Room.StartCountdown(new RankedPlayStageCountdown
             {
                 Stage = Stage,

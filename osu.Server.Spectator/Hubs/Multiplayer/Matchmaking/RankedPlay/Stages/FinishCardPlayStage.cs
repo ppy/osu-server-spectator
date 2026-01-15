@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
+using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 {
@@ -32,7 +33,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         public override async Task HandleUserStateChanged(MultiplayerRoomUser user)
         {
-            if (Room.Users.All(u => u.State == MultiplayerUserState.Ready))
+            if (Room.Users.All(u => u.IsReadyForGameplay()))
                 await FinishWithCountdown(TimeSpan.FromSeconds(3));
         }
     }

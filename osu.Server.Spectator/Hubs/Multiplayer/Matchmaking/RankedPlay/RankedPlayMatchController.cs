@@ -44,6 +44,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public int DeckCount => deck.Count;
 
         /// <summary>
+        /// The current stage implementation.
+        /// </summary>
+        public RankedPlayStageImplementation Stage { get; private set; }
+
+        /// <summary>
         /// Mapping of cards to their associated effect.
         /// </summary>
         private readonly Dictionary<RankedPlayCardItem, MultiplayerPlaylistItem> cardToEffectMap = [];
@@ -53,8 +58,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// </summary>
         private readonly List<RankedPlayCardItem> deck = [];
 
-        private RankedPlayStageImplementation stageImplementation;
-
         public RankedPlayMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger)
         {
             Room = room;
@@ -62,7 +65,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             DbFactory = dbFactory;
             EventLogger = eventLogger;
             State = new RankedPlayRoomState();
-            stageImplementation = new EmptyStage(this);
+            Stage = new EmptyStage(this);
 
             room.MatchState = State;
         }
@@ -137,7 +140,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 await Hub.NotifyPlaylistItemChanged(Room, CurrentItem, true);
             }
 
-            await stageImplementation.HandleGameplayCompleted();
+            await Stage.HandleGameplayCompleted();
         }
 
         Task IMatchController.HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
@@ -148,12 +151,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         async Task IMatchController.HandleUserJoined(MultiplayerRoomUser user)
         {
             await EventLogger.LogMatchmakingUserJoinAsync(Room.RoomID, user.UserID);
-            await stageImplementation.HandleUserJoined(user);
+            await Stage.HandleUserJoined(user);
         }
 
         async Task IMatchController.HandleUserLeft(MultiplayerRoomUser user)
         {
-            await stageImplementation.HandleUserLeft(user);
+            await Stage.HandleUserLeft(user);
         }
 
         Task IMatchController.AddPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
@@ -173,7 +176,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
         async Task IMatchController.HandleUserStateChanged(MultiplayerRoomUser user)
         {
-            await stageImplementation.HandleUserStateChanged(user);
+            await Stage.HandleUserStateChanged(user);
         }
 
         public void SkipToNextStage(out Task countdownTask)
@@ -186,17 +189,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
         public async Task DiscardCards(MultiplayerRoomUser user, RankedPlayCardItem[] cards)
         {
-            await stageImplementation.HandleDiscardCards(user, cards);
+            await Stage.HandleDiscardCards(user, cards);
         }
 
         public async Task PlayCard(MultiplayerRoomUser user, RankedPlayCardItem card)
         {
-            await stageImplementation.HandlePlayCard(user, card);
+            await Stage.HandlePlayCard(user, card);
         }
 
         public async Task GotoStage(RankedPlayStage stage)
         {
-            stageImplementation = stage switch
+            Stage = stage switch
             {
                 RankedPlayStage.WaitForJoin => new WaitForJoinStage(this),
                 RankedPlayStage.RoundWarmup => new RoundWarmupStage(this),
@@ -211,7 +214,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, null)
             };
 
-            await stageImplementation.Enter();
+            await Stage.Enter();
         }
 
         /// <summary>
