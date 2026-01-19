@@ -133,6 +133,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        /// <summary>
+        /// A user has left the given room on their own accord.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="user">The user who left.</param>
+        public async Task OnUserLeftAsync(long roomId, MultiplayerRoomUser user)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserLeft), user);
+            await logToDatabase(new multiplayer_realtime_room_event
+            {
+                event_type = "player_left",
+                room_id = roomId,
+                user_id = user.UserID,
+            });
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try

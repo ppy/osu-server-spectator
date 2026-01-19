@@ -210,7 +210,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task LeaveRoom()
         {
             Log("Requesting to leave room");
-            long roomId;
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -219,11 +218,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (userUsage.Item.CurrentRoomID == null)
                     return;
 
-                roomId = userUsage.Item.CurrentRoomID.Value;
                 await leaveRoom(userUsage.Item, false);
             }
-
-            await multiplayerEventLogger.LogPlayerLeftAsync(roomId, Context.GetUserId());
         }
 
         public async Task InvitePlayer(int userId)
@@ -1000,7 +996,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     await Clients.Group(GetGroupId(room.RoomID)).UserKicked(user);
                 }
                 else
-                    await Clients.Group(GetGroupId(room.RoomID)).UserLeft(user);
+                    await multiplayerEventDispatcher.OnUserLeftAsync(room.RoomID, user);
             }
             finally
             {
