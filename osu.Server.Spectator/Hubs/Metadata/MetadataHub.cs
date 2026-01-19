@@ -60,25 +60,7 @@ namespace osu.Server.Spectator.Hubs.Metadata
                 await logLogin(usage);
                 await Clients.Caller.DailyChallengeUpdated(dailyChallengeUpdater.Current);
 
-                using (var db = databaseFactory.GetInstance())
-                {
-                    foreach (int friendId in await db.GetUserFriendsAsync(usage.Item.UserId))
-                    {
-                        // Once upon a time users were able to add themselves as friends.
-                        // This errors during the state retrieval below, so let's not support it.
-                        if (friendId == usage.Item.UserId)
-                            continue;
-
-                        await Groups.AddToGroupAsync(Context.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
-
-                        // Check if the friend is online, and if they are, broadcast to the connected user.
-                        using (var friendUsage = await TryGetStateFromUser(friendId))
-                        {
-                            if (friendUsage?.Item != null && shouldBroadcastPresenceToOtherUsers(friendUsage.Item))
-                                await Clients.Caller.FriendPresenceUpdated(friendId, friendUsage.Item.ToUserPresence());
-                        }
-                    }
-                }
+                await refreshFriends(usage.Item);
             }
         }
 
@@ -238,6 +220,49 @@ namespace osu.Server.Spectator.Hubs.Metadata
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, MultiplayerRoomWatchersGroup(id));
             await scoreProcessedSubscriber.UnregisterFromMultiplayerRoomAsync(Context.GetUserId(), id);
+        }
+
+        public async Task RefreshFriends()
+        {
+            using (var usage = await GetOrCreateLocalUserState())
+            {
+                Debug.Assert(usage.Item != null);
+                await refreshFriends(usage.Item);
+            }
+        }
+
+        private async Task refreshFriends(MetadataClientState state)
+        {
+            // Remove the caller from any friend tracking groups.
+            foreach (int friendId in state.FriendIds)
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
+
+            int[] newFriendIds;
+
+            using (var db = databaseFactory.GetInstance())
+            {
+                newFriendIds = (await db.GetUserFriendsAsync(state.UserId))
+                               // Once upon a time users were able to add themselves as friends.
+                               // This errors during the state retrieval below, so let's not support it.
+                               .Where(u => u != state.UserId)
+                               .ToArray();
+            }
+
+            // Add the caller to the friend tracking groups.
+            foreach (int friendId in newFriendIds)
+                await Groups.AddToGroupAsync(Context.ConnectionId, FRIEND_PRESENCE_WATCHERS_GROUP(friendId));
+
+            // Broadcast presence from any online friends to the caller.
+            foreach (int friendId in newFriendIds.Except(state.FriendIds))
+            {
+                using (var friendUsage = await TryGetStateFromUser(friendId))
+                {
+                    if (friendUsage?.Item != null && shouldBroadcastPresenceToOtherUsers(friendUsage.Item))
+                        await Clients.Caller.FriendPresenceUpdated(friendId, friendUsage.Item.ToUserPresence());
+                }
+            }
+
+            state.FriendIds = newFriendIds;
         }
 
         protected override async Task CleanUpState(MetadataClientState state)

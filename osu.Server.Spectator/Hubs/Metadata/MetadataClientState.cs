@@ -13,6 +13,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         public string? VersionHash { get; set; }
 
+        public int[] FriendIds { get; set; } = [];
+
         public MetadataClientState(in string connectionId, in int userId, in string? versionHash)
             : base(in connectionId, in userId)
         {
