@@ -272,8 +272,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task TransferHost(int userId)
         {
-            long roomId;
-
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
@@ -286,7 +284,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         throw new InvalidOperationException("Attempted to operate on a null room");
 
                     Log(room, $"Transferring host from {room.Host?.UserID} to {userId}");
-                    roomId = room.RoomID;
 
                     ensureIsHost(room);
 
@@ -298,8 +295,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     await setNewHost(room, newHost);
                 }
             }
-
-            await multiplayerEventLogger.LogHostChangedAsync(roomId, userId);
         }
 
         public async Task KickUser(int userId)
@@ -813,7 +808,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
         {
             room.Host = newHost;
-            await Clients.Group(GetGroupId(room.RoomID)).HostChanged(newHost.UserID);
+            await multiplayerEventDispatcher.OnHostChangedAsync(room.RoomID, newHost.UserID);
 
             await updateDatabaseHost(room);
         }

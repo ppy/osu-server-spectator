@@ -179,6 +179,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerHubContext.Clients.User(invitedUserId.ToString()).SendAsync(nameof(IMultiplayerClient.Invited), invitedBy, roomId, password);
         }
 
+        /// <summary>
+        /// The user with the given ID was made host of the given room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="userId">The ID of the user who was made host.</param>
+        public async Task OnHostChangedAsync(long roomId, int userId)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.HostChanged), userId);
+            await logToDatabase(new multiplayer_realtime_room_event
+            {
+                event_type = "host_changed",
+                room_id = roomId,
+                user_id = userId,
+            });
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try
