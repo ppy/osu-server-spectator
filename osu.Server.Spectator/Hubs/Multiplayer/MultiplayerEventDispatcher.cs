@@ -87,6 +87,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
         }
 
+        /// <summary>
+        /// The <see cref="MultiplayerRoom.Settings"/> of the given room changed.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="newSettings">The new settings of the room.</param>
+        public async Task OnRoomSettingsChangedAsync(long roomId, MultiplayerRoomSettings newSettings)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.SettingsChanged), newSettings);
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try

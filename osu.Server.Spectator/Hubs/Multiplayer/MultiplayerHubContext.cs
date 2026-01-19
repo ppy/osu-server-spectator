@@ -101,7 +101,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
             await UnreadyAllUsers(room, playlistItemChanged);
 
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.SettingsChanged), room.Settings);
+            await eventDispatcher.OnRoomSettingsChangedAsync(room.RoomID, room.Settings);
         }
 
         public Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId)
