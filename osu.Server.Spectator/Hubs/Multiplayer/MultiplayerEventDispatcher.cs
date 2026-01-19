@@ -282,6 +282,31 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerHubContext.Clients.User(userId.ToString()).SendAsync(nameof(IMultiplayerClient.GameplayStarted));
         }
 
+        /// <summary>
+        /// A match in the given room has been aborted.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="playlistItemId">The ID of the playlist item which was being played.</param>
+        public async Task OnMatchAbortedAsync(long roomId, long playlistItemId)
+        {
+            await logToDatabase(new multiplayer_realtime_room_event
+            {
+                event_type = "game_aborted",
+                room_id = roomId,
+                playlist_item_id = playlistItemId,
+            });
+        }
+
+        /// <summary>
+        /// Communicates the reasoning for aborting the match to the given room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="abortReason">The reason given for aborting the match.</param>
+        public async Task OnMatchAbortReasonGivenAsync(long roomId, GameplayAbortReason abortReason)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.GameplayAborted), abortReason);
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try

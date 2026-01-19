@@ -349,7 +349,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             else
             {
                 await ChangeRoomState(room, MultiplayerRoomState.Open);
-                await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
+                await eventDispatcher.OnMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
                 await room.Controller.HandleGameplayCompleted();
             }
         }
@@ -397,7 +397,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         if (anyUserFinishedPlay)
                             await multiplayerEventLogger.LogGameCompletedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
                         else
-                            await multiplayerEventLogger.LogGameAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
+                            await eventDispatcher.OnMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
 
                         await room.Controller.HandleGameplayCompleted();
                     }
