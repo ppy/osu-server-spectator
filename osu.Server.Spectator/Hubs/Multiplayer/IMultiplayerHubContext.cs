@@ -110,8 +110,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room);
 
-        Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId);
-
         Task CheckVotesToSkipPassed(ServerMultiplayerRoom room);
 
         void Log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information);

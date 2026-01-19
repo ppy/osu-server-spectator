@@ -376,11 +376,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        public async Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId)
-        {
-            await eventDispatcher.OnPlayerDeselectedBeatmapAsync(room.RoomID, userId, playlistItemId);
-        }
-
         public async Task CheckVotesToSkipPassed(ServerMultiplayerRoom room)
         {
             int countVotedUsers = room.Users.Count(u => u.State == MultiplayerUserState.Playing && u.VotedToSkipIntro);

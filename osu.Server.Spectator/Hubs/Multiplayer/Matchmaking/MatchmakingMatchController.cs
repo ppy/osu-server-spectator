@@ -261,7 +261,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 if (existingPick == playlistItemId)
                     return;
 
-                await hub.NotifyMatchmakingItemDeselected(room, user.UserID, existingPick);
+                await eventDispatcher.OnPlayerDeselectedBeatmapAsync(room.RoomID, user.UserID, existingPick);
             }
 
             userPicks[user.UserID] = playlistItemId;
