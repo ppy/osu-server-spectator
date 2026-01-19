@@ -406,6 +406,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemDeselected), userId, playlistItemId);
         }
 
+        /// <summary>
+        /// Records a user's individual beatmap selection.
+        /// </summary>
+        public async Task OnPlayerBeatmapPickFinalised(long roomId, int userId, long playlistItemId)
+        {
+            await logToDatabase(new matchmaking_room_event
+            {
+                event_type = "user_pick",
+                room_id = roomId,
+                user_id = userId,
+                playlist_item_id = playlistItemId
+            });
+        }
+
         #endregion
 
         #region Database logging helpers

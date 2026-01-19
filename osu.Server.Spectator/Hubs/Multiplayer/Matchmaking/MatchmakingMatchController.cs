@@ -314,7 +314,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task stageServerBeatmapFinalised(ServerMultiplayerRoom _)
         {
             foreach ((int userId, long playlistItemId) in userPicks)
-                await eventLogger.LogMatchmakingUserPickAsync(room.RoomID, userId, playlistItemId);
+                await eventDispatcher.OnPlayerBeatmapPickFinalised(room.RoomID, userId, playlistItemId);
 
             long[] pickIds = userPicks.Values.ToArray();
 

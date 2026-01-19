@@ -24,17 +24,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
-        /// Records a user's individual beatmap selection.
-        /// </summary>
-        public Task LogMatchmakingUserPickAsync(long roomId, int userId, long playlistItemId) => logEvent(new matchmaking_room_event
-        {
-            event_type = "user_pick",
-            room_id = roomId,
-            user_id = userId,
-            playlist_item_id = playlistItemId
-        });
-
-        /// <summary>
         /// Records the final gameplay beatmap as selected by the server.
         /// </summary>
         public Task LogMatchmakingGameplayBeatmapAsync(long roomId, long playlistItemId) => logEvent(new matchmaking_room_event
