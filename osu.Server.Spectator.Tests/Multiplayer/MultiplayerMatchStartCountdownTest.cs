@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
+using osu.Game.Online.Rooms;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -37,7 +38,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task GameplayStartsWhenCountdownEnds()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromSeconds(3) });
 
@@ -62,7 +63,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 Assert.Null(room.FindCountdownOfType<MatchStartCountdown>());
-                Receiver.Verify(r => r.LoadRequested(), Times.Once);
+                UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
 
@@ -70,7 +71,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task GameplayStartsWhenCountdownFinished()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMinutes(1) });
 
@@ -96,7 +97,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 Assert.Null(room.FindCountdownOfType<MatchStartCountdown>());
-                Receiver.Verify(r => r.LoadRequested(), Times.Once);
+                UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
 
@@ -130,7 +131,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task NewCountdownOverridesExisting()
         {
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             // Start first countdown.
 
@@ -185,7 +186,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Assert.Null(room.FindCountdownOfType<MatchStartCountdown>());
                 Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStoppedEvent>(e => e.ID == secondCountdown.ID)), Times.Once);
-                Receiver.Verify(r => r.LoadRequested(), Times.Once);
+                UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
 
@@ -250,14 +251,13 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
-
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
                 Assert.NotNull(usage.Item!.FindCountdownOfType<MatchStartCountdown>());
 
             await skipToEndOfCountdown();
-            Receiver.Verify(r => r.LoadRequested(), Times.Once);
+            UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
         [Fact(Timeout = test_timeout)]
@@ -265,16 +265,18 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeSettings(new MultiplayerRoomSettings { AutoStartDuration = TimeSpan.FromMinutes(1) });
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
+            await MarkCurrentUserReadyAndAvailable();
 
             using (var usage = await Hub.GetRoom(ROOM_ID))
                 Assert.NotNull(usage.Item!.FindCountdownOfType<MatchStartCountdown>());
 
             await skipToEndOfCountdown();
-            Receiver.Verify(r => r.LoadRequested(), Times.Once);
+            UserReceiver.Verify(r => r.LoadRequested(), Times.Once);
+            User2Receiver.Verify(r => r.LoadRequested(), Times.Once);
         }
 
         [Fact(Timeout = test_timeout)]
