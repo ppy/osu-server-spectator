@@ -421,7 +421,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             int countGameplayUsers = room.Users.Count(u => u.State == MultiplayerUserState.Playing);
 
             if (countVotedUsers >= countGameplayUsers / 2 + 1)
-                await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.VoteToSkipIntroPassed));
+                await eventDispatcher.OnVoteToSkipIntroPassedAsync(room.RoomID);
         }
 
         public void Log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)
