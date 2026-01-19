@@ -107,6 +107,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchRoomStateChanged), newMatchState);
         }
 
+        /// <summary>
+        /// A <see cref="MatchServerEvent"/> has occurred in the room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="e">The relevant match event.</param>
+        public async Task OnMatchEventAsync(long roomId, MatchServerEvent e)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchEvent), e);
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try

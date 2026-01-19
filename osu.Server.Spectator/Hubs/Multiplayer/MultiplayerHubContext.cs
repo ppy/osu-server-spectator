@@ -60,7 +60,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public Task NotifyNewMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
         {
-            return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchEvent), e);
+            return eventDispatcher.OnMatchEventAsync(room.RoomID, e);
         }
 
         public Task NotifyMatchRoomStateChanged(ServerMultiplayerRoom room)
