@@ -348,6 +348,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// Signals the given user to abort gameplay for the given <paramref name="abortReason"/>.
+        /// </summary>
+        public async Task OnGameplayAbortedAsync(int userId, GameplayAbortReason abortReason)
+        {
+            await multiplayerHubContext.Clients.User(userId.ToString()).SendAsync(nameof(IMultiplayerClient.GameplayAborted), abortReason);
+        }
+
+        /// <summary>
         /// A match in the given room has been aborted.
         /// </summary>
         /// <param name="roomId">The ID of the relevant room.</param>
