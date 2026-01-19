@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
@@ -215,6 +216,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task OnMatchUserStateChangedAsync(long roomId, int userId, MatchUserState? newMatchUserState)
         {
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchUserStateChanged), userId, newMatchUserState);
+        }
+
+        /// <summary>
+        /// A user's <see cref="BeatmapAvailability"/> in a room has changed.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="userId">The ID of the relevant user.</param>
+        /// <param name="newBeatmapAvailability">The new beatmap availability for the user in the room.</param>
+        public async Task OnUserBeatmapAvailabilityChangedAsync(long roomId, int userId, BeatmapAvailability newBeatmapAvailability)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserBeatmapAvailabilityChanged), userId, newBeatmapAvailability);
         }
 
         private async Task logToDatabase(multiplayer_realtime_room_event ev)

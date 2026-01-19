@@ -252,7 +252,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             user.BeatmapAvailability = newBeatmapAvailability;
 
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserBeatmapAvailabilityChanged), user.UserID, user.BeatmapAvailability);
+            await eventDispatcher.OnUserBeatmapAvailabilityChangedAsync(room.RoomID, user.UserID, user.BeatmapAvailability);
 
             await room.Controller.HandleUserStateChanged(user);
         }
