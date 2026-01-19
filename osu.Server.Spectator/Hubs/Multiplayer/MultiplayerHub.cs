@@ -799,7 +799,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             using (var db = databaseFactory.GetInstance())
                 await db.EndMatchAsync(room);
 
-            await multiplayerEventLogger.LogRoomDisbandedAsync(room.RoomID, Context.GetUserId());
+            await multiplayerEventDispatcher.OnRoomDisbandedAsync(room.RoomID, Context.GetUserId());
         }
 
         private async Task addDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)

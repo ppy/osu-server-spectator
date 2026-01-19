@@ -61,6 +61,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        /// <summary>
+        /// A multiplayer room was disbanded.
+        /// </summary>
+        /// <param name="roomId">The ID of the disbanded room.</param>
+        /// <param name="userId">The ID of the user that disbanded the room.</param>
+        public async Task OnRoomDisbandedAsync(long roomId, int userId)
+        {
+            await logToDatabase(new multiplayer_realtime_room_event
+            {
+                event_type = "room_disbanded",
+                room_id = roomId,
+                user_id = userId,
+            });
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try
