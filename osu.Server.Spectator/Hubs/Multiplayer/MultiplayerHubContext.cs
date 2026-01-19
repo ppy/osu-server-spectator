@@ -54,11 +54,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
         }
 
-        public Task NotifyPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId)
-        {
-            return eventDispatcher.OnPlaylistItemRemovedAsync(room.RoomID, playlistItemId);
-        }
-
         public async Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged)
         {
             if (item.ID == room.Settings.PlaylistItemId)

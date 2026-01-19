@@ -275,7 +275,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
             // It's important for clients to be notified of the removal AFTER settings are changed
             // so that PlaylistItemId always points to a valid item in the playlist.
-            await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
+            await eventDispatcher.OnPlaylistItemRemovedAsync(room.RoomID, playlistItemId);
         }
 
         public abstract MatchStartedEventDetail GetMatchDetails();
