@@ -103,6 +103,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
         private readonly MultiplayerEventLogger eventLogger;
+        private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly MatchmakingRoomState state;
         private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
 
@@ -110,12 +111,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private bool anyPlayerQuit;
         private bool statsUpdatePending = true;
 
-        public MatchmakingMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger)
+        public MatchmakingMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger, MultiplayerEventDispatcher eventDispatcher)
         {
             this.room = room;
             this.hub = hub;
             this.dbFactory = dbFactory;
             this.eventLogger = eventLogger;
+            this.eventDispatcher = eventDispatcher;
 
             room.MatchState = state = new MatchmakingRoomState();
             room.Settings.PlaylistItemId = room.Playlist[Random.Shared.Next(0, room.Playlist.Count)].ID;
@@ -181,7 +183,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             switch (state.Stage)
             {
                 case MatchmakingStage.WaitingForClientsJoin:
-                    await eventLogger.LogMatchmakingUserJoinAsync(room.RoomID, user.UserID);
+                    await eventDispatcher.OnPlayerJoinedMatchmakingRoomAsync(room.RoomID, user.UserID);
 
                     if (++joinedUserCount >= state.Users.Count)
                         await stageRoundWarmupTime(room);

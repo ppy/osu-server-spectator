@@ -176,7 +176,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Rooms,
                 HubContext,
                 new MemoryCache(new MemoryCacheOptions()),
-                EventLogger);
+                EventLogger,
+                EventDispatcher);
 
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,

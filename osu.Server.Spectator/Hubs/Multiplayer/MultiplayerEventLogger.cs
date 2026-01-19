@@ -24,16 +24,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
-        /// Records a user joining a matchmaking room.
-        /// </summary>
-        public Task LogMatchmakingUserJoinAsync(long roomId, int userId) => logEvent(new matchmaking_room_event
-        {
-            event_type = "user_join",
-            room_id = roomId,
-            user_id = userId
-        });
-
-        /// <summary>
         /// Records a user's individual beatmap selection.
         /// </summary>
         public Task LogMatchmakingUserPickAsync(long roomId, int userId, long playlistItemId) => logEvent(new matchmaking_room_event

@@ -385,6 +385,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        public async Task OnPlayerJoinedMatchmakingRoomAsync(long roomId, int userId)
+        {
+            await logToDatabase(new matchmaking_room_event
+            {
+                event_type = "user_join",
+                room_id = roomId,
+                user_id = userId
+            });
+        }
+
         #endregion
 
         #region Database logging helpers

@@ -320,7 +320,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
-                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id);
+                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, eventDispatcher, group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id);
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
@@ -341,13 +341,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="hub">The multiplayer hub context.</param>
         /// <param name="dbFactory">The database factory.</param>
         /// <param name="eventLogger">The event logger.</param>
+        /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
         /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
         /// <param name="poolId">The pool ID.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
         public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger,
-                                                                            int[] eligibleUserIds, uint poolId)
+                                                                            MultiplayerEventDispatcher eventDispatcher, int[] eligibleUserIds, uint poolId)
         {
-            ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventLogger);
+            ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventLogger, eventDispatcher);
 
             if (room.MatchState is not MatchmakingRoomState matchmakingState)
                 throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid state).");
