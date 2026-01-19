@@ -382,7 +382,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (newState == MultiplayerUserState.Spectating
                         && (room.State == MultiplayerRoomState.WaitingForLoad || room.State == MultiplayerRoomState.Playing))
                     {
-                        await Clients.Caller.LoadRequested();
+                        await multiplayerEventDispatcher.OnSpectatedMatchInProgressAsync(user.UserID);
                     }
 
                     await HubContext.UpdateRoomStateIfRequired(room);
