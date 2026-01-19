@@ -240,7 +240,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             user.State = state;
 
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), user.UserID, user.State);
+            await eventDispatcher.OnUserStateChangedAsync(room.RoomID, user.UserID, user.State);
 
             await room.Controller.HandleUserStateChanged(user);
         }
