@@ -216,7 +216,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserModsChanged), user.UserID, user.Mods);
             }
 
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserStyleChanged), user.UserID, beatmapId, rulesetId);
+            await eventDispatcher.OnUserStyleChangedAsync(room.RoomID, user.UserID, beatmapId, rulesetId);
         }
 
         public async Task ChangeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user)

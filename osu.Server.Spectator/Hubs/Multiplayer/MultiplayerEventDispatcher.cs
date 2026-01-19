@@ -229,6 +229,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserBeatmapAvailabilityChanged), userId, newBeatmapAvailability);
         }
 
+        /// <summary>
+        /// A user's selected style in a room has changed.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="userId">The ID of the relevant user.</param>
+        /// <param name="beatmapId">The ID of the difficulty selected by the user.</param>
+        /// <param name="rulesetId">The ID of the ruleset selected by the user.</param>
+        public async Task OnUserStyleChangedAsync(long roomId, int userId, int? beatmapId, int? rulesetId)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserStyleChanged), userId, beatmapId, rulesetId);
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try
