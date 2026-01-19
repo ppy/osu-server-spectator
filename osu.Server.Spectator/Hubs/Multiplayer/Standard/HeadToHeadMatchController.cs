@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         private readonly MultiplayerEventDispatcher eventDispatcher;
 
         public HeadToHeadMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
-            : base(room, hub, dbFactory)
+            : base(room, hub, dbFactory, eventDispatcher)
         {
             this.room = room;
             this.hub = hub;

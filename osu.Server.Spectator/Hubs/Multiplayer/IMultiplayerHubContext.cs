@@ -18,13 +18,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     public interface IMultiplayerHubContext
     {
         /// <summary>
-        /// Notifies users in a room that a playlist item has been added.
-        /// </summary>
-        /// <param name="room">The room to send the event to.</param>
-        /// <param name="item">The added item.</param>
-        Task NotifyPlaylistItemAdded(ServerMultiplayerRoom room, MultiplayerPlaylistItem item);
-
-        /// <summary>
         /// Notifies users in a room that a playlist item has been removed.
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
