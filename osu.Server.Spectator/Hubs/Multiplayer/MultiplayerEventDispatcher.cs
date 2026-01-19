@@ -273,6 +273,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        /// <summary>
+        /// Signals the given user that they can begin gameplay.
+        /// </summary>
+        /// <param name="userId">The ID of the relevant user.</param>
+        public async Task OnGameplayStartedAsync(int userId)
+        {
+            await multiplayerHubContext.Clients.User(userId.ToString()).SendAsync(nameof(IMultiplayerClient.GameplayStarted));
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try

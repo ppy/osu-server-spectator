@@ -333,7 +333,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (user.CanStartGameplay())
                 {
                     await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Playing);
-                    await context.Clients.Client(connectionId).SendAsync(nameof(IMultiplayerClient.GameplayStarted));
+                    await eventDispatcher.OnGameplayStartedAsync(user.UserID);
                     anyUserPlaying = true;
                 }
                 else if (user.State == MultiplayerUserState.WaitingForLoad)
