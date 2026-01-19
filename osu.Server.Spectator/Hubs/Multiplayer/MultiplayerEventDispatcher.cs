@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         public async Task SubscribePlayerAsync(long roomId, string connectionId)
         {
-            await multiplayerHubContext.Groups.AddToGroupAsync(connectionId, MultiplayerHub.GetGroupId(roomId));
+            await multiplayerHubContext.Groups.AddToGroupAsync(connectionId, GetGroupId(roomId));
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         public async Task UnsubscribePlayerAsync(long roomId, string connectionId)
         {
-            await multiplayerHubContext.Groups.RemoveFromGroupAsync(connectionId, MultiplayerHub.GetGroupId(roomId));
+            await multiplayerHubContext.Groups.RemoveFromGroupAsync(connectionId, GetGroupId(roomId));
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="newState">The new state of the room.</param>
         public async Task OnRoomStateChangedAsync(long roomId, MultiplayerRoomState newState)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="newSettings">The new settings of the room.</param>
         public async Task OnRoomSettingsChangedAsync(long roomId, MultiplayerRoomSettings newSettings)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.SettingsChanged), newSettings);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.SettingsChanged), newSettings);
         }
 
         /// <summary>
@@ -109,7 +109,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="newMatchState">The new match state of the room.</param>
         public async Task OnMatchRoomStateChangedAsync(long roomId, MatchRoomState? newMatchState)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchRoomStateChanged), newMatchState);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchRoomStateChanged), newMatchState);
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="e">The relevant match event.</param>
         public async Task OnMatchEventAsync(long roomId, MatchServerEvent e)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchEvent), e);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchEvent), e);
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="user">The user who joined.</param>
         public async Task OnUserJoinedAsync(long roomId, MultiplayerRoomUser user)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserJoined), user);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserJoined), user);
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_joined",
@@ -145,7 +145,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="user">The user who left.</param>
         public async Task OnUserLeftAsync(long roomId, MultiplayerRoomUser user)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserLeft), user);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserLeft), user);
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_left",
@@ -163,7 +163,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             // the target user has already been removed from the group, so send the message to them separately.
             await multiplayerHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_kicked",
@@ -191,7 +191,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="userId">The ID of the user who was made host.</param>
         public async Task OnHostChangedAsync(long roomId, int userId)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.HostChanged), userId);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.HostChanged), userId);
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "host_changed",
@@ -208,7 +208,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="newUserState">The new state of the user in the room.</param>
         public async Task OnUserStateChangedAsync(long roomId, int userId, MultiplayerUserState newUserState)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), userId, newUserState);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserStateChanged), userId, newUserState);
         }
 
         /// <summary>
@@ -219,7 +219,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="newMatchUserState">The new match state of the user in the room.</param>
         public async Task OnMatchUserStateChangedAsync(long roomId, int userId, MatchUserState? newMatchUserState)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchUserStateChanged), userId, newMatchUserState);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchUserStateChanged), userId, newMatchUserState);
         }
 
         /// <summary>
@@ -230,7 +230,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="newBeatmapAvailability">The new beatmap availability for the user in the room.</param>
         public async Task OnUserBeatmapAvailabilityChangedAsync(long roomId, int userId, BeatmapAvailability newBeatmapAvailability)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserBeatmapAvailabilityChanged), userId, newBeatmapAvailability);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserBeatmapAvailabilityChanged), userId, newBeatmapAvailability);
         }
 
         /// <summary>
@@ -242,7 +242,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="rulesetId">The ID of the ruleset selected by the user.</param>
         public async Task OnUserStyleChangedAsync(long roomId, int userId, int? beatmapId, int? rulesetId)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserStyleChanged), userId, beatmapId, rulesetId);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserStyleChanged), userId, beatmapId, rulesetId);
         }
 
         /// <summary>
@@ -253,7 +253,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="newMods">The mods selected by the user.</param>
         public async Task OnUserModsChangedAsync(long roomId, int userId, IEnumerable<APIMod> newMods)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserModsChanged), userId, newMods);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserModsChanged), userId, newMods);
         }
 
         /// <summary>
@@ -263,7 +263,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="item">The playlist item which was added.</param>
         public async Task OnPlaylistItemAddedAsync(long roomId, MultiplayerPlaylistItem item)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemAdded), item);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemAdded), item);
         }
 
         /// <summary>
@@ -273,7 +273,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="item">The playlist item which was changed.</param>
         public async Task OnPlaylistItemChangedAsync(long roomId, MultiplayerPlaylistItem item)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemChanged), item);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemChanged), item);
         }
 
         /// <summary>
@@ -283,7 +283,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="playlistItemId">The ID of the removed playlist item.</param>
         public async Task OnPlaylistItemRemovedAsync(long roomId, long playlistItemId)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemRemoved), playlistItemId);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemRemoved), playlistItemId);
         }
 
         /// <summary>
@@ -294,7 +294,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="details">Relevant details about the match configuration to be relayed further.</param>
         public async Task OnMatchStartedAsync(long roomId, long playlistItemId, MatchStartedEventDetail details)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "game_started",
@@ -321,7 +321,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="voted">The user's vote to skip intro.</param>
         public async Task OnUserVotedToSkipIntroAsync(long roomId, int userId, bool voted)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserVotedToSkipIntro), userId, voted);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserVotedToSkipIntro), userId, voted);
         }
 
         /// <summary>
@@ -330,7 +330,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="roomId">The ID of the relevant room.</param>
         public async Task OnVoteToSkipIntroPassedAsync(long roomId)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.VoteToSkipIntroPassed));
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.VoteToSkipIntroPassed));
         }
 
         /// <summary>
@@ -355,7 +355,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="abortReason">The reason given for aborting the match.</param>
         public async Task OnMatchAbortReasonGivenAsync(long roomId, GameplayAbortReason abortReason)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.GameplayAborted), abortReason);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.GameplayAborted), abortReason);
         }
 
         /// <summary>
@@ -365,7 +365,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="playlistItemId">The ID of the playlist item which was played.</param>
         public async Task OnMatchCompletedAsync(long roomId, long playlistItemId)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.ResultsReady));
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.ResultsReady));
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "game_completed",
@@ -398,12 +398,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task OnPlayerSelectedBeatmapAsync(long roomId, int userId, long playlistItemId)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemSelected), userId, playlistItemId);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemSelected), userId, playlistItemId);
         }
 
         public async Task OnPlayerDeselectedBeatmapAsync(long roomId, int userId, long playlistItemId)
         {
-            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemDeselected), userId, playlistItemId);
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemDeselected), userId, playlistItemId);
         }
 
         /// <summary>
@@ -464,5 +464,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         #endregion
+
+        /// <summary>
+        /// Get the group ID to be used for multiplayer messaging for the given room.
+        /// </summary>
+        /// <param name="roomId">The databased room ID.</param>
+        public static string GetGroupId(long roomId) => $"room:{roomId}";
     }
 }

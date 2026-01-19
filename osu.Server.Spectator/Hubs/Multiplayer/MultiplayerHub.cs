@@ -755,12 +755,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        /// <summary>
-        /// Get the group ID to be used for multiplayer messaging.
-        /// </summary>
-        /// <param name="roomId">The databased room ID.</param>
-        public static string GetGroupId(long roomId) => $"room:{roomId}";
-
         private async Task updateDatabaseSettings(MultiplayerRoom room)
         {
             var playlistItem = room.Playlist.FirstOrDefault(item => item.ID == room.Settings.PlaylistItemId);
