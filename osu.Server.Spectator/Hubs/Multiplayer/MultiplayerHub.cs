@@ -32,6 +32,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly IDatabaseFactory databaseFactory;
         private readonly ChatFilters chatFilters;
         private readonly ISharedInterop sharedInterop;
+        private readonly MultiplayerEventDispatcher multiplayerEventDispatcher;
         private readonly MultiplayerEventLogger multiplayerEventLogger;
         private readonly IMatchmakingQueueBackgroundService matchmakingQueueService;
 
@@ -43,6 +44,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             ChatFilters chatFilters,
             IMultiplayerHubContext hubContext,
             ISharedInterop sharedInterop,
+            MultiplayerEventDispatcher multiplayerEventDispatcher,
             MultiplayerEventLogger multiplayerEventLogger,
             IMatchmakingQueueBackgroundService matchmakingQueueService)
             : base(loggerFactory, users)
@@ -50,6 +52,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
             this.sharedInterop = sharedInterop;
+            this.multiplayerEventDispatcher = multiplayerEventDispatcher;
             this.multiplayerEventLogger = multiplayerEventLogger;
             this.matchmakingQueueService = matchmakingQueueService;
 
@@ -146,7 +149,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             room.UpdateForRetrieval();
 
                             await addDatabaseUser(room, roomUser);
-                            await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupId(roomId));
+                            await multiplayerEventDispatcher.SubscribePlayerAsync(roomId, Context.ConnectionId);
 
                             Log(room, "User joined");
                         }
@@ -950,7 +953,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 Log(room, wasKick ? "User kicked" : "User left");
 
-                await Groups.RemoveFromGroupAsync(state.ConnectionId, GetGroupId(room.RoomID));
+                await multiplayerEventDispatcher.UnsubscribePlayerAsync(room.RoomID, state.ConnectionId);
 
                 var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);
 

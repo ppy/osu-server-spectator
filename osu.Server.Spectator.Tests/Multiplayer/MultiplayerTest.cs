@@ -43,6 +43,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected readonly Mock<IDatabaseAccess> Database;
         protected readonly Mock<ISharedInterop> LegacyIO;
         protected readonly MultiplayerEventLogger EventLogger;
+        protected readonly MultiplayerEventDispatcher EventDispatcher;
 
         /// <summary>
         /// A general non-gameplay receiver for the room with ID <see cref="ROOM_ID"/>.
@@ -152,6 +153,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                     .Returns<int, MultiplayerRoom>((_, room) => Task.FromResult(room.RoomID));
 
             EventLogger = new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object);
+            EventDispatcher = new MultiplayerEventDispatcher(
+                DatabaseFactory.Object,
+                hubContext.Object,
+                loggerFactoryMock.Object);
 
             HubContext = new MultiplayerHubContext(
                 hubContext.Object,
@@ -179,6 +184,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 new ChatFilters(DatabaseFactory.Object),
                 HubContext,
                 LegacyIO.Object,
+                EventDispatcher,
                 EventLogger,
                 MatchmakingBackgroundService);
             Hub.Groups = Groups.Object;

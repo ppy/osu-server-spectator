@@ -22,9 +22,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             ChatFilters chatFilters,
             IMultiplayerHubContext hubContext,
             ISharedInterop sharedInterop,
+            MultiplayerEventDispatcher multiplayerEventDispatcher,
             MultiplayerEventLogger multiplayerEventLogger,
             IMatchmakingQueueBackgroundService matchmakingQueueBackgroundService)
-            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, sharedInterop, multiplayerEventLogger, matchmakingQueueBackgroundService)
+            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, sharedInterop, multiplayerEventDispatcher, multiplayerEventLogger, matchmakingQueueBackgroundService)
         {
         }
 
