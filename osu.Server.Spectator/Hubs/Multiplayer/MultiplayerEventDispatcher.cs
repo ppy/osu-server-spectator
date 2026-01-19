@@ -256,6 +256,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// A playlist item has been added in the given room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="item">The playlist item which was added.</param>
+        public async Task OnPlaylistItemAddedAsync(long roomId, MultiplayerPlaylistItem item)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemAdded), item);
+        }
+
+        /// <summary>
         /// A match has been started in a given room.
         /// </summary>
         /// <param name="roomId">The ID of the relevant room.</param>

@@ -75,7 +75,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public Task NotifyPlaylistItemAdded(ServerMultiplayerRoom room, MultiplayerPlaylistItem item)
         {
-            return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemAdded), item);
+            return eventDispatcher.OnPlaylistItemAddedAsync(room.RoomID, item);
         }
 
         public Task NotifyPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId)
