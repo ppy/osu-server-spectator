@@ -26,16 +26,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// Records a user joining a matchmaking room.
         /// </summary>
-        public Task LogMatchmakingRoomCreatedAsync(long roomId, MatchmakingRoomCreatedEventDetail details) => logEvent(new matchmaking_room_event
-        {
-            event_type = "room_created",
-            room_id = roomId,
-            event_detail = JsonConvert.SerializeObject(details)
-        });
-
-        /// <summary>
-        /// Records a user joining a matchmaking room.
-        /// </summary>
         public Task LogMatchmakingUserJoinAsync(long roomId, int userId) => logEvent(new matchmaking_room_event
         {
             event_type = "user_join",

@@ -52,13 +52,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly ILogger logger;
         private readonly IMemoryCache memoryCache;
         private readonly MultiplayerEventLogger eventLogger;
+        private readonly MultiplayerEventDispatcher eventDispatcher;
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
         private DateTimeOffset lastQueueRefreshTime = DateTimeOffset.UnixEpoch;
         private DateTimeOffset lastPoolRefreshTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
-                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache, MultiplayerEventLogger eventLogger)
+                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache, MultiplayerEventLogger eventLogger,
+                                                 MultiplayerEventDispatcher eventDispatcher)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
@@ -67,6 +69,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             this.hubContext = hubContext;
             this.memoryCache = memoryCache;
             this.eventLogger = eventLogger;
+            this.eventDispatcher = eventDispatcher;
 
             logger = loggerFactory.CreateLogger(nameof(MatchmakingQueueBackgroundService));
         }
@@ -324,7 +327,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 foreach (var user in group.Users)
                     await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
 
-                await eventLogger.LogMatchmakingRoomCreatedAsync(roomId, new MatchmakingRoomCreatedEventDetail
+                await eventDispatcher.OnMatchmakingRoomCreatedAsync(roomId, new MatchmakingRoomCreatedEventDetail
                 {
                     pool_id = (int)bundle.Queue.Pool.id
                 });

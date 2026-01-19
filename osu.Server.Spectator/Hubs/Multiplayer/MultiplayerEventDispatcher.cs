@@ -373,6 +373,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        #region Matchmaking
+
+        public async Task OnMatchmakingRoomCreatedAsync(long roomId, MatchmakingRoomCreatedEventDetail details)
+        {
+            await logToDatabase(new matchmaking_room_event
+            {
+                event_type = "room_created",
+                room_id = roomId,
+                event_detail = JsonConvert.SerializeObject(details)
+            });
+        }
+
+        #endregion
+
+        #region Database logging helpers
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try
@@ -385,5 +401,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 logger.LogWarning(e, "Failed to log multiplayer room event to database");
             }
         }
+
+        private async Task logToDatabase(matchmaking_room_event ev)
+        {
+            try
+            {
+                using var db = databaseFactory.GetInstance();
+                await db.LogRoomEventAsync(ev);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Failed to log multiplayer room event to database");
+            }
+        }
+
+        #endregion
     }
 }
