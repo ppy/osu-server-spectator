@@ -1,10 +1,12 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Server.Spectator.Database;
+using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -42,6 +44,34 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task UnsubscribePlayerAsync(long roomId, string connectionId)
         {
             await multiplayerHubContext.Groups.RemoveFromGroupAsync(connectionId, MultiplayerHub.GetGroupId(roomId));
+        }
+
+        /// <summary>
+        /// A new multiplayer room was created.
+        /// </summary>
+        /// <param name="roomId">The ID of the created room.</param>
+        /// <param name="userId">The ID of the user that created the room.</param>
+        public async Task OnRoomCreatedAsync(long roomId, int userId)
+        {
+            await logToDatabase(new multiplayer_realtime_room_event
+            {
+                event_type = "room_created",
+                room_id = roomId,
+                user_id = userId,
+            });
+        }
+
+        private async Task logToDatabase(multiplayer_realtime_room_event ev)
+        {
+            try
+            {
+                using var db = databaseFactory.GetInstance();
+                await db.LogRoomEventAsync(ev);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Failed to log multiplayer room event to database");
+            }
         }
     }
 }

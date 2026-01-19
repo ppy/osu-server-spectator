@@ -79,7 +79,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             long roomId = await sharedInterop.CreateRoomAsync(Context.GetUserId(), room);
-            await multiplayerEventLogger.LogRoomCreatedAsync(roomId, Context.GetUserId());
+            await multiplayerEventDispatcher.OnRoomCreatedAsync(roomId, Context.GetUserId());
 
             return await joinOrCreateRoom(roomId, room.Settings.Password, true);
         }

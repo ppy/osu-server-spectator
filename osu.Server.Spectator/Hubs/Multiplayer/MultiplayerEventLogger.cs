@@ -23,13 +23,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.databaseFactory = databaseFactory;
         }
 
-        public Task LogRoomCreatedAsync(long roomId, int userId) => logEvent(new multiplayer_realtime_room_event
-        {
-            event_type = "room_created",
-            room_id = roomId,
-            user_id = userId,
-        });
-
         public Task LogRoomDisbandedAsync(long roomId, int userId) => logEvent(new multiplayer_realtime_room_event
         {
             event_type = "room_disbanded",
