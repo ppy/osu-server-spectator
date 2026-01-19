@@ -304,8 +304,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task KickUser(int userId)
         {
-            long roomId;
-
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
@@ -318,7 +316,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         throw new InvalidOperationException("Attempted to operate on a null room");
 
                     Log(room, $"Kicking user {userId}");
-                    roomId = room.RoomID;
 
                     if (userId == userUsage.Item?.UserId)
                         throw new InvalidStateException("Can't kick self");
@@ -341,8 +338,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     }
                 }
             }
-
-            await multiplayerEventLogger.LogPlayerKickedAsync(roomId, userId);
         }
 
         public async Task ChangeState(MultiplayerUserState newState)
@@ -990,11 +985,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
 
                 if (wasKick)
-                {
-                    // the target user has already been removed from the group, so send the message to them separately.
-                    await Clients.Client(state.ConnectionId).UserKicked(user);
-                    await Clients.Group(GetGroupId(room.RoomID)).UserKicked(user);
-                }
+                    await multiplayerEventDispatcher.OnUserKickedAsync(room.RoomID, user);
                 else
                     await multiplayerEventDispatcher.OnUserLeftAsync(room.RoomID, user);
             }

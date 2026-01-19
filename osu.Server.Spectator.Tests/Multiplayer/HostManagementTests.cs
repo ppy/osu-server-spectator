@@ -66,9 +66,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
 
-            var kickedUserReceiver = new Mock<IMultiplayerClient>();
-            Clients.Setup(clients => clients.Client(USER_ID_2.ToString())).Returns(kickedUserReceiver.Object);
-
             SetUserContext(ContextUser);
             await Hub.KickUser(USER_ID_2);
 
@@ -76,7 +73,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Receiver.Verify(r => r.UserKicked(It.Is<MultiplayerRoomUser>(u => u.UserID == USER_ID_2)), Times.Once);
 
             // the kicked user received the event.
-            kickedUserReceiver.Verify(r => r.UserKicked(It.Is<MultiplayerRoomUser>(u => u.UserID == USER_ID_2)), Times.Once);
+            User2Receiver.Verify(r => r.UserKicked(It.Is<MultiplayerRoomUser>(u => u.UserID == USER_ID_2)), Times.Once);
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
                 Assert.True(room.Item?.Users.All(u => u.UserID != USER_ID_2));

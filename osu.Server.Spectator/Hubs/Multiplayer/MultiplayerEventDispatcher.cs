@@ -149,6 +149,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        /// <summary>
+        /// A user has been forcibly removed from the room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="user">The user who was kicked.</param>
+        public async Task OnUserKickedAsync(long roomId, MultiplayerRoomUser user)
+        {
+            // the target user has already been removed from the group, so send the message to them separately.
+            await multiplayerHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+            await logToDatabase(new multiplayer_realtime_room_event
+            {
+                event_type = "player_kicked",
+                room_id = roomId,
+                user_id = user.UserID,
+            });
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try
