@@ -420,6 +420,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        /// <summary>
+        /// Records the final gameplay beatmap as selected by the server.
+        /// </summary>
+        public async Task OnFinalBeatmapSelectedAsync(long roomId, long playlistItemId)
+        {
+            await logToDatabase(new matchmaking_room_event
+            {
+                event_type = "gameplay_beatmap",
+                room_id = roomId,
+                playlist_item_id = playlistItemId
+            });
+        }
+
         #endregion
 
         #region Database logging helpers

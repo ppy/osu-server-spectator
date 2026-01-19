@@ -342,7 +342,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             room.Settings.PlaylistItemId = state.GameplayItem;
             await hub.NotifySettingsChanged(room, true);
 
-            await eventLogger.LogMatchmakingGameplayBeatmapAsync(room.RoomID, room.Settings.PlaylistItemId);
+            await eventDispatcher.OnFinalBeatmapSelectedAsync(room.RoomID, room.Settings.PlaylistItemId);
 
             await changeStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
             await tryAdvanceStage();

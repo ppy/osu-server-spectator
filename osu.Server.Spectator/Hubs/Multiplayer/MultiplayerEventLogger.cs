@@ -23,16 +23,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.databaseFactory = databaseFactory;
         }
 
-        /// <summary>
-        /// Records the final gameplay beatmap as selected by the server.
-        /// </summary>
-        public Task LogMatchmakingGameplayBeatmapAsync(long roomId, long playlistItemId) => logEvent(new matchmaking_room_event
-        {
-            event_type = "gameplay_beatmap",
-            room_id = roomId,
-            playlist_item_id = playlistItemId
-        });
-
         private async Task logEvent(multiplayer_realtime_room_event ev)
         {
             try
