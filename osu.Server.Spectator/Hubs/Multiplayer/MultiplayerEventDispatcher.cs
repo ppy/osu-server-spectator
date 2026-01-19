@@ -16,6 +16,15 @@ using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
+    /// <summary>
+    /// This is intended to be the sole class responsible for relaying events that happen in a multiplayer rooms
+    /// to interested parties, such as:
+    /// <list type="bullet">
+    /// <item>the active players in the room</item>
+    /// <item>the active referees in the room, in the case of tournament rooms</item>
+    /// <item>the relevant database tables, through which match history pages on the website work</item>
+    /// </list>
+    /// </summary>
     public class MultiplayerEventDispatcher
     {
         private readonly IDatabaseFactory databaseFactory;
