@@ -407,7 +407,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task NotifyMatchmakingItemSelected(ServerMultiplayerRoom room, int userId, long playlistItemId)
         {
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemSelected), userId, playlistItemId);
+            await eventDispatcher.OnPlayerSelectedBeatmapAsync(room.RoomID, userId, playlistItemId);
         }
 
         public async Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId)

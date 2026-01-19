@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
+using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
@@ -393,6 +394,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 room_id = roomId,
                 user_id = userId
             });
+        }
+
+        public async Task OnPlayerSelectedBeatmapAsync(long roomId, int userId, long playlistItemId)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemSelected), userId, playlistItemId);
         }
 
         #endregion
