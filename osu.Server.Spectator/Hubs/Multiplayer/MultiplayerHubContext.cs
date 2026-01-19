@@ -80,7 +80,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public Task NotifyPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId)
         {
-            return context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.PlaylistItemRemoved), playlistItemId);
+            return eventDispatcher.OnPlaylistItemRemovedAsync(room.RoomID, playlistItemId);
         }
 
         public async Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged)

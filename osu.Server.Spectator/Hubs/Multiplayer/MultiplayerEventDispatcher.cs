@@ -276,6 +276,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// The given playlist item in the given room has been removed.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="playlistItemId">The ID of the removed playlist item.</param>
+        public async Task OnPlaylistItemRemovedAsync(long roomId, long playlistItemId)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemRemoved), playlistItemId);
+        }
+
+        /// <summary>
         /// A match has been started in a given room.
         /// </summary>
         /// <param name="roomId">The ID of the relevant room.</param>
