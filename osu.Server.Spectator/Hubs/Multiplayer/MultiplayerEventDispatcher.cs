@@ -167,6 +167,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        /// <summary>
+        /// A user has been invited to join the given room.
+        /// </summary>
+        /// <param name="roomId">The ID of the room that the invitation pertains to.</param>
+        /// <param name="invitedUserId">The ID of the user who was invited to the room.</param>
+        /// <param name="invitedBy">The ID of the user who sent the invite.</param>
+        /// <param name="password">The password to the given room.</param>
+        public async Task OnUserInvitedAsync(long roomId, int invitedUserId, int invitedBy, string password)
+        {
+            await multiplayerHubContext.Clients.User(invitedUserId.ToString()).SendAsync(nameof(IMultiplayerClient.Invited), invitedBy, roomId, password);
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try

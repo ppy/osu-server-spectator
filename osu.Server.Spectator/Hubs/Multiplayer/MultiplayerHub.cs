@@ -265,7 +265,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (room.Settings.MatchType == MatchType.Matchmaking)
                         throw new InvalidStateException("Can't invite players to matchmaking rooms.");
 
-                    await Clients.User(userId.ToString()).Invited(user.UserId, room.RoomID, room.Settings.Password);
+                    await multiplayerEventDispatcher.OnUserInvitedAsync(room.RoomID, invitedUserId: userId, invitedBy: user.UserId, room.Settings.Password);
                 }
             }
         }
