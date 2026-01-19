@@ -51,7 +51,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly IMultiplayerHubContext hubContext;
         private readonly ILogger logger;
         private readonly IMemoryCache memoryCache;
-        private readonly MultiplayerEventLogger eventLogger;
         private readonly MultiplayerEventDispatcher eventDispatcher;
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
@@ -59,8 +58,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private DateTimeOffset lastPoolRefreshTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
-                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache, MultiplayerEventLogger eventLogger,
-                                                 MultiplayerEventDispatcher eventDispatcher)
+                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache, MultiplayerEventDispatcher eventDispatcher)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
@@ -68,7 +66,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             this.rooms = rooms;
             this.hubContext = hubContext;
             this.memoryCache = memoryCache;
-            this.eventLogger = eventLogger;
             this.eventDispatcher = eventDispatcher;
 
             logger = loggerFactory.CreateLogger(nameof(MatchmakingQueueBackgroundService));
@@ -320,7 +317,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
-                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, eventDispatcher, group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id);
+                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventDispatcher, group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id);
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
@@ -340,15 +337,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="roomId">The room identifier.</param>
         /// <param name="hub">The multiplayer hub context.</param>
         /// <param name="dbFactory">The database factory.</param>
-        /// <param name="eventLogger">The event logger.</param>
         /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
         /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
         /// <param name="poolId">The pool ID.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
-        public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger,
+        public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory,
                                                                             MultiplayerEventDispatcher eventDispatcher, int[] eligibleUserIds, uint poolId)
         {
-            ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventLogger, eventDispatcher);
+            ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventDispatcher);
 
             if (room.MatchState is not MatchmakingRoomState matchmakingState)
                 throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid state).");

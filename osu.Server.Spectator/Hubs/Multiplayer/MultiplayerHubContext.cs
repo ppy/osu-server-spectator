@@ -36,7 +36,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly EntityStore<MultiplayerClientState> users;
         private readonly IDatabaseFactory databaseFactory;
         private readonly ILogger logger;
-        private readonly MultiplayerEventLogger multiplayerEventLogger;
 
         public MultiplayerHubContext(
             IHubContext<MultiplayerHub> context,
@@ -44,15 +43,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
             ILoggerFactory loggerFactory,
-            IDatabaseFactory databaseFactory,
-            MultiplayerEventLogger multiplayerEventLogger)
+            IDatabaseFactory databaseFactory)
         {
             this.context = context;
             this.eventDispatcher = eventDispatcher;
             this.rooms = rooms;
             this.users = users;
             this.databaseFactory = databaseFactory;
-            this.multiplayerEventLogger = multiplayerEventLogger;
 
             logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
         }

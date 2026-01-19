@@ -33,7 +33,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly ChatFilters chatFilters;
         private readonly ISharedInterop sharedInterop;
         private readonly MultiplayerEventDispatcher multiplayerEventDispatcher;
-        private readonly MultiplayerEventLogger multiplayerEventLogger;
         private readonly IMatchmakingQueueBackgroundService matchmakingQueueService;
 
         public MultiplayerHub(
@@ -45,7 +44,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             IMultiplayerHubContext hubContext,
             ISharedInterop sharedInterop,
             MultiplayerEventDispatcher multiplayerEventDispatcher,
-            MultiplayerEventLogger multiplayerEventLogger,
             IMatchmakingQueueBackgroundService matchmakingQueueService)
             : base(loggerFactory, users)
         {
@@ -53,7 +51,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.chatFilters = chatFilters;
             this.sharedInterop = sharedInterop;
             this.multiplayerEventDispatcher = multiplayerEventDispatcher;
-            this.multiplayerEventLogger = multiplayerEventLogger;
             this.matchmakingQueueService = matchmakingQueueService;
 
             Rooms = rooms;
@@ -120,7 +117,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         try
                         {
-                            room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, HubContext, databaseFactory, multiplayerEventLogger, multiplayerEventDispatcher);
+                            room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, HubContext, databaseFactory, multiplayerEventDispatcher);
 
                             // this is a sanity check to keep *rooms* in a good state.
                             // in theory the connection clean-up code should handle this correctly.

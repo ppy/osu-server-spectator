@@ -42,7 +42,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected readonly Mock<IDatabaseFactory> DatabaseFactory;
         protected readonly Mock<IDatabaseAccess> Database;
         protected readonly Mock<ISharedInterop> LegacyIO;
-        protected readonly MultiplayerEventLogger EventLogger;
         protected readonly MultiplayerEventDispatcher EventDispatcher;
 
         /// <summary>
@@ -153,7 +152,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>()))
                     .Returns<int, MultiplayerRoom>((_, room) => Task.FromResult(room.RoomID));
 
-            EventLogger = new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object);
             EventDispatcher = new MultiplayerEventDispatcher(
                 DatabaseFactory.Object,
                 hubContext.Object,
@@ -165,8 +163,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Rooms,
                 UserStates,
                 loggerFactoryMock.Object,
-                DatabaseFactory.Object,
-                EventLogger);
+                DatabaseFactory.Object);
 
             MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
                 hubContext.Object,
@@ -176,7 +173,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Rooms,
                 HubContext,
                 new MemoryCache(new MemoryCacheOptions()),
-                EventLogger,
                 EventDispatcher);
 
             Hub = new TestMultiplayerHub(
@@ -188,7 +184,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 HubContext,
                 LegacyIO.Object,
                 EventDispatcher,
-                EventLogger,
                 MatchmakingBackgroundService);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;
