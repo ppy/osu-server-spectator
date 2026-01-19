@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             var hub = new Mock<IMultiplayerHubContext>();
             var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher);
 
-            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object);
+            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object, EventDispatcher);
 
             // change the match type
             await room.ChangeMatchType(teamVersus);
@@ -47,7 +47,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             var hub = new Mock<IMultiplayerHubContext>();
             var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher);
 
-            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object);
+            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object, EventDispatcher);
 
             // change the match type
             await room.ChangeMatchType(teamVersus);

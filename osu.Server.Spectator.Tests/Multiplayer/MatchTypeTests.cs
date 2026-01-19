@@ -32,7 +32,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 room.MatchState = mockRoomState.Object;
 
-                await HubContext.NotifyMatchRoomStateChanged(room);
+                await EventDispatcher.OnMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
 
                 Receiver.Verify(c => c.MatchRoomStateChanged(mockRoomState.Object), Times.Once);
             }

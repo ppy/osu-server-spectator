@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task Initialise()
         {
-            await hub.NotifyMatchRoomStateChanged(room);
+            await eventDispatcher.OnMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
             await startCountdown(TimeSpan.FromSeconds(stage_waiting_for_clients_join_time), stageRoundWarmupTime);
         }
 
@@ -198,7 +198,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             {
                 state.Users.GetOrAdd(user.UserID).AbandonedAt = DateTimeOffset.UtcNow;
                 state.RecordScores([], placement_points); // Empty update to adjust placements.
-                await hub.NotifyMatchRoomStateChanged(room);
+                await eventDispatcher.OnMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
             }
 
             // Attempt to conclude the match in advance so users don't have to keep playing rounds by themselves.
@@ -444,7 +444,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task changeStage(MatchmakingStage stage)
         {
             state.Stage = stage;
-            await hub.NotifyMatchRoomStateChanged(room);
+            await eventDispatcher.OnMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
         }
 
         private async Task startCountdown(TimeSpan duration, Func<ServerMultiplayerRoom, Task> continuation)

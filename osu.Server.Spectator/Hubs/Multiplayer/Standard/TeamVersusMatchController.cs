@@ -15,13 +15,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
     {
         private readonly ServerMultiplayerRoom room;
         private readonly IMultiplayerHubContext hub;
+        private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly TeamVersusRoomState state;
 
-        public TeamVersusMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
+        public TeamVersusMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
             : base(room, hub, dbFactory)
         {
             this.room = room;
             this.hub = hub;
+            this.eventDispatcher = eventDispatcher;
 
             room.MatchState = state = TeamVersusRoomState.CreateDefault();
         }
@@ -30,7 +32,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         {
             await base.Initialise();
 
-            await hub.NotifyMatchRoomStateChanged(room);
+            await eventDispatcher.OnMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
         }
 
         public override async Task HandleUserJoined(MultiplayerRoomUser user)
