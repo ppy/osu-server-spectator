@@ -305,11 +305,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await ChangeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
+            await eventDispatcher.OnMatchStartedAsync(room.RoomID, room.Controller.CurrentItem.ID, room.Controller.GetMatchDetails());
 
             await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
-
-            await multiplayerEventLogger.LogGameStartedAsync(room.RoomID, room.Controller.CurrentItem.ID, room.Controller.GetMatchDetails());
         }
 
         /// <summary>

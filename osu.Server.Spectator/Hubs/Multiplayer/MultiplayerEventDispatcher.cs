@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
@@ -252,6 +253,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task OnUserModsChangedAsync(long roomId, int userId, IEnumerable<APIMod> newMods)
         {
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserModsChanged), userId, newMods);
+        }
+
+        /// <summary>
+        /// A match has been started in a given room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="playlistItemId">The ID of the playlist item which is being played.</param>
+        /// <param name="details">Relevant details about the match configuration to be relayed further.</param>
+        public async Task OnMatchStartedAsync(long roomId, long playlistItemId, MatchStartedEventDetail details)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.LoadRequested));
+            await logToDatabase(new multiplayer_realtime_room_event
+            {
+                event_type = "game_started",
+                room_id = roomId,
+                playlist_item_id = playlistItemId,
+                event_detail = JsonConvert.SerializeObject(details)
+            });
         }
 
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
