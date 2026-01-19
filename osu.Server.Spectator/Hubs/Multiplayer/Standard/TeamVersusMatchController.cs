@@ -14,7 +14,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
     public class TeamVersusMatchController : StandardMatchController
     {
         private readonly ServerMultiplayerRoom room;
-        private readonly IMultiplayerHubContext hub;
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly TeamVersusRoomState state;
 
@@ -22,7 +21,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             : base(room, hub, dbFactory, eventDispatcher)
         {
             this.room = room;
-            this.hub = hub;
             this.eventDispatcher = eventDispatcher;
 
             room.MatchState = state = TeamVersusRoomState.CreateDefault();
