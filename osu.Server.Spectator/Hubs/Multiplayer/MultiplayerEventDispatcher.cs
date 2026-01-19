@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
@@ -74,6 +75,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 room_id = roomId,
                 user_id = userId,
             });
+        }
+
+        /// <summary>
+        /// The <see cref="MultiplayerRoom.State"/> of the given room changed.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="newState">The new state of the room.</param>
+        public async Task OnRoomStateChangedAsync(long roomId, MultiplayerRoomState newState)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
         }
 
         private async Task logToDatabase(multiplayer_realtime_room_event ev)

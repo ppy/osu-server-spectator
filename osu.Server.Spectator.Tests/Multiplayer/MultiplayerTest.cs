@@ -160,6 +160,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             HubContext = new MultiplayerHubContext(
                 hubContext.Object,
+                EventDispatcher,
                 Rooms,
                 UserStates,
                 loggerFactoryMock.Object,

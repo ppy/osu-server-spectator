@@ -32,6 +32,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private static readonly TimeSpan gameplay_load_timeout = TimeSpan.FromSeconds(30);
 
         private readonly IHubContext<MultiplayerHub> context;
+        private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly EntityStore<MultiplayerClientState> users;
         private readonly IDatabaseFactory databaseFactory;
@@ -40,6 +41,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public MultiplayerHubContext(
             IHubContext<MultiplayerHub> context,
+            MultiplayerEventDispatcher eventDispatcher,
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
             ILoggerFactory loggerFactory,
@@ -47,6 +49,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             MultiplayerEventLogger multiplayerEventLogger)
         {
             this.context = context;
+            this.eventDispatcher = eventDispatcher;
             this.rooms = rooms;
             this.users = users;
             this.databaseFactory = databaseFactory;
@@ -262,7 +265,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             using (var db = databaseFactory.GetInstance())
                 await db.UpdateRoomStatusAsync(room);
 
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.RoomStateChanged), newState);
+            await eventDispatcher.OnRoomStateChangedAsync(room.RoomID, newState);
         }
 
         public async Task ChangeUserVoteToSkipIntro(ServerMultiplayerRoom room, MultiplayerRoomUser user, bool voted)
