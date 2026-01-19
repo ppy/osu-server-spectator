@@ -283,6 +283,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// The given user has changed their vote whether to skip intro.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="userId">The ID of the relevant user.</param>
+        /// <param name="voted">The user's vote to skip intro.</param>
+        public async Task OnUserVotedToSkipIntroAsync(long roomId, int userId, bool voted)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserVotedToSkipIntro), userId, voted);
+        }
+
+        /// <summary>
         /// A match in the given room has been aborted.
         /// </summary>
         /// <param name="roomId">The ID of the relevant room.</param>

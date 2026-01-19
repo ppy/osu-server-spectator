@@ -276,7 +276,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             Log(room, user, $"Changing user vote to skip intro => {voted}");
 
             user.VotedToSkipIntro = voted;
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserVotedToSkipIntro), user.UserID, voted);
+            await eventDispatcher.OnUserVotedToSkipIntroAsync(room.RoomID, user.UserID, voted);
         }
 
         public async Task StartMatch(ServerMultiplayerRoom room)
