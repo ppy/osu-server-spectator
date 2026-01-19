@@ -120,7 +120,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     return ChangeMatchType(new TeamVersusMatchController(this, hub, dbFactory, eventDispatcher));
 
                 default:
-                    return ChangeMatchType(new HeadToHeadMatchController(this, hub, dbFactory));
+                    return ChangeMatchType(new HeadToHeadMatchController(this, hub, dbFactory, eventDispatcher));
             }
         }
 

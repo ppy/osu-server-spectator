@@ -72,7 +72,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 user.MatchState = mockRoomState.Object;
 
-                await HubContext.NotifyMatchUserStateChanged(room, user);
+                await EventDispatcher.OnMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
 
                 Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, mockRoomState.Object), Times.Once);
             }

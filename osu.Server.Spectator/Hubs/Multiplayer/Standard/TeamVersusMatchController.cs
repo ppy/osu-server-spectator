@@ -40,7 +40,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             await base.HandleUserJoined(user);
 
             user.MatchState = new TeamVersusUserState { TeamID = getBestAvailableTeam() };
-            await hub.NotifyMatchUserStateChanged(room, user);
+            await eventDispatcher.OnMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
         }
 
         public override async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
@@ -56,7 +56,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                     if (user.MatchState is TeamVersusUserState userState)
                         userState.TeamID = changeTeam.TeamID;
 
-                    await hub.NotifyMatchUserStateChanged(room, user);
+                    await eventDispatcher.OnMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
                     break;
             }
         }

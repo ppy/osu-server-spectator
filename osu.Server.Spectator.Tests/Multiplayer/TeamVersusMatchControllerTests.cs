@@ -30,12 +30,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             var user = new MultiplayerRoomUser(1);
 
             await room.AddUser(user);
-            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
 
             await teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
 
             checkUserOnTeam(user, team);
-            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Exactly(2));
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Exactly(2));
         }
 
         [Theory]
@@ -56,7 +56,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await room.AddUser(user);
             // called once on the initial user join operation (to inform other clients in the room).
-            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
 
             var previousTeam = ((TeamVersusUserState)user.MatchState!).TeamID;
 
@@ -64,7 +64,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             checkUserOnTeam(user, previousTeam);
             // was not called a second time from the invalid change.
-            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
         }
 
         [Fact]

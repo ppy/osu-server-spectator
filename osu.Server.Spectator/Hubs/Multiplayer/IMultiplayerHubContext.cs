@@ -18,13 +18,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     public interface IMultiplayerHubContext
     {
         /// <summary>
-        /// Notifies users in a room that a user's <see cref="MultiplayerRoomUser.MatchState"/> has been altered.
-        /// </summary>
-        /// <param name="room">The room to send the event to.</param>
-        /// <param name="user">The user whose state has changed.</param>
-        Task NotifyMatchUserStateChanged(ServerMultiplayerRoom room, MultiplayerRoomUser user);
-
-        /// <summary>
         /// Notifies users in a room that a playlist item has been added.
         /// </summary>
         /// <param name="room">The room to send the event to.</param>
