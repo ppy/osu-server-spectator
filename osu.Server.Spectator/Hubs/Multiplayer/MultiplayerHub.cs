@@ -143,7 +143,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                             // because match controllers may send subsequent information via Users collection hooks,
                             // inform clients before adding user to the room.
-                            await Clients.Group(GetGroupId(roomId)).UserJoined(roomUser);
+                            await multiplayerEventDispatcher.OnUserJoinedAsync(roomId, roomUser);
 
                             await room.AddUser(roomUser);
                             room.UpdateForRetrieval();
@@ -203,8 +203,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             {
                 // Errors are logged internally by SharedInterop.
             }
-
-            await multiplayerEventLogger.LogPlayerJoinedAsync(roomId, Context.GetUserId());
 
             return MessagePackSerializer.Deserialize<MultiplayerRoom>(roomBytes, message_pack_options);
         }

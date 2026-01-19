@@ -117,6 +117,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchEvent), e);
         }
 
+        /// <summary>
+        /// A user has joined the given room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="user">The user who joined.</param>
+        public async Task OnUserJoinedAsync(long roomId, MultiplayerRoomUser user)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserJoined), user);
+            await logToDatabase(new multiplayer_realtime_room_event
+            {
+                event_type = "player_joined",
+                room_id = roomId,
+                user_id = user.UserID,
+            });
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try
