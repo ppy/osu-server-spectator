@@ -158,7 +158,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 loggerFactoryMock.Object);
 
             HubContext = new MultiplayerHubContext(
-                hubContext.Object,
                 EventDispatcher,
                 Rooms,
                 UserStates,

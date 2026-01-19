@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Game.Online.API;
@@ -30,7 +29,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         private static readonly TimeSpan gameplay_load_timeout = TimeSpan.FromSeconds(30);
 
-        private readonly IHubContext<MultiplayerHub> context;
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly EntityStore<MultiplayerClientState> users;
@@ -38,14 +36,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly ILogger logger;
 
         public MultiplayerHubContext(
-            IHubContext<MultiplayerHub> context,
             MultiplayerEventDispatcher eventDispatcher,
             EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
             ILoggerFactory loggerFactory,
             IDatabaseFactory databaseFactory)
         {
-            this.context = context;
             this.eventDispatcher = eventDispatcher;
             this.rooms = rooms;
             this.users = users;
