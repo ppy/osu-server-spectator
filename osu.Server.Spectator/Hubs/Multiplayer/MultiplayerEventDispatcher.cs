@@ -401,6 +401,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemSelected), userId, playlistItemId);
         }
 
+        public async Task OnPlayerDeselectedBeatmapAsync(long roomId, int userId, long playlistItemId)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemDeselected), userId, playlistItemId);
+        }
+
         #endregion
 
         #region Database logging helpers

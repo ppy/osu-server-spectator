@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Game.Online.API;
-using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
@@ -412,7 +411,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId)
         {
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMatchmakingClient.MatchmakingItemDeselected), userId, playlistItemId);
+            await eventDispatcher.OnPlayerDeselectedBeatmapAsync(room.RoomID, userId, playlistItemId);
         }
 
         public async Task CheckVotesToSkipPassed(ServerMultiplayerRoom room)
