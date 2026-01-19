@@ -307,6 +307,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.GameplayAborted), abortReason);
         }
 
+        /// <summary>
+        /// A match in the given room has completed.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="playlistItemId">The ID of the playlist item which was played.</param>
+        public async Task OnMatchCompletedAsync(long roomId, long playlistItemId)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.ResultsReady));
+            await logToDatabase(new multiplayer_realtime_room_event
+            {
+                event_type = "game_completed",
+                room_id = roomId,
+                playlist_item_id = playlistItemId,
+            });
+        }
+
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
         {
             try

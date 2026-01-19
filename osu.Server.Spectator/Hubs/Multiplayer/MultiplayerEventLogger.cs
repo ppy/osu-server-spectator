@@ -23,13 +23,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.databaseFactory = databaseFactory;
         }
 
-        public Task LogGameCompletedAsync(long roomId, long playlistItemId) => logEvent(new multiplayer_realtime_room_event
-        {
-            event_type = "game_completed",
-            room_id = roomId,
-            playlist_item_id = playlistItemId,
-        });
-
         /// <summary>
         /// Records a user joining a matchmaking room.
         /// </summary>

@@ -392,10 +392,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         }
 
                         await ChangeRoomState(room, MultiplayerRoomState.Open);
-                        await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.ResultsReady));
 
                         if (anyUserFinishedPlay)
-                            await multiplayerEventLogger.LogGameCompletedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
+                            await eventDispatcher.OnMatchCompletedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
                         else
                             await eventDispatcher.OnMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
 
