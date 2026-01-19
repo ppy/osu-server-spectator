@@ -376,11 +376,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        public async Task NotifyMatchmakingItemSelected(ServerMultiplayerRoom room, int userId, long playlistItemId)
-        {
-            await eventDispatcher.OnPlayerSelectedBeatmapAsync(room.RoomID, userId, playlistItemId);
-        }
-
         public async Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId)
         {
             await eventDispatcher.OnPlayerDeselectedBeatmapAsync(room.RoomID, userId, playlistItemId);

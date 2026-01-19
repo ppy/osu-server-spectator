@@ -265,7 +265,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             }
 
             userPicks[user.UserID] = playlistItemId;
-            await hub.NotifyMatchmakingItemSelected(room, user.UserID, playlistItemId);
+            await eventDispatcher.OnPlayerSelectedBeatmapAsync(room.RoomID, user.UserID, playlistItemId);
 
             await checkCanFastForwardBeatmapSelection();
         }
