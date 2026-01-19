@@ -213,7 +213,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (!room.Controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
             {
                 user.Mods = validMods.ToArray();
-                await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserModsChanged), user.UserID, user.Mods);
+                await eventDispatcher.OnUserModsChangedAsync(room.RoomID, user.UserID, user.Mods);
             }
 
             await eventDispatcher.OnUserStyleChangedAsync(room.RoomID, user.UserID, beatmapId, rulesetId);
@@ -231,7 +231,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             user.Mods = newModList;
 
-            await context.Clients.Group(MultiplayerHub.GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.UserModsChanged), user.UserID, newModList);
+            await eventDispatcher.OnUserModsChangedAsync(room.RoomID, user.UserID, newModList);
         }
 
         public async Task ChangeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)

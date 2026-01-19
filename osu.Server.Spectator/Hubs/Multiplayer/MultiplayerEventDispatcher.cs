@@ -2,9 +2,11 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
@@ -239,6 +241,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task OnUserStyleChangedAsync(long roomId, int userId, int? beatmapId, int? rulesetId)
         {
             await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserStyleChanged), userId, beatmapId, rulesetId);
+        }
+
+        /// <summary>
+        /// A user's selected free mods in a room have changed.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="userId">The ID of the relevant user.</param>
+        /// <param name="newMods">The mods selected by the user.</param>
+        public async Task OnUserModsChangedAsync(long roomId, int userId, IEnumerable<APIMod> newMods)
+        {
+            await multiplayerHubContext.Clients.Group(MultiplayerHub.GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserModsChanged), userId, newMods);
         }
 
         private async Task logToDatabase(multiplayer_realtime_room_event ev)
