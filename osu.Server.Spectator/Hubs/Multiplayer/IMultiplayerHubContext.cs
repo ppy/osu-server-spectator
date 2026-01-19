@@ -18,17 +18,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     public interface IMultiplayerHubContext
     {
         /// <summary>
-        /// Notifies users in a room of an event.
-        /// </summary>
-        /// <remarks>
-        /// This should be used for events which have no permanent effect on state.
-        /// For operations which are intended to persist (and be visible to new users which join a room) use <see cref="NotifyMatchRoomStateChanged"/> or <see cref="NotifyMatchUserStateChanged"/> instead.
-        /// </remarks>
-        /// <param name="room">The room to send the event to.</param>
-        /// <param name="e">The event.</param>
-        Task NotifyNewMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e);
-
-        /// <summary>
         /// Notify users in a room that the room's <see cref="MultiplayerRoom.MatchState"/> has been altered.
         /// </summary>
         /// <param name="room">The room whose state has changed.</param>

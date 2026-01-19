@@ -115,6 +115,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// A <see cref="MatchServerEvent"/> has occurred in the room.
         /// </summary>
+        /// <remarks>
+        /// This should be used for events which have no permanent effect on state.
+        /// For operations which are intended to persist (and be visible to new users which join a room)
+        /// use <see cref="OnMatchRoomStateChangedAsync"/> or <see cref="OnMatchUserStateChangedAsync"/> instead.
+        /// </remarks>
         /// <param name="roomId">The ID of the relevant room.</param>
         /// <param name="e">The relevant match event.</param>
         public async Task OnMatchEventAsync(long roomId, MatchServerEvent e)

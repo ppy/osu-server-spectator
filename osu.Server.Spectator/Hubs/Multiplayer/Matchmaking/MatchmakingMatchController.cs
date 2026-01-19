@@ -167,7 +167,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             switch (request)
             {
                 case MatchmakingAvatarActionRequest avatarAction:
-                    await hub.NotifyNewMatchEvent(room, new MatchmakingAvatarActionEvent
+                    await eventDispatcher.OnMatchEventAsync(room.RoomID, new MatchmakingAvatarActionEvent
                     {
                         UserId = user.UserID,
                         Action = avatarAction.Action

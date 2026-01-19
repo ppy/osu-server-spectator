@@ -54,11 +54,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
         }
 
-        public Task NotifyNewMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e)
-        {
-            return eventDispatcher.OnMatchEventAsync(room.RoomID, e);
-        }
-
         public Task NotifyMatchRoomStateChanged(ServerMultiplayerRoom room)
         {
             return eventDispatcher.OnMatchRoomStateChangedAsync(room.RoomID, room.MatchState);

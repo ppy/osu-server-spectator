@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 var mockEvent = new Mock<MatchServerEvent>();
 
-                await HubContext.NotifyNewMatchEvent(room, mockEvent.Object);
+                await EventDispatcher.OnMatchEventAsync(room.RoomID, mockEvent.Object);
 
                 Receiver.Verify(c => c.MatchEvent(mockEvent.Object), Times.Once);
             }
