@@ -762,6 +762,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await eventDispatcher.PostVoteToSkipIntroPassedAsync(RoomID);
         }
 
+        /// <summary>
+        /// Aborts the gameplay of a given user.
+        /// </summary>
+        /// <param name="userId">The relevant user's ID.</param>
+        /// <exception cref="InvalidStateException">
+        /// The user was not in this room, or was not in the correct state to abort.
+        /// </exception>
+        public async Task AbortGameplay(int userId)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+            if (user == null)
+                throw new InvalidStateException("User is not in expected room.");
+
+            if (!user.State.IsGameplayState())
+                throw new InvalidStateException("Cannot abort gameplay while not in a gameplay state.");
+
+            await ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
+            await hub.UpdateRoomStateIfRequired(this);
+        }
+
         #endregion
 
         #region Countdowns

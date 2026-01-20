@@ -515,15 +515,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (room == null)
                         throw new InvalidOperationException("Attempted to operate on a null room");
 
-                    var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
-                    if (user == null)
-                        throw new InvalidOperationException("Local user was not found in the expected room");
-
-                    if (!user.State.IsGameplayState())
-                        throw new InvalidStateException("Cannot abort gameplay while not in a gameplay state");
-
-                    await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
-                    await HubContext.UpdateRoomStateIfRequired(room);
+                    await room.AbortGameplay(Context.GetUserId());
                 }
             }
         }
