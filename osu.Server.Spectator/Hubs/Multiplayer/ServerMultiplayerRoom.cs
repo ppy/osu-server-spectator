@@ -16,6 +16,7 @@ using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
 using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 
@@ -196,6 +197,124 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             using (var db = dbFactory.GetInstance())
                 await db.UpdateRoomHostAsync(this);
+        }
+
+        /// <summary>
+        /// Changes the state of the user with the given <paramref name="userId"/> to <paramref name="newState"/>.
+        /// Permissions for changing state are not checked. Callers are expected to perform relevant checks themselves.
+        /// </summary>
+        /// <param name="userId">The ID of the user whose state should change.</param>
+        /// <param name="newState">The new state.</param>
+        /// <exception cref="InvalidStateException">The user with the supplied <paramref name="userId"/> was not in the room.</exception>
+        public async Task ChangeUserState(int userId, MultiplayerUserState newState)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+
+            if (user == null)
+                throw new InvalidStateException("User is not in the expected room.");
+
+            if (user.State == newState)
+                return;
+
+            // There's a potential that a client attempts to change state while a message from the server is in transit. Silently block these changes rather than informing the client.
+            switch (newState)
+            {
+                // If a client triggered `Idle` (ie. un-readying) before they received the `WaitingForLoad` message from the match starting.
+                case MultiplayerUserState.Idle:
+                    if (user.State.IsGameplayState())
+                        return;
+
+                    break;
+
+                // If a client a triggered gameplay state before they received the `Idle` message from their gameplay being aborted.
+                case MultiplayerUserState.Loaded:
+                case MultiplayerUserState.ReadyForGameplay:
+                    if (!user.State.IsGameplayState())
+                        return;
+
+                    break;
+            }
+
+            Log(user, $"User changing state from {user.State} to {newState}");
+
+            ensureValidStateSwitch(user.State, newState);
+
+            await ChangeAndBroadcastUserState(user, newState);
+
+            // Signal newly-spectating users to load gameplay if currently in the middle of play.
+            if (newState == MultiplayerUserState.Spectating
+                && (State == MultiplayerRoomState.WaitingForLoad || State == MultiplayerRoomState.Playing))
+            {
+                await eventDispatcher.PostSpectatedMatchInProgressAsync(user.UserID);
+            }
+
+            await hub.UpdateRoomStateIfRequired(this);
+        }
+
+        /// <summary>
+        /// Given this room and a state transition, throw if there's an issue with the sequence of events.
+        /// </summary>
+        /// <param name="oldState">The old state.</param>
+        /// <param name="newState">The new state.</param>
+        private void ensureValidStateSwitch(MultiplayerUserState oldState, MultiplayerUserState newState)
+        {
+            switch (newState)
+            {
+                case MultiplayerUserState.Idle:
+                    if (oldState.IsGameplayState())
+                        throw new InvalidStateException("Cannot return to idle without aborting gameplay.");
+
+                    // any non-gameplay state can return to idle.
+                    break;
+
+                case MultiplayerUserState.Ready:
+                    if (oldState != MultiplayerUserState.Idle)
+                        throw new InvalidStateChangeException(oldState, newState);
+
+                    if (Controller.CurrentItem.Expired)
+                        throw new InvalidStateException("Cannot ready up while all items have been played.");
+
+                    break;
+
+                case MultiplayerUserState.WaitingForLoad:
+                    // state is managed by the server.
+                    throw new InvalidStateChangeException(oldState, newState);
+
+                case MultiplayerUserState.Loaded:
+                    if (oldState != MultiplayerUserState.WaitingForLoad)
+                        throw new InvalidStateChangeException(oldState, newState);
+
+                    break;
+
+                case MultiplayerUserState.ReadyForGameplay:
+                    if (oldState != MultiplayerUserState.Loaded)
+                        throw new InvalidStateChangeException(oldState, newState);
+
+                    break;
+
+                case MultiplayerUserState.Playing:
+                    // state is managed by the server.
+                    throw new InvalidStateChangeException(oldState, newState);
+
+                case MultiplayerUserState.FinishedPlay:
+                    if (oldState != MultiplayerUserState.Playing)
+                        throw new InvalidStateChangeException(oldState, newState);
+
+                    break;
+
+                case MultiplayerUserState.Results:
+                    // state is managed by the server.
+                    throw new InvalidStateChangeException(oldState, newState);
+
+                case MultiplayerUserState.Spectating:
+                    if (oldState != MultiplayerUserState.Idle && oldState != MultiplayerUserState.Ready)
+                        throw new InvalidStateChangeException(oldState, newState);
+
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
+            }
         }
 
         public async Task ChangeAndBroadcastUserState(MultiplayerRoomUser user, MultiplayerUserState state)
