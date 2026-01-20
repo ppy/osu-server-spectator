@@ -138,7 +138,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         #region Room state management
 
-        public async Task ChangeRoomState(MultiplayerRoomState newState)
+        private async Task changeRoomState(MultiplayerRoomState newState)
         {
             Log($"Room state changing from {State} to {newState}");
 
@@ -171,7 +171,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                     // Attempt to start gameplay when no more users need to change states. If all users have aborted, this will abort the match.
                     if (countReadyUsers == countGameplayUsers)
-                        await StartOrStopGameplay(this);
+                        await startOrStopGameplay(this);
 
                     break;
 
@@ -186,7 +186,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             await ChangeAndBroadcastUserState(u, MultiplayerUserState.Results);
                         }
 
-                        await ChangeRoomState(MultiplayerRoomState.Open);
+                        await changeRoomState(MultiplayerRoomState.Open);
 
                         if (anyUserFinishedPlay)
                             await eventDispatcher.PostMatchCompletedAsync(RoomID, CurrentPlaylistItem.ID);
@@ -293,10 +293,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="playlistItemChanged">Whether the current playlist item changed.</param>
         public async Task NotifySettingsChanged(bool playlistItemChanged)
         {
-            await EnsureAllUsersValidStyle();
+            await ensureAllUsersValidStyle();
 
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
-            await UnreadyAllUsers(playlistItemChanged);
+            await unreadyAllUsers(playlistItemChanged);
 
             await eventDispatcher.PostRoomSettingsChangedAsync(RoomID, Settings);
         }
@@ -341,7 +341,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             using (var db = dbFactory.GetInstance())
                 await db.RemoveRoomParticipantAsync(this, user);
 
-            await CheckVotesToSkipPassed();
+            await checkVotesToSkipPassed();
 
             await Controller.HandleUserLeft(user);
             return user;
@@ -510,10 +510,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (user == null)
                 throw new InvalidStateException("User was not in the expected room.");
 
-            await ChangeAndBroadcastUserBeatmapAvailability(user, newBeatmapAvailability);
+            await changeAndBroadcastUserBeatmapAvailability(user, newBeatmapAvailability);
         }
 
-        public async Task ChangeAndBroadcastUserBeatmapAvailability(MultiplayerRoomUser user, BeatmapAvailability newBeatmapAvailability)
+        private async Task changeAndBroadcastUserBeatmapAvailability(MultiplayerRoomUser user, BeatmapAvailability newBeatmapAvailability)
         {
             if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
                 return;
@@ -524,7 +524,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await Controller.HandleUserStateChanged(user);
         }
 
-        public async Task UnreadyAllUsers(bool resetBeatmapAvailability)
+        private async Task unreadyAllUsers(bool resetBeatmapAvailability)
         {
             Log("Unreadying all users");
 
@@ -536,12 +536,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 Log("Resetting all users' beatmap availability");
 
                 foreach (var user in Users)
-                    await ChangeAndBroadcastUserBeatmapAvailability(user, new BeatmapAvailability(DownloadState.Unknown));
+                    await changeAndBroadcastUserBeatmapAvailability(user, new BeatmapAvailability(DownloadState.Unknown));
             }
 
             // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop any match start countdown.
             // For example, gameplay-specific changes to the match settings or the current playlist item.
-            await StopAllCountdowns<MatchStartCountdown>();
+            await stopAllCountdowns<MatchStartCountdown>();
         }
 
         /// <summary>
@@ -562,10 +562,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (user == null)
                 throw new InvalidStateException("User is not in the expected room.");
 
-            await ChangeUserStyle(user, beatmapId, rulesetId);
+            await changeUserStyle(user, beatmapId, rulesetId);
         }
 
-        public async Task ChangeUserStyle(MultiplayerRoomUser user, int? beatmapId, int? rulesetId)
+        private async Task changeUserStyle(MultiplayerRoomUser user, int? beatmapId, int? rulesetId)
         {
             if (user.BeatmapId == beatmapId && user.RulesetId == rulesetId)
                 return;
@@ -624,10 +624,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (user == null)
                 throw new InvalidStateException("User is not in the expected room.");
 
-            await ChangeUserMods(user, newMods);
+            await changeUserMods(user, newMods);
         }
 
-        public async Task ChangeUserMods(MultiplayerRoomUser user, IEnumerable<APIMod> newMods)
+        private async Task changeUserMods(MultiplayerRoomUser user, IEnumerable<APIMod> newMods)
         {
             var newModList = newMods.ToList();
 
@@ -642,13 +642,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await eventDispatcher.PostUserModsChangedAsync(RoomID, user.UserID, newModList);
         }
 
-        public async Task EnsureAllUsersValidStyle()
+        private async Task ensureAllUsersValidStyle()
         {
             if (!Controller.CurrentItem.Freestyle)
             {
                 // Reset entire style when freestyle is disabled.
                 foreach (var user in Users)
-                    await ChangeUserStyle(user, null, null);
+                    await changeUserStyle(user, null, null);
             }
             else
             {
@@ -678,14 +678,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (userRulesetId != null && beatmapRuleset > 0 && userRulesetId != beatmapRuleset)
                         userRulesetId = null;
 
-                    await ChangeUserStyle(user, userBeatmapId, userRulesetId);
+                    await changeUserStyle(user, userBeatmapId, userRulesetId);
                 }
             }
 
             foreach (var user in Users)
             {
                 if (!Controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
-                    await ChangeUserMods(user, validMods);
+                    await changeUserMods(user, validMods);
             }
         }
 
@@ -760,8 +760,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             if (item.ID == Settings.PlaylistItemId)
             {
-                await EnsureAllUsersValidStyle();
-                await UnreadyAllUsers(beatmapChanged);
+                await ensureAllUsersValidStyle();
+                await unreadyAllUsers(beatmapChanged);
             }
 
             await eventDispatcher.PostPlaylistItemChangedAsync(RoomID, item);
@@ -798,29 +798,29 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             // This is the very first time users get a "gameplay" state. Reset any properties for the gameplay session.
             foreach (var user in room.Users)
-                await room.ChangeUserVoteToSkipIntro(user, false);
+                await room.changeUserVoteToSkipIntro(user, false);
 
             var readyUsers = room.Users.Where(u => u.IsReadyForGameplay()).ToArray();
 
             foreach (var u in readyUsers)
                 await room.ChangeAndBroadcastUserState(u, MultiplayerUserState.WaitingForLoad);
 
-            await room.ChangeRoomState(MultiplayerRoomState.WaitingForLoad);
+            await room.changeRoomState(MultiplayerRoomState.WaitingForLoad);
 
             await room.eventDispatcher.PostMatchStartedAsync(room.RoomID, room.Controller.CurrentItem.ID, room.Controller.GetMatchDetails());
 
-            await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
+            await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, startOrStopGameplay);
         }
 
         /// <summary>
         /// Starts gameplay for all users in the <see cref="MultiplayerUserState.Loaded"/> or <see cref="MultiplayerUserState.ReadyForGameplay"/> states,
         /// and aborts gameplay for any others in the <see cref="MultiplayerUserState.WaitingForLoad"/> state.
         /// </summary>
-        public static async Task StartOrStopGameplay(ServerMultiplayerRoom room)
+        private static async Task startOrStopGameplay(ServerMultiplayerRoom room)
         {
             Debug.Assert(room.State == MultiplayerRoomState.WaitingForLoad);
 
-            await room.StopAllCountdowns<ForceGameplayStartCountdown>();
+            await room.stopAllCountdowns<ForceGameplayStartCountdown>();
 
             bool anyUserPlaying = false;
 
@@ -842,10 +842,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             if (anyUserPlaying)
-                await room.ChangeRoomState(MultiplayerRoomState.Playing);
+                await room.changeRoomState(MultiplayerRoomState.Playing);
             else
             {
-                await room.ChangeRoomState(MultiplayerRoomState.Open);
+                await room.changeRoomState(MultiplayerRoomState.Open);
                 await room.eventDispatcher.PostMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
                 await room.Controller.HandleGameplayCompleted();
             }
@@ -867,11 +867,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (!user.State.IsGameplayState())
                 throw new InvalidStateException("Cannot skip while not in a gameplay state");
 
-            await ChangeUserVoteToSkipIntro(user, true);
-            await CheckVotesToSkipPassed();
+            await changeUserVoteToSkipIntro(user, true);
+            await checkVotesToSkipPassed();
         }
 
-        public async Task ChangeUserVoteToSkipIntro(MultiplayerRoomUser user, bool voted)
+        private async Task changeUserVoteToSkipIntro(MultiplayerRoomUser user, bool voted)
         {
             if (user.VotedToSkipIntro == voted)
                 return;
@@ -882,7 +882,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await eventDispatcher.PostUserVotedToSkipIntroAsync(RoomID, user.UserID, voted);
         }
 
-        public async Task CheckVotesToSkipPassed()
+        private async Task checkVotesToSkipPassed()
         {
             int countVotedUsers = Users.Count(u => u.State == MultiplayerUserState.Playing && u.VotedToSkipIntro);
             int countGameplayUsers = Users.Count(u => u.State == MultiplayerUserState.Playing);
@@ -945,7 +945,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             where T : MultiplayerCountdown
         {
             if (countdown.IsExclusive)
-                await StopAllCountdowns<T>();
+                await stopAllCountdowns<T>();
 
             countdown.ID = Interlocked.Increment(ref nextCountdownId);
 
@@ -1005,7 +1005,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// Stops all countdowns of the given type, preventing their callbacks from running.
         /// </summary>
         /// <typeparam name="T">The countdown type.</typeparam>
-        public async Task StopAllCountdowns<T>()
+        private async Task stopAllCountdowns<T>()
             where T : MultiplayerCountdown
         {
             foreach (var countdown in ActiveCountdowns.OfType<T>().ToArray())
