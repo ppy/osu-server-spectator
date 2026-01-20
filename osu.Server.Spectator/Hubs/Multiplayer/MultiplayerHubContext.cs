@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -89,51 +88,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await eventDispatcher.PostMatchStartedAsync(room.RoomID, room.Controller.CurrentItem.ID, room.Controller.GetMatchDetails());
 
-            await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
-        }
-
-        /// <summary>
-        /// Starts gameplay for all users in the <see cref="MultiplayerUserState.Loaded"/> or <see cref="MultiplayerUserState.ReadyForGameplay"/> states,
-        /// and aborts gameplay for any others in the <see cref="MultiplayerUserState.WaitingForLoad"/> state.
-        /// </summary>
-        public async Task StartOrStopGameplay(ServerMultiplayerRoom room)
-        {
-            Debug.Assert(room.State == MultiplayerRoomState.WaitingForLoad);
-
-            await room.StopAllCountdowns<ForceGameplayStartCountdown>();
-
-            bool anyUserPlaying = false;
-
-            // Start gameplay for users that are able to, and abort the others which cannot.
-            foreach (var user in room.Users)
-            {
-                string? connectionId = users.GetConnectionIdForUser(user.UserID);
-
-                if (connectionId == null)
-                    continue;
-
-                if (user.CanStartGameplay())
-                {
-                    await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Playing);
-                    await eventDispatcher.PostGameplayStartedAsync(user.UserID);
-                    anyUserPlaying = true;
-                }
-                else if (user.State == MultiplayerUserState.WaitingForLoad)
-                {
-                    await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
-                    await eventDispatcher.PostGameplayAbortedAsync(user.UserID, GameplayAbortReason.LoadTookTooLong);
-                    Log(room, user, "Gameplay aborted because this user took too long to load.");
-                }
-            }
-
-            if (anyUserPlaying)
-                await room.ChangeRoomState(MultiplayerRoomState.Playing);
-            else
-            {
-                await room.ChangeRoomState(MultiplayerRoomState.Open);
-                await eventDispatcher.PostMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
-                await room.Controller.HandleGameplayCompleted();
-            }
+            await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, ServerMultiplayerRoom.StartOrStopGameplay);
         }
 
         public async Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room)
@@ -158,7 +113,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                     // Attempt to start gameplay when no more users need to change states. If all users have aborted, this will abort the match.
                     if (countReadyUsers == countGameplayUsers)
-                        await StartOrStopGameplay(room);
+                        await ServerMultiplayerRoom.StartOrStopGameplay(room);
 
                     break;
 

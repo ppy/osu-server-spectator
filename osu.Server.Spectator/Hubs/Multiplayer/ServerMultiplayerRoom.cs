@@ -642,6 +642,45 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         #region Playing matches
 
+        /// <summary>
+        /// Starts gameplay for all users in the <see cref="MultiplayerUserState.Loaded"/> or <see cref="MultiplayerUserState.ReadyForGameplay"/> states,
+        /// and aborts gameplay for any others in the <see cref="MultiplayerUserState.WaitingForLoad"/> state.
+        /// </summary>
+        public static async Task StartOrStopGameplay(ServerMultiplayerRoom room)
+        {
+            Debug.Assert(room.State == MultiplayerRoomState.WaitingForLoad);
+
+            await room.StopAllCountdowns<ForceGameplayStartCountdown>();
+
+            bool anyUserPlaying = false;
+
+            // Start gameplay for users that are able to, and abort the others which cannot.
+            foreach (var user in room.Users)
+            {
+                if (user.CanStartGameplay())
+                {
+                    await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Playing);
+                    await room.eventDispatcher.PostGameplayStartedAsync(user.UserID);
+                    anyUserPlaying = true;
+                }
+                else if (user.State == MultiplayerUserState.WaitingForLoad)
+                {
+                    await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
+                    await room.eventDispatcher.PostGameplayAbortedAsync(user.UserID, GameplayAbortReason.LoadTookTooLong);
+                    room.Log(user, "Gameplay aborted because this user took too long to load.");
+                }
+            }
+
+            if (anyUserPlaying)
+                await room.ChangeRoomState(MultiplayerRoomState.Playing);
+            else
+            {
+                await room.ChangeRoomState(MultiplayerRoomState.Open);
+                await room.eventDispatcher.PostMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
+                await room.Controller.HandleGameplayCompleted();
+            }
+        }
+
         public async Task ChangeUserVoteToSkipIntro(MultiplayerRoomUser user, bool voted)
         {
             if (user.VotedToSkipIntro == voted)
