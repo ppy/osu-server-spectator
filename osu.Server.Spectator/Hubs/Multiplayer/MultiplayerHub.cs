@@ -660,8 +660,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     return;
                 }
 
-                await room.UpdateRoomStateIfRequired();
-
                 // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
                 if (room.Host?.Equals(user) == true)
                 {

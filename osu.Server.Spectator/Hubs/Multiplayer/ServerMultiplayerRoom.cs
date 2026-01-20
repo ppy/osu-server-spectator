@@ -369,6 +369,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await checkVotesToSkipPassed();
 
             await controller.HandleUserLeft(user);
+            await UpdateRoomStateIfRequired();
             return user;
         }
 
