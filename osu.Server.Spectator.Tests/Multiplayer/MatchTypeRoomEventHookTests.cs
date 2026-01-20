@@ -41,7 +41,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Mock<IMatchController> controller = new Mock<IMatchController>();
             await room.ChangeMatchType(controller.Object);
 
-            await room.RemoveUser(user);
+            await room.RemoveUser(user.UserID);
             controller.Verify(m => m.HandleUserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
 

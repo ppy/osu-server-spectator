@@ -766,12 +766,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await multiplayerEventDispatcher.PostRoomDisbandedAsync(room.RoomID, Context.GetUserId());
         }
 
-        private async Task removeDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)
-        {
-            using (var db = databaseFactory.GetInstance())
-                await db.RemoveRoomParticipantAsync(room, user);
-        }
-
         protected override async Task CleanUpState(MultiplayerClientState state)
         {
             await base.CleanUpState(state);
@@ -913,13 +907,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 await multiplayerEventDispatcher.UnsubscribePlayerAsync(room.RoomID, state.ConnectionId);
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);
-
-                if (user == null)
-                    throw new InvalidStateException("User was not in the expected room.");
-
-                await room.RemoveUser(user);
-                await removeDatabaseUser(room, user);
+                var user = await room.RemoveUser(state.UserId);
 
                 try
                 {

@@ -139,6 +139,30 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await Controller.HandleUserJoined(user);
         }
 
+        /// <summary>
+        /// Removes a user with the given <paramref name="userId"/> from this room.
+        /// The removal is communicated to the other users in the room.
+        /// Permissions for removal from the room are not checked. Callers are expected to perform relevant checks themselves.
+        /// </summary>
+        /// <returns>The <see cref="MultiplayerRoomUser"/> who was removed.</returns>
+        /// <exception cref="InvalidStateException">The user with the supplied <paramref name="userId"/> was not in the room.</exception>
+        public async Task<MultiplayerRoomUser> RemoveUser(int userId)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+
+            if (user == null)
+                throw new InvalidStateException("User is not in the expected room.");
+
+            Users.Remove(user);
+            using (var db = dbFactory.GetInstance())
+                await db.RemoveRoomParticipantAsync(this, user);
+
+            await hub.CheckVotesToSkipPassed(this);
+
+            await Controller.HandleUserLeft(user);
+            return user;
+        }
+
         #endregion
 
         [MemberNotNull(nameof(Controller))]
@@ -166,13 +190,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             foreach (var u in Users)
                 await Controller.HandleUserJoined(u);
-        }
-
-        public async Task RemoveUser(MultiplayerRoomUser user)
-        {
-            Users.Remove(user);
-            await Controller.HandleUserLeft(user);
-            await hub.CheckVotesToSkipPassed(this);
         }
 
         #region Countdowns
