@@ -134,13 +134,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                             userUsage.Item.SetRoom(roomId);
 
-                            // because match controllers may send subsequent information via Users collection hooks,
-                            // inform clients before adding user to the room.
-                            await multiplayerEventDispatcher.PostUserJoinedAsync(roomId, roomUser);
-
                             await room.AddUser(roomUser);
-
-                            await addDatabaseUser(room, roomUser);
                             await multiplayerEventDispatcher.SubscribePlayerAsync(roomId, Context.ConnectionId);
 
                             Log(room, "User joined");
@@ -770,12 +764,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await db.EndMatchAsync(room);
 
             await multiplayerEventDispatcher.PostRoomDisbandedAsync(room.RoomID, Context.GetUserId());
-        }
-
-        private async Task addDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)
-        {
-            using (var db = databaseFactory.GetInstance())
-                await db.AddRoomParticipantAsync(room, user);
         }
 
         private async Task removeDatabaseUser(MultiplayerRoom room, MultiplayerRoomUser user)

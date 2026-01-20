@@ -119,6 +119,28 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         #endregion
 
+        #region User & user state management
+
+        /// <summary>
+        /// Adds a new <paramref name="user"/> to this room.
+        /// The addition is communicated to the other users in the room.
+        /// Permissions for addition to the room are not checked. Callers are expected to perform relevant checks themselves.
+        /// </summary>
+        public async Task AddUser(MultiplayerRoomUser user)
+        {
+            // because match controllers may send subsequent information via Users collection hooks,
+            // inform clients before adding user to the room.
+            await eventDispatcher.PostUserJoinedAsync(RoomID, user);
+
+            Users.Add(user);
+            using (var db = dbFactory.GetInstance())
+                await db.AddRoomParticipantAsync(this, user);
+
+            await Controller.HandleUserJoined(user);
+        }
+
+        #endregion
+
         [MemberNotNull(nameof(Controller))]
         public Task ChangeMatchType(MatchType type)
         {
@@ -144,12 +166,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             foreach (var u in Users)
                 await Controller.HandleUserJoined(u);
-        }
-
-        public async Task AddUser(MultiplayerRoomUser user)
-        {
-            Users.Add(user);
-            await Controller.HandleUserJoined(user);
         }
 
         public async Task RemoveUser(MultiplayerRoomUser user)
