@@ -952,6 +952,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly Dictionary<MultiplayerCountdown, CountdownInfo> trackedCountdowns = new Dictionary<MultiplayerCountdown, CountdownInfo>();
 
         /// <summary>
+        /// Starts a countdown to begin the match.
+        /// Permissions are not checked. Callers are expected to perform checks themselves.
+        /// </summary>
+        /// <param name="duration">The duration of time in which the match should begin.</param>
+        /// <exception cref="InvalidStateException">A countdown could not be started in the current room state.</exception>
+        public async Task StartMatchCountdown(TimeSpan duration)
+        {
+            if (State != MultiplayerRoomState.Open)
+                throw new InvalidStateException("Cannot start a countdown during ongoing play.");
+
+            if (Settings.AutoStartEnabled)
+                throw new InvalidStateException("Cannot start manual countdown if auto-start is enabled.");
+
+            await StartCountdown(new MatchStartCountdown { TimeRemaining = duration }, StartMatch);
+        }
+
+        /// <summary>
         /// Starts a new countdown.
         /// </summary>
         /// <param name="countdown">The countdown to start. The <see cref="MultiplayerRoom"/> will receive this object for the duration of the countdown.</param>

@@ -409,15 +409,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     {
                         case StartMatchCountdownRequest startMatchCountdownRequest:
                             ensureIsHost(room);
-
-                            if (room.State != MultiplayerRoomState.Open)
-                                throw new InvalidStateException("Cannot start a countdown during ongoing play.");
-
-                            if (room.Settings.AutoStartEnabled)
-                                throw new InvalidStateException("Cannot start manual countdown if auto-start is enabled.");
-
-                            await room.StartCountdown(new MatchStartCountdown { TimeRemaining = startMatchCountdownRequest.Duration }, ServerMultiplayerRoom.StartMatch);
-
+                            await room.StartMatchCountdown(startMatchCountdownRequest.Duration);
                             break;
 
                         case StopCountdownRequest stopCountdownRequest:
