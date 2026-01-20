@@ -149,6 +149,63 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await eventDispatcher.PostRoomStateChangedAsync(RoomID, newState);
         }
 
+        /// <summary>
+        /// Changes this room's settings.
+        /// Permissions are not checked and validations are not performed. Callers are expected to perform relevant checks themselves.
+        /// </summary>
+        /// <param name="newSettings">The new settings.</param>
+        /// <exception cref="InvalidStateException">The provided settings were invalid.</exception>
+        public async Task ChangeRoomSettings(MultiplayerRoomSettings newSettings)
+        {
+            Log("Settings updating");
+
+            // Server is authoritative over the playlist item ID.
+            // Todo: This needs to change for tournament mode.
+            newSettings.PlaylistItemId = Settings.PlaylistItemId;
+
+            if (Settings.Equals(newSettings))
+                return;
+
+            var previousSettings = Settings;
+
+            if (newSettings.MatchType == MatchType.Playlists)
+                throw new InvalidStateException("Invalid match type selected");
+
+            try
+            {
+                Settings = newSettings;
+                await updateDatabaseSettings();
+            }
+            catch
+            {
+                // rollback settings if an error occurred when updating the database.
+                Settings = previousSettings;
+                throw;
+            }
+
+            if (previousSettings.MatchType != newSettings.MatchType)
+            {
+                await ChangeMatchType(newSettings.MatchType);
+                Log($"Switching room ruleset to {Controller}");
+            }
+
+            await Controller.HandleSettingsChanged();
+            await hub.NotifySettingsChanged(this, false);
+
+            await hub.UpdateRoomStateIfRequired(this);
+        }
+
+        private async Task updateDatabaseSettings()
+        {
+            var playlistItem = Playlist.FirstOrDefault(item => item.ID == Settings.PlaylistItemId);
+
+            if (playlistItem == null)
+                throw new InvalidStateException("Attempted to select a playlist item not contained by the room.");
+
+            using (var db = dbFactory.GetInstance())
+                await db.UpdateRoomSettingsAsync(this);
+        }
+
         #endregion
 
         #region User & user state management
