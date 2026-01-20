@@ -338,7 +338,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             // The settings playlist item controls various components by the client such as download tracking,
             // so it is set as late as possible to not inedvertently reveal it before animations are complete.
             room.Settings.PlaylistItemId = state.GameplayItem;
-            await hub.NotifySettingsChanged(room, true);
+            await room.NotifySettingsChanged(true);
 
             await eventDispatcher.PostFinalBeatmapSelectedAsync(room.RoomID, room.Settings.PlaylistItemId);
 

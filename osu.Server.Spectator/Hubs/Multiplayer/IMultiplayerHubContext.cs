@@ -27,16 +27,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged);
 
         /// <summary>
-        /// Notifies users in a room that the room's settings have changed.
-        /// </summary>
-        /// <remarks>
-        /// Adjusts user mod selections to ensure mod validity, unreadies all users, and stops the current countdown.
-        /// </remarks>
-        /// <param name="room">The room to send the event to.</param>
-        /// <param name="playlistItemChanged">Whether the current playlist item changed.</param>
-        Task NotifySettingsChanged(ServerMultiplayerRoom room, bool playlistItemChanged);
-
-        /// <summary>
         /// Retrieves a <see cref="ServerMultiplayerRoom"/> usage.
         /// </summary>
         /// <param name="roomId">The ID of the room to retrieve.</param>

@@ -190,7 +190,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             await Controller.HandleSettingsChanged();
-            await hub.NotifySettingsChanged(this, false);
+            await NotifySettingsChanged(false);
 
             await hub.UpdateRoomStateIfRequired(this);
         }
@@ -204,6 +204,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             using (var db = dbFactory.GetInstance())
                 await db.UpdateRoomSettingsAsync(this);
+        }
+
+        /// <summary>
+        /// Notifies users in this room that the room's settings have changed.
+        /// </summary>
+        /// <remarks>
+        /// Adjusts user mod selections to ensure mod validity, unreadies all users, and stops the current countdown.
+        /// </remarks>
+        /// <param name="playlistItemChanged">Whether the current playlist item changed.</param>
+        public async Task NotifySettingsChanged(bool playlistItemChanged)
+        {
+            await EnsureAllUsersValidStyle();
+
+            // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
+            await UnreadyAllUsers(playlistItemChanged);
+
+            await eventDispatcher.PostRoomSettingsChangedAsync(RoomID, Settings);
         }
 
         #endregion

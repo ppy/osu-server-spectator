@@ -56,16 +56,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await eventDispatcher.PostPlaylistItemChangedAsync(room.RoomID, item);
         }
 
-        public async Task NotifySettingsChanged(ServerMultiplayerRoom room, bool playlistItemChanged)
-        {
-            await room.EnsureAllUsersValidStyle();
-
-            // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
-            await room.UnreadyAllUsers(playlistItemChanged);
-
-            await eventDispatcher.PostRoomSettingsChangedAsync(room.RoomID, room.Settings);
-        }
-
         public Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId)
         {
             return rooms.TryGetForUse(roomId);

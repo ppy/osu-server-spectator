@@ -314,7 +314,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             room.Settings.PlaylistItemId = nextItem.ID;
 
             if (nextItem.ID != lastItemID)
-                await hub.NotifySettingsChanged(room, true);
+                await room.NotifySettingsChanged(true);
         }
 
         /// <summary>
