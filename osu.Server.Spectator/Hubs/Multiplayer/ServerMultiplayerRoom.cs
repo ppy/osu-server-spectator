@@ -79,7 +79,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             // Needs further discussion and consideration either way.
             using (var db = dbFactory.GetInstance())
             {
-                hub.Log(room, null, $"Retrieving room {roomId} from database");
+                room.Log($"Retrieving room {roomId} from database");
                 var databaseRoom = await db.GetRealtimeRoomAsync(roomId);
 
                 if (databaseRoom == null)
