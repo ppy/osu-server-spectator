@@ -8,6 +8,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MessagePack;
+using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
@@ -92,10 +94,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             return room;
         }
 
+        #region Serialisation
+
+        private static readonly MessagePackSerializerOptions message_pack_options = new MessagePackSerializerOptions(new SignalRUnionWorkaroundResolver());
+
         /// <summary>
-        /// Ensures that all states in this <see cref="ServerMultiplayerRoom"/> are valid to be newly serialised out to a client.
+        /// Takes a snapshot of the current state of this <see cref="ServerMultiplayerRoom"/> to be sent to a new client.
         /// </summary>
-        public void UpdateForRetrieval()
+        public MultiplayerRoom TakeSnapshot()
         {
             foreach (var countdown in ActiveCountdowns)
             {
@@ -106,7 +112,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 countdown.TimeRemaining = timeRemaining.TotalSeconds > 0 ? timeRemaining : TimeSpan.Zero;
             }
+
+            byte[] roomBytes = MessagePackSerializer.Serialize<MultiplayerRoom>(this, message_pack_options);
+            return MessagePackSerializer.Deserialize<MultiplayerRoom>(roomBytes, message_pack_options);
         }
+
+        #endregion
 
         [MemberNotNull(nameof(Controller))]
         public Task ChangeMatchType(MatchType type)

@@ -6,9 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using MessagePack;
 using Microsoft.Extensions.Logging;
-using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
@@ -24,8 +22,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     public partial class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
         public const string STATSD_PREFIX = "multiplayer";
-
-        private static readonly MessagePackSerializerOptions message_pack_options = new MessagePackSerializerOptions(new SignalRUnionWorkaroundResolver());
 
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
         protected readonly IMultiplayerHubContext HubContext;
@@ -98,7 +94,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private async Task<MultiplayerRoom> joinOrCreateRoom(long roomId, string password, bool isNewRoom)
         {
-            byte[] roomBytes;
+            MultiplayerRoom roomSnapshot;
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -143,7 +139,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             await multiplayerEventDispatcher.PostUserJoinedAsync(roomId, roomUser);
 
                             await room.AddUser(roomUser);
-                            room.UpdateForRetrieval();
 
                             await addDatabaseUser(room, roomUser);
                             await multiplayerEventDispatcher.SubscribePlayerAsync(roomId, Context.ConnectionId);
@@ -181,7 +176,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             throw;
                         }
 
-                        roomBytes = MessagePackSerializer.Serialize<MultiplayerRoom>(room, message_pack_options);
+                        roomSnapshot = room.TakeSnapshot();
                     }
                 }
                 catch (KeyNotFoundException)
@@ -201,7 +196,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 // Errors are logged internally by SharedInterop.
             }
 
-            return MessagePackSerializer.Deserialize<MultiplayerRoom>(roomBytes, message_pack_options);
+            return roomSnapshot;
         }
 
         public async Task LeaveRoom()
