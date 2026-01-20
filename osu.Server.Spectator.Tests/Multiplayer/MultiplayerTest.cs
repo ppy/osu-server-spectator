@@ -158,12 +158,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 hubContext.Object,
                 LoggerFactory.Object);
 
-            HubContext = new MultiplayerHubContext(
-                EventDispatcher,
-                Rooms,
-                UserStates,
-                LoggerFactory.Object,
-                DatabaseFactory.Object);
+            HubContext = new MultiplayerHubContext(Rooms);
 
             MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
                 hubContext.Object,
