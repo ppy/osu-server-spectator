@@ -414,21 +414,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         case StopCountdownRequest stopCountdownRequest:
                             ensureIsHost(room);
-
-                            MultiplayerCountdown? countdown = room.FindCountdownById(stopCountdownRequest.ID);
-
-                            if (countdown == null)
-                                break;
-
-                            switch (countdown)
-                            {
-                                case MatchStartCountdown when room.Settings.AutoStartEnabled:
-                                case ForceGameplayStartCountdown:
-                                case ServerShuttingDownCountdown:
-                                    throw new InvalidStateException("Cannot stop the requested countdown.");
-                            }
-
-                            await room.StopCountdown(countdown);
+                            await room.StopCountdown(stopCountdownRequest.ID);
                             break;
 
                         default:

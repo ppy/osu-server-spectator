@@ -1045,6 +1045,31 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// Stops the countdown with the given ID.
+        /// System-level countdowns cannot be stopped, but other than that,
+        /// no permission checks related to roles of the caller in the room are performed.
+        /// </summary>
+        /// <param name="countdownId">The ID of the countdown.</param>
+        /// <exception cref="InvalidStateException">The countdown cannot be stopped.</exception>
+        public async Task StopCountdown(int countdownId)
+        {
+            MultiplayerCountdown? countdown = FindCountdownById(countdownId);
+
+            if (countdown == null)
+                return;
+
+            switch (countdown)
+            {
+                case MatchStartCountdown when Settings.AutoStartEnabled:
+                case ForceGameplayStartCountdown:
+                case ServerShuttingDownCountdown:
+                    throw new InvalidStateException("Cannot stop the requested countdown.");
+            }
+
+            await StopCountdown(countdown);
+        }
+
+        /// <summary>
         /// Stops the given countdown, preventing its callback from running.
         /// </summary>
         /// <param name="countdown">The countdown to stop.</param>
