@@ -163,6 +163,27 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             return user;
         }
 
+        /// <summary>
+        /// Sets the user with the given <paramref name="userId"/> as host of this room.
+        /// The host change is communicated to the other users in the room.
+        /// Permissions for giving host are not checked. Callers are expected to perform relevant checks themselves.
+        /// </summary>
+        /// <param name="userId">The ID of the user who host should be given to.</param>
+        /// <exception cref="InvalidStateException">The user with the supplied <paramref name="userId"/> was not in the room.</exception>
+        public async Task SetHost(int userId)
+        {
+            var newHost = Users.FirstOrDefault(u => u.UserID == userId);
+
+            if (newHost == null)
+                throw new InvalidStateException("User is not in the expected room.");
+
+            Host = newHost;
+            await eventDispatcher.PostHostChangedAsync(RoomID, newHost.UserID);
+
+            using (var db = dbFactory.GetInstance())
+                await db.UpdateRoomHostAsync(this);
+        }
+
         #endregion
 
         [MemberNotNull(nameof(Controller))]

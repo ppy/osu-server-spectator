@@ -273,12 +273,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                     ensureIsHost(room);
 
-                    var newHost = room.Users.FirstOrDefault(u => u.UserID == userId);
-
-                    if (newHost == null)
-                        throw new Exception("Target user is not in the current room");
-
-                    await setNewHost(room, newHost);
+                    await room.SetHost(userId);
                 }
             }
         }
@@ -752,12 +747,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await db.UpdateRoomSettingsAsync(room);
         }
 
-        private async Task updateDatabaseHost(MultiplayerRoom room)
-        {
-            using (var db = databaseFactory.GetInstance())
-                await db.UpdateRoomHostAsync(room);
-        }
-
         private async Task endDatabaseMatch(MultiplayerRoom room)
         {
             using (var db = databaseFactory.GetInstance())
@@ -771,14 +760,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await base.CleanUpState(state);
             await matchmakingQueueService.RemoveFromQueueAsync(state);
             await leaveRoom(state, false);
-        }
-
-        private async Task setNewHost(MultiplayerRoom room, MultiplayerRoomUser newHost)
-        {
-            room.Host = newHost;
-            await multiplayerEventDispatcher.PostHostChangedAsync(room.RoomID, newHost.UserID);
-
-            await updateDatabaseHost(room);
         }
 
         /// <summary>
@@ -938,7 +919,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     // there *has* to still be at least one user in the room (see user check above).
                     var newHost = room.Users.First();
 
-                    await setNewHost(room, newHost);
+                    await room.SetHost(newHost.UserID);
                 }
 
                 if (wasKick)
