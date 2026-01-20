@@ -348,6 +348,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// Invites a player into this room.
+        /// Permissions for inviting are not checked. Callers are expected to perform relevant checks themselves.
+        /// </summary>
+        /// <param name="invitedUserId">The ID of the user being invited.</param>
+        /// <param name="invitedBy">The ID of the user sending the invite.</param>
+        /// <exception cref="InvalidStateException">The room does not support invitations.</exception>
+        public async Task InvitePlayer(int invitedUserId, int invitedBy)
+        {
+            if (Settings.MatchType == MatchType.Matchmaking)
+                throw new InvalidStateException("Can't invite players to matchmaking rooms.");
+
+            await eventDispatcher.PostUserInvitedAsync(RoomID, invitedUserId, invitedBy, Settings.Password);
+        }
+
+        /// <summary>
         /// Sets the user with the given <paramref name="userId"/> as host of this room.
         /// The host change is communicated to the other users in the room.
         /// Permissions for giving host are not checked. Callers are expected to perform relevant checks themselves.
