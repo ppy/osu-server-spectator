@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using IDatabaseFactory = osu.Server.Spectator.Database.IDatabaseFactory;
@@ -50,7 +49,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             if (item.ID == room.Settings.PlaylistItemId)
             {
-                await EnsureAllUsersValidStyle(room);
+                await room.EnsureAllUsersValidStyle();
                 await room.UnreadyAllUsers(beatmapChanged);
             }
 
@@ -59,7 +58,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task NotifySettingsChanged(ServerMultiplayerRoom room, bool playlistItemChanged)
         {
-            await EnsureAllUsersValidStyle(room);
+            await room.EnsureAllUsersValidStyle();
 
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
             await room.UnreadyAllUsers(playlistItemChanged);
@@ -70,53 +69,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId)
         {
             return rooms.TryGetForUse(roomId);
-        }
-
-        public async Task EnsureAllUsersValidStyle(ServerMultiplayerRoom room)
-        {
-            if (!room.Controller.CurrentItem.Freestyle)
-            {
-                // Reset entire style when freestyle is disabled.
-                foreach (var user in room.Users)
-                    await room.ChangeUserStyle(user, null, null);
-            }
-            else
-            {
-                database_beatmap itemBeatmap;
-                database_beatmap[] validDifficulties;
-
-                using (var db = databaseFactory.GetInstance())
-                {
-                    itemBeatmap = (await db.GetBeatmapAsync(room.Controller.CurrentItem.BeatmapID))!;
-                    validDifficulties = await db.GetBeatmapsAsync(itemBeatmap.beatmapset_id);
-                }
-
-                foreach (var user in room.Users)
-                {
-                    int? userBeatmapId = user.BeatmapId;
-                    int? userRulesetId = user.RulesetId;
-
-                    database_beatmap? foundBeatmap = validDifficulties.SingleOrDefault(b => b.beatmap_id == userBeatmapId);
-
-                    // Reset beatmap style if it's not a valid difficulty for the current beatmap set.
-                    if (userBeatmapId != null && foundBeatmap == null)
-                        userBeatmapId = null;
-
-                    int beatmapRuleset = foundBeatmap?.playmode ?? itemBeatmap.playmode;
-
-                    // Reset ruleset style when it's no longer valid for the resolved beatmap.
-                    if (userRulesetId != null && beatmapRuleset > 0 && userRulesetId != beatmapRuleset)
-                        userRulesetId = null;
-
-                    await room.ChangeUserStyle(user, userBeatmapId, userRulesetId);
-                }
-            }
-
-            foreach (var user in room.Users)
-            {
-                if (!room.Controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
-                    await room.ChangeUserMods(user, validMods);
-            }
         }
 
         public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)

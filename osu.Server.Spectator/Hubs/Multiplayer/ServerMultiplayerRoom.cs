@@ -475,6 +475,53 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await eventDispatcher.PostUserModsChangedAsync(RoomID, user.UserID, newModList);
         }
 
+        public async Task EnsureAllUsersValidStyle()
+        {
+            if (!Controller.CurrentItem.Freestyle)
+            {
+                // Reset entire style when freestyle is disabled.
+                foreach (var user in Users)
+                    await ChangeUserStyle(user, null, null);
+            }
+            else
+            {
+                database_beatmap itemBeatmap;
+                database_beatmap[] validDifficulties;
+
+                using (var db = dbFactory.GetInstance())
+                {
+                    itemBeatmap = (await db.GetBeatmapAsync(Controller.CurrentItem.BeatmapID))!;
+                    validDifficulties = await db.GetBeatmapsAsync(itemBeatmap.beatmapset_id);
+                }
+
+                foreach (var user in Users)
+                {
+                    int? userBeatmapId = user.BeatmapId;
+                    int? userRulesetId = user.RulesetId;
+
+                    database_beatmap? foundBeatmap = validDifficulties.SingleOrDefault(b => b.beatmap_id == userBeatmapId);
+
+                    // Reset beatmap style if it's not a valid difficulty for the current beatmap set.
+                    if (userBeatmapId != null && foundBeatmap == null)
+                        userBeatmapId = null;
+
+                    int beatmapRuleset = foundBeatmap?.playmode ?? itemBeatmap.playmode;
+
+                    // Reset ruleset style when it's no longer valid for the resolved beatmap.
+                    if (userRulesetId != null && beatmapRuleset > 0 && userRulesetId != beatmapRuleset)
+                        userRulesetId = null;
+
+                    await ChangeUserStyle(user, userBeatmapId, userRulesetId);
+                }
+            }
+
+            foreach (var user in Users)
+            {
+                if (!Controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
+                    await ChangeUserMods(user, validMods);
+            }
+        }
+
         #endregion
 
         [MemberNotNull(nameof(Controller))]
