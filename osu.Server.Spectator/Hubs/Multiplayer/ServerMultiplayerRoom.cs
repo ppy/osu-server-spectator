@@ -640,6 +640,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         #endregion
 
+        #region Playing matches
+
+        public async Task ChangeUserVoteToSkipIntro(MultiplayerRoomUser user, bool voted)
+        {
+            if (user.VotedToSkipIntro == voted)
+                return;
+
+            Log(user, $"Changing user vote to skip intro => {voted}");
+
+            user.VotedToSkipIntro = voted;
+            await eventDispatcher.PostUserVotedToSkipIntroAsync(RoomID, user.UserID, voted);
+        }
+
+        #endregion
+
         #region Countdowns
 
         private int nextCountdownId;

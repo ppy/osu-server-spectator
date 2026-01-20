@@ -61,17 +61,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             return rooms.TryGetForUse(roomId);
         }
 
-        public async Task ChangeUserVoteToSkipIntro(ServerMultiplayerRoom room, MultiplayerRoomUser user, bool voted)
-        {
-            if (user.VotedToSkipIntro == voted)
-                return;
-
-            Log(room, user, $"Changing user vote to skip intro => {voted}");
-
-            user.VotedToSkipIntro = voted;
-            await eventDispatcher.PostUserVotedToSkipIntroAsync(room.RoomID, user.UserID, voted);
-        }
-
         public async Task StartMatch(ServerMultiplayerRoom room)
         {
             if (room.State != MultiplayerRoomState.Open)
@@ -89,7 +78,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             // This is the very first time users get a "gameplay" state. Reset any properties for the gameplay session.
             foreach (var user in room.Users)
-                await ChangeUserVoteToSkipIntro(room, user, false);
+                await room.ChangeUserVoteToSkipIntro(user, false);
 
             var readyUsers = room.Users.Where(u => u.IsReadyForGameplay()).ToArray();
 

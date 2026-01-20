@@ -547,7 +547,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (!user.State.IsGameplayState())
                         throw new InvalidStateException("Cannot skip while not in a gameplay state");
 
-                    await HubContext.ChangeUserVoteToSkipIntro(room, user, true);
+                    await room.ChangeUserVoteToSkipIntro(user, true);
                     await HubContext.CheckVotesToSkipPassed(room);
                 }
             }
