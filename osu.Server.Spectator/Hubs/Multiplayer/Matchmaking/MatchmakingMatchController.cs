@@ -142,7 +142,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 // Expire and let clients know that the current item has finished.
                 await db.MarkPlaylistItemAsPlayedAsync(room.RoomID, CurrentItem.ID);
                 room.Playlist[room.Playlist.IndexOf(CurrentItem)] = (await db.GetPlaylistItemAsync(room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem();
-                await hub.NotifyPlaylistItemChanged(room, CurrentItem, true);
+                await room.NotifyPlaylistItemChanged(CurrentItem, true);
             }
 
             // Collect all scores from the database.

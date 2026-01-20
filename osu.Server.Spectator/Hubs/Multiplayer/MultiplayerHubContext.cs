@@ -5,7 +5,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Entities;
 using IDatabaseFactory = osu.Server.Spectator.Database.IDatabaseFactory;
 
@@ -35,17 +34,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.databaseFactory = databaseFactory;
 
             logger = loggerFactory.CreateLogger(nameof(MultiplayerHub).Replace("Hub", string.Empty));
-        }
-
-        public async Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged)
-        {
-            if (item.ID == room.Settings.PlaylistItemId)
-            {
-                await room.EnsureAllUsersValidStyle();
-                await room.UnreadyAllUsers(beatmapChanged);
-            }
-
-            await eventDispatcher.PostPlaylistItemChangedAsync(room.RoomID, item);
         }
 
         public Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId)

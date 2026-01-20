@@ -748,6 +748,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await UpdateRoomStateIfRequired();
         }
 
+        /// <summary>
+        /// Notifies users in the room that a playlist item has been changed.
+        /// </summary>
+        /// <remarks>
+        /// Adjusts user mod selections to ensure mod validity, and unreadies all users and stops the current countdown if the currently-selected playlist item was changed.
+        /// </remarks>
+        /// <param name="item">The changed item.</param>
+        /// <param name="beatmapChanged">Whether the beatmap changed.</param>
+        public async Task NotifyPlaylistItemChanged(MultiplayerPlaylistItem item, bool beatmapChanged)
+        {
+            if (item.ID == Settings.PlaylistItemId)
+            {
+                await EnsureAllUsersValidStyle();
+                await UnreadyAllUsers(beatmapChanged);
+            }
+
+            await eventDispatcher.PostPlaylistItemChangedAsync(RoomID, item);
+        }
+
         #endregion
 
         #region Playing matches

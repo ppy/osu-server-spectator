@@ -5,7 +5,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
@@ -15,17 +14,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     /// </summary>
     public interface IMultiplayerHubContext
     {
-        /// <summary>
-        /// Notifies users in a room that a playlist item has been changed.
-        /// </summary>
-        /// <remarks>
-        /// Adjusts user mod selections to ensure mod validity, and unreadies all users and stops the current countdown if the currently-selected playlist item was changed.
-        /// </remarks>
-        /// <param name="room">The room to send the event to.</param>
-        /// <param name="item">The changed item.</param>
-        /// <param name="beatmapChanged">Whether the beatmap changed.</param>
-        Task NotifyPlaylistItemChanged(ServerMultiplayerRoom room, MultiplayerPlaylistItem item, bool beatmapChanged);
-
         /// <summary>
         /// Retrieves a <see cref="ServerMultiplayerRoom"/> usage.
         /// </summary>
