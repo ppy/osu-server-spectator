@@ -43,6 +43,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected readonly Mock<IDatabaseAccess> Database;
         protected readonly Mock<ISharedInterop> LegacyIO;
         protected readonly MultiplayerEventDispatcher EventDispatcher;
+        protected Mock<ILoggerFactory> LoggerFactory;
 
         /// <summary>
         /// A general non-gameplay receiver for the room with ID <see cref="ROOM_ID"/>.
@@ -144,9 +145,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
-            var loggerFactoryMock = new Mock<ILoggerFactory>();
-            loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
-                             .Returns(new Mock<ILogger>().Object);
+            LoggerFactory = new Mock<ILoggerFactory>();
+            LoggerFactory.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                         .Returns(new Mock<ILogger>().Object);
 
             LegacyIO = new Mock<ISharedInterop>();
             LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>()))
@@ -155,27 +156,27 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             EventDispatcher = new MultiplayerEventDispatcher(
                 DatabaseFactory.Object,
                 hubContext.Object,
-                loggerFactoryMock.Object);
+                LoggerFactory.Object);
 
             HubContext = new MultiplayerHubContext(
                 EventDispatcher,
                 Rooms,
                 UserStates,
-                loggerFactoryMock.Object,
+                LoggerFactory.Object,
                 DatabaseFactory.Object);
 
             MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
                 hubContext.Object,
                 LegacyIO.Object,
                 DatabaseFactory.Object,
-                loggerFactoryMock.Object,
+                LoggerFactory.Object,
                 Rooms,
                 HubContext,
                 new MemoryCache(new MemoryCacheOptions()),
                 EventDispatcher);
 
             Hub = new TestMultiplayerHub(
-                loggerFactoryMock.Object,
+                LoggerFactory.Object,
                 Rooms,
                 UserStates,
                 DatabaseFactory.Object,

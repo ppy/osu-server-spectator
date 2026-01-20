@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MessagePack;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
@@ -31,14 +32,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
         private readonly MultiplayerEventDispatcher eventDispatcher;
+        private readonly ILogger<ServerMultiplayerRoom> logger;
         private IMatchController? matchController;
 
-        private ServerMultiplayerRoom(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
+        private ServerMultiplayerRoom(
+            long roomId,
+            IMultiplayerHubContext hub,
+            IDatabaseFactory dbFactory,
+            MultiplayerEventDispatcher eventDispatcher,
+            ILoggerFactory loggerFactory)
             : base(roomId)
         {
             this.hub = hub;
             this.dbFactory = dbFactory;
             this.eventDispatcher = eventDispatcher;
+            logger = loggerFactory.CreateLogger<ServerMultiplayerRoom>();
         }
 
         /// <summary>
@@ -50,11 +58,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="hub">The multiplayer hub context.</param>
         /// <param name="dbFactory">The database factory.</param>
         /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
+        /// <param name="loggerFactory">The logger factory.</param>
         /// <exception cref="InvalidOperationException">If the room does not exist in the database.</exception>
         /// <exception cref="InvalidStateException">If the match has already ended.</exception>
-        public static async Task<ServerMultiplayerRoom> InitialiseAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
+        public static async Task<ServerMultiplayerRoom> InitialiseAsync(
+            long roomId,
+            IMultiplayerHubContext hub,
+            IDatabaseFactory dbFactory,
+            MultiplayerEventDispatcher eventDispatcher,
+            ILoggerFactory loggerFactory)
         {
-            ServerMultiplayerRoom room = new ServerMultiplayerRoom(roomId, hub, dbFactory, eventDispatcher);
+            ServerMultiplayerRoom room = new ServerMultiplayerRoom(roomId, hub, dbFactory, eventDispatcher, loggerFactory);
 
             // TODO: this call should be transactional, and mark the room as managed by this server instance.
             // This will allow for other instances to know not to reinitialise the room if the host arrives there.
@@ -87,7 +101,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 await room.ChangeMatchType(room.Settings.MatchType);
 
-                hub.Log(room, null, "Marking room active");
+                room.Log("Marking room active");
                 await db.MarkRoomActiveAsync(room);
             }
 
@@ -386,6 +400,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 StopSource.Dispose();
                 SkipSource.Dispose();
             }
+        }
+
+        #endregion
+
+        #region Logging
+
+        public void Log(string message, LogLevel logLevel = LogLevel.Information)
+        {
+            logger.Log(logLevel, "[room:{roomID}] {message}",
+                RoomID,
+                message.Trim());
+        }
+
+        public void Log(MultiplayerRoomUser user, string message, LogLevel logLevel = LogLevel.Information)
+        {
+            logger.Log(logLevel, "[user:{userId}] [room:{roomID}] {message}",
+                user.UserID.ToString(),
+                RoomID,
+                message.Trim());
         }
 
         #endregion

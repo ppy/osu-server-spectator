@@ -25,6 +25,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
         protected readonly IMultiplayerHubContext HubContext;
+        private readonly ILoggerFactory loggerFactory;
         private readonly IDatabaseFactory databaseFactory;
         private readonly ChatFilters chatFilters;
         private readonly ISharedInterop sharedInterop;
@@ -43,6 +44,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             IMatchmakingQueueBackgroundService matchmakingQueueService)
             : base(loggerFactory, users)
         {
+            this.loggerFactory = loggerFactory;
             this.databaseFactory = databaseFactory;
             this.chatFilters = chatFilters;
             this.sharedInterop = sharedInterop;
@@ -113,7 +115,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         try
                         {
-                            room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, HubContext, databaseFactory, multiplayerEventDispatcher);
+                            room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, HubContext, databaseFactory, multiplayerEventDispatcher, loggerFactory);
 
                             // this is a sanity check to keep *rooms* in a good state.
                             // in theory the connection clean-up code should handle this correctly.
@@ -137,7 +139,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             await room.AddUser(roomUser);
                             await multiplayerEventDispatcher.SubscribePlayerAsync(roomId, Context.ConnectionId);
 
-                            Log(room, "User joined");
+                            room.Log(roomUser, "User joined");
                         }
                         catch
                         {
@@ -269,7 +271,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (room == null)
                         throw new InvalidOperationException("Attempted to operate on a null room");
 
-                    Log(room, $"Transferring host from {room.Host?.UserID} to {userId}");
+                    room.Log($"Transferring host from {room.Host?.UserID} to {userId}");
 
                     ensureIsHost(room);
 
@@ -884,11 +886,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                Log(room, wasKick ? "User kicked" : "User left");
-
                 await multiplayerEventDispatcher.UnsubscribePlayerAsync(room.RoomID, state.ConnectionId);
 
                 var user = await room.RemoveUser(state.UserId);
+                room.Log(user, wasKick ? "User kicked" : "User left");
 
                 try
                 {
