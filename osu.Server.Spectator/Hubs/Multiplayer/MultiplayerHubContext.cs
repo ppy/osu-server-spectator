@@ -81,7 +81,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             Log(room, null, "Unreadying all users");
 
             foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
-                await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Idle);
+                await room.ChangeAndBroadcastUserState(u, MultiplayerUserState.Idle);
 
             if (resetBeatmapAvailability)
             {
@@ -201,17 +201,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await eventDispatcher.PostUserModsChangedAsync(room.RoomID, user.UserID, newModList);
         }
 
-        public async Task ChangeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
-        {
-            Log(room, user, $"User state changed from {user.State} to {state}");
-
-            user.State = state;
-
-            await eventDispatcher.PostUserStateChangedAsync(room.RoomID, user.UserID, user.State);
-
-            await room.Controller.HandleUserStateChanged(user);
-        }
-
         public async Task ChangeAndBroadcastUserBeatmapAvailability(ServerMultiplayerRoom room, MultiplayerRoomUser user, BeatmapAvailability newBeatmapAvailability)
         {
             if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
@@ -268,7 +257,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var readyUsers = room.Users.Where(u => u.IsReadyForGameplay()).ToArray();
 
             foreach (var u in readyUsers)
-                await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.WaitingForLoad);
+                await room.ChangeAndBroadcastUserState(u, MultiplayerUserState.WaitingForLoad);
 
             await ChangeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
@@ -299,13 +288,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 if (user.CanStartGameplay())
                 {
-                    await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Playing);
+                    await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Playing);
                     await eventDispatcher.PostGameplayStartedAsync(user.UserID);
                     anyUserPlaying = true;
                 }
                 else if (user.State == MultiplayerUserState.WaitingForLoad)
                 {
-                    await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+                    await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
                     await eventDispatcher.PostGameplayAbortedAsync(user.UserID, GameplayAbortReason.LoadTookTooLong);
                     Log(room, user, "Gameplay aborted because this user took too long to load.");
                 }
@@ -355,7 +344,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.FinishedPlay))
                         {
                             anyUserFinishedPlay = true;
-                            await ChangeAndBroadcastUserState(room, u, MultiplayerUserState.Results);
+                            await room.ChangeAndBroadcastUserState(u, MultiplayerUserState.Results);
                         }
 
                         await ChangeRoomState(room, MultiplayerRoomState.Open);

@@ -74,14 +74,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         Task ChangeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user);
 
         /// <summary>
-        /// Changes a user's state in a room.
-        /// </summary>
-        /// <param name="room">The room containing the user.</param>
-        /// <param name="user">The user.</param>
-        /// <param name="state">The new state.</param>
-        Task ChangeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state);
-
-        /// <summary>
         /// Changes a user's beatmap availability for the current playlist item.
         /// </summary>
         /// <param name="room">The room containing the user.</param>

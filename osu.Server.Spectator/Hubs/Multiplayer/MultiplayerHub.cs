@@ -362,7 +362,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                     ensureValidStateSwitch(room, user.State, newState);
 
-                    await HubContext.ChangeAndBroadcastUserState(room, user, newState);
+                    await room.ChangeAndBroadcastUserState(user, newState);
 
                     // Signal newly-spectating users to load gameplay if currently in the middle of play.
                     if (newState == MultiplayerUserState.Spectating
@@ -549,7 +549,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         throw new InvalidStateException("Cannot abort a match that hasn't started.");
 
                     foreach (var user in room.Users)
-                        await HubContext.ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+                        await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
 
                     await multiplayerEventDispatcher.PostMatchAbortReasonGivenAsync(room.RoomID, GameplayAbortReason.HostAbortedTheMatch);
 
@@ -577,7 +577,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (!IsGameplayState(user.State))
                         throw new InvalidStateException("Cannot abort gameplay while not in a gameplay state");
 
-                    await HubContext.ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
+                    await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
                     await HubContext.UpdateRoomStateIfRequired(room);
                 }
             }

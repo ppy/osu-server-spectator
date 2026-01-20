@@ -198,6 +198,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await db.UpdateRoomHostAsync(this);
         }
 
+        public async Task ChangeAndBroadcastUserState(MultiplayerRoomUser user, MultiplayerUserState state)
+        {
+            Log(user, $"User state changed from {user.State} to {state}");
+
+            user.State = state;
+            await eventDispatcher.PostUserStateChangedAsync(RoomID, user.UserID, user.State);
+
+            await Controller.HandleUserStateChanged(user);
+        }
+
         #endregion
 
         [MemberNotNull(nameof(Controller))]
