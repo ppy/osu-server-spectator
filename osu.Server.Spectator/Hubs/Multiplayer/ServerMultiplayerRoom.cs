@@ -290,7 +290,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             using (var db = dbFactory.GetInstance())
                 await db.RemoveRoomParticipantAsync(this, user);
 
-            await hub.CheckVotesToSkipPassed(this);
+            await CheckVotesToSkipPassed();
 
             await Controller.HandleUserLeft(user);
             return user;
@@ -731,6 +731,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             user.VotedToSkipIntro = voted;
             await eventDispatcher.PostUserVotedToSkipIntroAsync(RoomID, user.UserID, voted);
+        }
+
+        public async Task CheckVotesToSkipPassed()
+        {
+            int countVotedUsers = Users.Count(u => u.State == MultiplayerUserState.Playing && u.VotedToSkipIntro);
+            int countGameplayUsers = Users.Count(u => u.State == MultiplayerUserState.Playing);
+
+            if (countVotedUsers >= countGameplayUsers / 2 + 1)
+                await eventDispatcher.PostVoteToSkipIntroPassedAsync(RoomID);
         }
 
         #endregion

@@ -106,15 +106,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
-        public async Task CheckVotesToSkipPassed(ServerMultiplayerRoom room)
-        {
-            int countVotedUsers = room.Users.Count(u => u.State == MultiplayerUserState.Playing && u.VotedToSkipIntro);
-            int countGameplayUsers = room.Users.Count(u => u.State == MultiplayerUserState.Playing);
-
-            if (countVotedUsers >= countGameplayUsers / 2 + 1)
-                await eventDispatcher.PostVoteToSkipIntroPassedAsync(room.RoomID);
-        }
-
         public void Log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)
         {
             logger.Log(logLevel, "[user:{userId}] [room:{roomID}] {message}",

@@ -37,8 +37,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room);
 
-        Task CheckVotesToSkipPassed(ServerMultiplayerRoom room);
-
         void Log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information);
 
         void Error(MultiplayerRoomUser? user, string message, Exception exception);
