@@ -42,13 +42,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="roomId">The ID of the room to retrieve.</param>
         Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId);
 
-        /// <summary>
-        /// Changes a room's state.
-        /// </summary>
-        /// <param name="room">The room.</param>
-        /// <param name="newState">The new room state.</param>
-        Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState);
-
         Task ChangeUserVoteToSkipIntro(ServerMultiplayerRoom room, MultiplayerRoomUser user, bool voted);
 
         /// <summary>

@@ -71,17 +71,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             return rooms.TryGetForUse(roomId);
         }
 
-        public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
-        {
-            Log(room, null, $"Room state changing from {room.State} to {newState}");
-
-            room.State = newState;
-            using (var db = databaseFactory.GetInstance())
-                await db.UpdateRoomStatusAsync(room);
-
-            await eventDispatcher.PostRoomStateChangedAsync(room.RoomID, newState);
-        }
-
         public async Task ChangeUserVoteToSkipIntro(ServerMultiplayerRoom room, MultiplayerRoomUser user, bool voted)
         {
             if (user.VotedToSkipIntro == voted)
@@ -159,10 +148,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             if (anyUserPlaying)
-                await ChangeRoomState(room, MultiplayerRoomState.Playing);
+                await room.ChangeRoomState(MultiplayerRoomState.Playing);
             else
             {
-                await ChangeRoomState(room, MultiplayerRoomState.Open);
+                await room.ChangeRoomState(MultiplayerRoomState.Open);
                 await eventDispatcher.PostMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
                 await room.Controller.HandleGameplayCompleted();
             }

@@ -136,6 +136,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         #endregion
 
+        #region Room state management
+
+        public async Task ChangeRoomState(MultiplayerRoomState newState)
+        {
+            Log($"Room state changing from {State} to {newState}");
+
+            State = newState;
+            using (var db = dbFactory.GetInstance())
+                await db.UpdateRoomStatusAsync(this);
+
+            await eventDispatcher.PostRoomStateChangedAsync(RoomID, newState);
+        }
+
+        #endregion
+
         #region User & user state management
 
         /// <summary>
