@@ -438,7 +438,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task changeUserState(MultiplayerRoomUser user, MultiplayerUserState newState)
         {
             await room.ChangeAndBroadcastUserState(user, newState);
-            await hub.UpdateRoomStateIfRequired(room);
+            await room.UpdateRoomStateIfRequired();
         }
 
         private async Task changeStage(MatchmakingStage stage)

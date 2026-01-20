@@ -548,7 +548,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     Log(room, $"Adding playlist item for beatmap {item.BeatmapID}");
                     await room.Controller.AddPlaylistItem(item, user);
 
-                    await HubContext.UpdateRoomStateIfRequired(room);
+                    await room.UpdateRoomStateIfRequired();
                 }
             }
         }
@@ -594,7 +594,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     Log(room, $"Removing playlist item {playlistItemId}");
                     await room.Controller.RemovePlaylistItem(playlistItemId, user);
 
-                    await HubContext.UpdateRoomStateIfRequired(room);
+                    await room.UpdateRoomStateIfRequired();
                 }
             }
         }
@@ -704,7 +704,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     return;
                 }
 
-                await HubContext.UpdateRoomStateIfRequired(room);
+                await room.UpdateRoomStateIfRequired();
 
                 // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
                 if (room.Host?.Equals(user) == true)

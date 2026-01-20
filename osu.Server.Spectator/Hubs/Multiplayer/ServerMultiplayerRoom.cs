@@ -149,6 +149,57 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await eventDispatcher.PostRoomStateChangedAsync(RoomID, newState);
         }
 
+        public async Task UpdateRoomStateIfRequired()
+        {
+            //check whether a room state change is required.
+            switch (State)
+            {
+                case MultiplayerRoomState.Open:
+                    if (Settings.AutoStartEnabled)
+                    {
+                        bool shouldHaveCountdown = !Controller.CurrentItem.Expired && Users.Any(u => u.State == MultiplayerUserState.Ready);
+
+                        if (shouldHaveCountdown && !ActiveCountdowns.Any(c => c is MatchStartCountdown))
+                            await StartCountdown(new MatchStartCountdown { TimeRemaining = Settings.AutoStartDuration }, StartMatch);
+                    }
+
+                    break;
+
+                case MultiplayerRoomState.WaitingForLoad:
+                    int countGameplayUsers = Users.Count(u => u.State.IsGameplayState());
+                    int countReadyUsers = Users.Count(u => u.State == MultiplayerUserState.ReadyForGameplay);
+
+                    // Attempt to start gameplay when no more users need to change states. If all users have aborted, this will abort the match.
+                    if (countReadyUsers == countGameplayUsers)
+                        await StartOrStopGameplay(this);
+
+                    break;
+
+                case MultiplayerRoomState.Playing:
+                    if (Users.All(u => u.State != MultiplayerUserState.Playing))
+                    {
+                        bool anyUserFinishedPlay = false;
+
+                        foreach (var u in Users.Where(u => u.State == MultiplayerUserState.FinishedPlay))
+                        {
+                            anyUserFinishedPlay = true;
+                            await ChangeAndBroadcastUserState(u, MultiplayerUserState.Results);
+                        }
+
+                        await ChangeRoomState(MultiplayerRoomState.Open);
+
+                        if (anyUserFinishedPlay)
+                            await eventDispatcher.PostMatchCompletedAsync(RoomID, CurrentPlaylistItem.ID);
+                        else
+                            await eventDispatcher.PostMatchAbortedAsync(RoomID, CurrentPlaylistItem.ID);
+
+                        await Controller.HandleGameplayCompleted();
+                    }
+
+                    break;
+            }
+        }
+
         /// <summary>
         /// Changes this room's settings.
         /// Permissions are not checked and validations are not performed. Callers are expected to perform relevant checks themselves.
@@ -192,7 +243,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await Controller.HandleSettingsChanged();
             await NotifySettingsChanged(false);
 
-            await hub.UpdateRoomStateIfRequired(this);
+            await UpdateRoomStateIfRequired();
         }
 
         private async Task updateDatabaseSettings()
@@ -366,7 +417,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await eventDispatcher.PostSpectatedMatchInProgressAsync(user.UserID);
             }
 
-            await hub.UpdateRoomStateIfRequired(this);
+            await UpdateRoomStateIfRequired();
         }
 
         /// <summary>
@@ -779,7 +830,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 throw new InvalidStateException("Cannot abort gameplay while not in a gameplay state.");
 
             await ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
-            await hub.UpdateRoomStateIfRequired(this);
+            await UpdateRoomStateIfRequired();
         }
 
         /// <summary>
@@ -797,7 +848,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await eventDispatcher.PostMatchAbortReasonGivenAsync(RoomID, GameplayAbortReason.HostAbortedTheMatch);
 
-            await hub.UpdateRoomStateIfRequired(this);
+            await UpdateRoomStateIfRequired();
         }
 
         #endregion
