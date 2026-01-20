@@ -722,6 +722,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
+        /// <summary>
+        /// Submits a user's vote to skip the intro.
+        /// </summary>
+        /// <param name="userId">The relevant user's ID.</param>
+        /// <exception cref="InvalidStateException">
+        /// The user was not in this room, or was not in the correct state to vote to skip.
+        /// </exception>
+        public async Task VoteToSkipIntro(int userId)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+            if (user == null)
+                throw new InvalidStateException("User is not in expected room");
+
+            if (!user.State.IsGameplayState())
+                throw new InvalidStateException("Cannot skip while not in a gameplay state");
+
+            await ChangeUserVoteToSkipIntro(user, true);
+            await CheckVotesToSkipPassed();
+        }
+
         public async Task ChangeUserVoteToSkipIntro(MultiplayerRoomUser user, bool voted)
         {
             if (user.VotedToSkipIntro == voted)
