@@ -490,15 +490,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                     ensureIsHost(room);
 
-                    if (room.State != MultiplayerRoomState.WaitingForLoad && room.State != MultiplayerRoomState.Playing)
-                        throw new InvalidStateException("Cannot abort a match that hasn't started.");
-
-                    foreach (var user in room.Users)
-                        await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
-
-                    await multiplayerEventDispatcher.PostMatchAbortReasonGivenAsync(room.RoomID, GameplayAbortReason.HostAbortedTheMatch);
-
-                    await HubContext.UpdateRoomStateIfRequired(room);
+                    await room.AbortMatch();
                 }
             }
         }

@@ -782,6 +782,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await hub.UpdateRoomStateIfRequired(this);
         }
 
+        /// <summary>
+        /// Aborts an ongoing match.
+        /// Permissions are not checked. Callers should implement tne necessary checks themselves.
+        /// </summary>
+        /// <exception cref="InvalidStateException">If a match is not in progress.</exception>
+        public async Task AbortMatch()
+        {
+            if (State != MultiplayerRoomState.WaitingForLoad && State != MultiplayerRoomState.Playing)
+                throw new InvalidStateException("Cannot abort a match that hasn't started.");
+
+            foreach (var user in Users)
+                await ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
+
+            await eventDispatcher.PostMatchAbortReasonGivenAsync(RoomID, GameplayAbortReason.HostAbortedTheMatch);
+
+            await hub.UpdateRoomStateIfRequired(this);
+        }
+
         #endregion
 
         #region Countdowns
