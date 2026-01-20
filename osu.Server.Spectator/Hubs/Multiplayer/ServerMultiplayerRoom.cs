@@ -712,6 +712,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await UpdateRoomStateIfRequired();
         }
 
+        /// <summary>
+        /// Edits an existing playlist item from the user with the given <see cref="userId"/>.
+        /// Permissions are not checked. Callers should check themselves, or via <see cref="Controller"/>.
+        /// </summary>
+        /// <param name="userId">The ID of the user editing the item.</param>
+        /// <param name="item">The playlist item.</param>
+        /// <exception cref="InvalidStateException">The user with the supplied <paramref name="userId"/> was not in the room.</exception>
+        public async Task EditPlaylistItem(int userId, MultiplayerPlaylistItem item)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+            if (user == null)
+                throw new InvalidStateException("User is not in expected room.");
+
+            Log(user, $"Editing playlist item {item.ID} for beatmap {item.BeatmapID}");
+            await Controller.EditPlaylistItem(item, user);
+        }
+
         #endregion
 
         #region Playing matches
