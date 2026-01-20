@@ -2,12 +2,10 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
@@ -117,23 +115,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             foreach (var user in room.Users)
             {
                 if (!room.Controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
-                    await ChangeUserMods(validMods, room, user);
+                    await room.ChangeUserMods(user, validMods);
             }
-        }
-
-        public async Task ChangeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user)
-        {
-            var newModList = newMods.ToList();
-
-            if (!room.Controller.CurrentItem.ValidateUserMods(user, newModList, out var validMods))
-                throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
-
-            if (user.Mods.SequenceEqual(newModList))
-                return;
-
-            user.Mods = newModList;
-
-            await eventDispatcher.PostUserModsChangedAsync(room.RoomID, user.UserID, newModList);
         }
 
         public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)
@@ -182,7 +165,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             foreach (var u in readyUsers)
                 await room.ChangeAndBroadcastUserState(u, MultiplayerUserState.WaitingForLoad);
 
-            await ChangeRoomState(room, MultiplayerRoomState.WaitingForLoad);
+            await room.ChangeRoomState(MultiplayerRoomState.WaitingForLoad);
 
             await eventDispatcher.PostMatchStartedAsync(room.RoomID, room.Controller.CurrentItem.ID, room.Controller.GetMatchDetails());
 
@@ -270,7 +253,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             await room.ChangeAndBroadcastUserState(u, MultiplayerUserState.Results);
                         }
 
-                        await ChangeRoomState(room, MultiplayerRoomState.Open);
+                        await room.ChangeRoomState(MultiplayerRoomState.Open);
 
                         if (anyUserFinishedPlay)
                             await eventDispatcher.PostMatchCompletedAsync(room.RoomID, room.CurrentPlaylistItem.ID);

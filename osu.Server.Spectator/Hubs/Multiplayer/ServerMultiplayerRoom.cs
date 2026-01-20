@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online;
+using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
@@ -438,6 +439,40 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             await eventDispatcher.PostUserStyleChangedAsync(RoomID, user.UserID, beatmapId, rulesetId);
+        }
+
+        /// <summary>
+        /// Changes the selected mods of the user with the given <paramref name="userId"/>.
+        /// </summary>
+        /// <param name="userId">The ID of the target user.</param>
+        /// <param name="newMods">The new mod selection.</param>
+        /// <exception cref="InvalidStateException">
+        /// The user with the supplied <paramref name="userId"/> was not in the room,
+        /// or the new selection is not valid for the current playlist item.
+        /// </exception>
+        public async Task ChangeUserMods(int userId, IEnumerable<APIMod> newMods)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+
+            if (user == null)
+                throw new InvalidStateException("User is not in the expected room.");
+
+            await ChangeUserMods(user, newMods);
+        }
+
+        public async Task ChangeUserMods(MultiplayerRoomUser user, IEnumerable<APIMod> newMods)
+        {
+            var newModList = newMods.ToList();
+
+            if (!Controller.CurrentItem.ValidateUserMods(user, newModList, out var validMods))
+                throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
+
+            if (user.Mods.SequenceEqual(newModList))
+                return;
+
+            user.Mods = newModList;
+
+            await eventDispatcher.PostUserModsChangedAsync(RoomID, user.UserID, newModList);
         }
 
         #endregion

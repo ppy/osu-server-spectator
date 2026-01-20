@@ -2,10 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Entities;
@@ -43,15 +41,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         /// <param name="roomId">The ID of the room to retrieve.</param>
         Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId);
-
-        /// <summary>
-        /// Changes a user's mods in a room.
-        /// </summary>
-        /// <param name="newMods">The new mod selection.</param>
-        /// <param name="room">The room containing the user.</param>
-        /// <param name="user">The user.</param>
-        /// <exception cref="InvalidStateException">If the new selection is not valid for current playlist item.</exception>
-        Task ChangeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user);
 
         /// <summary>
         /// Changes a room's state.
