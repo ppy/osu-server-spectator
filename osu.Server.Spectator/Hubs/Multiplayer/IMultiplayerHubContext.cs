@@ -45,16 +45,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId);
 
         /// <summary>
-        /// Unreadies all users in a room.
-        /// </summary>
-        /// <remarks>
-        /// Stops the current countdown.
-        /// </remarks>
-        /// <param name="room">The room to unready users in.</param>
-        /// <param name="resetBeatmapAvailability">Whether to reset availabilities (ie. if the beatmap changed).</param>
-        Task UnreadyAllUsers(ServerMultiplayerRoom room, bool resetBeatmapAvailability);
-
-        /// <summary>
         /// Changes a user's style in a room.
         /// </summary>
         /// <param name="beatmapId">The new beatmap selection.</param>

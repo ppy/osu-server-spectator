@@ -355,6 +355,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await Controller.HandleUserStateChanged(user);
         }
 
+        public async Task UnreadyAllUsers(bool resetBeatmapAvailability)
+        {
+            Log("Unreadying all users");
+
+            foreach (var u in Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
+                await ChangeAndBroadcastUserState(u, MultiplayerUserState.Idle);
+
+            if (resetBeatmapAvailability)
+            {
+                Log("Resetting all users' beatmap availability");
+
+                foreach (var user in Users)
+                    await ChangeAndBroadcastUserBeatmapAvailability(user, new BeatmapAvailability(DownloadState.Unknown));
+            }
+
+            // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop any match start countdown.
+            // For example, gameplay-specific changes to the match settings or the current playlist item.
+            await StopAllCountdowns<MatchStartCountdown>();
+        }
+
         #endregion
 
         [MemberNotNull(nameof(Controller))]

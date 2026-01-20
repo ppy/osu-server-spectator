@@ -55,7 +55,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (item.ID == room.Settings.PlaylistItemId)
             {
                 await EnsureAllUsersValidStyle(room);
-                await UnreadyAllUsers(room, beatmapChanged);
+                await room.UnreadyAllUsers(beatmapChanged);
             }
 
             await eventDispatcher.PostPlaylistItemChangedAsync(room.RoomID, item);
@@ -66,7 +66,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await EnsureAllUsersValidStyle(room);
 
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
-            await UnreadyAllUsers(room, playlistItemChanged);
+            await room.UnreadyAllUsers(playlistItemChanged);
 
             await eventDispatcher.PostRoomSettingsChangedAsync(room.RoomID, room.Settings);
         }
@@ -74,26 +74,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId)
         {
             return rooms.TryGetForUse(roomId);
-        }
-
-        public async Task UnreadyAllUsers(ServerMultiplayerRoom room, bool resetBeatmapAvailability)
-        {
-            Log(room, null, "Unreadying all users");
-
-            foreach (var u in room.Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
-                await room.ChangeAndBroadcastUserState(u, MultiplayerUserState.Idle);
-
-            if (resetBeatmapAvailability)
-            {
-                Log(room, null, "Resetting all users' beatmap availability");
-
-                foreach (var user in room.Users)
-                    await room.ChangeAndBroadcastUserBeatmapAvailability(user, new BeatmapAvailability(DownloadState.Unknown));
-            }
-
-            // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop any match start countdown.
-            // For example, gameplay-specific changes to the match settings or the current playlist item.
-            await room.StopAllCountdowns<MatchStartCountdown>();
         }
 
         public async Task EnsureAllUsersValidStyle(ServerMultiplayerRoom room)
