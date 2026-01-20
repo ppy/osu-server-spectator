@@ -344,7 +344,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     {
                         // If a client triggered `Idle` (ie. un-readying) before they received the `WaitingForLoad` message from the match starting.
                         case MultiplayerUserState.Idle:
-                            if (IsGameplayState(user.State))
+                            if (user.State.IsGameplayState())
                                 return;
 
                             break;
@@ -352,7 +352,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         // If a client a triggered gameplay state before they received the `Idle` message from their gameplay being aborted.
                         case MultiplayerUserState.Loaded:
                         case MultiplayerUserState.ReadyForGameplay:
-                            if (!IsGameplayState(user.State))
+                            if (!user.State.IsGameplayState())
                                 return;
 
                             break;
@@ -574,7 +574,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (user == null)
                         throw new InvalidOperationException("Local user was not found in the expected room");
 
-                    if (!IsGameplayState(user.State))
+                    if (!user.State.IsGameplayState())
                         throw new InvalidStateException("Cannot abort gameplay while not in a gameplay state");
 
                     await room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
@@ -599,7 +599,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (user == null)
                         throw new InvalidOperationException("Local user was not found in the expected room");
 
-                    if (!IsGameplayState(user.State))
+                    if (!user.State.IsGameplayState())
                         throw new InvalidStateException("Cannot skip while not in a gameplay state");
 
                     await HubContext.ChangeUserVoteToSkipIntro(room, user, true);
@@ -775,7 +775,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             switch (newState)
             {
                 case MultiplayerUserState.Idle:
-                    if (IsGameplayState(oldState))
+                    if (oldState.IsGameplayState())
                         throw new InvalidStateException("Cannot return to idle without aborting gameplay.");
 
                     // any non-gameplay state can return to idle.
@@ -828,21 +828,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
-            }
-        }
-
-        public static bool IsGameplayState(MultiplayerUserState state)
-        {
-            switch (state)
-            {
-                default:
-                    return false;
-
-                case MultiplayerUserState.WaitingForLoad:
-                case MultiplayerUserState.Loaded:
-                case MultiplayerUserState.ReadyForGameplay:
-                case MultiplayerUserState.Playing:
-                    return true;
             }
         }
 

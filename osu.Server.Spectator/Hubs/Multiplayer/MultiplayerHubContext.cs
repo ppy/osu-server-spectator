@@ -327,7 +327,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     break;
 
                 case MultiplayerRoomState.WaitingForLoad:
-                    int countGameplayUsers = room.Users.Count(u => MultiplayerHub.IsGameplayState(u.State));
+                    int countGameplayUsers = room.Users.Count(u => u.State.IsGameplayState());
                     int countReadyUsers = room.Users.Count(u => u.State == MultiplayerUserState.ReadyForGameplay);
 
                     // Attempt to start gameplay when no more users need to change states. If all users have aborted, this will abort the match.
