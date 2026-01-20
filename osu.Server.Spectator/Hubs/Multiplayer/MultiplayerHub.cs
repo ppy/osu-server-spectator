@@ -122,7 +122,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             if (room.Users.Any(u => u.UserID == roomUser.UserID))
                                 throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
 
-                            if (!await room.Controller.UserCanJoin(roomUser.UserID))
+                            if (!await room.UserCanJoin(roomUser.UserID))
                                 throw new InvalidStateException("Not eligible to join this room.");
 
                             if (!string.IsNullOrEmpty(room.Settings.Password))
@@ -418,7 +418,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             break;
 
                         default:
-                            await room.Controller.HandleUserRequest(user, request);
+                            await room.HandleUserRequest(user, request);
                             break;
                     }
                 }

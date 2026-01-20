@@ -82,7 +82,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // change all users to team 0
             for (int i = 0; i < 5; i++)
-                await room.Controller.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
+                await room.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
 
             Assert.All(room.Users, u => checkUserOnTeam(u, 0));
 

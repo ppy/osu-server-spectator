@@ -11,8 +11,8 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
-using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
-using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
+using osu.Server.Spectator.Extensions;
+using osu.Server.Spectator.Hubs.Multiplayer;
 using osu.Server.Spectator.Tests.Multiplayer;
 using Xunit;
 
@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         public async Task InitializeAsync()
         {
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2], 0);
+                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2], 0);
         }
 
         [Fact]
@@ -202,7 +202,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
+                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
 
             await Hub.JoinRoom(ROOM_ID);
             SetUserContext(ContextUser2);
@@ -293,7 +293,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
+                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -327,7 +327,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
+                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -642,7 +642,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             CreateUser(3, out var contextUser3, out _);
 
             using (var roomUsage = await Rooms.GetForUse(ROOM_ID, true))
-                roomUsage.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
+                roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
 
             await Hub.JoinRoom(ROOM_ID);
             SetUserContext(ContextUser2);
@@ -660,9 +660,9 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await Hub.LeaveRoom();
             Assert.NotNull(roomState.Users.GetOrAdd(USER_ID).AbandonedAt);
 
+            SetUserContext(ContextUser2);
             await gotoStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
 
-            SetUserContext(ContextUser2);
             await MarkCurrentUserReadyAndAvailable();
             SetUserContext(contextUser3);
             await MarkCurrentUserReadyAndAvailable();
@@ -828,15 +828,14 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
         private async Task gotoNextStage()
         {
-            MatchmakingMatchController controller;
+            Task countdownTask;
 
             using (var room = await Rooms.GetForUse(ROOM_ID))
             {
                 Assert.NotNull(room.Item);
-                controller = (MatchmakingMatchController)room.Item.Controller;
+                room.Item.MatchmakingSkipToNextStage(Hub.Context.GetUserId(), out countdownTask);
             }
 
-            controller.SkipToNextStage(out Task countdownTask);
             await countdownTask;
         }
 

@@ -95,7 +95,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         /// </summary>
         private static readonly int[] placement_points = [15, 12, 10, 8, 6, 4, 2, 1];
 
-        public MultiplayerPlaylistItem CurrentItem => room.CurrentPlaylistItem;
+        public MultiplayerPlaylistItem CurrentItem => room.Playlist.Single(item => item.ID == room.Settings.PlaylistItemId);
 
         public uint PoolId { get; set; }
 
