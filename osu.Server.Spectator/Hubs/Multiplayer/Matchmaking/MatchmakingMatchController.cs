@@ -358,7 +358,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task stageGameplay(ServerMultiplayerRoom _)
         {
             await changeStage(MatchmakingStage.Gameplay);
-            await startCountdown(TimeSpan.FromSeconds(stage_gameplay_time), hub.StartMatch);
+            await startCountdown(TimeSpan.FromSeconds(stage_gameplay_time), ServerMultiplayerRoom.StartMatch);
         }
 
         private async Task stageResultsDisplaying()

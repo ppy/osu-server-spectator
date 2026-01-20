@@ -643,6 +643,47 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         #region Playing matches
 
         /// <summary>
+        /// The amount of time allowed for players to finish loading gameplay before they're either forced into gameplay (if loaded) or booted to the menu (if still loading).
+        /// </summary>
+        private static readonly TimeSpan gameplay_load_timeout = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// Starts a match in a room.
+        /// </summary>
+        /// <param name="room">The room to start the match for.</param>
+        /// <exception cref="InvalidStateException">If the current playlist item is expired or the room is not in an <see cref="MultiplayerRoomState.Open"/> state.</exception>
+        public static async Task StartMatch(ServerMultiplayerRoom room)
+        {
+            if (room.State != MultiplayerRoomState.Open)
+                throw new InvalidStateException("Can't start match when already in a running state.");
+
+            if (room.Controller.CurrentItem.Expired)
+                throw new InvalidStateException("Cannot start an expired playlist item.");
+
+            // If no users are ready, skip the current item in the queue.
+            if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
+            {
+                await room.Controller.HandleGameplayCompleted();
+                return;
+            }
+
+            // This is the very first time users get a "gameplay" state. Reset any properties for the gameplay session.
+            foreach (var user in room.Users)
+                await room.ChangeUserVoteToSkipIntro(user, false);
+
+            var readyUsers = room.Users.Where(u => u.IsReadyForGameplay()).ToArray();
+
+            foreach (var u in readyUsers)
+                await room.ChangeAndBroadcastUserState(u, MultiplayerUserState.WaitingForLoad);
+
+            await room.ChangeRoomState(MultiplayerRoomState.WaitingForLoad);
+
+            await room.eventDispatcher.PostMatchStartedAsync(room.RoomID, room.Controller.CurrentItem.ID, room.Controller.GetMatchDetails());
+
+            await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
+        }
+
+        /// <summary>
         /// Starts gameplay for all users in the <see cref="MultiplayerUserState.Loaded"/> or <see cref="MultiplayerUserState.ReadyForGameplay"/> states,
         /// and aborts gameplay for any others in the <see cref="MultiplayerUserState.WaitingForLoad"/> state.
         /// </summary>

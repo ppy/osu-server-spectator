@@ -419,7 +419,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             if (room.Settings.AutoStartEnabled)
                                 throw new InvalidStateException("Cannot start manual countdown if auto-start is enabled.");
 
-                            await room.StartCountdown(new MatchStartCountdown { TimeRemaining = startMatchCountdownRequest.Duration }, HubContext.StartMatch);
+                            await room.StartCountdown(new MatchStartCountdown { TimeRemaining = startMatchCountdownRequest.Duration }, ServerMultiplayerRoom.StartMatch);
 
                             break;
 
@@ -471,7 +471,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
                         throw new InvalidStateException("Can't start match when no users are ready.");
 
-                    await HubContext.StartMatch(room);
+                    await ServerMultiplayerRoom.StartMatch(room);
                 }
             }
         }

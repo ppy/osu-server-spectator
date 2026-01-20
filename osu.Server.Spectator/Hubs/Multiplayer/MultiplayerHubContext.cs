@@ -18,11 +18,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     /// </summary>
     public class MultiplayerHubContext : IMultiplayerHubContext
     {
-        /// <summary>
-        /// The amount of time allowed for players to finish loading gameplay before they're either forced into gameplay (if loaded) or booted to the menu (if still loading).
-        /// </summary>
-        private static readonly TimeSpan gameplay_load_timeout = TimeSpan.FromSeconds(30);
-
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly EntityStore<MultiplayerClientState> users;
@@ -60,37 +55,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             return rooms.TryGetForUse(roomId);
         }
 
-        public async Task StartMatch(ServerMultiplayerRoom room)
-        {
-            if (room.State != MultiplayerRoomState.Open)
-                throw new InvalidStateException("Can't start match when already in a running state.");
-
-            if (room.Controller.CurrentItem.Expired)
-                throw new InvalidStateException("Cannot start an expired playlist item.");
-
-            // If no users are ready, skip the current item in the queue.
-            if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
-            {
-                await room.Controller.HandleGameplayCompleted();
-                return;
-            }
-
-            // This is the very first time users get a "gameplay" state. Reset any properties for the gameplay session.
-            foreach (var user in room.Users)
-                await room.ChangeUserVoteToSkipIntro(user, false);
-
-            var readyUsers = room.Users.Where(u => u.IsReadyForGameplay()).ToArray();
-
-            foreach (var u in readyUsers)
-                await room.ChangeAndBroadcastUserState(u, MultiplayerUserState.WaitingForLoad);
-
-            await room.ChangeRoomState(MultiplayerRoomState.WaitingForLoad);
-
-            await eventDispatcher.PostMatchStartedAsync(room.RoomID, room.Controller.CurrentItem.ID, room.Controller.GetMatchDetails());
-
-            await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, ServerMultiplayerRoom.StartOrStopGameplay);
-        }
-
         public async Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room)
         {
             //check whether a room state change is required.
@@ -102,7 +66,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         bool shouldHaveCountdown = !room.Controller.CurrentItem.Expired && room.Users.Any(u => u.State == MultiplayerUserState.Ready);
 
                         if (shouldHaveCountdown && !room.ActiveCountdowns.Any(c => c is MatchStartCountdown))
-                            await room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, StartMatch);
+                            await room.StartCountdown(new MatchStartCountdown { TimeRemaining = room.Settings.AutoStartDuration }, ServerMultiplayerRoom.StartMatch);
                     }
 
                     break;
