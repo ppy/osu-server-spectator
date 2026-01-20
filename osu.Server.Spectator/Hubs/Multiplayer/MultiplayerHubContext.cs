@@ -88,7 +88,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 Log(room, null, "Resetting all users' beatmap availability");
 
                 foreach (var user in room.Users)
-                    await ChangeAndBroadcastUserBeatmapAvailability(room, user, new BeatmapAvailability(DownloadState.Unknown));
+                    await room.ChangeAndBroadcastUserBeatmapAvailability(user, new BeatmapAvailability(DownloadState.Unknown));
             }
 
             // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop any match start countdown.
@@ -199,18 +199,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             user.Mods = newModList;
 
             await eventDispatcher.PostUserModsChangedAsync(room.RoomID, user.UserID, newModList);
-        }
-
-        public async Task ChangeAndBroadcastUserBeatmapAvailability(ServerMultiplayerRoom room, MultiplayerRoomUser user, BeatmapAvailability newBeatmapAvailability)
-        {
-            if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
-                return;
-
-            user.BeatmapAvailability = newBeatmapAvailability;
-
-            await eventDispatcher.PostUserBeatmapAvailabilityChangedAsync(room.RoomID, user.UserID, user.BeatmapAvailability);
-
-            await room.Controller.HandleUserStateChanged(user);
         }
 
         public async Task ChangeRoomState(ServerMultiplayerRoom room, MultiplayerRoomState newState)

@@ -327,6 +327,34 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await Controller.HandleUserStateChanged(user);
         }
 
+        /// <summary>
+        /// Changes the beatmap availability of the user with the given <paramref name="userId"/> to <paramref name="newBeatmapAvailability"/>.
+        /// Permissions for changing state are not checked. Callers are expected to perform relevant checks themselves.
+        /// </summary>
+        /// <param name="userId">The ID of the user whose availability should change.</param>
+        /// <param name="newBeatmapAvailability">The new availability.</param>
+        /// <exception cref="InvalidStateException">The user with the supplied <paramref name="userId"/> was not in the room.</exception>
+        public async Task ChangeUserBeatmapAvailability(int userId, BeatmapAvailability newBeatmapAvailability)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+
+            if (user == null)
+                throw new InvalidStateException("User was not in the expected room.");
+
+            await ChangeAndBroadcastUserBeatmapAvailability(user, newBeatmapAvailability);
+        }
+
+        public async Task ChangeAndBroadcastUserBeatmapAvailability(MultiplayerRoomUser user, BeatmapAvailability newBeatmapAvailability)
+        {
+            if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
+                return;
+
+            user.BeatmapAvailability = newBeatmapAvailability;
+            await eventDispatcher.PostUserBeatmapAvailabilityChangedAsync(RoomID, user.UserID, user.BeatmapAvailability);
+
+            await Controller.HandleUserStateChanged(user);
+        }
+
         #endregion
 
         [MemberNotNull(nameof(Controller))]
