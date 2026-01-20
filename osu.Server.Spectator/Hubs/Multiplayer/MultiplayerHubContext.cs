@@ -7,11 +7,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using osu.Game.Rulesets;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
@@ -82,7 +80,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             {
                 // Reset entire style when freestyle is disabled.
                 foreach (var user in room.Users)
-                    await ChangeUserStyle(null, null, room, user);
+                    await room.ChangeUserStyle(user, null, null);
             }
             else
             {
@@ -112,7 +110,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (userRulesetId != null && beatmapRuleset > 0 && userRulesetId != beatmapRuleset)
                         userRulesetId = null;
 
-                    await ChangeUserStyle(userBeatmapId, userRulesetId, room, user);
+                    await room.ChangeUserStyle(user, userBeatmapId, userRulesetId);
                 }
             }
 
@@ -121,49 +119,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (!room.Controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
                     await ChangeUserMods(validMods, room, user);
             }
-        }
-
-        public async Task ChangeUserStyle(int? beatmapId, int? rulesetId, ServerMultiplayerRoom room, MultiplayerRoomUser user)
-        {
-            if (user.BeatmapId == beatmapId && user.RulesetId == rulesetId)
-                return;
-
-            Log(room, user, $"User style changing from (b:{user.BeatmapId}, r:{user.RulesetId}) to (b:{beatmapId}, r:{rulesetId})");
-
-            if (rulesetId < 0 || rulesetId > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
-                throw new InvalidStateException("Attempted to select an unsupported ruleset.");
-
-            if (beatmapId != null || rulesetId != null)
-            {
-                if (!room.Controller.CurrentItem.Freestyle)
-                    throw new InvalidStateException("Current item does not allow free user styles.");
-
-                using (var db = databaseFactory.GetInstance())
-                {
-                    database_beatmap itemBeatmap = (await db.GetBeatmapAsync(room.Controller.CurrentItem.BeatmapID))!;
-                    database_beatmap? userBeatmap = beatmapId == null ? itemBeatmap : await db.GetBeatmapAsync(beatmapId.Value);
-
-                    if (userBeatmap == null)
-                        throw new InvalidStateException("Invalid beatmap selected.");
-
-                    if (userBeatmap.beatmapset_id != itemBeatmap.beatmapset_id)
-                        throw new InvalidStateException("Selected beatmap is not from the same beatmap set.");
-
-                    if (rulesetId != null && userBeatmap.playmode != 0 && rulesetId != userBeatmap.playmode)
-                        throw new InvalidStateException("Selected ruleset is not supported for the given beatmap.");
-                }
-            }
-
-            user.BeatmapId = beatmapId;
-            user.RulesetId = rulesetId;
-
-            if (!room.Controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
-            {
-                user.Mods = validMods.ToArray();
-                await eventDispatcher.PostUserModsChangedAsync(room.RoomID, user.UserID, user.Mods);
-            }
-
-            await eventDispatcher.PostUserStyleChangedAsync(room.RoomID, user.UserID, beatmapId, rulesetId);
         }
 
         public async Task ChangeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user)

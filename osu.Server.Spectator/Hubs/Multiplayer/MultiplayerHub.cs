@@ -367,12 +367,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (room == null)
                         throw new InvalidOperationException("Attempted to operate on a null room");
 
-                    var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
-
-                    if (user == null)
-                        throw new InvalidOperationException("Local user was not found in the expected room");
-
-                    await HubContext.ChangeUserStyle(beatmapId, rulesetId, room, user);
+                    await room.ChangeUserStyle(Context.GetUserId(), beatmapId, rulesetId);
                 }
             }
         }

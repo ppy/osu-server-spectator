@@ -14,6 +14,7 @@ using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Extensions;
@@ -373,6 +374,70 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             // Assume some destructive operation took place to warrant unreadying all users, and pre-emptively stop any match start countdown.
             // For example, gameplay-specific changes to the match settings or the current playlist item.
             await StopAllCountdowns<MatchStartCountdown>();
+        }
+
+        /// <summary>
+        /// Changes the selected style of the user with the given <paramref name="userId"/>.
+        /// Permissions for changing state are not checked. Callers are expected to perform relevant checks themselves.
+        /// </summary>
+        /// <param name="userId">The ID of the target user.</param>
+        /// <param name="beatmapId">The beatmap ID of the difficulty picked by the user.</param>
+        /// <param name="rulesetId">The ID of the ruleset picked by the user.</param>
+        /// <exception cref="InvalidStateException">
+        /// The user with the supplied <paramref name="userId"/> was not in the room,
+        /// or the new selection is not valid for the current playlist item.
+        /// </exception>
+        public async Task ChangeUserStyle(int userId, int? beatmapId, int? rulesetId)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+
+            if (user == null)
+                throw new InvalidStateException("User is not in the expected room.");
+
+            await ChangeUserStyle(user, beatmapId, rulesetId);
+        }
+
+        public async Task ChangeUserStyle(MultiplayerRoomUser user, int? beatmapId, int? rulesetId)
+        {
+            if (user.BeatmapId == beatmapId && user.RulesetId == rulesetId)
+                return;
+
+            Log(user, $"User style changing from (b:{user.BeatmapId}, r:{user.RulesetId}) to (b:{beatmapId}, r:{rulesetId})");
+
+            if (rulesetId < 0 || rulesetId > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                throw new InvalidStateException("Attempted to select an unsupported ruleset.");
+
+            if (beatmapId != null || rulesetId != null)
+            {
+                if (!Controller.CurrentItem.Freestyle)
+                    throw new InvalidStateException("Current item does not allow free user styles.");
+
+                using (var db = dbFactory.GetInstance())
+                {
+                    database_beatmap itemBeatmap = (await db.GetBeatmapAsync(Controller.CurrentItem.BeatmapID))!;
+                    database_beatmap? userBeatmap = beatmapId == null ? itemBeatmap : await db.GetBeatmapAsync(beatmapId.Value);
+
+                    if (userBeatmap == null)
+                        throw new InvalidStateException("Invalid beatmap selected.");
+
+                    if (userBeatmap.beatmapset_id != itemBeatmap.beatmapset_id)
+                        throw new InvalidStateException("Selected beatmap is not from the same beatmap set.");
+
+                    if (rulesetId != null && userBeatmap.playmode != 0 && rulesetId != userBeatmap.playmode)
+                        throw new InvalidStateException("Selected ruleset is not supported for the given beatmap.");
+                }
+            }
+
+            user.BeatmapId = beatmapId;
+            user.RulesetId = rulesetId;
+
+            if (!Controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
+            {
+                user.Mods = validMods.ToArray();
+                await eventDispatcher.PostUserModsChangedAsync(RoomID, user.UserID, user.Mods);
+            }
+
+            await eventDispatcher.PostUserStyleChangedAsync(RoomID, user.UserID, beatmapId, rulesetId);
         }
 
         #endregion
