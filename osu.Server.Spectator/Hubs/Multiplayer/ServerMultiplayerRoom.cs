@@ -206,6 +206,33 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await db.UpdateRoomSettingsAsync(this);
         }
 
+        [MemberNotNull(nameof(Controller))]
+        public Task ChangeMatchType(MatchType type)
+        {
+            switch (type)
+            {
+                case MatchType.Matchmaking:
+                    return ChangeMatchType(new MatchmakingMatchController(this, hub, dbFactory, eventDispatcher));
+
+                case MatchType.TeamVersus:
+                    return ChangeMatchType(new TeamVersusMatchController(this, hub, dbFactory, eventDispatcher));
+
+                default:
+                    return ChangeMatchType(new HeadToHeadMatchController(this, hub, dbFactory, eventDispatcher));
+            }
+        }
+
+        [MemberNotNull(nameof(Controller))]
+        public async Task ChangeMatchType(IMatchController controller)
+        {
+            Controller = controller;
+
+            await Controller.Initialise();
+
+            foreach (var u in Users)
+                await Controller.HandleUserJoined(u);
+        }
+
         /// <summary>
         /// Notifies users in this room that the room's settings have changed.
         /// </summary>
@@ -612,33 +639,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         #endregion
-
-        [MemberNotNull(nameof(Controller))]
-        public Task ChangeMatchType(MatchType type)
-        {
-            switch (type)
-            {
-                case MatchType.Matchmaking:
-                    return ChangeMatchType(new MatchmakingMatchController(this, hub, dbFactory, eventDispatcher));
-
-                case MatchType.TeamVersus:
-                    return ChangeMatchType(new TeamVersusMatchController(this, hub, dbFactory, eventDispatcher));
-
-                default:
-                    return ChangeMatchType(new HeadToHeadMatchController(this, hub, dbFactory, eventDispatcher));
-            }
-        }
-
-        [MemberNotNull(nameof(Controller))]
-        public async Task ChangeMatchType(IMatchController controller)
-        {
-            Controller = controller;
-
-            await Controller.Initialise();
-
-            foreach (var u in Users)
-                await Controller.HandleUserJoined(u);
-        }
 
         #region Countdowns
 
