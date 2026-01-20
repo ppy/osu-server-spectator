@@ -691,6 +691,29 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         #endregion
 
+        #region Playlist management
+
+        /// <summary>
+        /// Adds a new playlist item from the user with the given <see cref="userId"/>.
+        /// Permissions are not checked. Callers should check themselves, or via <see cref="Controller"/>.
+        /// </summary>
+        /// <param name="userId">The ID of the user adding the item.</param>
+        /// <param name="item">The playlist item.</param>
+        /// <exception cref="InvalidStateException">The user with the supplied <paramref name="userId"/> was not in the room.</exception>
+        public async Task AddPlaylistItem(int userId, MultiplayerPlaylistItem item)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+            if (user == null)
+                throw new InvalidStateException("User is not in expected room.");
+
+            Log(user, $"Adding playlist item for beatmap {item.BeatmapID}");
+            await Controller.AddPlaylistItem(item, user);
+
+            await UpdateRoomStateIfRequired();
+        }
+
+        #endregion
+
         #region Playing matches
 
         /// <summary>
