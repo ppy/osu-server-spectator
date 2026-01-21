@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected const long ROOM_ID = 8888;
         protected const long ROOM_ID_2 = 9999;
 
-        protected IMultiplayerHubContext HubContext { get; }
+        protected IMultiplayerRoomController RoomController { get; }
         protected TestMultiplayerHub Hub { get; }
         protected EntityStore<ServerMultiplayerRoom> Rooms { get; }
         protected EntityStore<MultiplayerClientState> UserStates { get; }
@@ -158,7 +158,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 hubContext.Object,
                 LoggerFactory.Object);
 
-            HubContext = new MultiplayerHubContext(Rooms);
+            RoomController = new MultiplayerRoomController(Rooms);
 
             MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
                 hubContext.Object,
@@ -166,7 +166,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 DatabaseFactory.Object,
                 LoggerFactory.Object,
                 Rooms,
-                HubContext,
+                RoomController,
                 new MemoryCache(new MemoryCacheOptions()),
                 EventDispatcher);
 
@@ -176,7 +176,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 UserStates,
                 DatabaseFactory.Object,
                 new ChatFilters(DatabaseFactory.Object),
-                HubContext,
+                RoomController,
                 LegacyIO.Object,
                 EventDispatcher,
                 MatchmakingBackgroundService);

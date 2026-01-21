@@ -17,7 +17,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task NewUserJoinedTriggersRulesetHook()
         {
-            var hub = new Mock<IMultiplayerHubContext>();
+            var hub = new Mock<IMultiplayerRoomController>();
             var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
             Mock<IMatchController> controller = new Mock<IMatchController>();
@@ -31,7 +31,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task UserLeavesTriggersRulesetHook()
         {
-            var hub = new Mock<IMultiplayerHubContext>();
+            var hub = new Mock<IMultiplayerRoomController>();
             var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
             var user = new MultiplayerRoomUser(1);
@@ -48,7 +48,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task TypeChangeTriggersInitialJoins()
         {
-            var hub = new Mock<IMultiplayerHubContext>();
+            var hub = new Mock<IMultiplayerRoomController>();
             var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
             // join a number of users initially to the room

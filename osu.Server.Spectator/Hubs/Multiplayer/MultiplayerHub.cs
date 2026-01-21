@@ -24,7 +24,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public const string STATSD_PREFIX = "multiplayer";
 
         protected readonly EntityStore<ServerMultiplayerRoom> Rooms;
-        protected readonly IMultiplayerHubContext HubContext;
+        protected readonly IMultiplayerRoomController RoomController;
         private readonly ILoggerFactory loggerFactory;
         private readonly IDatabaseFactory databaseFactory;
         private readonly ChatFilters chatFilters;
@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
-            IMultiplayerHubContext hubContext,
+            IMultiplayerRoomController roomController,
             ISharedInterop sharedInterop,
             MultiplayerEventDispatcher multiplayerEventDispatcher,
             IMatchmakingQueueBackgroundService matchmakingQueueService)
@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             this.matchmakingQueueService = matchmakingQueueService;
 
             Rooms = rooms;
-            HubContext = hubContext;
+            RoomController = roomController;
         }
 
         public override async Task OnConnectedAsync()
@@ -115,7 +115,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         try
                         {
-                            room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, HubContext, databaseFactory, multiplayerEventDispatcher, loggerFactory);
+                            room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, RoomController, databaseFactory, multiplayerEventDispatcher, loggerFactory);
 
                             // this is a sanity check to keep *rooms* in a good state.
                             // in theory the connection clean-up code should handle this correctly.

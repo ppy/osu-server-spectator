@@ -20,11 +20,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
-            IMultiplayerHubContext hubContext,
+            IMultiplayerRoomController roomController,
             ISharedInterop sharedInterop,
             MultiplayerEventDispatcher multiplayerEventDispatcher,
             IMatchmakingQueueBackgroundService matchmakingQueueBackgroundService)
-            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, hubContext, sharedInterop, multiplayerEventDispatcher, matchmakingQueueBackgroundService)
+            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, roomController, sharedInterop, multiplayerEventDispatcher, matchmakingQueueBackgroundService)
         {
         }
 

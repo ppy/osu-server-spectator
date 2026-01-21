@@ -6,11 +6,11 @@ using osu.Server.Spectator.Entities;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
-    public class MultiplayerHubContext : IMultiplayerHubContext
+    public class MultiplayerRoomController : IMultiplayerRoomController
     {
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
 
-        public MultiplayerHubContext(
+        public MultiplayerRoomController(
             EntityStore<ServerMultiplayerRoom> rooms)
         {
             this.rooms = rooms;

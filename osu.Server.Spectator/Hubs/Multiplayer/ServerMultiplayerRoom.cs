@@ -27,7 +27,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
-        private readonly IMultiplayerHubContext hub;
+        private readonly IMultiplayerRoomController roomController;
         private readonly IDatabaseFactory dbFactory;
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly ILogger<ServerMultiplayerRoom> logger;
@@ -36,13 +36,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private ServerMultiplayerRoom(
             long roomId,
-            IMultiplayerHubContext hub,
+            IMultiplayerRoomController roomController,
             IDatabaseFactory dbFactory,
             MultiplayerEventDispatcher eventDispatcher,
             ILoggerFactory loggerFactory)
             : base(roomId)
         {
-            this.hub = hub;
+            this.roomController = roomController;
             this.dbFactory = dbFactory;
             this.eventDispatcher = eventDispatcher;
             logger = loggerFactory.CreateLogger<ServerMultiplayerRoom>();
@@ -54,7 +54,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// This will also mark the room as active, indicating that this server is now in control of the room's lifetime.
         /// </summary>
         /// <param name="roomId">The room identifier.</param>
-        /// <param name="hub">The multiplayer hub context.</param>
+        /// <param name="roomController">The room controller.</param>
         /// <param name="dbFactory">The database factory.</param>
         /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
         /// <param name="loggerFactory">The logger factory.</param>
@@ -62,12 +62,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <exception cref="InvalidStateException">If the match has already ended.</exception>
         public static async Task<ServerMultiplayerRoom> InitialiseAsync(
             long roomId,
-            IMultiplayerHubContext hub,
+            IMultiplayerRoomController roomController,
             IDatabaseFactory dbFactory,
             MultiplayerEventDispatcher eventDispatcher,
             ILoggerFactory loggerFactory)
         {
-            ServerMultiplayerRoom room = new ServerMultiplayerRoom(roomId, hub, dbFactory, eventDispatcher, loggerFactory);
+            ServerMultiplayerRoom room = new ServerMultiplayerRoom(roomId, roomController, dbFactory, eventDispatcher, loggerFactory);
 
             // TODO: this call should be transactional, and mark the room as managed by this server instance.
             // This will allow for other instances to know not to reinitialise the room if the host arrives there.
@@ -111,18 +111,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// Initialises a matchmaking room with the given eligible user IDs.
         /// </summary>
         /// <param name="roomId">The room identifier.</param>
-        /// <param name="hub">The multiplayer hub context.</param>
+        /// <param name="roomController">The room controller.</param>
         /// <param name="dbFactory">The database factory.</param>
         /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
         /// <param name="loggerFactory">The logger factory.</param>
         /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
         /// <param name="poolId">The pool ID.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
-        public static async Task<ServerMultiplayerRoom> InitialiseMatchmakingRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory,
+        public static async Task<ServerMultiplayerRoom> InitialiseMatchmakingRoomAsync(long roomId, IMultiplayerRoomController roomController, IDatabaseFactory dbFactory,
                                                                                        MultiplayerEventDispatcher eventDispatcher, ILoggerFactory loggerFactory,
                                                                                        int[] eligibleUserIds, uint poolId)
         {
-            ServerMultiplayerRoom room = await InitialiseAsync(roomId, hub, dbFactory, eventDispatcher, loggerFactory);
+            ServerMultiplayerRoom room = await InitialiseAsync(roomId, roomController, dbFactory, eventDispatcher, loggerFactory);
 
             if (room.MatchState is not MatchmakingRoomState matchmakingState)
                 throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid state).");
@@ -292,13 +292,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             switch (type)
             {
                 case MatchType.Matchmaking:
-                    return ChangeMatchType(new MatchmakingMatchController(this, hub, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new MatchmakingMatchController(this, roomController, dbFactory, eventDispatcher));
 
                 case MatchType.TeamVersus:
-                    return ChangeMatchType(new TeamVersusMatchController(this, hub, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new TeamVersusMatchController(this, roomController, dbFactory, eventDispatcher));
 
                 default:
-                    return ChangeMatchType(new HeadToHeadMatchController(this, hub, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new HeadToHeadMatchController(this, roomController, dbFactory, eventDispatcher));
             }
         }
 
@@ -1034,7 +1034,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 // Notify users that the countdown has finished (or cancelled) and run the continuation.
                 // Note: The room must be re-retrieved rather than using our own instance to enforce single-thread access.
-                using (var roomUsage = await hub.TryGetRoom(RoomID))
+                using (var roomUsage = await roomController.TryGetRoom(RoomID))
                 {
                     try
                     {
