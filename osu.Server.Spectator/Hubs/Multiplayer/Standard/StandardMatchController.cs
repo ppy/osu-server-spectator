@@ -275,7 +275,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
             // It's important for clients to be notified of the removal AFTER settings are changed
             // so that PlaylistItemId always points to a valid item in the playlist.
-            await eventDispatcher.OnPlaylistItemRemovedAsync(room.RoomID, playlistItemId);
+            await eventDispatcher.PostPlaylistItemRemovedAsync(room.RoomID, playlistItemId);
         }
 
         public abstract MatchStartedEventDetail GetMatchDetails();
@@ -289,7 +289,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
             room.Playlist.Add(item);
-            await eventDispatcher.OnPlaylistItemAddedAsync(room.RoomID, item);
+            await eventDispatcher.PostPlaylistItemAddedAsync(room.RoomID, item);
 
             if (room.State == MultiplayerRoomState.Open)
                 await updatePlaylistOrder(db);

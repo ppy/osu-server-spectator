@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public async Task Initialise()
         {
-            await eventDispatcher.OnMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
+            await eventDispatcher.PostMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
             await startCountdown(TimeSpan.FromSeconds(stage_waiting_for_clients_join_time), stageRoundWarmupTime);
         }
 
@@ -167,7 +167,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             switch (request)
             {
                 case MatchmakingAvatarActionRequest avatarAction:
-                    await eventDispatcher.OnMatchEventAsync(room.RoomID, new MatchmakingAvatarActionEvent
+                    await eventDispatcher.PostMatchEventAsync(room.RoomID, new MatchmakingAvatarActionEvent
                     {
                         UserId = user.UserID,
                         Action = avatarAction.Action
@@ -181,7 +181,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             switch (state.Stage)
             {
                 case MatchmakingStage.WaitingForClientsJoin:
-                    await eventDispatcher.OnPlayerJoinedMatchmakingRoomAsync(room.RoomID, user.UserID);
+                    await eventDispatcher.PostPlayerJoinedMatchmakingRoomAsync(room.RoomID, user.UserID);
 
                     if (++joinedUserCount >= state.Users.Count)
                         await stageRoundWarmupTime(room);
@@ -198,7 +198,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             {
                 state.Users.GetOrAdd(user.UserID).AbandonedAt = DateTimeOffset.UtcNow;
                 state.RecordScores([], placement_points); // Empty update to adjust placements.
-                await eventDispatcher.OnMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
+                await eventDispatcher.PostMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
             }
 
             // Attempt to conclude the match in advance so users don't have to keep playing rounds by themselves.
@@ -261,11 +261,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
                 if (existingPick == playlistItemId)
                     return;
 
-                await eventDispatcher.OnPlayerDeselectedBeatmapAsync(room.RoomID, user.UserID, existingPick);
+                await eventDispatcher.PostPlayerDeselectedBeatmapAsync(room.RoomID, user.UserID, existingPick);
             }
 
             userPicks[user.UserID] = playlistItemId;
-            await eventDispatcher.OnPlayerSelectedBeatmapAsync(room.RoomID, user.UserID, playlistItemId);
+            await eventDispatcher.PostPlayerSelectedBeatmapAsync(room.RoomID, user.UserID, playlistItemId);
 
             await checkCanFastForwardBeatmapSelection();
         }
@@ -312,7 +312,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task stageServerBeatmapFinalised(ServerMultiplayerRoom _)
         {
             foreach ((int userId, long playlistItemId) in userPicks)
-                await eventDispatcher.OnPlayerBeatmapPickFinalised(room.RoomID, userId, playlistItemId);
+                await eventDispatcher.PostPlayerBeatmapPickFinalised(room.RoomID, userId, playlistItemId);
 
             long[] pickIds = userPicks.Values.ToArray();
 
@@ -340,7 +340,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             room.Settings.PlaylistItemId = state.GameplayItem;
             await hub.NotifySettingsChanged(room, true);
 
-            await eventDispatcher.OnFinalBeatmapSelectedAsync(room.RoomID, room.Settings.PlaylistItemId);
+            await eventDispatcher.PostFinalBeatmapSelectedAsync(room.RoomID, room.Settings.PlaylistItemId);
 
             await changeStage(MatchmakingStage.WaitingForClientsBeatmapDownload);
             await tryAdvanceStage();
@@ -444,7 +444,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private async Task changeStage(MatchmakingStage stage)
         {
             state.Stage = stage;
-            await eventDispatcher.OnMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
+            await eventDispatcher.PostMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
         }
 
         private async Task startCountdown(TimeSpan duration, Func<ServerMultiplayerRoom, Task> continuation)

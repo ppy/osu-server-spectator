@@ -58,7 +58,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await UnreadyAllUsers(room, beatmapChanged);
             }
 
-            await eventDispatcher.OnPlaylistItemChangedAsync(room.RoomID, item);
+            await eventDispatcher.PostPlaylistItemChangedAsync(room.RoomID, item);
         }
 
         public async Task NotifySettingsChanged(ServerMultiplayerRoom room, bool playlistItemChanged)
@@ -68,7 +68,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             // this should probably only happen for gameplay-related changes, but let's just keep things simple for now.
             await UnreadyAllUsers(room, playlistItemChanged);
 
-            await eventDispatcher.OnRoomSettingsChangedAsync(room.RoomID, room.Settings);
+            await eventDispatcher.PostRoomSettingsChangedAsync(room.RoomID, room.Settings);
         }
 
         public Task<ItemUsage<ServerMultiplayerRoom>?> TryGetRoom(long roomId)
@@ -180,10 +180,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (!room.Controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
             {
                 user.Mods = validMods.ToArray();
-                await eventDispatcher.OnUserModsChangedAsync(room.RoomID, user.UserID, user.Mods);
+                await eventDispatcher.PostUserModsChangedAsync(room.RoomID, user.UserID, user.Mods);
             }
 
-            await eventDispatcher.OnUserStyleChangedAsync(room.RoomID, user.UserID, beatmapId, rulesetId);
+            await eventDispatcher.PostUserStyleChangedAsync(room.RoomID, user.UserID, beatmapId, rulesetId);
         }
 
         public async Task ChangeUserMods(IEnumerable<APIMod> newMods, ServerMultiplayerRoom room, MultiplayerRoomUser user)
@@ -198,7 +198,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             user.Mods = newModList;
 
-            await eventDispatcher.OnUserModsChangedAsync(room.RoomID, user.UserID, newModList);
+            await eventDispatcher.PostUserModsChangedAsync(room.RoomID, user.UserID, newModList);
         }
 
         public async Task ChangeAndBroadcastUserState(ServerMultiplayerRoom room, MultiplayerRoomUser user, MultiplayerUserState state)
@@ -207,7 +207,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             user.State = state;
 
-            await eventDispatcher.OnUserStateChangedAsync(room.RoomID, user.UserID, user.State);
+            await eventDispatcher.PostUserStateChangedAsync(room.RoomID, user.UserID, user.State);
 
             await room.Controller.HandleUserStateChanged(user);
         }
@@ -219,7 +219,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             user.BeatmapAvailability = newBeatmapAvailability;
 
-            await eventDispatcher.OnUserBeatmapAvailabilityChangedAsync(room.RoomID, user.UserID, user.BeatmapAvailability);
+            await eventDispatcher.PostUserBeatmapAvailabilityChangedAsync(room.RoomID, user.UserID, user.BeatmapAvailability);
 
             await room.Controller.HandleUserStateChanged(user);
         }
@@ -232,7 +232,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             using (var db = databaseFactory.GetInstance())
                 await db.UpdateRoomStatusAsync(room);
 
-            await eventDispatcher.OnRoomStateChangedAsync(room.RoomID, newState);
+            await eventDispatcher.PostRoomStateChangedAsync(room.RoomID, newState);
         }
 
         public async Task ChangeUserVoteToSkipIntro(ServerMultiplayerRoom room, MultiplayerRoomUser user, bool voted)
@@ -243,7 +243,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             Log(room, user, $"Changing user vote to skip intro => {voted}");
 
             user.VotedToSkipIntro = voted;
-            await eventDispatcher.OnUserVotedToSkipIntroAsync(room.RoomID, user.UserID, voted);
+            await eventDispatcher.PostUserVotedToSkipIntroAsync(room.RoomID, user.UserID, voted);
         }
 
         public async Task StartMatch(ServerMultiplayerRoom room)
@@ -272,7 +272,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await ChangeRoomState(room, MultiplayerRoomState.WaitingForLoad);
 
-            await eventDispatcher.OnMatchStartedAsync(room.RoomID, room.Controller.CurrentItem.ID, room.Controller.GetMatchDetails());
+            await eventDispatcher.PostMatchStartedAsync(room.RoomID, room.Controller.CurrentItem.ID, room.Controller.GetMatchDetails());
 
             await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, StartOrStopGameplay);
         }
@@ -300,13 +300,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (user.CanStartGameplay())
                 {
                     await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Playing);
-                    await eventDispatcher.OnGameplayStartedAsync(user.UserID);
+                    await eventDispatcher.PostGameplayStartedAsync(user.UserID);
                     anyUserPlaying = true;
                 }
                 else if (user.State == MultiplayerUserState.WaitingForLoad)
                 {
                     await ChangeAndBroadcastUserState(room, user, MultiplayerUserState.Idle);
-                    await eventDispatcher.OnGameplayAbortedAsync(user.UserID, GameplayAbortReason.LoadTookTooLong);
+                    await eventDispatcher.PostGameplayAbortedAsync(user.UserID, GameplayAbortReason.LoadTookTooLong);
                     Log(room, user, "Gameplay aborted because this user took too long to load.");
                 }
             }
@@ -316,7 +316,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             else
             {
                 await ChangeRoomState(room, MultiplayerRoomState.Open);
-                await eventDispatcher.OnMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
+                await eventDispatcher.PostMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
                 await room.Controller.HandleGameplayCompleted();
             }
         }
@@ -361,9 +361,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         await ChangeRoomState(room, MultiplayerRoomState.Open);
 
                         if (anyUserFinishedPlay)
-                            await eventDispatcher.OnMatchCompletedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
+                            await eventDispatcher.PostMatchCompletedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
                         else
-                            await eventDispatcher.OnMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
+                            await eventDispatcher.PostMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
 
                         await room.Controller.HandleGameplayCompleted();
                     }
@@ -378,7 +378,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             int countGameplayUsers = room.Users.Count(u => u.State == MultiplayerUserState.Playing);
 
             if (countVotedUsers >= countGameplayUsers / 2 + 1)
-                await eventDispatcher.OnVoteToSkipIntroPassedAsync(room.RoomID);
+                await eventDispatcher.PostVoteToSkipIntroPassedAsync(room.RoomID);
         }
 
         public void Log(ServerMultiplayerRoom room, MultiplayerRoomUser? user, string message, LogLevel logLevel = LogLevel.Information)

@@ -324,7 +324,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 foreach (var user in group.Users)
                     await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
 
-                await eventDispatcher.OnMatchmakingRoomCreatedAsync(roomId, new MatchmakingRoomCreatedEventDetail
+                await eventDispatcher.PostMatchmakingRoomCreatedAsync(roomId, new MatchmakingRoomCreatedEventDetail
                 {
                     pool_id = (int)bundle.Queue.Pool.id
                 });

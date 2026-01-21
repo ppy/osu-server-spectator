@@ -29,7 +29,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 // we don't need a state, but keep things simple by completely nulling the state.
                 // this allows the client to see a user state change and handle match type specifics based on that alone.
                 user.MatchState = null;
-                await eventDispatcher.OnMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
+                await eventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
             }
         }
 

@@ -171,7 +171,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             trackedCountdowns[countdown] = countdownInfo;
             ActiveCountdowns.Add(countdown);
 
-            await eventDispatcher.OnMatchEventAsync(RoomID, new CountdownStartedEvent(countdown));
+            await eventDispatcher.PostMatchEventAsync(RoomID, new CountdownStartedEvent(countdown));
 
             countdownInfo.Task = start();
 
@@ -243,7 +243,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             trackedCountdowns.Remove(countdown);
             ActiveCountdowns.Remove(countdownInfo.Countdown);
 
-            await eventDispatcher.OnMatchEventAsync(RoomID, new CountdownStoppedEvent(countdownInfo.Countdown.ID));
+            await eventDispatcher.PostMatchEventAsync(RoomID, new CountdownStoppedEvent(countdownInfo.Countdown.ID));
         }
 
         /// <summary>
