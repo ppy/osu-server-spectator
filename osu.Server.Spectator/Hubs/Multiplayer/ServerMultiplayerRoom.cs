@@ -236,7 +236,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task ChangeRoomSettings(MultiplayerRoomSettings newSettings)
         {
             if (State != MultiplayerRoomState.Open)
-                throw new InvalidStateException("Attempted to change settings while game is active");
+                throw new InvalidStateException("Attempted to change settings while a game is in progress.");
 
             Log("Settings updating");
 
@@ -250,7 +250,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var previousSettings = Settings;
 
             if (newSettings.MatchType == MatchType.Playlists)
-                throw new InvalidStateException("Invalid match type selected");
+                throw new InvalidStateException("Invalid match type selected.");
 
             try
             {
@@ -281,7 +281,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var playlistItem = Playlist.FirstOrDefault(item => item.ID == Settings.PlaylistItemId);
 
             if (playlistItem == null)
-                throw new InvalidStateException("Attempted to select a playlist item not contained by the room.");
+                throw new InvalidStateException("Attempted to select a playlist item not in the room.");
 
             using (var db = dbFactory.GetInstance())
                 await db.UpdateRoomSettingsAsync(this);
@@ -363,7 +363,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var user = Users.FirstOrDefault(u => u.UserID == userId);
 
             if (user == null)
-                throw new InvalidStateException("User is not in the expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             Users.Remove(user);
             using (var db = dbFactory.GetInstance())
@@ -403,7 +403,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var newHost = Users.FirstOrDefault(u => u.UserID == userId);
 
             if (newHost == null)
-                throw new InvalidStateException("User is not in the expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             Host = newHost;
             await eventDispatcher.PostHostChangedAsync(RoomID, newHost.UserID);
@@ -424,7 +424,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var user = Users.FirstOrDefault(u => u.UserID == userId);
 
             if (user == null)
-                throw new InvalidStateException("User is not in the expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             if (user.State == newState)
                 return;
@@ -552,7 +552,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var user = Users.FirstOrDefault(u => u.UserID == userId);
 
             if (user == null)
-                throw new InvalidStateException("User was not in the expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             await changeAndBroadcastUserBeatmapAvailability(user, newBeatmapAvailability);
         }
@@ -604,7 +604,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var user = Users.FirstOrDefault(u => u.UserID == userId);
 
             if (user == null)
-                throw new InvalidStateException("User is not in the expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             await changeUserStyle(user, beatmapId, rulesetId);
         }
@@ -666,7 +666,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var user = Users.FirstOrDefault(u => u.UserID == userId);
 
             if (user == null)
-                throw new InvalidStateException("User is not in the expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             await changeUserMods(user, newMods);
         }
@@ -748,7 +748,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var user = Users.FirstOrDefault(u => u.UserID == userId);
             if (user == null)
-                throw new InvalidStateException("User is not in expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             Log(user, $"Adding playlist item for beatmap {item.BeatmapID}");
             await controller.AddPlaylistItem(item, user);
@@ -767,7 +767,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var user = Users.FirstOrDefault(u => u.UserID == userId);
             if (user == null)
-                throw new InvalidStateException("User is not in expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             Log(user, $"Editing playlist item {item.ID} for beatmap {item.BeatmapID}");
             await controller.EditPlaylistItem(item, user);
@@ -784,7 +784,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var user = Users.FirstOrDefault(u => u.UserID == userId);
             if (user == null)
-                throw new InvalidStateException("User is not in expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             Log(user, $"Removing playlist item {playlistItemId}");
             await controller.RemovePlaylistItem(playlistItemId, user);
@@ -906,10 +906,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var user = Users.FirstOrDefault(u => u.UserID == userId);
             if (user == null)
-                throw new InvalidStateException("User is not in expected room");
+                throw new InvalidStateException("User is not in the room.");
 
             if (!user.State.IsGameplayState())
-                throw new InvalidStateException("Cannot skip while not in a gameplay state");
+                throw new InvalidStateException("Cannot skip while not in gameplay.");
 
             await changeUserVoteToSkipIntro(user, true);
             await checkVotesToSkipPassed();
@@ -946,10 +946,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var user = Users.FirstOrDefault(u => u.UserID == userId);
             if (user == null)
-                throw new InvalidStateException("User is not in expected room.");
+                throw new InvalidStateException("User is not in the room.");
 
             if (!user.State.IsGameplayState())
-                throw new InvalidStateException("Cannot abort gameplay while not in a gameplay state.");
+                throw new InvalidStateException("Cannot abort gameplay while not in gameplay.");
 
             await ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
             await UpdateRoomStateIfRequired();
@@ -1225,7 +1225,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var user = Users.FirstOrDefault(u => u.UserID == userId);
             if (user == null)
-                throw new InvalidStateException("User is not in the expected room");
+                throw new InvalidStateException("User is not in the room.");
 
             if (controller is not MatchmakingMatchController matchmakingController)
                 throw new NotSupportedException();
@@ -1237,7 +1237,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var user = Users.FirstOrDefault(u => u.UserID == userId);
             if (user == null)
-                throw new InvalidStateException("User is not in the expected room");
+                throw new InvalidStateException("User is not in the room.");
 
             if (controller is not MatchmakingMatchController matchmakingController)
                 throw new NotSupportedException();
