@@ -29,15 +29,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         private readonly ServerMultiplayerRoom room;
         private readonly IMultiplayerHubContext hub;
         private readonly IDatabaseFactory dbFactory;
+        private readonly MultiplayerEventDispatcher eventDispatcher;
 
         private QueueMode queueMode;
         private int currentPlaylistItemIndex;
 
-        protected StandardMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
+        protected StandardMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
         {
             this.room = room;
             this.hub = hub;
             this.dbFactory = dbFactory;
+            this.eventDispatcher = eventDispatcher;
 
             queueMode = room.Settings.QueueMode;
         }
@@ -273,7 +275,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
             // It's important for clients to be notified of the removal AFTER settings are changed
             // so that PlaylistItemId always points to a valid item in the playlist.
-            await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
+            await eventDispatcher.PostPlaylistItemRemovedAsync(room.RoomID, playlistItemId);
         }
 
         public abstract MatchStartedEventDetail GetMatchDetails();
@@ -287,7 +289,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
             room.Playlist.Add(item);
-            await hub.NotifyPlaylistItemAdded(room, item);
+            await eventDispatcher.PostPlaylistItemAddedAsync(room.RoomID, item);
 
             if (room.State == MultiplayerRoomState.Open)
                 await updatePlaylistOrder(db);

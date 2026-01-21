@@ -32,7 +32,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 room.MatchState = mockRoomState.Object;
 
-                await HubContext.NotifyMatchRoomStateChanged(room);
+                await EventDispatcher.PostMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
 
                 Receiver.Verify(c => c.MatchRoomStateChanged(mockRoomState.Object), Times.Once);
             }
@@ -50,7 +50,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 var mockEvent = new Mock<MatchServerEvent>();
 
-                await HubContext.NotifyNewMatchEvent(room, mockEvent.Object);
+                await EventDispatcher.PostMatchEventAsync(room.RoomID, mockEvent.Object);
 
                 Receiver.Verify(c => c.MatchEvent(mockEvent.Object), Times.Once);
             }
@@ -72,7 +72,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 user.MatchState = mockRoomState.Object;
 
-                await HubContext.NotifyMatchUserStateChanged(room, user);
+                await EventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
 
                 Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, mockRoomState.Object), Times.Once);
             }

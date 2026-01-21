@@ -42,7 +42,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected readonly Mock<IDatabaseFactory> DatabaseFactory;
         protected readonly Mock<IDatabaseAccess> Database;
         protected readonly Mock<ISharedInterop> LegacyIO;
-        protected readonly MultiplayerEventLogger EventLogger;
+        protected readonly MultiplayerEventDispatcher EventDispatcher;
 
         /// <summary>
         /// A general non-gameplay receiver for the room with ID <see cref="ROOM_ID"/>.
@@ -101,16 +101,17 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Groups = new Mock<IGroupManager>();
 
             Receiver = new Mock<DelegatingMultiplayerClient> { CallBase = true };
-            Receiver.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerHub.GetGroupId(ROOM_ID)));
+            Receiver.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerEventDispatcher.GetGroupId(ROOM_ID)));
 
             Receiver2 = new Mock<DelegatingMultiplayerClient> { CallBase = true };
-            Receiver2.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerHub.GetGroupId(ROOM_ID_2)));
+            Receiver2.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerEventDispatcher.GetGroupId(ROOM_ID_2)));
 
             Caller = new Mock<IMultiplayerClient>();
 
             var hubContext = new Mock<IHubContext<MultiplayerHub>>();
             hubContext.Setup(ctx => ctx.Groups).Returns(Groups.Object);
             hubContext.Setup(ctx => ctx.Clients.Client(It.IsAny<string>())).Returns<string>(connectionId => (ISingleClientProxy)Clients.Object.Client(connectionId));
+            hubContext.Setup(ctx => ctx.Clients.User(It.IsAny<string>())).Returns<string>(userId => ((ISingleClientProxy)Clients.Object.User(userId)));
             hubContext.Setup(ctx => ctx.Clients.Group(It.IsAny<string>())).Returns<string>(groupName => (ISingleClientProxy)Clients.Object.Group(groupName));
             hubContext.Setup(ctx => ctx.Clients.All).Returns((ISingleClientProxy)Clients.Object.All);
 
@@ -138,8 +139,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             });
 
             // Room-specific group receivers
-            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID))).Returns(Receiver.Object);
-            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2))).Returns(Receiver2.Object);
+            Clients.Setup(clients => clients.Group(MultiplayerEventDispatcher.GetGroupId(ROOM_ID))).Returns(Receiver.Object);
+            Clients.Setup(clients => clients.Group(MultiplayerEventDispatcher.GetGroupId(ROOM_ID_2))).Returns(Receiver2.Object);
 
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
@@ -151,15 +152,17 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>()))
                     .Returns<int, MultiplayerRoom>((_, room) => Task.FromResult(room.RoomID));
 
-            EventLogger = new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object);
+            EventDispatcher = new MultiplayerEventDispatcher(
+                DatabaseFactory.Object,
+                hubContext.Object,
+                loggerFactoryMock.Object);
 
             HubContext = new MultiplayerHubContext(
-                hubContext.Object,
+                EventDispatcher,
                 Rooms,
                 UserStates,
                 loggerFactoryMock.Object,
-                DatabaseFactory.Object,
-                EventLogger);
+                DatabaseFactory.Object);
 
             MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
                 hubContext.Object,
@@ -169,7 +172,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Rooms,
                 HubContext,
                 new MemoryCache(new MemoryCacheOptions()),
-                EventLogger);
+                EventDispatcher);
 
             Hub = new TestMultiplayerHub(
                 loggerFactoryMock.Object,
@@ -179,7 +182,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 new ChatFilters(DatabaseFactory.Object),
                 HubContext,
                 LegacyIO.Object,
-                EventLogger,
+                EventDispatcher,
                 MatchmakingBackgroundService);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;

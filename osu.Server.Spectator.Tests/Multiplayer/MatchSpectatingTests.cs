@@ -78,7 +78,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             SetUserContext(ContextUser2);
             await Hub.JoinRoom(ROOM_ID);
             await Hub.ChangeState(MultiplayerUserState.Spectating);
-            Caller.Verify(c => c.LoadRequested(), Times.Once);
+            User2Receiver.Verify(c => c.LoadRequested(), Times.Once);
 
             // Ensure no other clients received LoadRequested().
             Receiver.Verify(c => c.LoadRequested(), Times.Once);

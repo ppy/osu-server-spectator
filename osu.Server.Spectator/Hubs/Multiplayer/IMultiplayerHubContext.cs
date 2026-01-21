@@ -18,44 +18,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     public interface IMultiplayerHubContext
     {
         /// <summary>
-        /// Notifies users in a room of an event.
-        /// </summary>
-        /// <remarks>
-        /// This should be used for events which have no permanent effect on state.
-        /// For operations which are intended to persist (and be visible to new users which join a room) use <see cref="NotifyMatchRoomStateChanged"/> or <see cref="NotifyMatchUserStateChanged"/> instead.
-        /// </remarks>
-        /// <param name="room">The room to send the event to.</param>
-        /// <param name="e">The event.</param>
-        Task NotifyNewMatchEvent(ServerMultiplayerRoom room, MatchServerEvent e);
-
-        /// <summary>
-        /// Notify users in a room that the room's <see cref="MultiplayerRoom.MatchState"/> has been altered.
-        /// </summary>
-        /// <param name="room">The room whose state has changed.</param>
-        Task NotifyMatchRoomStateChanged(ServerMultiplayerRoom room);
-
-        /// <summary>
-        /// Notifies users in a room that a user's <see cref="MultiplayerRoomUser.MatchState"/> has been altered.
-        /// </summary>
-        /// <param name="room">The room to send the event to.</param>
-        /// <param name="user">The user whose state has changed.</param>
-        Task NotifyMatchUserStateChanged(ServerMultiplayerRoom room, MultiplayerRoomUser user);
-
-        /// <summary>
-        /// Notifies users in a room that a playlist item has been added.
-        /// </summary>
-        /// <param name="room">The room to send the event to.</param>
-        /// <param name="item">The added item.</param>
-        Task NotifyPlaylistItemAdded(ServerMultiplayerRoom room, MultiplayerPlaylistItem item);
-
-        /// <summary>
-        /// Notifies users in a room that a playlist item has been removed.
-        /// </summary>
-        /// <param name="room">The room to send the event to.</param>
-        /// <param name="playlistItemId">The removed item.</param>
-        Task NotifyPlaylistItemRemoved(ServerMultiplayerRoom room, long playlistItemId);
-
-        /// <summary>
         /// Notifies users in a room that a playlist item has been changed.
         /// </summary>
         /// <remarks>
@@ -147,10 +109,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// Should be called when user states change, to check whether the new overall room state can trigger a room-level state change.
         /// </summary>
         Task UpdateRoomStateIfRequired(ServerMultiplayerRoom room);
-
-        Task NotifyMatchmakingItemSelected(ServerMultiplayerRoom room, int userId, long playlistItemId);
-
-        Task NotifyMatchmakingItemDeselected(ServerMultiplayerRoom room, int userId, long playlistItemId);
 
         Task CheckVotesToSkipPassed(ServerMultiplayerRoom room);
 
