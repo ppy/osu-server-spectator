@@ -16,7 +16,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     {
         public TestMultiplayerHub(
             ILoggerFactory loggerFactory,
-            EntityStore<ServerMultiplayerRoom> rooms,
             EntityStore<MultiplayerClientState> users,
             IDatabaseFactory databaseFactory,
             ChatFilters chatFilters,
@@ -24,7 +23,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             ISharedInterop sharedInterop,
             MultiplayerEventDispatcher multiplayerEventDispatcher,
             IMatchmakingQueueBackgroundService matchmakingQueueBackgroundService)
-            : base(loggerFactory, rooms, users, databaseFactory, chatFilters, roomController, sharedInterop, multiplayerEventDispatcher, matchmakingQueueBackgroundService)
+            : base(loggerFactory, users, databaseFactory, chatFilters, roomController, sharedInterop, multiplayerEventDispatcher, matchmakingQueueBackgroundService)
         {
         }
 
@@ -61,7 +60,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             try
             {
-                using (var usage = Rooms.GetForUse(roomId).Result)
+                using (var usage = RoomController.GetRoom(roomId).Result)
                     return usage.Item != null;
             }
             catch

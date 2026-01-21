@@ -158,7 +158,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 hubContext.Object,
                 LoggerFactory.Object);
 
-            RoomController = new MultiplayerRoomController(Rooms);
+            RoomController = new MultiplayerRoomController(
+                Rooms,
+                DatabaseFactory.Object,
+                EventDispatcher,
+                LoggerFactory.Object,
+                LegacyIO.Object);
 
             MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
                 hubContext.Object,
@@ -172,7 +177,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             Hub = new TestMultiplayerHub(
                 LoggerFactory.Object,
-                Rooms,
                 UserStates,
                 DatabaseFactory.Object,
                 new ChatFilters(DatabaseFactory.Object),

@@ -265,12 +265,14 @@ namespace osu.Server.Spectator.Hubs.Metadata
             state.FriendIds = newFriendIds;
         }
 
-        protected override async Task CleanUpState(MetadataClientState state)
+        protected override async Task CleanUpState(ItemUsage<MetadataClientState> state)
         {
+            Debug.Assert(state.Item != null);
+            
             await base.CleanUpState(state);
-            if (shouldBroadcastPresenceToOtherUsers(state))
-                await broadcastUserPresenceUpdate(state.UserId, null);
-            await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.UserId);
+            if (shouldBroadcastPresenceToOtherUsers(state.Item))
+                await broadcastUserPresenceUpdate(state.Item.UserId, null);
+            await scoreProcessedSubscriber.UnregisterFromAllMultiplayerRoomsAsync(state.Item.UserId);
         }
 
         private Task broadcastUserPresenceUpdate(int userId, UserPresence? userPresence)
