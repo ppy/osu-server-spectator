@@ -232,9 +232,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// Permissions are not checked and validations are not performed. Callers are expected to perform relevant checks themselves.
         /// </summary>
         /// <param name="newSettings">The new settings.</param>
-        /// <exception cref="InvalidStateException">The provided settings were invalid.</exception>
+        /// <exception cref="InvalidStateException">The provided settings were invalid, or the room cannot accept setting changes at this time.</exception>
         public async Task ChangeRoomSettings(MultiplayerRoomSettings newSettings)
         {
+            if (State != MultiplayerRoomState.Open)
+                throw new InvalidStateException("Attempted to change settings while game is active");
+
             Log("Settings updating");
 
             // Server is authoritative over the playlist item ID.

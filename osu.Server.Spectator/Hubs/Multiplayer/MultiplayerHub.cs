@@ -568,9 +568,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (room == null)
                         throw new InvalidOperationException("Attempted to operate on a null room");
 
-                    if (room.State != MultiplayerRoomState.Open)
-                        throw new InvalidStateException("Attempted to change settings while game is active");
-
                     ensureIsHost(room);
 
                     settings.Name = await chatFilters.FilterAsync(settings.Name);
