@@ -423,7 +423,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.Equal(4, room.Controller.CurrentItem.ID);
+                Assert.Equal(4, room.CurrentPlaylistItem.ID);
             }
         }
 

@@ -14,7 +14,6 @@ using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -49,6 +48,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly IDatabaseFactory databaseFactory;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
         private readonly IMultiplayerHubContext hubContext;
+        private readonly ILoggerFactory loggerFactory;
         private readonly ILogger logger;
         private readonly IMemoryCache memoryCache;
         private readonly MultiplayerEventDispatcher eventDispatcher;
@@ -68,6 +68,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             this.memoryCache = memoryCache;
             this.eventDispatcher = eventDispatcher;
 
+            this.loggerFactory = loggerFactory;
             logger = loggerFactory.CreateLogger(nameof(MatchmakingQueueBackgroundService));
         }
 
@@ -317,7 +318,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
-                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventDispatcher, group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id);
+                    roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, hubContext, databaseFactory, eventDispatcher, loggerFactory, group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id);
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
@@ -329,35 +330,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     pool_id = (int)bundle.Queue.Pool.id
                 });
             }
-        }
-
-        /// <summary>
-        /// Initialises a matchmaking room with the given eligible user IDs.
-        /// </summary>
-        /// <param name="roomId">The room identifier.</param>
-        /// <param name="hub">The multiplayer hub context.</param>
-        /// <param name="dbFactory">The database factory.</param>
-        /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
-        /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
-        /// <param name="poolId">The pool ID.</param>
-        /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
-        public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory,
-                                                                            MultiplayerEventDispatcher eventDispatcher, int[] eligibleUserIds, uint poolId)
-        {
-            ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventDispatcher);
-
-            if (room.MatchState is not MatchmakingRoomState matchmakingState)
-                throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid state).");
-
-            foreach (int user in eligibleUserIds)
-                matchmakingState.Users.GetOrAdd(user);
-
-            if (room.Controller is not MatchmakingMatchController matchmakingController)
-                throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid controller).");
-
-            matchmakingController.PoolId = poolId;
-
-            return room;
         }
 
         private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)

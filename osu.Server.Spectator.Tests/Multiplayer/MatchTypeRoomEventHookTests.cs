@@ -18,7 +18,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task NewUserJoinedTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher);
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
             Mock<IMatchController> controller = new Mock<IMatchController>();
             await room.ChangeMatchType(controller.Object);
@@ -32,7 +32,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task UserLeavesTriggersRulesetHook()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher);
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
             var user = new MultiplayerRoomUser(1);
 
@@ -41,7 +41,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Mock<IMatchController> controller = new Mock<IMatchController>();
             await room.ChangeMatchType(controller.Object);
 
-            await room.RemoveUser(user);
+            await room.RemoveUser(user.UserID);
             controller.Verify(m => m.HandleUserLeft(It.IsAny<MultiplayerRoomUser>()), Times.Once());
         }
 
@@ -49,7 +49,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         public async Task TypeChangeTriggersInitialJoins()
         {
             var hub = new Mock<IMultiplayerHubContext>();
-            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher);
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
