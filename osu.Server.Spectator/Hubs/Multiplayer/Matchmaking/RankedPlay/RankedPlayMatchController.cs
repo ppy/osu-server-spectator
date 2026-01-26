@@ -147,7 +147,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             switch (request)
             {
                 case RankedPlayCardHandReplayRequest cardHandReplay:
-                    await Hub.NotifyNewMatchEvent(Room, new RankedPlayCardHandReplayEvent
+                    await EventDispatcher.PostMatchEventAsync(Room.RoomID, new RankedPlayCardHandReplayEvent
                     {
                         UserId = user.UserID,
                         Frames = cardHandReplay.Frames
