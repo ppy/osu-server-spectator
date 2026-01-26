@@ -25,7 +25,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             UserState.Hand.Clear();
 
             await MatchController.GotoStage(RankedPlayStage.CardPlay);
-            Assert.Equal(1, UserState.Hand.Count);
+            Assert.Single(UserState.Hand);
         }
 
         [Fact]
@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             var card = UserState.Hand.First();
             await FinishCountdown();
 
-            Assert.True(UserState.Hand.Any(c => c.Equals(card)));
+            Assert.Contains(card, UserState.Hand);
             Assert.NotEqual(0, Room.Settings.PlaylistItemId);
             Assert.Equal(RankedPlayStage.FinishCardPlay, RoomState.Stage);
 

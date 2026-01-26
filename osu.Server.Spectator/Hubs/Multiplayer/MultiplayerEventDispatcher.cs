@@ -495,7 +495,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         public async Task PostRankedPlayCardRevealed(int userId, RankedPlayCardItem card, MultiplayerPlaylistItem item)
         {
-            await multiplayerHubContext.Clients.Users(userId.ToString()).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRevealed), card, item);
+            await multiplayerHubContext.Clients.User(userId.ToString()).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRevealed), card, item);
         }
 
         /// <summary>
