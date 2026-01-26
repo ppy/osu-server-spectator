@@ -292,13 +292,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             switch (type)
             {
                 case MatchType.Matchmaking:
-                    return ChangeMatchType(new MatchmakingMatchController(this, roomController, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new MatchmakingMatchController(this, dbFactory, eventDispatcher));
 
                 case MatchType.TeamVersus:
-                    return ChangeMatchType(new TeamVersusMatchController(this, roomController, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new TeamVersusMatchController(this, dbFactory, eventDispatcher));
 
                 default:
-                    return ChangeMatchType(new HeadToHeadMatchController(this, roomController, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new HeadToHeadMatchController(this, dbFactory, eventDispatcher));
             }
         }
 

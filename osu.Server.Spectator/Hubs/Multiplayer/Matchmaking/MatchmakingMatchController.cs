@@ -100,7 +100,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         public uint PoolId { get; set; }
 
         private readonly ServerMultiplayerRoom room;
-        private readonly IMultiplayerRoomController hub;
         private readonly IDatabaseFactory dbFactory;
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly MatchmakingRoomState state;
@@ -110,10 +109,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
         private bool anyPlayerQuit;
         private bool statsUpdatePending = true;
 
-        public MatchmakingMatchController(ServerMultiplayerRoom room, IMultiplayerRoomController hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
+        public MatchmakingMatchController(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
         {
             this.room = room;
-            this.hub = hub;
             this.dbFactory = dbFactory;
             this.eventDispatcher = eventDispatcher;
 
