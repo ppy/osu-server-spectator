@@ -33,7 +33,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected const long ROOM_ID = 8888;
         protected const long ROOM_ID_2 = 9999;
 
-        protected IMultiplayerHubContext HubContext { get; }
+        protected IMultiplayerRoomController RoomController { get; }
         protected TestMultiplayerHub Hub { get; }
         protected EntityStore<ServerMultiplayerRoom> Rooms { get; }
         protected EntityStore<MultiplayerClientState> UserStates { get; }
@@ -42,7 +42,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected readonly Mock<IDatabaseFactory> DatabaseFactory;
         protected readonly Mock<IDatabaseAccess> Database;
         protected readonly Mock<ISharedInterop> LegacyIO;
-        protected readonly MultiplayerEventLogger EventLogger;
+        protected readonly MultiplayerEventDispatcher EventDispatcher;
+        protected Mock<ILoggerFactory> LoggerFactory;
 
         /// <summary>
         /// A general non-gameplay receiver for the room with ID <see cref="ROOM_ID"/>.
@@ -101,16 +102,17 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             Groups = new Mock<IGroupManager>();
 
             Receiver = new Mock<DelegatingMultiplayerClient> { CallBase = true };
-            Receiver.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerHub.GetGroupId(ROOM_ID)));
+            Receiver.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerEventDispatcher.GetGroupId(ROOM_ID)));
 
             Receiver2 = new Mock<DelegatingMultiplayerClient> { CallBase = true };
-            Receiver2.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerHub.GetGroupId(ROOM_ID_2)));
+            Receiver2.Setup(c => c.Clients).Returns(getClientsForGroup(MultiplayerEventDispatcher.GetGroupId(ROOM_ID_2)));
 
             Caller = new Mock<IMultiplayerClient>();
 
             var hubContext = new Mock<IHubContext<MultiplayerHub>>();
             hubContext.Setup(ctx => ctx.Groups).Returns(Groups.Object);
             hubContext.Setup(ctx => ctx.Clients.Client(It.IsAny<string>())).Returns<string>(connectionId => (ISingleClientProxy)Clients.Object.Client(connectionId));
+            hubContext.Setup(ctx => ctx.Clients.User(It.IsAny<string>())).Returns<string>(userId => ((ISingleClientProxy)Clients.Object.User(userId)));
             hubContext.Setup(ctx => ctx.Clients.Group(It.IsAny<string>())).Returns<string>(groupName => (ISingleClientProxy)Clients.Object.Group(groupName));
             hubContext.Setup(ctx => ctx.Clients.User(It.IsAny<string>())).Returns<string>(userId => (ISingleClientProxy)Clients.Object.User(userId));
             hubContext.Setup(ctx => ctx.Clients.All).Returns((ISingleClientProxy)Clients.Object.All);
@@ -139,48 +141,49 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             });
 
             // Room-specific group receivers
-            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID))).Returns(Receiver.Object);
-            Clients.Setup(clients => clients.Group(MultiplayerHub.GetGroupId(ROOM_ID_2))).Returns(Receiver2.Object);
+            Clients.Setup(clients => clients.Group(MultiplayerEventDispatcher.GetGroupId(ROOM_ID))).Returns(Receiver.Object);
+            Clients.Setup(clients => clients.Group(MultiplayerEventDispatcher.GetGroupId(ROOM_ID_2))).Returns(Receiver2.Object);
 
             Clients.Setup(client => client.Caller).Returns(Caller.Object);
 
-            var loggerFactoryMock = new Mock<ILoggerFactory>();
-            loggerFactoryMock.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
-                             .Returns(new Mock<ILogger>().Object);
+            LoggerFactory = new Mock<ILoggerFactory>();
+            LoggerFactory.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
+                         .Returns(new Mock<ILogger>().Object);
 
             LegacyIO = new Mock<ISharedInterop>();
             LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>()))
                     .Returns<int, MultiplayerRoom>((_, room) => Task.FromResult(room.RoomID));
 
-            EventLogger = new MultiplayerEventLogger(loggerFactoryMock.Object, DatabaseFactory.Object);
-
-            HubContext = new MultiplayerHubContext(
-                hubContext.Object,
-                Rooms,
-                UserStates,
-                loggerFactoryMock.Object,
+            EventDispatcher = new MultiplayerEventDispatcher(
                 DatabaseFactory.Object,
-                EventLogger);
+                hubContext.Object,
+                LoggerFactory.Object);
+
+            RoomController = new MultiplayerRoomController(
+                Rooms,
+                DatabaseFactory.Object,
+                EventDispatcher,
+                LoggerFactory.Object,
+                LegacyIO.Object);
 
             MatchmakingBackgroundService = new MatchmakingQueueBackgroundService(
                 hubContext.Object,
                 LegacyIO.Object,
                 DatabaseFactory.Object,
-                loggerFactoryMock.Object,
+                LoggerFactory.Object,
                 Rooms,
-                HubContext,
+                RoomController,
                 new MemoryCache(new MemoryCacheOptions()),
-                EventLogger);
+                EventDispatcher);
 
             Hub = new TestMultiplayerHub(
-                loggerFactoryMock.Object,
-                Rooms,
+                LoggerFactory.Object,
                 UserStates,
                 DatabaseFactory.Object,
                 new ChatFilters(DatabaseFactory.Object),
-                HubContext,
+                RoomController,
                 LegacyIO.Object,
-                EventLogger,
+                EventDispatcher,
                 MatchmakingBackgroundService);
             Hub.Groups = Groups.Object;
             Hub.Clients = Clients.Object;

@@ -24,8 +24,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         {
             foreach (var user in Room.Users.Where(u => u.State != MultiplayerUserState.Idle))
             {
-                await Hub.ChangeAndBroadcastUserState(Room, user, MultiplayerUserState.Idle);
-                await Hub.UpdateRoomStateIfRequired(Room);
+                await Room.ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
+                await Room.UpdateRoomStateIfRequired();
             }
 
             State.CurrentRound++;

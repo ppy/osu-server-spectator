@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             for (int i = 2; i < 5; i++)
             {
-                await Controller.GotoStage(RankedPlayStage.RoundWarmup);
+                await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
                 Assert.Equal(i, RoomState.CurrentRound);
             }
         }
@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             for (int i = 0; i < 5; i++)
             {
-                await Controller.GotoStage(RankedPlayStage.RoundWarmup);
+                await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
                 Assert.NotEqual(activeUserId, RoomState.ActiveUserId);
                 activeUserId = RoomState.ActiveUserId;
             }

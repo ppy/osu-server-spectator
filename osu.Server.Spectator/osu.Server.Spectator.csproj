@@ -16,11 +16,11 @@
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
         <PackageReference Include="OpenSkillSharp" Version="1.1.0" />
-        <PackageReference Include="ppy.osu.Game" Version="2025.1209.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Catch" Version="2025.1209.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Mania" Version="2025.1209.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2025.1209.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Taiko" Version="2025.1209.0" />
+        <PackageReference Include="ppy.osu.Game" Version="2026.119.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Catch" Version="2026.119.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Mania" Version="2026.119.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.119.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Taiko" Version="2026.119.0" />
         <PackageReference Include="ppy.osu.Server.OsuQueueProcessor" Version="2025.317.0" />
         <PackageReference Include="Sentry.AspNetCore" Version="5.0.1" />
     </ItemGroup>

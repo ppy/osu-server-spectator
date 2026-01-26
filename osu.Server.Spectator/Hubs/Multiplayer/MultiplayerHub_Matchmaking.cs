@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using osu.Game.Online.Matchmaking;
 using osu.Server.Spectator.Extensions;
-using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -68,11 +67,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
-                if (user == null)
-                    throw new InvalidOperationException("Local user was not found in the expected room");
-
-                await ((MatchmakingMatchController)room.Controller).ToggleSelectionAsync(user, playlistItemId);
+                await room.MatchmakingToggleSelection(Context.GetUserId(), playlistItemId);
             }
         }
 
@@ -85,11 +80,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (room == null)
                     throw new InvalidOperationException("Attempted to operate on a null room");
 
-                var user = room.Users.FirstOrDefault(u => u.UserID == Context.GetUserId());
-                if (user == null)
-                    throw new InvalidOperationException("Local user was not found in the expected room");
-
-                ((IMatchmakingMatchController)room.Controller).SkipToNextStage(out _);
+                room.MatchmakingSkipToNextStage(Context.GetUserId(), out _);
             }
         }
     }

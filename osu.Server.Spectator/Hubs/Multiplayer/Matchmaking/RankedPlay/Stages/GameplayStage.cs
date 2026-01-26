@@ -21,8 +21,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Begin()
         {
-            await EventLogger.LogMatchmakingGameplayBeatmapAsync(Room.RoomID, Room.Settings.PlaylistItemId);
-            await Hub.StartMatch(Room);
+            await EventDispatcher.PostPlayerBeatmapPickFinalised(Room.RoomID, State.ActiveUserId, Room.Settings.PlaylistItemId);
+            await ServerMultiplayerRoom.StartMatch(Room);
         }
 
         protected override async Task Finish()

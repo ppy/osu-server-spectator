@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
@@ -18,13 +19,16 @@ namespace osu.Server.Spectator
     {
         private readonly IDatabaseFactory databaseFactory;
         private readonly IMemoryCache memoryCache;
+        private readonly ILogger<ClientVersionChecker> logger;
 
         public ClientVersionChecker(
             IDatabaseFactory databaseFactory,
-            IMemoryCache memoryCache)
+            IMemoryCache memoryCache,
+            ILoggerFactory loggerFactory)
         {
             this.databaseFactory = databaseFactory;
             this.memoryCache = memoryCache;
+            logger = loggerFactory.CreateLogger<ClientVersionChecker>();
         }
 
         public async Task OnConnectedAsync(HubLifetimeContext context, Func<HubLifetimeContext, Task> next)
@@ -52,6 +56,8 @@ namespace osu.Server.Spectator
             if (!AppSettings.ClientCheckVersion)
                 return true;
 
+            int userId = callerContext.GetUserId();
+
             HashSet<int> exemptUsers = await memoryCache.GetOrCreateAsync<HashSet<int>>(cache_key_for_exempt_users, async entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1);
@@ -60,13 +66,19 @@ namespace osu.Server.Spectator
                     return new HashSet<int>(await db.GetUsersInGroupsAsync(AppSettings.ClientCheckVersionExemptGroups));
             }) ?? [];
 
-            if (exemptUsers.Contains(callerContext.GetUserId()))
+            if (exemptUsers.Contains(userId))
+            {
+                logger.LogDebug("[user:{userId}] [connectionId:{connectionId}] Excluding user from client version check due to belonging to excluded group(s)", userId, callerContext.ConnectionId);
                 return true;
+            }
 
             string? hash = memoryCache.Get<string?>(cacheKeyForClientHash(callerContext.ConnectionId));
 
             if (string.IsNullOrEmpty(hash))
+            {
+                logger.LogDebug("[user:{userId}] [connectionId:{connectionId}] Version hash missing", userId, callerContext.ConnectionId);
                 return false;
+            }
 
             var build = await memoryCache.GetOrCreateAsync(cacheKeyForBuild(hash), async entry =>
             {
@@ -83,7 +95,19 @@ namespace osu.Server.Spectator
                 return build;
             });
 
-            return build?.allow_bancho == true;
+            if (build == null)
+            {
+                logger.LogDebug("[user:{userId}] [connectionId:{connectionId}] Version hash {hash} indicates non-existent build", userId, callerContext.ConnectionId, hash);
+                return false;
+            }
+
+            if (!build.allow_bancho)
+            {
+                logger.LogDebug("[user:{userId}] [connectionId:{connectionId}] Version hash {hash} indicates build {buildId} with pulled online support",
+                    userId, callerContext.ConnectionId, hash, build.build_id);
+            }
+
+            return build.allow_bancho;
         }
 
         private static string cacheKeyForClientHash(string connectionId) => $"{HubClientConnector.VERSION_HASH_HEADER}#{connectionId}";

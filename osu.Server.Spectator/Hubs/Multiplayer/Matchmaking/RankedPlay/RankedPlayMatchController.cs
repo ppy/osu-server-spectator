@@ -28,9 +28,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public uint PoolId { get; private set; }
 
         public readonly ServerMultiplayerRoom Room;
-        public readonly IMultiplayerHubContext Hub;
+        public readonly IMultiplayerRoomController Hub;
         public readonly IDatabaseFactory DbFactory;
-        public readonly MultiplayerEventLogger EventLogger;
+        public readonly MultiplayerEventDispatcher EventDispatcher;
         public readonly RankedPlayRoomState State;
 
         /// <summary>
@@ -58,12 +58,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// </summary>
         private readonly List<RankedPlayCardItem> deck = [];
 
-        public RankedPlayMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger)
+        public RankedPlayMatchController(ServerMultiplayerRoom room, IMultiplayerRoomController hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
         {
             Room = room;
             Hub = hub;
             DbFactory = dbFactory;
-            EventLogger = eventLogger;
+            EventDispatcher = eventDispatcher;
             State = new RankedPlayRoomState();
             Stage = new EmptyStage(this);
 
@@ -72,7 +72,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
         async Task IMatchController.Initialise()
         {
-            await Hub.NotifyMatchRoomStateChanged(Room);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
             await GotoStage(RankedPlayStage.WaitForJoin);
         }
 
@@ -114,7 +114,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 };
             }
 
-            await Hub.NotifyMatchRoomStateChanged(Room);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
         }
 
         Task<bool> IMatchController.UserCanJoin(int userId)
@@ -137,7 +137,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 CurrentItem.Expired = newItem.expired;
                 CurrentItem.PlayedAt = newItem.played_at;
 
-                await Hub.NotifyPlaylistItemChanged(Room, CurrentItem, true);
+                await Room.NotifyPlaylistItemChanged(CurrentItem, true);
             }
 
             await Stage.HandleGameplayCompleted();
@@ -150,7 +150,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
         async Task IMatchController.HandleUserJoined(MultiplayerRoomUser user)
         {
-            await EventLogger.LogMatchmakingUserJoinAsync(Room.RoomID, user.UserID);
+            await EventDispatcher.PostPlayerJoinedMatchmakingRoomAsync(Room.RoomID, user.UserID);
             await Stage.HandleUserJoined(user);
         }
 
@@ -230,11 +230,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             foreach (var card in cards)
             {
                 State.Users[userId].Hand.Add(card);
-                await Hub.NotifyRankedPlayCardAdded(Room, userId, card);
-                await Hub.NotifyRankedPlayCardRevealed(Room, userId, card, cardToEffectMap[card]);
+                await EventDispatcher.PostRankedPlayCardAdded(Room.RoomID, userId, card);
+                await EventDispatcher.PostRankedPlayCardRevealed(Room.RoomID, userId, card, cardToEffectMap[card]);
             }
 
-            await Hub.NotifyMatchRoomStateChanged(Room);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
         }
 
         /// <summary>
@@ -247,10 +247,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             foreach (var card in cards)
             {
                 State.Users[userId].Hand.Remove(card);
-                await Hub.NotifyRankedPlayCardRemoved(Room, userId, card);
+                await EventDispatcher.PostRankedPlayCardRemoved(Room.RoomID, userId, card);
             }
 
-            await Hub.NotifyMatchRoomStateChanged(Room);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
         }
 
         /// <summary>
@@ -260,8 +260,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         {
             MultiplayerPlaylistItem effect = cardToEffectMap[card];
 
-            await Hub.NotifyRankedPlayCardRevealed(Room, null, card, effect);
-            await Hub.NotifyRankedPlayCardPlayed(Room, card);
+            await EventDispatcher.PostRankedPlayCardRevealed(Room.RoomID, card, effect);
+            await EventDispatcher.PostRankedPlayCardPlayed(Room.RoomID, card);
 
             // Todo: If we ever have cards with non-"play beatmap" effects, then
             //       this is the first responder to perform any relevant actions.
@@ -273,7 +273,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                     effect.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, effect));
 
                     Room.Playlist.Add(effect);
-                    await Hub.NotifyPlaylistItemAdded(Room, effect);
+                    await EventDispatcher.PostPlaylistItemAddedAsync(Room.RoomID, effect);
                 }
                 else
                 {
@@ -281,12 +281,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
                     Room.Playlist[Room.Playlist.IndexOf(CurrentItem)] = effect;
                     await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, effect));
-                    await Hub.NotifyPlaylistItemChanged(Room, effect, true);
+                    await Room.NotifyPlaylistItemChanged(CurrentItem, true);
                 }
             }
 
             Room.Settings.PlaylistItemId = effect.ID;
-            await Hub.NotifySettingsChanged(Room, true);
+            await Room.NotifySettingsChanged(true);
 
             LastActivatedCard = card;
         }

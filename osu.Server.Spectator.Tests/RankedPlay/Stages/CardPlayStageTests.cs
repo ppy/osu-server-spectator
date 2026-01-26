@@ -24,7 +24,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             RoomState.ActiveUserId = USER_ID;
             UserState.Hand.Clear();
 
-            await Controller.GotoStage(RankedPlayStage.CardPlay);
+            await MatchController.GotoStage(RankedPlayStage.CardPlay);
             Assert.Equal(1, UserState.Hand.Count);
         }
 
@@ -36,7 +36,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             var card = UserState.Hand.First();
             await Hub.PlayCard(card);
 
-            Assert.Equal(card, Controller.LastActivatedCard);
+            Assert.Equal(card, MatchController.LastActivatedCard);
             Assert.NotEqual(0, Room.Settings.PlaylistItemId);
             Assert.Equal(RankedPlayStage.FinishCardPlay, RoomState.Stage);
 

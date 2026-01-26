@@ -23,10 +23,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         protected abstract TimeSpan Duration { get; }
 
         protected ServerMultiplayerRoom Room => Controller.Room;
-        protected IMultiplayerHubContext Hub => Controller.Hub;
+        protected IMultiplayerRoomController Hub => Controller.Hub;
         protected RankedPlayRoomState State => Controller.State;
         protected IDatabaseFactory DbFactory => Controller.DbFactory;
-        protected MultiplayerEventLogger EventLogger => Controller.EventLogger;
+        protected MultiplayerEventDispatcher EventDispatcher => Controller.EventDispatcher;
 
         protected readonly RankedPlayMatchController Controller;
 
@@ -43,7 +43,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             State.Stage = Stage;
 
             await Begin();
-            await Hub.NotifyMatchRoomStateChanged(Room);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
 
             await FinishWithCountdown(Duration);
         }
@@ -113,7 +113,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         protected async Task KillUser(MultiplayerRoomUser user)
         {
             State.Users[user.UserID].Life = 0;
-            await Hub.NotifyMatchRoomStateChanged(Room);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
         }
 
         /// <summary>

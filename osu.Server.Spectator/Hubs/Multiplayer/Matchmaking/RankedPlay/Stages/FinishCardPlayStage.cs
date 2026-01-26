@@ -23,7 +23,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         protected override async Task Begin()
         {
             // Reset ready states.
-            await Hub.NotifySettingsChanged(Room, true);
+            await Room.NotifySettingsChanged(true);
         }
 
         protected override async Task Finish()

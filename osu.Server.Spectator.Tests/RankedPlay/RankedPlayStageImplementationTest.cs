@@ -22,7 +22,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay
     public abstract class RankedPlayStageImplementationTest : MultiplayerTest, IAsyncLifetime
     {
         protected ServerMultiplayerRoom Room { get; private set; } = null!;
-        protected RankedPlayMatchController Controller => (RankedPlayMatchController)Room.Controller;
+        protected RankedPlayMatchController MatchController => (RankedPlayMatchController)Room.MatchController;
 
         protected RankedPlayRoomState RoomState => (RankedPlayRoomState)Room.MatchState!;
         protected RankedPlayUserInfo UserState => RoomState.Users[USER_ID];
@@ -58,7 +58,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay
         {
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
-                room.Item = await MatchmakingQueueBackgroundService.InitialiseRoomAsync(ROOM_ID, HubContext, DatabaseFactory.Object, EventLogger, 0, [USER_ID, USER_ID_2],
+                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2], 0,
                     new MatchmakingBeatmapSelector(Enumerable.Range(1, 50).Select(i => new matchmaking_pool_beatmap
                     {
                         id = (uint)i,
@@ -72,7 +72,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay
             await SetupForEnter();
 
             if (RoomState.Stage != stage)
-                await Controller.GotoStage(stage);
+                await MatchController.GotoStage(stage);
         }
 
         protected virtual async Task JoinUsers()

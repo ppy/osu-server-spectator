@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,17 +27,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentPlaylistItemIndex];
 
         private readonly ServerMultiplayerRoom room;
-        private readonly IMultiplayerHubContext hub;
+        private readonly IMultiplayerRoomController hub;
         private readonly IDatabaseFactory dbFactory;
+        private readonly MultiplayerEventDispatcher eventDispatcher;
 
         private QueueMode queueMode;
         private int currentPlaylistItemIndex;
 
-        protected StandardMatchController(ServerMultiplayerRoom room, IMultiplayerHubContext hub, IDatabaseFactory dbFactory)
+        protected StandardMatchController(ServerMultiplayerRoom room, IMultiplayerRoomController hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
         {
             this.room = room;
             this.hub = hub;
             this.dbFactory = dbFactory;
+            this.eventDispatcher = eventDispatcher;
 
             queueMode = room.Settings.QueueMode;
         }
@@ -71,10 +74,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 if (room.Settings.QueueMode == QueueMode.HostOnly && room.Playlist.All(item => item.Expired))
                     await addItem(db, CurrentItem.Clone());
 
-                await updatePlaylistOrder(db);
+                if (room.State == MultiplayerRoomState.Open)
+                    await updatePlaylistOrder(db);
             }
 
-            await updateCurrentItem();
+            if (room.State == MultiplayerRoomState.Open)
+                await updateCurrentItem();
         }
 
         /// <summary>
@@ -88,7 +93,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 await db.MarkPlaylistItemAsPlayedAsync(room.RoomID, CurrentItem.ID);
                 room.Playlist[currentPlaylistItemIndex] = (await db.GetPlaylistItemAsync(room.RoomID, CurrentItem.ID)).ToMultiplayerPlaylistItem();
 
-                await hub.NotifyPlaylistItemChanged(room, CurrentItem, true);
+                await room.NotifyPlaylistItemChanged(CurrentItem, true);
                 await updatePlaylistOrder(db);
 
                 // In host-only mode, duplicate the playlist item for the next round if no other non-expired items exist.
@@ -163,7 +168,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 item.StarRating = beatmap.difficultyrating;
 
                 await addItem(db, item);
-                await updateCurrentItem();
+                if (room.State == MultiplayerRoomState.Open)
+                    await updateCurrentItem();
             }
         }
 
@@ -194,7 +200,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
                 var existingItem = room.Playlist.SingleOrDefault(i => i.ID == item.ID);
 
-                if (existingItem == CurrentItem)
+                if (ReferenceEquals(existingItem, CurrentItem))
                 {
                     if (room.State != MultiplayerRoomState.Open)
                         throw new InvalidStateException("The current item in the room cannot be edited when currently being played.");
@@ -215,7 +221,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
                 room.Playlist[room.Playlist.IndexOf(existingItem)] = item;
 
-                await hub.NotifyPlaylistItemChanged(room, item, existingItem.BeatmapChecksum != item.BeatmapChecksum);
+                await room.NotifyPlaylistItemChanged(item, existingItem.BeatmapChecksum != item.BeatmapChecksum);
             }
         }
 
@@ -231,7 +237,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             if (item == null)
                 throw new InvalidStateException("Item does not exist in the room.");
 
-            if (item == CurrentItem)
+            if (ReferenceEquals(item, CurrentItem))
             {
                 // The current item check is only an optimisation for this condition. It is guaranteed for the single item in the room to be the current item.
                 if (UpcomingItems.Count() == 1)
@@ -260,14 +266,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 // Importantly, this is done before the playlist order is updated since the update requires the current item.
                 currentPlaylistItemIndex = room.Playlist.IndexOf(UpcomingItems.First());
 
-                await updatePlaylistOrder(db);
+                if (room.State == MultiplayerRoomState.Open)
+                    await updatePlaylistOrder(db);
             }
 
-            await updateCurrentItem();
+            if (room.State == MultiplayerRoomState.Open)
+                await updateCurrentItem();
 
             // It's important for clients to be notified of the removal AFTER settings are changed
             // so that PlaylistItemId always points to a valid item in the playlist.
-            await hub.NotifyPlaylistItemRemoved(room, playlistItemId);
+            await eventDispatcher.PostPlaylistItemRemovedAsync(room.RoomID, playlistItemId);
         }
 
         public abstract MatchStartedEventDetail GetMatchDetails();
@@ -281,9 +289,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
             room.Playlist.Add(item);
-            await hub.NotifyPlaylistItemAdded(room, item);
+            await eventDispatcher.PostPlaylistItemAddedAsync(room.RoomID, item);
 
-            await updatePlaylistOrder(db);
+            if (room.State == MultiplayerRoomState.Open)
+                await updatePlaylistOrder(db);
         }
 
         public IEnumerable<MultiplayerPlaylistItem> UpcomingItems => room.Playlist.Where(i => !i.Expired).OrderBy(i => i.PlaylistOrder);
@@ -293,6 +302,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         /// </summary>
         private async Task updateCurrentItem()
         {
+            if (room.State != MultiplayerRoomState.Open)
+                throw new InvalidOperationException("Can't update current item when game is being played");
+
             // Pick the next non-expired playlist item by playlist order, or default to the most-recently-expired item.
             MultiplayerPlaylistItem nextItem = UpcomingItems.FirstOrDefault() ?? room.Playlist.OrderByDescending(i => i.PlayedAt).First();
 
@@ -302,7 +314,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             room.Settings.PlaylistItemId = nextItem.ID;
 
             if (nextItem.ID != lastItemID)
-                await hub.NotifySettingsChanged(room, true);
+                await room.NotifySettingsChanged(true);
         }
 
         /// <summary>
@@ -310,6 +322,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         /// </summary>
         private async Task updatePlaylistOrder(IDatabaseAccess db)
         {
+            if (room.State != MultiplayerRoomState.Open)
+                throw new InvalidOperationException("Can't update playlist order when game is being played");
+
             List<MultiplayerPlaylistItem> orderedActiveItems;
 
             switch (room.Settings.QueueMode)
@@ -360,7 +375,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 item.PlaylistOrder = (ushort)i;
 
                 await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
-                await hub.NotifyPlaylistItemChanged(room, item, false);
+                await room.NotifyPlaylistItemChanged(item, false);
             }
         }
     }

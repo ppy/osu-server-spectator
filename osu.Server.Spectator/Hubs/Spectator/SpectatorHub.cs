@@ -267,13 +267,15 @@ namespace osu.Server.Spectator.Hubs.Spectator
             await base.OnConnectedAsync();
         }
 
-        protected override async Task CleanUpState(SpectatorClientState state)
+        protected override async Task CleanUpState(ItemUsage<SpectatorClientState> state)
         {
-            if (state.State != null)
-                await endPlaySession(state.UserId, state.State);
+            Debug.Assert(state.Item != null);
 
-            foreach (int watchedUserId in state.WatchedUsers)
-                await Clients.User(watchedUserId.ToString()).UserEndedWatching(state.UserId);
+            if (state.Item.State != null)
+                await endPlaySession(state.Item.UserId, state.Item.State);
+
+            foreach (int watchedUserId in state.Item.WatchedUsers)
+                await Clients.User(watchedUserId.ToString()).UserEndedWatching(state.Item.UserId);
 
             await base.CleanUpState(state);
         }

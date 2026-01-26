@@ -44,26 +44,29 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly ISharedInterop sharedInterop;
         private readonly IDatabaseFactory databaseFactory;
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
-        private readonly IMultiplayerHubContext hubContext;
+        private readonly IMultiplayerRoomController roomController;
+        private readonly ILoggerFactory loggerFactory;
         private readonly ILogger logger;
         private readonly IMemoryCache memoryCache;
-        private readonly MultiplayerEventLogger eventLogger;
+        private readonly MultiplayerEventDispatcher eventDispatcher;
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
         private DateTimeOffset lastQueueRefreshTime = DateTimeOffset.UnixEpoch;
         private DateTimeOffset lastPoolRefreshTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
-                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerHubContext hubContext, IMemoryCache memoryCache, MultiplayerEventLogger eventLogger)
+                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerRoomController roomController, IMemoryCache memoryCache,
+                                                 MultiplayerEventDispatcher eventDispatcher)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
             this.databaseFactory = databaseFactory;
             this.rooms = rooms;
-            this.hubContext = hubContext;
+            this.roomController = roomController;
             this.memoryCache = memoryCache;
-            this.eventLogger = eventLogger;
+            this.eventDispatcher = eventDispatcher;
 
+            this.loggerFactory = loggerFactory;
             logger = loggerFactory.CreateLogger(nameof(MatchmakingQueueBackgroundService));
         }
 
@@ -315,56 +318,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
-                    roomUsage.Item = await InitialiseRoomAsync(roomId, hubContext, databaseFactory, eventLogger, bundle.Queue.Pool.id, group.Users, beatmapSelector);
+                {
+                    roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, databaseFactory, eventDispatcher, loggerFactory,
+                        group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id, beatmapSelector);
+                }
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
                 foreach (var user in group.Users)
                     await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
 
-                await eventLogger.LogMatchmakingRoomCreatedAsync(roomId, new MatchmakingRoomCreatedEventDetail
+                await eventDispatcher.PostMatchmakingRoomCreatedAsync(roomId, new MatchmakingRoomCreatedEventDetail
                 {
                     pool_id = (int)bundle.Queue.Pool.id
                 });
             }
         }
-
-        /// <summary>
-        /// Initialises a matchmaking room with the given eligible users.
-        /// </summary>
-        /// <param name="roomId">The room identifier.</param>
-        /// <param name="hub">The multiplayer hub context.</param>
-        /// <param name="dbFactory">The database factory.</param>
-        /// <param name="eventLogger">The event logger.</param>
-        /// <param name="poolId">The pool ID.</param>
-        /// <param name="users">The users who are allowed to join the room.</param>
-        /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
-        public static async Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger,
-                                                                            uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector)
-        {
-            ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseAsync(roomId, hub, dbFactory, eventLogger);
-
-            if (room.Controller is IMatchmakingMatchController matchmakingController)
-                await matchmakingController.Initialise(poolId, users, beatmapSelector);
-
-            return room;
-        }
-
-        /// <summary>
-        /// Initialises a matchmaking room with the given eligible users.
-        /// </summary>
-        /// <remarks>
-        /// Only to be used for testing purposes.
-        /// </remarks>
-        /// <param name="roomId">The room identifier.</param>
-        /// <param name="hub">The multiplayer hub context.</param>
-        /// <param name="dbFactory">The database factory.</param>
-        /// <param name="eventLogger">The event logger.</param>
-        /// <param name="poolId">The pool ID.</param>
-        /// <param name="users">The users who are allowed to join the room.</param>
-        /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
-        public static Task<ServerMultiplayerRoom> InitialiseRoomAsync(long roomId, IMultiplayerHubContext hub, IDatabaseFactory dbFactory, MultiplayerEventLogger eventLogger,
-                                                                      uint poolId, int[] users, MatchmakingBeatmapSelector beatmapSelector)
-            => InitialiseRoomAsync(roomId, hub, dbFactory, eventLogger, poolId, users.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray(), beatmapSelector);
     }
 }

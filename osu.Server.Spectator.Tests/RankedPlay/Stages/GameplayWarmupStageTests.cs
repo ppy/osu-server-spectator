@@ -19,7 +19,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         {
             await base.SetupForEnter();
 
-            await Controller.ActivateCard(UserState.Hand.First());
+            await MatchController.ActivateCard(UserState.Hand.First());
 
             await MarkCurrentUserReadyAndAvailable();
             SetUserContext(ContextUser2);

@@ -19,10 +19,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [InlineData(1)]
         public async Task UserRequestsValidTeamChange(int team)
         {
-            var hub = new Mock<IMultiplayerHubContext>();
-            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventLogger);
+            var hub = new Mock<IMultiplayerRoomController>();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
-            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object);
+            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object, EventDispatcher);
 
             // change the match type
             await room.ChangeMatchType(teamVersus);
@@ -30,12 +30,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             var user = new MultiplayerRoomUser(1);
 
             await room.AddUser(user);
-            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
 
             await teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
 
             checkUserOnTeam(user, team);
-            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Exactly(2));
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Exactly(2));
         }
 
         [Theory]
@@ -44,10 +44,10 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [InlineData(3)]
         public async Task UserRequestsInvalidTeamChange(int team)
         {
-            var hub = new Mock<IMultiplayerHubContext>();
-            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventLogger);
+            var hub = new Mock<IMultiplayerRoomController>();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
-            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object);
+            var teamVersus = new TeamVersusMatchController(room, hub.Object, DatabaseFactory.Object, EventDispatcher);
 
             // change the match type
             await room.ChangeMatchType(teamVersus);
@@ -56,7 +56,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await room.AddUser(user);
             // called once on the initial user join operation (to inform other clients in the room).
-            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
 
             var previousTeam = ((TeamVersusUserState)user.MatchState!).TeamID;
 
@@ -64,14 +64,14 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             checkUserOnTeam(user, previousTeam);
             // was not called a second time from the invalid change.
-            hub.Verify(h => h.NotifyMatchUserStateChanged(room, user), Times.Once());
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
         }
 
         [Fact]
         public async Task NewUsersAssignedToTeamWithFewerUsers()
         {
-            var hub = new Mock<IMultiplayerHubContext>();
-            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventLogger);
+            var hub = new Mock<IMultiplayerRoomController>();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
             // change the match type
             await room.ChangeMatchType(MatchType.TeamVersus);
@@ -82,7 +82,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // change all users to team 0
             for (int i = 0; i < 5; i++)
-                await room.Controller.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
+                await room.HandleUserRequest(room.Users[i], new ChangeTeamRequest { TeamID = 0 });
 
             Assert.All(room.Users, u => checkUserOnTeam(u, 0));
 
@@ -100,8 +100,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task InitialUsersAssignedToTeamsEqually()
         {
-            var hub = new Mock<IMultiplayerHubContext>();
-            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventLogger);
+            var hub = new Mock<IMultiplayerRoomController>();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
             // join a number of users initially to the room
             for (int i = 0; i < 5; i++)
@@ -120,8 +120,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task StateMaintainedBetweenRulesetSwitch()
         {
-            var hub = new Mock<IMultiplayerHubContext>();
-            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventLogger);
+            var hub = new Mock<IMultiplayerRoomController>();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
 
             await room.ChangeMatchType(MatchType.TeamVersus);
 

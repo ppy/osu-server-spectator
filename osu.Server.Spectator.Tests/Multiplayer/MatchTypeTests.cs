@@ -11,7 +11,6 @@ using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer;
-using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -32,7 +31,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 room.MatchState = mockRoomState.Object;
 
-                await HubContext.NotifyMatchRoomStateChanged(room);
+                await EventDispatcher.PostMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
 
                 Receiver.Verify(c => c.MatchRoomStateChanged(mockRoomState.Object), Times.Once);
             }
@@ -50,7 +49,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 var mockEvent = new Mock<MatchServerEvent>();
 
-                await HubContext.NotifyNewMatchEvent(room, mockEvent.Object);
+                await EventDispatcher.PostMatchEventAsync(room.RoomID, mockEvent.Object);
 
                 Receiver.Verify(c => c.MatchEvent(mockEvent.Object), Times.Once);
             }
@@ -72,7 +71,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 user.MatchState = mockRoomState.Object;
 
-                await HubContext.NotifyMatchUserStateChanged(room, user);
+                await EventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
 
                 Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, mockRoomState.Object), Times.Once);
             }
@@ -127,7 +126,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 var room = usage.Item;
                 Debug.Assert(room != null);
 
-                Assert.True(room.Controller is TeamVersusMatchController);
                 Assert.Equal(MatchType.TeamVersus, room.Settings.MatchType);
 
                 Receiver.Verify(r => r.SettingsChanged(room.Settings), Times.Once);
@@ -156,7 +154,6 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
 
                 Assert.Equal(MatchType.TeamVersus, room.Settings.MatchType);
-                Assert.IsType<TeamVersusMatchController>(room.Controller);
             }
         }
 

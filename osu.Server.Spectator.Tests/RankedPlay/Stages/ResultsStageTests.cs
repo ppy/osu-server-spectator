@@ -26,7 +26,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                         new SoloScore { user_id = USER_ID, total_score = 500_000 }
                     ]));
 
-            await Controller.Stage.Enter();
+            await MatchController.Stage.Enter();
 
             Assert.Equal(1_000_000, UserState.Life);
             Assert.Equal(500_000, User2State.Life);
@@ -42,7 +42,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
                     ]));
 
-            await Controller.Stage.Enter();
+            await MatchController.Stage.Enter();
 
             Assert.Equal(1_000_000, UserState.Life);
             Assert.Equal(750_000, User2State.Life);
@@ -60,7 +60,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             RoomState.DamageMultiplier = 2;
 
-            await Controller.Stage.Enter();
+            await MatchController.Stage.Enter();
 
             Assert.Equal(1_000_000, UserState.Life);
             Assert.Equal(500_000, User2State.Life);
