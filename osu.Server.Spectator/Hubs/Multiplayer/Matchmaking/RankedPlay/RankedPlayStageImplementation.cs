@@ -23,7 +23,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         protected abstract TimeSpan Duration { get; }
 
         protected ServerMultiplayerRoom Room => Controller.Room;
-        protected IMultiplayerRoomController Hub => Controller.Hub;
         protected RankedPlayRoomState State => Controller.State;
         protected IDatabaseFactory DbFactory => Controller.DbFactory;
         protected MultiplayerEventDispatcher EventDispatcher => Controller.EventDispatcher;

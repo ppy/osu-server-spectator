@@ -23,12 +23,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public const int PLAYER_HAND_SIZE = 5;
         public const int DECK_SIZE = PLAYER_HAND_SIZE * 2 + 1;
 
-        public MultiplayerPlaylistItem CurrentItem => Room.CurrentPlaylistItem;
+        public MultiplayerPlaylistItem CurrentItem => Room.Playlist.Single(item => item.ID == Room.Settings.PlaylistItemId);
 
         public uint PoolId { get; private set; }
 
         public readonly ServerMultiplayerRoom Room;
-        public readonly IMultiplayerRoomController Hub;
         public readonly IDatabaseFactory DbFactory;
         public readonly MultiplayerEventDispatcher EventDispatcher;
         public readonly RankedPlayRoomState State;
@@ -61,9 +60,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public RankedPlayMatchController(ServerMultiplayerRoom room, IMultiplayerRoomController hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
         {
             Room = room;
-            Hub = hub;
             DbFactory = dbFactory;
             EventDispatcher = eventDispatcher;
+
             State = new RankedPlayRoomState();
             Stage = new EmptyStage(this);
 
@@ -231,7 +230,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             {
                 State.Users[userId].Hand.Add(card);
                 await EventDispatcher.PostRankedPlayCardAdded(Room.RoomID, userId, card);
-                await EventDispatcher.PostRankedPlayCardRevealed(Room.RoomID, userId, card, cardToEffectMap[card]);
+                await EventDispatcher.PostRankedPlayCardRevealed(userId, card, cardToEffectMap[card]);
             }
 
             await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);

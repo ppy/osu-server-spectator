@@ -14,7 +14,6 @@ using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
-using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
@@ -118,15 +117,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="dbFactory">The database factory.</param>
         /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
         /// <param name="loggerFactory">The logger factory.</param>
-        /// <param name="eligibleUsers">The users who are allowed to join the room.</param>
         /// <param name="poolId">The pool ID.</param>
+        /// <param name="users">The users who are allowed to join the room.</param>
         /// <param name="beatmapSelector">The beatmap selector.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
         public static Task<ServerMultiplayerRoom> InitialiseMatchmakingRoomAsync(long roomId, IMultiplayerRoomController roomController, IDatabaseFactory dbFactory,
                                                                                  MultiplayerEventDispatcher eventDispatcher, ILoggerFactory loggerFactory,
-                                                                                 int[] eligibleUsers, uint poolId, MatchmakingBeatmapSelector beatmapSelector)
-            => InitialiseMatchmakingRoomAsync(roomId, roomController, dbFactory, eventDispatcher, loggerFactory,
-                eligibleUsers.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray(), poolId, beatmapSelector);
+                                                                                 uint poolId, int[] users, MatchmakingBeatmapSelector beatmapSelector)
+            => InitialiseMatchmakingRoomAsync(roomId, roomController, dbFactory, eventDispatcher, loggerFactory, poolId,
+                users.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray(), beatmapSelector);
 
         /// <summary>
         /// Initialises a matchmaking room.
@@ -136,26 +135,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="dbFactory">The database factory.</param>
         /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
         /// <param name="loggerFactory">The logger factory.</param>
-        /// <param name="eligibleUsers">The users who are allowed to join the room.</param>
         /// <param name="poolId">The pool ID.</param>
+        /// <param name="users">The users who are allowed to join the room.</param>
         /// <param name="beatmapSelector">The beatmap selector.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
         public static async Task<ServerMultiplayerRoom> InitialiseMatchmakingRoomAsync(long roomId, IMultiplayerRoomController roomController, IDatabaseFactory dbFactory,
                                                                                        MultiplayerEventDispatcher eventDispatcher, ILoggerFactory loggerFactory,
-                                                                                       MatchmakingQueueUser[] eligibleUsers, uint poolId, MatchmakingBeatmapSelector beatmapSelector)
+                                                                                       uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector)
         {
             ServerMultiplayerRoom room = await InitialiseAsync(roomId, roomController, dbFactory, eventDispatcher, loggerFactory);
-
-            if (room.MatchState is not MatchmakingRoomState matchmakingState)
-                throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid state).");
-
-            foreach (var user in eligibleUsers)
-                matchmakingState.Users.GetOrAdd(user.UserId);
 
             if (room.MatchController is not IMatchmakingMatchController matchmakingController)
                 throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid controller).");
 
-            await matchmakingController.Initialise(poolId, eligibleUsers, beatmapSelector);
+            await matchmakingController.Initialise(poolId, users, beatmapSelector);
 
             return room;
         }

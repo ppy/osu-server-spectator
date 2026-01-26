@@ -493,7 +493,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// Communicates that a ranked play card was revealed to the given user.
         /// </summary>
-        public async Task PostRankedPlayCardRevealed(long roomId, int userId, RankedPlayCardItem card, MultiplayerPlaylistItem item)
+        public async Task PostRankedPlayCardRevealed(int userId, RankedPlayCardItem card, MultiplayerPlaylistItem item)
         {
             await multiplayerHubContext.Clients.Users(userId.ToString()).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRevealed), card, item);
         }
