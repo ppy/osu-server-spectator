@@ -88,7 +88,7 @@ namespace osu.Server.Spectator.Hubs
 
                     try
                     {
-                        await CleanUpState(usage.Item);
+                        await CleanUpState(usage);
                     }
                     finally
                     {
@@ -106,7 +106,7 @@ namespace osu.Server.Spectator.Hubs
         /// <summary>
         /// Perform any cleanup required on the provided state.
         /// </summary>
-        protected virtual Task CleanUpState(TUserState state) => Task.CompletedTask;
+        protected virtual Task CleanUpState(ItemUsage<TUserState> state) => Task.CompletedTask;
 
         protected async Task<ItemUsage<TUserState>> GetOrCreateLocalUserState()
         {

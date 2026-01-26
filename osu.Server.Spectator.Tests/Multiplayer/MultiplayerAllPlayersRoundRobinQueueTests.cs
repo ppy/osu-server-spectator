@@ -84,7 +84,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             //
             // queue: 4, 3
 
-            using (var roomUsage = await HubContext.TryGetRoom(ROOM_ID))
+            using (var roomUsage = await RoomController.TryGetRoom(ROOM_ID))
                 item3 = roomUsage!.Item!.Playlist.Single(p => p.ID == 3);
 
             // this prepares the breakage. the OwnerID of the playlist item changes but the item's order is retained.
