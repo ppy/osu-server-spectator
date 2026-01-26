@@ -142,9 +142,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             await Stage.HandleGameplayCompleted();
         }
 
-        Task IMatchController.HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
+        async Task IMatchController.HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
         {
-            return Task.CompletedTask;
+            switch (request)
+            {
+                case RankedPlayCardHandReplayRequest cardHandReplay:
+                    await Hub.NotifyNewMatchEvent(Room, new RankedPlayCardHandReplayEvent
+                    {
+                        UserId = user.UserID,
+                        Frames = cardHandReplay.Frames
+                    });
+                    break;
+            }
         }
 
         async Task IMatchController.HandleUserJoined(MultiplayerRoomUser user)
