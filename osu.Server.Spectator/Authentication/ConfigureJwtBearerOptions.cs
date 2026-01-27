@@ -17,6 +17,9 @@ namespace osu.Server.Spectator.Authentication
 {
     public class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearerOptions>
     {
+        public const string LAZER_CLIENT_SCHEME = "lazer";
+        public const string REFEREE_CLIENT_SCHEME = "referee";
+
         private readonly IDatabaseFactory databaseFactory;
         private readonly ILoggerFactory loggerFactory;
 
@@ -26,7 +29,21 @@ namespace osu.Server.Spectator.Authentication
             this.loggerFactory = loggerFactory;
         }
 
+        // this looks very scary, but ASP.NET never calls this and calls the named variant instead. don't ask why.
         public void Configure(JwtBearerOptions options)
+            => throw new NotSupportedException();
+
+        public void Configure(string? name, JwtBearerOptions options)
+        {
+            switch (name)
+            {
+                case LAZER_CLIENT_SCHEME:
+                    configureLazerClientScheme(options);
+                    return;
+            }
+        }
+
+        private void configureLazerClientScheme(JwtBearerOptions options)
         {
             var rsa = getKeyProvider();
 
@@ -60,9 +77,6 @@ namespace osu.Server.Spectator.Authentication
                 },
             };
         }
-
-        public void Configure(string? name, JwtBearerOptions options)
-            => Configure(options);
 
         /// <summary>
         /// borrowed from https://stackoverflow.com/a/54323524
