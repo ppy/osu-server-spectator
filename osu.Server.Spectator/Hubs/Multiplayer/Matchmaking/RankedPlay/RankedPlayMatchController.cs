@@ -57,7 +57,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// </summary>
         private readonly List<RankedPlayCardItem> deck = [];
 
-        public RankedPlayMatchController(ServerMultiplayerRoom room, IMultiplayerRoomController hub, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
+        public RankedPlayMatchController(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
         {
             Room = room;
             DbFactory = dbFactory;
@@ -136,7 +136,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 CurrentItem.Expired = newItem.expired;
                 CurrentItem.PlayedAt = newItem.played_at;
 
-                await Room.NotifyPlaylistItemChanged(CurrentItem, true);
+                await Room.HandlePlaylistItemChanged(CurrentItem, true);
             }
 
             await Stage.HandleGameplayCompleted();
@@ -289,12 +289,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
                     Room.Playlist[Room.Playlist.IndexOf(CurrentItem)] = effect;
                     await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, effect));
-                    await Room.NotifyPlaylistItemChanged(CurrentItem, true);
+                    await Room.HandlePlaylistItemChanged(CurrentItem, true);
                 }
             }
 
             Room.Settings.PlaylistItemId = effect.ID;
-            await Room.NotifySettingsChanged(true);
+            await Room.HandleSettingsChanged(true);
 
             LastActivatedCard = card;
         }

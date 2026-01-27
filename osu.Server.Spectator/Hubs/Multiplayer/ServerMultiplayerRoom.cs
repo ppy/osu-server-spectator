@@ -286,7 +286,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             await MatchController.HandleSettingsChanged();
-            await NotifySettingsChanged(false);
+            await HandleSettingsChanged(false);
 
             await UpdateRoomStateIfRequired();
         }
@@ -307,16 +307,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             switch (type)
             {
                 case MatchType.Matchmaking:
-                    return ChangeMatchType(new MatchmakingMatchController(this, roomController, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new MatchmakingMatchController(this, dbFactory, eventDispatcher));
 
                 case MatchType.RankedPlay:
-                    return ChangeMatchType(new RankedPlayMatchController(this, roomController, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new RankedPlayMatchController(this, dbFactory, eventDispatcher));
 
                 case MatchType.TeamVersus:
-                    return ChangeMatchType(new TeamVersusMatchController(this, roomController, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new TeamVersusMatchController(this, dbFactory, eventDispatcher));
 
                 default:
-                    return ChangeMatchType(new HeadToHeadMatchController(this, roomController, dbFactory, eventDispatcher));
+                    return ChangeMatchType(new HeadToHeadMatchController(this, dbFactory, eventDispatcher));
             }
         }
 
@@ -331,13 +331,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
-        /// Notifies users in this room that the room's settings have changed.
+        /// Called when the room's <see cref="MultiplayerRoom.Settings">Settings</see> have changed by an <see cref="IMatchController"/>.
+        /// Adjusts user mod selections to ensure mod validity, unreadies all users, and stops the current match start countdown.
         /// </summary>
-        /// <remarks>
-        /// Adjusts user mod selections to ensure mod validity, unreadies all users, and stops the current countdown.
-        /// </remarks>
         /// <param name="playlistItemChanged">Whether the current playlist item changed.</param>
-        public async Task NotifySettingsChanged(bool playlistItemChanged)
+        public async Task HandleSettingsChanged(bool playlistItemChanged)
         {
             await ensureAllUsersValidStyle();
 
@@ -811,14 +809,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
-        /// Notifies users in the room that a playlist item has been changed.
+        /// Called when the room's <see cref="CurrentPlaylistItem"/> have changed by an <see cref="IMatchController"/>.
+        /// Adjusts user mod selections to ensure mod validity, unreadies all users, and stops the current match countdown if the currently-selected playlist item was changed.
         /// </summary>
-        /// <remarks>
-        /// Adjusts user mod selections to ensure mod validity, and unreadies all users and stops the current countdown if the currently-selected playlist item was changed.
-        /// </remarks>
         /// <param name="item">The changed item.</param>
         /// <param name="beatmapChanged">Whether the beatmap changed.</param>
-        public async Task NotifyPlaylistItemChanged(MultiplayerPlaylistItem item, bool beatmapChanged)
+        public async Task HandlePlaylistItemChanged(MultiplayerPlaylistItem item, bool beatmapChanged)
         {
             if (item.ID == Settings.PlaylistItemId)
             {
