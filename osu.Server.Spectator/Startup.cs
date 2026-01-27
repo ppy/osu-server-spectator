@@ -25,16 +25,18 @@ namespace osu.Server.Spectator
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSignalR(options =>
-                    {
-                        // JSON hub protocol is enabled by default, but we use MessagePack.
-                        // Some models are not compatible with the JSON protocol, so we should never negotiate it.
-                        options.SupportedProtocols?.Remove("json");
+            Action<HubOptions> configureClientHubOptions = options =>
+            {
+                // JSON hub protocol is enabled by default, but we use MessagePack.
+                // Some models are not compatible with the JSON protocol, so we should never negotiate it.
+                options.SupportedProtocols?.Remove("json");
 
-                        options.AddFilter<LoggingHubFilter>();
-                        options.AddFilter<ConcurrentConnectionLimiter>();
-                        options.AddFilter<ClientVersionChecker>();
-                    })
+                options.AddFilter<LoggingHubFilter>();
+                options.AddFilter<ConcurrentConnectionLimiter>();
+                options.AddFilter<ClientVersionChecker>();
+            };
+
+            services.AddSignalR()
                     .AddMessagePackProtocol(options =>
                     {
                         // This is required for match type states/events, which are regularly sent as derived implementations where that type is not conveyed in the invocation signature itself.
@@ -44,7 +46,10 @@ namespace osu.Server.Spectator
                         // https://github.com/dotnet/aspnetcore/issues/30096 ("it's definitely broken")
                         // https://github.com/dotnet/aspnetcore/issues/7298 (current tracking issue, though weirdly described as a javascript client issue)
                         options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS;
-                    });
+                    })
+                    .AddHubOptions<MetadataHub>(configureClientHubOptions)
+                    .AddHubOptions<MultiplayerHub>(configureClientHubOptions)
+                    .AddHubOptions<SpectatorHub>(configureClientHubOptions);
 
             services.AddHubEntities()
                     .AddDatabaseServices()
