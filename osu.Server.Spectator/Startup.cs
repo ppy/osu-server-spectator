@@ -95,6 +95,14 @@ namespace osu.Server.Spectator
                     {
                         options.ForwardDefaultSelector = _ => ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME;
                     });
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy(ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME, policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim("scopes", "*");
+                });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
