@@ -5,6 +5,7 @@ using System;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,6 +17,7 @@ using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs;
 using osu.Server.Spectator.Hubs.Metadata;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Referee;
 using osu.Server.Spectator.Hubs.Spectator;
 
 namespace osu.Server.Spectator
@@ -49,7 +51,11 @@ namespace osu.Server.Spectator
                     })
                     .AddHubOptions<MetadataHub>(configureClientHubOptions)
                     .AddHubOptions<MultiplayerHub>(configureClientHubOptions)
-                    .AddHubOptions<SpectatorHub>(configureClientHubOptions);
+                    .AddHubOptions<SpectatorHub>(configureClientHubOptions)
+                    .AddHubOptions<RefereeHub>(options =>
+                    {
+                        options.SupportedProtocols?.Remove("messagepack");
+                    });
 
             services.AddHubEntities()
                     .AddDatabaseServices()
@@ -91,9 +97,12 @@ namespace osu.Server.Spectator
                     })
                     // options will be injected through DI, via the singleton registration above.
                     .AddJwtBearer(ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME)
+                    .AddJwtBearer(ConfigureJwtBearerOptions.REFEREE_CLIENT_SCHEME)
                     .AddPolicyScheme(JwtBearerDefaults.AuthenticationScheme, displayName: null, options =>
                     {
-                        options.ForwardDefaultSelector = _ => ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME;
+                        options.ForwardDefaultSelector = ctx => ctx.GetEndpoint()?.Metadata.GetMetadata<HubMetadata>()?.HubType == typeof(RefereeHub)
+                            ? ConfigureJwtBearerOptions.REFEREE_CLIENT_SCHEME
+                            : ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME;
                     });
             services.AddAuthorization(options =>
             {
@@ -102,7 +111,13 @@ namespace osu.Server.Spectator
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim("scopes", "*");
                 });
+                options.AddPolicy(ConfigureJwtBearerOptions.REFEREE_CLIENT_SCHEME, policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim("scopes", "multiplayer.write_manage");
+                });
             });
+            services.AddSingleton<IUserIdProvider, JwtUserIdProvider>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -125,6 +140,7 @@ namespace osu.Server.Spectator
                 endpoints.MapHub<SpectatorHub>("/spectator");
                 endpoints.MapHub<MultiplayerHub>("/multiplayer");
                 endpoints.MapHub<MetadataHub>("/metadata");
+                endpoints.MapHub<RefereeHub>("/referee");
             });
 
             // Create shutdown manager singleton.
