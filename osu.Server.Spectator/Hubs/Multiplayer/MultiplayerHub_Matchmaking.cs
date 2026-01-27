@@ -11,7 +11,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public partial class MultiplayerHub : IMatchmakingServer
     {
-        public async Task<MatchmakingPool[]> GetMatchmakingPools(MatchmakingPoolType type)
+        // Provided for backwards compatibility. Can be removed 20260727.
+        public Task<MatchmakingPool[]> GetMatchmakingPools()
+            => GetMatchmakingPoolsOfType(MatchmakingPoolType.QuickPlay);
+
+        public async Task<MatchmakingPool[]> GetMatchmakingPoolsOfType(MatchmakingPoolType type)
         {
             using (var db = databaseFactory.GetInstance())
             {
