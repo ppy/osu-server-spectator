@@ -104,6 +104,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// The <see cref="MultiplayerRoom.Settings"/> of the given room changed.
         /// </summary>
+        /// <remarks>
+        /// If attempting to call this method from an <see cref="IMatchController"/>, you probably want <see cref="ServerMultiplayerRoom.HandleSettingsChanged"/> instead,
+        /// which will additionally unready all users, validate their style, and stop all countdowns aside from notifying users about the settings change.
+        /// </remarks>
         /// <param name="roomId">The ID of the relevant room.</param>
         /// <param name="newSettings">The new settings of the room.</param>
         public async Task PostRoomSettingsChangedAsync(long roomId, MultiplayerRoomSettings newSettings)
@@ -283,6 +287,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// The given playlist item in the given room has been modified.
         /// </summary>
+        /// <remarks>
+        /// If attempting to call this method from an <see cref="IMatchController"/>, you probably want <see cref="ServerMultiplayerRoom.HandlePlaylistItemChanged"/> instead,
+        /// which will additionally conditionally unready all users, validate their style, and stop all countdowns aside from notifying users about the playlist item change.
+        /// </remarks>
         /// <param name="roomId">The ID of the relevant room.</param>
         /// <param name="item">The playlist item which was changed.</param>
         public async Task PostPlaylistItemChangedAsync(long roomId, MultiplayerPlaylistItem item)
