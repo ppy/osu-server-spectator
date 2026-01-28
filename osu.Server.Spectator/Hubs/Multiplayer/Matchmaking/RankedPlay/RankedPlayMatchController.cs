@@ -48,6 +48,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public RankedPlayStageImplementation Stage { get; private set; }
 
         /// <summary>
+        /// All users participating in this match ordered by their turn order.
+        /// </summary>
+        public int[] UserIdsByTurnOrder { get; private set; } = [];
+
+        /// <summary>
         /// Mapping of cards to their associated effect.
         /// </summary>
         private readonly Dictionary<RankedPlayCardItem, MultiplayerPlaylistItem> cardToEffectMap = [];
@@ -112,6 +117,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                     Rating = (int)Math.Round(user.Rating.Mu)
                 };
             }
+
+            UserIdsByTurnOrder = users.Select(u => u.UserId).ToArray();
+            Random.Shared.Shuffle(UserIdsByTurnOrder);
+
+            // Populate the initial active user, for use by the client to display the first turn's user.
+            State.ActiveUserId = UserIdsByTurnOrder[0];
 
             await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
         }

@@ -30,9 +30,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
             State.CurrentRound++;
             State.DamageMultiplier = computeDamageMultiplier(State.CurrentRound);
-            State.ActiveUserId = State.CurrentRound == 1
-                ? Random.Shared.GetItems(State.Users.Keys.ToArray(), 1).Single()
-                : State.Users.Keys.Concat(State.Users.Keys).SkipWhile(u => u != State.ActiveUserId).Skip(1).First();
+
+            // For the first round, the active user is set during room initialisation.
+            if (State.CurrentRound > 1)
+                State.ActiveUserId = Controller.UserIdsByTurnOrder.Concat(Controller.UserIdsByTurnOrder).SkipWhile(u => u != State.ActiveUserId).Skip(1).First();
         }
 
         protected override async Task Finish()
