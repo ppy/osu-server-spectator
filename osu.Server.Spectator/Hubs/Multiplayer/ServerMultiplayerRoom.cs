@@ -322,12 +322,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeMatchType(IMatchController controller)
         {
-            this.MatchController = controller;
+            MatchController = controller;
 
-            await this.MatchController.Initialise();
+            await MatchController.Initialise();
 
             foreach (var u in Users)
-                await this.MatchController.HandleUserJoined(u);
+                await MatchController.HandleUserJoined(u);
         }
 
         /// <summary>
