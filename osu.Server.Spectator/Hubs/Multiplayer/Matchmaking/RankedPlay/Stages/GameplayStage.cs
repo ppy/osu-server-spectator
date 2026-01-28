@@ -21,15 +21,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Begin()
         {
-            await EventDispatcher.PostPlayerBeatmapPickFinalised(Room.RoomID, State.ActiveUserId, Room.Settings.PlaylistItemId);
+            Debug.Assert(State.ActiveUserId != null);
+
+            await EventDispatcher.PostPlayerBeatmapPickFinalised(Room.RoomID, State.ActiveUserId.Value, Room.Settings.PlaylistItemId);
             await ServerMultiplayerRoom.StartMatch(Room);
         }
 
         protected override async Task Finish()
         {
+            Debug.Assert(State.ActiveUserId != null);
             Debug.Assert(Controller.LastActivatedCard != null);
 
-            await Controller.RemoveCards(State.ActiveUserId, [Controller.LastActivatedCard]);
+            await Controller.RemoveCards(State.ActiveUserId.Value, [Controller.LastActivatedCard]);
             await Controller.GotoStage(RankedPlayStage.Results);
         }
 

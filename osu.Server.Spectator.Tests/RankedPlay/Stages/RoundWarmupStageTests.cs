@@ -29,14 +29,14 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         [Fact]
         public async Task NewActiveUserOnEnter()
         {
-            int activeUserId = RoomState.ActiveUserId;
+            int activeUserId = RoomState.ActiveUserId!.Value;
             Assert.Contains([activeUserId], [USER_ID, USER_ID_2]);
 
             for (int i = 0; i < 5; i++)
             {
                 await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
                 Assert.NotEqual(activeUserId, RoomState.ActiveUserId);
-                activeUserId = RoomState.ActiveUserId;
+                activeUserId = RoomState.ActiveUserId!.Value;
             }
         }
 
