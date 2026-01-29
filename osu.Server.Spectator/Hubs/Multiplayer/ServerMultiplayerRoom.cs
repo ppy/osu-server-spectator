@@ -14,25 +14,27 @@ using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
-using osu.Game.Online.Multiplayer.MatchTypes.Matchmaking;
+using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay;
 using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public class ServerMultiplayerRoom : MultiplayerRoom
     {
+        public IMatchController MatchController { get; private set; } = null!;
+
         private readonly IMultiplayerRoomController roomController;
         private readonly IDatabaseFactory dbFactory;
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly ILogger<ServerMultiplayerRoom> logger;
-
-        private IMatchController controller = null!;
 
         private ServerMultiplayerRoom(
             long roomId,
@@ -108,32 +110,45 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
-        /// Initialises a matchmaking room with the given eligible user IDs.
+        /// Initialises a matchmaking room.
         /// </summary>
         /// <param name="roomId">The room identifier.</param>
         /// <param name="roomController">The room controller.</param>
         /// <param name="dbFactory">The database factory.</param>
         /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
         /// <param name="loggerFactory">The logger factory.</param>
-        /// <param name="eligibleUserIds">The users who are allowed to join the room.</param>
         /// <param name="poolId">The pool ID.</param>
+        /// <param name="users">The users who are allowed to join the room.</param>
+        /// <param name="beatmapSelector">The beatmap selector.</param>
+        /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
+        public static Task<ServerMultiplayerRoom> InitialiseMatchmakingRoomAsync(long roomId, IMultiplayerRoomController roomController, IDatabaseFactory dbFactory,
+                                                                                 MultiplayerEventDispatcher eventDispatcher, ILoggerFactory loggerFactory,
+                                                                                 uint poolId, int[] users, MatchmakingBeatmapSelector beatmapSelector)
+            => InitialiseMatchmakingRoomAsync(roomId, roomController, dbFactory, eventDispatcher, loggerFactory, poolId,
+                users.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray(), beatmapSelector);
+
+        /// <summary>
+        /// Initialises a matchmaking room.
+        /// </summary>
+        /// <param name="roomId">The room identifier.</param>
+        /// <param name="roomController">The room controller.</param>
+        /// <param name="dbFactory">The database factory.</param>
+        /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
+        /// <param name="loggerFactory">The logger factory.</param>
+        /// <param name="poolId">The pool ID.</param>
+        /// <param name="users">The users who are allowed to join the room.</param>
+        /// <param name="beatmapSelector">The beatmap selector.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
         public static async Task<ServerMultiplayerRoom> InitialiseMatchmakingRoomAsync(long roomId, IMultiplayerRoomController roomController, IDatabaseFactory dbFactory,
                                                                                        MultiplayerEventDispatcher eventDispatcher, ILoggerFactory loggerFactory,
-                                                                                       int[] eligibleUserIds, uint poolId)
+                                                                                       uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector)
         {
             ServerMultiplayerRoom room = await InitialiseAsync(roomId, roomController, dbFactory, eventDispatcher, loggerFactory);
 
-            if (room.MatchState is not MatchmakingRoomState matchmakingState)
-                throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid state).");
-
-            foreach (int user in eligibleUserIds)
-                matchmakingState.Users.GetOrAdd(user);
-
-            if (room.controller is not MatchmakingMatchController matchmakingController)
+            if (room.MatchController is not IMatchmakingMatchController matchmakingController)
                 throw new InvalidOperationException("Failed to initialise the matchmaking room (invalid controller).");
 
-            matchmakingController.PoolId = poolId;
+            await matchmakingController.Initialise(poolId, users, beatmapSelector);
 
             return room;
         }
@@ -184,7 +199,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 case MultiplayerRoomState.Open:
                     if (Settings.AutoStartEnabled)
                     {
-                        bool shouldHaveCountdown = !controller.CurrentItem.Expired && Users.Any(u => u.State == MultiplayerUserState.Ready);
+                        bool shouldHaveCountdown = !MatchController.CurrentItem.Expired && Users.Any(u => u.State == MultiplayerUserState.Ready);
 
                         if (shouldHaveCountdown && !ActiveCountdowns.Any(c => c is MatchStartCountdown))
                             await StartCountdown(new MatchStartCountdown { TimeRemaining = Settings.AutoStartDuration }, StartMatch);
@@ -220,7 +235,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         else
                             await eventDispatcher.PostMatchAbortedAsync(RoomID, CurrentPlaylistItem.ID);
 
-                        await controller.HandleGameplayCompleted();
+                        await MatchController.HandleGameplayCompleted();
                     }
 
                     break;
@@ -267,10 +282,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (previousSettings.MatchType != newSettings.MatchType)
             {
                 await ChangeMatchType(newSettings.MatchType);
-                Log($"Switching room ruleset to {controller}");
+                Log($"Switching room ruleset to {MatchController}");
             }
 
-            await controller.HandleSettingsChanged();
+            await MatchController.HandleSettingsChanged();
             await HandleSettingsChanged(false);
 
             await UpdateRoomStateIfRequired();
@@ -294,6 +309,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 case MatchType.Matchmaking:
                     return ChangeMatchType(new MatchmakingMatchController(this, dbFactory, eventDispatcher));
 
+                case MatchType.RankedPlay:
+                    return ChangeMatchType(new RankedPlayMatchController(this, dbFactory, eventDispatcher));
+
                 case MatchType.TeamVersus:
                     return ChangeMatchType(new TeamVersusMatchController(this, dbFactory, eventDispatcher));
 
@@ -304,12 +322,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeMatchType(IMatchController controller)
         {
-            this.controller = controller;
+            MatchController = controller;
 
-            await this.controller.Initialise();
+            await MatchController.Initialise();
 
             foreach (var u in Users)
-                await this.controller.HandleUserJoined(u);
+                await MatchController.HandleUserJoined(u);
         }
 
         /// <summary>
@@ -346,7 +364,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             using (var db = dbFactory.GetInstance())
                 await db.AddRoomParticipantAsync(this, user);
 
-            await controller.HandleUserJoined(user);
+            await MatchController.HandleUserJoined(user);
         }
 
         /// <summary>
@@ -369,7 +387,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await checkVotesToSkipPassed();
 
-            await controller.HandleUserLeft(user);
+            await MatchController.HandleUserLeft(user);
             await UpdateRoomStateIfRequired();
             return user;
         }
@@ -383,7 +401,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <exception cref="InvalidStateException">The room does not support invitations.</exception>
         public async Task InvitePlayer(int invitedUserId, int invitedBy)
         {
-            if (Settings.MatchType == MatchType.Matchmaking)
+            if (Settings.MatchType.IsMatchmakingType())
                 throw new InvalidStateException("Can't invite players to matchmaking rooms.");
 
             await eventDispatcher.PostUserInvitedAsync(RoomID, invitedUserId, invitedBy, Settings.Password);
@@ -482,7 +500,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (oldState != MultiplayerUserState.Idle)
                         throw new InvalidStateChangeException(oldState, newState);
 
-                    if (controller.CurrentItem.Expired)
+                    if (MatchController.CurrentItem.Expired)
                         throw new InvalidStateException("Cannot ready up while all items have been played.");
 
                     break;
@@ -535,7 +553,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             user.State = state;
             await eventDispatcher.PostUserStateChangedAsync(RoomID, user.UserID, user.State);
 
-            await controller.HandleUserStateChanged(user);
+            await MatchController.HandleUserStateChanged(user);
         }
 
         /// <summary>
@@ -563,7 +581,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             user.BeatmapAvailability = newBeatmapAvailability;
             await eventDispatcher.PostUserBeatmapAvailabilityChangedAsync(RoomID, user.UserID, user.BeatmapAvailability);
 
-            await controller.HandleUserStateChanged(user);
+            await MatchController.HandleUserStateChanged(user);
         }
 
         private async Task unreadyAllUsers(bool resetBeatmapAvailability)
@@ -619,12 +637,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             if (beatmapId != null || rulesetId != null)
             {
-                if (!controller.CurrentItem.Freestyle)
+                if (!MatchController.CurrentItem.Freestyle)
                     throw new InvalidStateException("Current item does not allow free user styles.");
 
                 using (var db = dbFactory.GetInstance())
                 {
-                    database_beatmap itemBeatmap = (await db.GetBeatmapAsync(controller.CurrentItem.BeatmapID))!;
+                    database_beatmap itemBeatmap = (await db.GetBeatmapAsync(MatchController.CurrentItem.BeatmapID))!;
                     database_beatmap? userBeatmap = beatmapId == null ? itemBeatmap : await db.GetBeatmapAsync(beatmapId.Value);
 
                     if (userBeatmap == null)
@@ -641,7 +659,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             user.BeatmapId = beatmapId;
             user.RulesetId = rulesetId;
 
-            if (!controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
+            if (!MatchController.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
             {
                 user.Mods = validMods.ToArray();
                 await eventDispatcher.PostUserModsChangedAsync(RoomID, user.UserID, user.Mods);
@@ -673,7 +691,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
             var newModList = newMods.ToList();
 
-            if (!controller.CurrentItem.ValidateUserMods(user, newModList, out var validMods))
+            if (!MatchController.CurrentItem.ValidateUserMods(user, newModList, out var validMods))
                 throw new InvalidStateException($"Incompatible mods were selected: {string.Join(',', newModList.Except(validMods).Select(m => m.Acronym))}");
 
             if (user.Mods.SequenceEqual(newModList))
@@ -686,7 +704,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         private async Task ensureAllUsersValidStyle()
         {
-            if (!controller.CurrentItem.Freestyle)
+            if (!MatchController.CurrentItem.Freestyle)
             {
                 // Reset entire style when freestyle is disabled.
                 foreach (var user in Users)
@@ -699,7 +717,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 using (var db = dbFactory.GetInstance())
                 {
-                    itemBeatmap = (await db.GetBeatmapAsync(controller.CurrentItem.BeatmapID))!;
+                    itemBeatmap = (await db.GetBeatmapAsync(MatchController.CurrentItem.BeatmapID))!;
                     validDifficulties = await db.GetBeatmapsAsync(itemBeatmap.beatmapset_id);
                 }
 
@@ -726,7 +744,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             foreach (var user in Users)
             {
-                if (!controller.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
+                if (!MatchController.CurrentItem.ValidateUserMods(user, user.Mods, out var validMods))
                     await changeUserMods(user, validMods);
             }
         }
@@ -749,7 +767,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 throw new InvalidStateException("User is not in the room.");
 
             Log(user, $"Adding playlist item for beatmap {item.BeatmapID}");
-            await controller.AddPlaylistItem(item, user);
+            await MatchController.AddPlaylistItem(item, user);
 
             await UpdateRoomStateIfRequired();
         }
@@ -768,7 +786,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 throw new InvalidStateException("User is not in the room.");
 
             Log(user, $"Editing playlist item {item.ID} for beatmap {item.BeatmapID}");
-            await controller.EditPlaylistItem(item, user);
+            await MatchController.EditPlaylistItem(item, user);
         }
 
         /// <summary>
@@ -785,7 +803,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 throw new InvalidStateException("User is not in the room.");
 
             Log(user, $"Removing playlist item {playlistItemId}");
-            await controller.RemovePlaylistItem(playlistItemId, user);
+            await MatchController.RemovePlaylistItem(playlistItemId, user);
 
             await UpdateRoomStateIfRequired();
         }
@@ -826,13 +844,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (room.State != MultiplayerRoomState.Open)
                 throw new InvalidStateException("Can't start match when already in a running state.");
 
-            if (room.controller.CurrentItem.Expired)
+            if (room.MatchController.CurrentItem.Expired)
                 throw new InvalidStateException("Cannot start an expired playlist item.");
 
             // If no users are ready, skip the current item in the queue.
             if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
             {
-                await room.controller.HandleGameplayCompleted();
+                await room.MatchController.HandleGameplayCompleted();
                 return;
             }
 
@@ -847,7 +865,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             await room.changeRoomState(MultiplayerRoomState.WaitingForLoad);
 
-            await room.eventDispatcher.PostMatchStartedAsync(room.RoomID, room.controller.CurrentItem.ID, room.controller.GetMatchDetails());
+            await room.eventDispatcher.PostMatchStartedAsync(room.RoomID, room.MatchController.CurrentItem.ID, room.MatchController.GetMatchDetails());
 
             await room.StartCountdown(new ForceGameplayStartCountdown { TimeRemaining = gameplay_load_timeout }, startOrStopGameplay);
         }
@@ -887,7 +905,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             {
                 await room.changeRoomState(MultiplayerRoomState.Open);
                 await room.eventDispatcher.PostMatchAbortedAsync(room.RoomID, room.CurrentPlaylistItem.ID);
-                await room.controller.HandleGameplayCompleted();
+                await room.MatchController.HandleGameplayCompleted();
             }
         }
 
@@ -1098,9 +1116,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// Stops the given countdown, preventing its callback from running.
         /// </summary>
         /// <param name="countdown">The countdown to stop.</param>
-        public async Task StopCountdown(MultiplayerCountdown countdown)
+        public async Task StopCountdown(MultiplayerCountdown? countdown)
         {
-            if (!trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo))
+            if (countdown == null || !trackedCountdowns.TryGetValue(countdown, out CountdownInfo? countdownInfo))
                 return;
 
             countdownInfo.StopSource.Cancel();
@@ -1211,10 +1229,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         #region IMatchController encapsulation
 
-        public async Task<bool> UserCanJoin(int userId) => await controller.UserCanJoin(userId);
-        public async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request) => await controller.HandleUserRequest(user, request);
+        public async Task<bool> UserCanJoin(int userId) => await MatchController.UserCanJoin(userId);
+        public async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request) => await MatchController.HandleUserRequest(user, request);
 
-        public new MultiplayerPlaylistItem CurrentPlaylistItem => controller.CurrentItem;
+        public new MultiplayerPlaylistItem CurrentPlaylistItem => MatchController.CurrentItem;
 
         // the following ones are a little unfortunate, but it is what it is
         public async Task MatchmakingToggleSelection(int userId, long playlistItemId)
@@ -1223,7 +1241,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (user == null)
                 throw new InvalidStateException("User is not in the room.");
 
-            if (controller is not MatchmakingMatchController matchmakingController)
+            if (MatchController is not MatchmakingMatchController matchmakingController)
                 throw new NotSupportedException();
 
             await matchmakingController.ToggleSelectionAsync(user, playlistItemId);
@@ -1235,10 +1253,34 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (user == null)
                 throw new InvalidStateException("User is not in the room.");
 
-            if (controller is not MatchmakingMatchController matchmakingController)
+            if (MatchController is not IMatchmakingMatchController matchmakingController)
                 throw new NotSupportedException();
 
             matchmakingController.SkipToNextStage(out countdownTask);
+        }
+
+        public async Task RankedPlayDiscardCards(int userId, RankedPlayCardItem[] cards)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+            if (user == null)
+                throw new InvalidStateException("User is not in the room.");
+
+            if (MatchController is not RankedPlayMatchController rankedPlayController)
+                throw new NotSupportedException();
+
+            await rankedPlayController.DiscardCards(user, cards);
+        }
+
+        public async Task RankedPlayPlayCard(int userId, RankedPlayCardItem card)
+        {
+            var user = Users.FirstOrDefault(u => u.UserID == userId);
+            if (user == null)
+                throw new InvalidStateException("User is not in the room.");
+
+            if (MatchController is not RankedPlayMatchController rankedPlayController)
+                throw new NotSupportedException();
+
+            await rankedPlayController.PlayCard(user, card);
         }
 
         #endregion

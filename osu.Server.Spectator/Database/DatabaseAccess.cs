@@ -688,7 +688,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return (await connection.QueryAsync<matchmaking_pool_beatmap>("SELECT p.*, b.checksum, b.difficultyrating FROM `matchmaking_pool_beatmaps` p "
+            return (await connection.QueryAsync<matchmaking_pool_beatmap>("SELECT p.*, b.playmode, b.checksum, b.difficultyrating FROM `matchmaking_pool_beatmaps` p "
                                                                           + "JOIN `osu_beatmaps` b ON p.beatmap_id = b.beatmap_id "
                                                                           + "WHERE p.pool_id = @PoolId", new
             {
@@ -710,7 +710,7 @@ namespace osu.Server.Spectator.Database
             // - Ranked status
             // - Between 1 and 4 minutes in length
             // - With the correct keymode (if mania)
-            return (await connection.QueryAsync<database_beatmap>("SELECT b.beatmap_id, b.checksum, b.difficultyrating FROM `osu_beatmaps` b "
+            return (await connection.QueryAsync<database_beatmap>("SELECT b.beatmap_id, b.playmode, b.checksum, b.difficultyrating FROM `osu_beatmaps` b "
                                                                   + "JOIN `osu_beatmapsets` s ON s.beatmapset_id = b.beatmapset_id "
                                                                   + "WHERE s.track_id IS NOT NULL "
                                                                   + "AND b.playmode = @RulesetId "

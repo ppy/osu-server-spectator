@@ -10,11 +10,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
@@ -58,7 +55,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private DateTimeOffset lastPoolRefreshTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
-                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerRoomController roomController, IMemoryCache memoryCache, MultiplayerEventDispatcher eventDispatcher)
+                                                 EntityStore<ServerMultiplayerRoom> rooms, IMultiplayerRoomController roomController, IMemoryCache memoryCache,
+                                                 MultiplayerEventDispatcher eventDispatcher)
         {
             this.hub = hub;
             this.sharedInterop = sharedInterop;
@@ -310,15 +308,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     Settings =
                     {
-                        MatchType = MatchType.Matchmaking,
+                        MatchType = bundle.Queue.Pool.type.ToMatchType(),
                         Password = password
-                    },
-                    Playlist = await queryPlaylistItems(bundle.Queue.Pool, group.Users.Select(u => u.Rating).ToArray())
+                    }
                 });
+
+                if (!poolSelectors.TryGetValue(bundle.Queue.Pool.id, out MatchmakingBeatmapSelector? beatmapSelector))
+                    poolSelectors[bundle.Queue.Pool.id] = beatmapSelector = await MatchmakingBeatmapSelector.Initialise(bundle.Queue.Pool, databaseFactory);
 
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
-                    roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, databaseFactory, eventDispatcher, loggerFactory, group.Users.Select(u => u.UserId).ToArray(), bundle.Queue.Pool.id);
+                {
+                    roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, databaseFactory, eventDispatcher, loggerFactory, bundle.Queue.Pool.id, group.Users.Select(u => u.UserId).ToArray(), beatmapSelector);
+                }
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
 
@@ -330,23 +332,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     pool_id = (int)bundle.Queue.Pool.id
                 });
             }
-        }
-
-        private async Task<MultiplayerPlaylistItem[]> queryPlaylistItems(matchmaking_pool pool, EloRating[] ratings)
-        {
-            if (!poolSelectors.TryGetValue(pool.id, out MatchmakingBeatmapSelector? selector))
-                poolSelectors[pool.id] = selector = await MatchmakingBeatmapSelector.Initialise(pool, databaseFactory);
-
-            matchmaking_pool_beatmap[] items = selector.GetAppropriateBeatmaps(ratings);
-
-            return items.Select(b => new MultiplayerPlaylistItem
-            {
-                BeatmapID = b.beatmap_id,
-                BeatmapChecksum = b.checksum!,
-                RulesetID = pool.ruleset_id,
-                StarRating = b.difficultyrating,
-                RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(b.mods ?? string.Empty) ?? [],
-            }).ToArray();
         }
     }
 }

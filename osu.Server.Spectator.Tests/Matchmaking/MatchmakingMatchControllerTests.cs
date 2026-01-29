@@ -13,6 +13,7 @@ using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Tests.Multiplayer;
 using Xunit;
 
@@ -46,7 +47,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         public async Task InitializeAsync()
         {
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2], 0);
+                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0, [USER_ID, USER_ID_2], new MatchmakingBeatmapSelector([]));
         }
 
         [Fact]
@@ -202,7 +203,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
+                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0, [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector([]));
 
             await Hub.JoinRoom(ROOM_ID);
             SetUserContext(ContextUser2);
@@ -293,7 +294,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
+                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0, [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector([]));
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -327,7 +328,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
-                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
+                room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0, [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector([]));
 
             await Hub.JoinRoom(ROOM_ID);
 
@@ -642,7 +643,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             CreateUser(3, out var contextUser3, out _);
 
             using (var roomUsage = await Rooms.GetForUse(ROOM_ID, true))
-                roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, [USER_ID, USER_ID_2, 3], 0);
+                roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0, [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector([]));
 
             await Hub.JoinRoom(ROOM_ID);
             SetUserContext(ContextUser2);

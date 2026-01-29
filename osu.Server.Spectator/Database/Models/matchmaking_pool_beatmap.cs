@@ -5,6 +5,9 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Newtonsoft.Json;
+using osu.Game.Online.API;
+using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Database.Models
 {
@@ -20,8 +23,18 @@ namespace osu.Server.Spectator.Database.Models
         public int selection_count { get; set; }
 
         // osu_beatmaps
+        public ushort playmode { get; set; }
         public string? checksum { get; set; }
         public double difficultyrating { get; set; }
+
+        public MultiplayerPlaylistItem ToPlaylistItem() => new MultiplayerPlaylistItem
+        {
+            BeatmapID = beatmap_id,
+            BeatmapChecksum = checksum!,
+            RulesetID = playmode,
+            StarRating = difficultyrating,
+            RequiredMods = JsonConvert.DeserializeObject<APIMod[]>(mods ?? string.Empty) ?? [],
+        };
 
         public bool Equals(matchmaking_pool_beatmap? other)
             => other != null

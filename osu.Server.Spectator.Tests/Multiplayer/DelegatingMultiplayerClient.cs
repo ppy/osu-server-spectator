@@ -11,6 +11,8 @@ using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
+using osu.Game.Online.RankedPlay;
 using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -19,7 +21,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
     /// Used in testing. Delegates calls to one or more <see cref="IMultiplayerClient"/>s.
     /// Note: All members must be virtual!!
     /// </summary>
-    public class DelegatingMultiplayerClient : IMultiplayerClient, IMatchmakingClient, ISingleClientProxy
+    public class DelegatingMultiplayerClient : IMultiplayerClient, IMatchmakingClient, IRankedPlayClient, ISingleClientProxy
     {
         public virtual IEnumerable<IStatefulUserHubClient> Clients => Enumerable.Empty<IStatefulUserHubClient>();
 
@@ -207,6 +209,30 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         {
             foreach (var c in Clients.OfType<IMatchmakingClient>())
                 await c.MatchmakingItemDeselected(userId, playlistItemId);
+        }
+
+        public virtual async Task RankedPlayCardAdded(int userId, RankedPlayCardItem card)
+        {
+            foreach (var c in Clients.OfType<IRankedPlayClient>())
+                await c.RankedPlayCardAdded(userId, card);
+        }
+
+        public virtual async Task RankedPlayCardRemoved(int userId, RankedPlayCardItem card)
+        {
+            foreach (var c in Clients.OfType<IRankedPlayClient>())
+                await c.RankedPlayCardRemoved(userId, card);
+        }
+
+        public virtual async Task RankedPlayCardRevealed(RankedPlayCardItem card, MultiplayerPlaylistItem item)
+        {
+            foreach (var c in Clients.OfType<IRankedPlayClient>())
+                await c.RankedPlayCardRevealed(card, item);
+        }
+
+        public virtual async Task RankedPlayCardPlayed(RankedPlayCardItem card)
+        {
+            foreach (var c in Clients.OfType<IRankedPlayClient>())
+                await c.RankedPlayCardPlayed(card);
         }
 
         public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = new CancellationToken())

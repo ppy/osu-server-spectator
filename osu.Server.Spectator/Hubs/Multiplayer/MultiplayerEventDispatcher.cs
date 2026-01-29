@@ -10,6 +10,8 @@ using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
+using osu.Game.Online.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -470,6 +472,46 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 room_id = roomId,
                 playlist_item_id = playlistItemId
             });
+        }
+
+        /// <summary>
+        /// Communicates that a ranked play card was added for the given user.
+        /// </summary>
+        public async Task PostRankedPlayCardAdded(long roomId, int userId, RankedPlayCardItem card)
+        {
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRankedPlayClient.RankedPlayCardAdded), userId, card);
+        }
+
+        /// <summary>
+        /// Communicates that a ranked play card was removed for the given user.
+        /// </summary>
+        public async Task PostRankedPlayCardRemoved(long roomId, int userId, RankedPlayCardItem card)
+        {
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRemoved), userId, card);
+        }
+
+        /// <summary>
+        /// Communicates that a ranked play card was revealed to the room.
+        /// </summary>
+        public async Task PostRankedPlayCardRevealed(long roomId, RankedPlayCardItem card, MultiplayerPlaylistItem item)
+        {
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRevealed), card, item);
+        }
+
+        /// <summary>
+        /// Communicates that a ranked play card was revealed to the given user.
+        /// </summary>
+        public async Task PostRankedPlayCardRevealed(int userId, RankedPlayCardItem card, MultiplayerPlaylistItem item)
+        {
+            await multiplayerHubContext.Clients.User(userId.ToString()).SendAsync(nameof(IRankedPlayClient.RankedPlayCardRevealed), card, item);
+        }
+
+        /// <summary>
+        /// Communicates that a ranked play card was played.
+        /// </summary>
+        public async Task PostRankedPlayCardPlayed(long roomId, RankedPlayCardItem card)
+        {
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRankedPlayClient.RankedPlayCardPlayed), card);
         }
 
         #endregion

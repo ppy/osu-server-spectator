@@ -18,11 +18,12 @@ using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     [NonController]
-    public class MatchmakingMatchController : IMatchController
+    public class MatchmakingMatchController : IMatchController, IMatchmakingMatchController
     {
         /// <summary>
         /// Duration users are given to enter the room before it automatically starts.
@@ -97,14 +98,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
         public MultiplayerPlaylistItem CurrentItem => room.Playlist.Single(item => item.ID == room.Settings.PlaylistItemId);
 
-        public uint PoolId { get; set; }
-
         private readonly ServerMultiplayerRoom room;
         private readonly IDatabaseFactory dbFactory;
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly MatchmakingRoomState state;
         private readonly Dictionary<int, long> userPicks = new Dictionary<int, long>();
 
+        private uint poolId;
         private int joinedUserCount;
         private bool anyPlayerQuit;
         private bool statsUpdatePending = true;
@@ -116,13 +116,32 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
             this.eventDispatcher = eventDispatcher;
 
             room.MatchState = state = new MatchmakingRoomState();
-            room.Settings.PlaylistItemId = room.Playlist[Random.Shared.Next(0, room.Playlist.Count)].ID;
         }
 
         public async Task Initialise()
         {
             await eventDispatcher.PostMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
             await startCountdown(TimeSpan.FromSeconds(stage_waiting_for_clients_join_time), stageRoundWarmupTime);
+        }
+
+        public async Task Initialise(uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector)
+        {
+            this.poolId = poolId;
+
+            using (var db = dbFactory.GetInstance())
+            {
+                foreach (var beatmap in beatmapSelector.GetAppropriateBeatmaps(users.Select(u => u.Rating).ToArray()))
+                {
+                    MultiplayerPlaylistItem item = beatmap.ToPlaylistItem();
+                    item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
+                    room.Playlist.Add(item);
+                }
+            }
+
+            room.Settings.PlaylistItemId = room.Playlist[Random.Shared.Next(0, room.Playlist.Count)].ID;
+
+            foreach (var user in users)
+                state.Users.GetOrAdd(user.UserId);
         }
 
         public Task<bool> UserCanJoin(int userId)
@@ -399,10 +418,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
                 foreach (MatchmakingUser user in state.Users.Where(u => u.Points > 0).OrderBy(u => u.Placement))
                 {
-                    matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(user.UserId, PoolId) ?? new matchmaking_user_stats
+                    matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(user.UserId, poolId) ?? new matchmaking_user_stats
                     {
                         user_id = (uint)user.UserId,
-                        pool_id = PoolId
+                        pool_id = poolId
                     };
 
                     if (user.Placement == 1)
