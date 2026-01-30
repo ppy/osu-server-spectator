@@ -40,6 +40,7 @@ namespace osu.Server.Spectator.Database.Models
             => other != null
                && id == other.id
                && pool_id == other.pool_id
+               && playmode == other.playmode
                && beatmap_id == other.beatmap_id
                && mods == other.mods;
 
