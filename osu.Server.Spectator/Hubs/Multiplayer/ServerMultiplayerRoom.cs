@@ -121,24 +121,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="users">The users who are allowed to join the room.</param>
         /// <param name="beatmapSelector">The beatmap selector.</param>
         /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
-        public static Task<ServerMultiplayerRoom> InitialiseMatchmakingRoomAsync(long roomId, IMultiplayerRoomController roomController, IDatabaseFactory dbFactory,
-                                                                                 MultiplayerEventDispatcher eventDispatcher, ILoggerFactory loggerFactory,
-                                                                                 uint poolId, int[] users, MatchmakingBeatmapSelector beatmapSelector)
-            => InitialiseMatchmakingRoomAsync(roomId, roomController, dbFactory, eventDispatcher, loggerFactory, poolId,
-                users.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray(), beatmapSelector);
-
-        /// <summary>
-        /// Initialises a matchmaking room.
-        /// </summary>
-        /// <param name="roomId">The room identifier.</param>
-        /// <param name="roomController">The room controller.</param>
-        /// <param name="dbFactory">The database factory.</param>
-        /// <param name="eventDispatcher">Dispatcher responsible to relaying room events to applicable listeners.</param>
-        /// <param name="loggerFactory">The logger factory.</param>
-        /// <param name="poolId">The pool ID.</param>
-        /// <param name="users">The users who are allowed to join the room.</param>
-        /// <param name="beatmapSelector">The beatmap selector.</param>
-        /// <exception cref="InvalidOperationException">If the room is not a matchmaking room in the database.</exception>
         public static async Task<ServerMultiplayerRoom> InitialiseMatchmakingRoomAsync(long roomId, IMultiplayerRoomController roomController, IDatabaseFactory dbFactory,
                                                                                        MultiplayerEventDispatcher eventDispatcher, ILoggerFactory loggerFactory,
                                                                                        uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector)
