@@ -59,7 +59,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
                 room.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0,
-                    [USER_ID, USER_ID_2], new MatchmakingBeatmapSelector(Enumerable.Range(1, 50).Select(i => new matchmaking_pool_beatmap
+                    new[] { USER_ID, USER_ID_2 }.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray(),
+                    new MatchmakingBeatmapSelector(Enumerable.Range(1, 50).Select(i => new matchmaking_pool_beatmap
                     {
                         id = (uint)i,
                         beatmap_id = i
