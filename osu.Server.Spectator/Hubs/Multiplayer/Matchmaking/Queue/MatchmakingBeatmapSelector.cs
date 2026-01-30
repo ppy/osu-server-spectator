@@ -46,6 +46,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     {
                         pool_id = pool.id,
                         beatmap_id = b.beatmap_id,
+                        playmode = b.playmode,
                         checksum = b.checksum,
                         difficultyrating = b.difficultyrating
                     }).ToArray();
