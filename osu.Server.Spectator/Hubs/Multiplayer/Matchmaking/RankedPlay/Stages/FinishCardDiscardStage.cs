@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         }
 
         protected override RankedPlayStage Stage => RankedPlayStage.FinishCardDiscard;
-        protected override TimeSpan Duration => TimeSpan.FromSeconds(10);
+        protected override TimeSpan Duration => TimeSpan.FromSeconds(20);
 
         protected override Task Begin()
         {

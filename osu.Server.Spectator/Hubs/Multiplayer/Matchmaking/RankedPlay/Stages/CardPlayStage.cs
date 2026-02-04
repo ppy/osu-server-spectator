@@ -18,7 +18,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         }
 
         protected override RankedPlayStage Stage => RankedPlayStage.CardPlay;
-        protected override TimeSpan Duration => TimeSpan.FromSeconds(30);
+        protected override TimeSpan Duration => TimeSpan.FromSeconds(45);
 
         private RankedPlayCardItem? playedCard;
 
