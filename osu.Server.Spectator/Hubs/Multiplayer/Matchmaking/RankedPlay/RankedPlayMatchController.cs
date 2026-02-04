@@ -92,7 +92,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
             Random.Shared.Shuffle(beatmaps);
 
-            foreach (var beatmap in beatmaps.Take(beatmaps.Length))
+            foreach (var beatmap in beatmaps)
             {
                 var card = new RankedPlayCardItem();
                 cardToEffectMap[card] = beatmap.ToPlaylistItem();
