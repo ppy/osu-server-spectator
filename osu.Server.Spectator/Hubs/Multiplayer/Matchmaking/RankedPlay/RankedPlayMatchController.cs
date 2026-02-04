@@ -90,7 +90,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             if (beatmaps.Length < DECK_SIZE)
                 throw new InvalidOperationException($"There should be at least {DECK_SIZE} beatmaps, but only {beatmaps.Length} were selected.");
 
-            foreach (var beatmap in Random.Shared.GetItems(beatmaps, beatmaps.Length))
+            Random.Shared.Shuffle(beatmaps);
+
+            foreach (var beatmap in beatmaps)
             {
                 var card = new RankedPlayCardItem();
                 cardToEffectMap[card] = beatmap.ToPlaylistItem();
