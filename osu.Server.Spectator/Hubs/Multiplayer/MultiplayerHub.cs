@@ -6,11 +6,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Authentication;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
@@ -19,6 +21,7 @@ using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
+    [Authorize(ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME)]
     public partial class MultiplayerHub : StatefulUserHub<IMultiplayerClient, MultiplayerClientState>, IMultiplayerServer
     {
         public const string STATSD_PREFIX = "multiplayer";

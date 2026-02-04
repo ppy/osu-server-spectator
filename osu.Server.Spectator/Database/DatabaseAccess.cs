@@ -34,6 +34,23 @@ namespace osu.Server.Spectator.Database
                 new { id = jwtToken.Id });
         }
 
+        public async Task<int?> GetDelegatedResourceOwnerIdFromTokenAsync(JsonWebToken jwtToken)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QueryFirstOrDefaultAsync<int?>(
+                """
+                SELECT `clients`.`user_id`
+                FROM `oauth_access_tokens` AS `tokens`
+                JOIN `oauth_clients` AS `clients` ON `tokens`.`client_id` = `clients`.`id`
+                WHERE `tokens`.`revoked` = false
+                    AND `tokens`.`expires_at` > NOW()
+                    AND JSON_CONTAINS(`tokens`.`scopes`, JSON_QUOTE('delegate'))
+                    AND `tokens`.`id` = @id
+                """,
+                new { id = jwtToken.Id });
+        }
+
         public async Task<string?> GetUsernameAsync(int userId)
         {
             var connection = await getConnectionAsync();

@@ -20,6 +20,12 @@ namespace osu.Server.Spectator.Database
         Task<int?> GetUserIdFromTokenAsync(JsonWebToken jwtToken);
 
         /// <summary>
+        /// Returns the database ID of the owner of an OAuth client to which the supplied <paramref name="jwtToken"/> delegates permissions to.
+        /// Will be <c>null</c> if the token does not exist, has expired, has been revoked, or is not allowed to perform delegation.
+        /// </summary>
+        Task<int?> GetDelegatedResourceOwnerIdFromTokenAsync(JsonWebToken jwtToken);
+
+        /// <summary>
         /// Whether the user with the given <paramref name="userId"/> is currently restricted.
         /// </summary>
         Task<bool> IsUserRestrictedAsync(int userId);
