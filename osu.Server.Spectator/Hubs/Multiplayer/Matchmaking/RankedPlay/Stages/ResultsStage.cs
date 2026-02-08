@@ -39,17 +39,30 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
             foreach (var score in scores)
             {
-                double damage = maxTotalScore - (int)score.total_score;
-                damage *= State.DamageMultiplier;
-                damage = Math.Ceiling(damage);
-
                 var userInfo = State.Users[(int)score.user_id];
-                userInfo.Life = Math.Max(0, userInfo.Life - (int)damage);
+
+                int rawDamage = maxTotalScore - (int)score.total_score;
+                int damage = (int)Math.Ceiling(rawDamage * State.DamageMultiplier);
+
+                int oldLife = userInfo.Life;
+                int newLife = Math.Max(0, oldLife - damage);
+
+                userInfo.Life = newLife;
+                userInfo.DamageInfo = new RankedPlayDamageInfo
+                {
+                    RawDamage = rawDamage,
+                    Damage = damage,
+                    OldLife = oldLife,
+                    NewLife = newLife,
+                };
             }
         }
 
         protected override async Task Finish()
         {
+            foreach ((_, RankedPlayUserInfo userInfo) in State.Users)
+                userInfo.DamageInfo = null;
+
             if (hasGameplayRoundsRemaining())
                 await Controller.GotoStage(RankedPlayStage.RoundWarmup);
             else
