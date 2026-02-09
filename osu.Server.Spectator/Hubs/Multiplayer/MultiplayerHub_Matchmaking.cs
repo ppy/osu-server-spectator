@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Game.Online.Matchmaking;
+using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
@@ -77,6 +78,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task MatchmakingSkipToNextStage()
         {
+            // This is only used for testing purposes right now.
+            // It causes the room to skip forward with *any* user's request, which will not work well in standard usage.
+            if (!AppSettings.MatchmakingRoomAllowSkip)
+                throw new InvalidStateException("Skipping matchmaking rounds is not allowed.");
+
             using (var userUsage = await GetOrCreateLocalUserState())
             using (var roomUsage = await getLocalUserRoom(userUsage.Item!))
             {
