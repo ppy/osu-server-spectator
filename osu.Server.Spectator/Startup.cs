@@ -5,6 +5,7 @@ using System;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,6 +17,7 @@ using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs;
 using osu.Server.Spectator.Hubs.Metadata;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Referee;
 using osu.Server.Spectator.Hubs.Spectator;
 
 namespace osu.Server.Spectator
@@ -25,16 +27,18 @@ namespace osu.Server.Spectator
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSignalR(options =>
-                    {
-                        // JSON hub protocol is enabled by default, but we use MessagePack.
-                        // Some models are not compatible with the JSON protocol, so we should never negotiate it.
-                        options.SupportedProtocols?.Remove("json");
+            Action<HubOptions> configureClientHubOptions = options =>
+            {
+                // JSON hub protocol is enabled by default, but we use MessagePack.
+                // Some models are not compatible with the JSON protocol, so we should never negotiate it.
+                options.SupportedProtocols?.Remove("json");
 
-                        options.AddFilter<LoggingHubFilter>();
-                        options.AddFilter<ConcurrentConnectionLimiter>();
-                        options.AddFilter<ClientVersionChecker>();
-                    })
+                options.AddFilter<LoggingHubFilter>();
+                options.AddFilter<ConcurrentConnectionLimiter>();
+                options.AddFilter<ClientVersionChecker>();
+            };
+
+            services.AddSignalR()
                     .AddMessagePackProtocol(options =>
                     {
                         // This is required for match type states/events, which are regularly sent as derived implementations where that type is not conveyed in the invocation signature itself.
@@ -44,6 +48,13 @@ namespace osu.Server.Spectator
                         // https://github.com/dotnet/aspnetcore/issues/30096 ("it's definitely broken")
                         // https://github.com/dotnet/aspnetcore/issues/7298 (current tracking issue, though weirdly described as a javascript client issue)
                         options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS;
+                    })
+                    .AddHubOptions<MetadataHub>(configureClientHubOptions)
+                    .AddHubOptions<MultiplayerHub>(configureClientHubOptions)
+                    .AddHubOptions<SpectatorHub>(configureClientHubOptions)
+                    .AddHubOptions<RefereeHub>(options =>
+                    {
+                        options.SupportedProtocols?.Remove("messagepack");
                     });
 
             services.AddHubEntities()
@@ -84,7 +95,29 @@ namespace osu.Server.Spectator
                         config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                         config.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                     })
-                    .AddJwtBearer(); // options will be injected through DI, via the singleton registration above.
+                    // options will be injected through DI, via the singleton registration above.
+                    .AddJwtBearer(ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME)
+                    .AddJwtBearer(ConfigureJwtBearerOptions.REFEREE_CLIENT_SCHEME)
+                    .AddPolicyScheme(JwtBearerDefaults.AuthenticationScheme, displayName: null, options =>
+                    {
+                        options.ForwardDefaultSelector = ctx => ctx.GetEndpoint()?.Metadata.GetMetadata<HubMetadata>()?.HubType == typeof(RefereeHub)
+                            ? ConfigureJwtBearerOptions.REFEREE_CLIENT_SCHEME
+                            : ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME;
+                    });
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy(ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME, policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim("scopes", "*");
+                });
+                options.AddPolicy(ConfigureJwtBearerOptions.REFEREE_CLIENT_SCHEME, policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim("scopes", "multiplayer.write_manage");
+                });
+            });
+            services.AddSingleton<IUserIdProvider, JwtUserIdProvider>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -107,6 +140,7 @@ namespace osu.Server.Spectator
                 endpoints.MapHub<SpectatorHub>("/spectator");
                 endpoints.MapHub<MultiplayerHub>("/multiplayer");
                 endpoints.MapHub<MetadataHub>("/metadata");
+                endpoints.MapHub<RefereeHub>("/referee");
             });
 
             // Create shutdown manager singleton.

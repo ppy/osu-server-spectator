@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Online.API.Requests.Responses;
@@ -13,6 +14,7 @@ using osu.Game.Database;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
+using osu.Server.Spectator.Authentication;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -20,6 +22,7 @@ using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs.Spectator
 {
+    [Authorize(ConfigureJwtBearerOptions.LAZER_CLIENT_SCHEME)]
     public class SpectatorHub : StatefulUserHub<ISpectatorClient, SpectatorClientState>, ISpectatorServer
     {
         /// <summary>
