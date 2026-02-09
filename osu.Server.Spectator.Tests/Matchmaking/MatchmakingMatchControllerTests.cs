@@ -857,16 +857,23 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             await countdownTask;
         }
 
-        private async Task gotoStage(MatchmakingStage stage)
+        private async Task gotoStage(MatchmakingStage expectedStage)
         {
+            MatchmakingStage? currentStage = null;
+
             while (true)
             {
-                MatchmakingStage currentStage;
-
                 using (var room = await Rooms.GetForUse(ROOM_ID))
-                    currentStage = ((MatchmakingRoomState)room.Item!.MatchState!).Stage;
+                {
+                    MatchmakingStage newStage = ((MatchmakingRoomState)room.Item!.MatchState!).Stage;
 
-                if (currentStage == stage)
+                    if (currentStage == newStage)
+                        Assert.Fail("Stage is stuck and not changing.");
+
+                    currentStage = newStage;
+                }
+
+                if (currentStage == expectedStage)
                     break;
 
                 switch (currentStage)
@@ -913,7 +920,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                         break;
 
                     default:
-                        throw new ArgumentOutOfRangeException(nameof(stage));
+                        throw new ArgumentOutOfRangeException(nameof(expectedStage));
                 }
             }
         }
