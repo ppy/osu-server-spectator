@@ -19,6 +19,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay
     /// <summary>
     /// Abstract class for testing a <see cref="RankedPlayStageImplementation"/>.
     /// </summary>
+    [Collection("Tests that adjust global AppSettings")]
     public abstract class RankedPlayStageImplementationTest : MultiplayerTest, IAsyncLifetime
     {
         protected ServerMultiplayerRoom Room { get; private set; } = null!;
