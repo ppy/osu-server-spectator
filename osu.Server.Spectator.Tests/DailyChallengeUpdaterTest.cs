@@ -51,8 +51,8 @@ namespace osu.Server.Spectator.Tests
                 UpdateInterval = 50
             };
 
-            var task = updater.StartAsync(default);
-            await Task.Delay(100);
+            var task = updater.StartAsync(CancellationToken.None);
+            await Task.Delay(200);
 
             allClientsProxy.Verify(proxy => proxy.SendCoreAsync(
                     nameof(IMetadataClient.DailyChallengeUpdated),
@@ -62,7 +62,7 @@ namespace osu.Server.Spectator.Tests
 
             databaseAccessMock.Setup(db => db.GetActiveDailyChallengeRoomsAsync())
                               .ReturnsAsync([]);
-            await Task.Delay(100);
+            await Task.Delay(200);
 
             allClientsProxy.Verify(proxy => proxy.SendCoreAsync(
                     nameof(IMetadataClient.DailyChallengeUpdated),
@@ -72,7 +72,7 @@ namespace osu.Server.Spectator.Tests
 
             databaseAccessMock.Setup(db => db.GetActiveDailyChallengeRoomsAsync())
                               .ReturnsAsync([new multiplayer_room { id = 5, category = room_category.daily_challenge }]);
-            await Task.Delay(100);
+            await Task.Delay(200);
 
             allClientsProxy.Verify(proxy => proxy.SendCoreAsync(
                     nameof(IMetadataClient.DailyChallengeUpdated),
@@ -80,7 +80,7 @@ namespace osu.Server.Spectator.Tests
                     It.IsAny<CancellationToken>()),
                 Times.Once);
 
-            await updater.StopAsync(default);
+            await updater.StopAsync(CancellationToken.None);
             await task;
         }
     }

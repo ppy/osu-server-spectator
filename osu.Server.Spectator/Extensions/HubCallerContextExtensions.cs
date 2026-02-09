@@ -46,7 +46,7 @@ namespace osu.Server.Spectator.Extensions
             if (context.GetHttpContext()?.Request.Headers.TryGetValue(HubClientConnector.VERSION_HASH_HEADER, out StringValues headerValue) != true)
                 return null;
 
-            string versionHash = headerValue;
+            string? versionHash = headerValue;
 
             // The token is 82 chars long, and the clientHash is the first 32 of those.
             // See: https://github.com/ppy/osu-web/blob/7be19a0fe0c9fa2f686e4bb686dbc8e9bf7bcf84/app/Libraries/ClientCheck.php#L92

@@ -30,6 +30,22 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             Assert.Equal(1_000_000, UserState.Life);
             Assert.Equal(500_000, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 0,
+                Damage = 0,
+                OldLife = 1_000_000,
+                NewLife = 1_000_000,
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 500_000,
+                Damage = 500_000,
+                OldLife = 1_000_000,
+                NewLife = 500_000,
+            });
         }
 
         [Fact]
@@ -46,6 +62,22 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             Assert.Equal(1_000_000, UserState.Life);
             Assert.Equal(750_000, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 0,
+                Damage = 0,
+                OldLife = 1_000_000,
+                NewLife = 1_000_000,
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 250_000,
+                Damage = 250_000,
+                OldLife = 1_000_000,
+                NewLife = 750_000,
+            });
         }
 
         [Fact]
@@ -64,6 +96,22 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             Assert.Equal(1_000_000, UserState.Life);
             Assert.Equal(500_000, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 0,
+                Damage = 0,
+                OldLife = 1_000_000,
+                NewLife = 1_000_000,
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 250_000,
+                Damage = 500_000,
+                OldLife = 1_000_000,
+                NewLife = 500_000,
+            });
         }
 
         [Fact]
