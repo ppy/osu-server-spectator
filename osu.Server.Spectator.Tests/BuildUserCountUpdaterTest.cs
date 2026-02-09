@@ -13,6 +13,7 @@ using Xunit;
 
 namespace osu.Server.Spectator.Tests
 {
+    [Collection("Tests that adjust global AppSettings")]
     public class BuildUserCountUpdaterTest
     {
         private readonly EntityStore<MetadataClientState> clientStates;

@@ -21,6 +21,7 @@ using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
 
 namespace osu.Server.Spectator.Tests.Matchmaking
 {
+    [Collection("Tests that adjust global AppSettings")]
     public class MatchmakingMatchControllerTests : MultiplayerTest, IAsyncLifetime
     {
         public MatchmakingMatchControllerTests()
