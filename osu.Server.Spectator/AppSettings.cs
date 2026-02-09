@@ -8,12 +8,13 @@ namespace osu.Server.Spectator
 {
     public static class AppSettings
     {
-        public static bool SaveReplays { get; set; }
+        public static bool SaveReplays { get; }
+
         public static int ReplayUploaderConcurrency { get; set; } = 1;
 
         #region For use with FileScoreStorage
 
-        public static string ReplaysPath { get; set; } = "replays";
+        public static string ReplaysPath { get; } = "replays";
 
         #endregion
 
@@ -26,8 +27,8 @@ namespace osu.Server.Spectator
         #endregion
 
         public static bool TrackBuildUserCounts { get; set; }
-        public static bool ClientCheckVersion { get; set; }
-        public static int[] ClientCheckVersionExemptGroups { get; set; }
+        public static bool ClientCheckVersion { get; }
+        public static int[] ClientCheckVersionExemptGroups { get; }
 
         public static int ServerPort { get; set; } = 80;
         public static string RedisHost { get; } = "localhost";
@@ -47,6 +48,7 @@ namespace osu.Server.Spectator
         public static int MatchmakingRoomRounds { get; set; } = 5;
         public static bool MatchmakingHeadToHeadIsBestOf { get; set; } = true;
         public static bool MatchmakingRoomAllowSkip { get; set; }
+
         public static TimeSpan MatchmakingLobbyUpdateRate { get; } = TimeSpan.FromSeconds(5);
         public static TimeSpan MatchmakingQueueUpdateRate { get; } = TimeSpan.FromSeconds(1);
 
@@ -58,7 +60,7 @@ namespace osu.Server.Spectator
         /// <summary>
         /// The total number of beatmaps per matchmaking room.
         /// </summary>
-        public static int MatchmakingPoolSize { get; set; } = 50;
+        public static int MatchmakingPoolSize { get; } = 50;
 
         static AppSettings()
         {
