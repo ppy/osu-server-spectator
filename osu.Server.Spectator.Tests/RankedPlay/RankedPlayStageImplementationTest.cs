@@ -29,13 +29,10 @@ namespace osu.Server.Spectator.Tests.RankedPlay
         protected RankedPlayUserInfo User2State => RoomState.Users[USER_ID_2];
 
         private readonly RankedPlayStage stage;
-        private readonly IDisposable appSettingsLock;
 
         protected RankedPlayStageImplementationTest(RankedPlayStage stage)
         {
             this.stage = stage;
-
-            appSettingsLock = AppSettings.LockForRuntimeAdjustment();
 
             AppSettings.MatchmakingRoomRounds = 2;
             AppSettings.MatchmakingRoomAllowSkip = true;
@@ -135,7 +132,6 @@ namespace osu.Server.Spectator.Tests.RankedPlay
 
         public Task DisposeAsync()
         {
-            appSettingsLock.Dispose();
             return Task.CompletedTask;
         }
     }

@@ -3,25 +3,11 @@
 
 using System;
 using System.Linq;
-using System.Threading;
-using osu.Framework.Allocation;
 
 namespace osu.Server.Spectator
 {
     public static class AppSettings
     {
-        /// <summary>
-        /// IMPORTANT: Take out a lock on this when adjusting any <see cref="AppSettings"/> value at runtime.
-        /// </summary>
-        public static IDisposable LockForRuntimeAdjustment()
-        {
-            runtime_adjust_lock.Wait();
-
-            return new InvokeOnDisposal(() => runtime_adjust_lock.Release());
-        }
-
-        private static readonly SemaphoreSlim runtime_adjust_lock = new SemaphoreSlim(1);
-
         public static bool SaveReplays { get; }
 
         public static int ReplayUploaderConcurrency { get; set; } = 1;

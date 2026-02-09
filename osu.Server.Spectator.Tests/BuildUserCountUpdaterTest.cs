@@ -57,26 +57,23 @@ namespace osu.Server.Spectator.Tests
             await trackUser(5, "deadbeef"); // 2023.1208.0-lazer-ios
             await trackUser(6, "unknown");
 
-            using (AppSettings.LockForRuntimeAdjustment())
+            AppSettings.TrackBuildUserCounts = true;
+            var updater = new BuildUserCountUpdater(clientStates, databaseFactoryMock.Object, loggerFactoryMock.Object)
             {
-                AppSettings.TrackBuildUserCounts = true;
-                var updater = new BuildUserCountUpdater(clientStates, databaseFactoryMock.Object, loggerFactoryMock.Object)
-                {
-                    UpdateInterval = 50
-                };
-                await Task.Delay(100);
+                UpdateInterval = 50
+            };
+            await Task.Delay(100);
 
-                databaseAccessMock.Verify(db => db.UpdateBuildUserCountAsync(It.Is<osu_build>(build => build.version == "2023.1208.0" && build.users == 3)), Times.AtLeastOnce);
-                databaseAccessMock.Verify(db => db.UpdateBuildUserCountAsync(It.Is<osu_build>(build => build.version == "2023.1209.0" && build.users == 2)), Times.AtLeastOnce);
+            databaseAccessMock.Verify(db => db.UpdateBuildUserCountAsync(It.Is<osu_build>(build => build.version == "2023.1208.0" && build.users == 3)), Times.AtLeastOnce);
+            databaseAccessMock.Verify(db => db.UpdateBuildUserCountAsync(It.Is<osu_build>(build => build.version == "2023.1209.0" && build.users == 2)), Times.AtLeastOnce);
 
-                await disconnectUser(3);
-                await disconnectUser(4);
-                await Task.Delay(100);
+            await disconnectUser(3);
+            await disconnectUser(4);
+            await Task.Delay(100);
 
-                databaseAccessMock.Verify(db => db.UpdateBuildUserCountAsync(It.Is<osu_build>(build => build.version == "2023.1209.0" && build.users == 0)), Times.AtLeastOnce);
+            databaseAccessMock.Verify(db => db.UpdateBuildUserCountAsync(It.Is<osu_build>(build => build.version == "2023.1209.0" && build.users == 0)), Times.AtLeastOnce);
 
-                updater.Dispose();
-            }
+            updater.Dispose();
         }
 
         private async Task trackUser(int userId, string versionHash)

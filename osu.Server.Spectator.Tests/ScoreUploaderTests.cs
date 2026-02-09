@@ -213,21 +213,18 @@ namespace osu.Server.Spectator.Tests
         [Fact]
         public async Task TestMassUploads()
         {
-            using (AppSettings.LockForRuntimeAdjustment())
+            AppSettings.ReplayUploaderConcurrency = 4;
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
             {
-                AppSettings.ReplayUploaderConcurrency = 4;
-                var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
-                {
-                    SaveReplays = true
-                };
+                SaveReplays = true
+            };
 
-                for (int i = 0; i < 1000; ++i)
-                    await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+            for (int i = 0; i < 1000; ++i)
+                await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
 
-                await uploadsCompleteAsync(uploader);
-                mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 2)), Times.Exactly(1000));
-                AppSettings.ReplayUploaderConcurrency = 1;
-            }
+            await uploadsCompleteAsync(uploader);
+            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 2)), Times.Exactly(1000));
+            AppSettings.ReplayUploaderConcurrency = 1;
         }
 
         private async Task uploadsCompleteAsync(ScoreUploader uploader, int attempts = 5)
