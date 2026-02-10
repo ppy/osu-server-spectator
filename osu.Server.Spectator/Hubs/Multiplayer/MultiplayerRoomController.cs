@@ -197,7 +197,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
 
                 if (wasKick)
-                    await eventDispatcher.PostUserKickedAsync(room.RoomID, user);
+                    await eventDispatcher.PostUserKickedAsync(room.RoomID, user, removingUserId);
                 else
                     await eventDispatcher.PostUserLeftAsync(room.RoomID, user);
             }

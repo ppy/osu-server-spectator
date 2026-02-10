@@ -118,6 +118,9 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             multiplayerHubContext.Setup(ctx => ctx.Clients.User(It.IsAny<string>())).Returns<string>(userId => (ISingleClientProxy)Clients.Object.User(userId));
             multiplayerHubContext.Setup(ctx => ctx.Clients.All).Returns((ISingleClientProxy)Clients.Object.All);
 
+            var refereeHubContext = new Mock<IHubContext<RefereeHub>>();
+            refereeHubContext.Setup(ctx => ctx.Clients.Group(It.IsAny<string>())).Returns(new Mock<ISingleClientProxy>().Object);
+
             Groups.Setup(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                   .Callback<string, string, CancellationToken>((connectionId, groupId, _) =>
                   {
@@ -158,7 +161,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             EventDispatcher = new MultiplayerEventDispatcher(
                 DatabaseFactory.Object,
                 multiplayerHubContext.Object,
-                new Mock<IHubContext<RefereeHub>>().Object,
+                refereeHubContext.Object,
                 LoggerFactory.Object);
 
             RoomController = new MultiplayerRoomController(

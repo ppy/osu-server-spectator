@@ -16,6 +16,7 @@ using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Referee;
+using osu.Server.Spectator.Hubs.Referee.Models.Events;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -174,6 +175,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task PostUserJoinedAsync(long roomId, MultiplayerRoomUser user)
         {
             await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserJoined), user);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserJoined), new UserJoinedEvent
+            {
+                RoomId = roomId,
+                UserId = user.UserID,
+            });
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_joined",
@@ -190,6 +196,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task PostUserLeftAsync(long roomId, MultiplayerRoomUser user)
         {
             await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserLeft), user);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserLeft), new UserLeftEvent
+            {
+                RoomId = roomId,
+                UserId = user.UserID,
+            });
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_left",
@@ -203,11 +214,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         /// <param name="roomId">The ID of the relevant room.</param>
         /// <param name="user">The user who was kicked.</param>
-        public async Task PostUserKickedAsync(long roomId, MultiplayerRoomUser user)
+        /// <param name="kickingUserId">The ID of the user who did the kicking.</param>
+        public async Task PostUserKickedAsync(long roomId, MultiplayerRoomUser user, int kickingUserId)
         {
             // the target user has already been removed from the group, so send the message to them separately.
             await multiplayerHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
             await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserKicked), new UserKickedEvent
+            {
+                RoomId = roomId,
+                KickedUserId = user.UserID,
+                KickingUserId = kickingUserId,
+            });
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_kicked",
