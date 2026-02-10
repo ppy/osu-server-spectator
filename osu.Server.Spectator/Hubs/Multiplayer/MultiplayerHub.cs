@@ -81,7 +81,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (userUsage.Item.CurrentRoomID != null)
                     throw new InvalidStateException("Can't join a room when already in another room.");
 
-                return await RoomController.CreateRoom(userUsage, roomId, room.Settings.Password);
+                return await RoomController.CreateRoom(userUsage.Item, roomId, room.Settings.Password);
             }
         }
 
@@ -104,7 +104,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 if (userUsage.Item.CurrentRoomID != null)
                     throw new InvalidStateException("Can't join a room when already in another room.");
 
-                return await RoomController.JoinRoom(userUsage, roomId, password);
+                return await RoomController.JoinRoom(userUsage.Item, roomId, password);
             }
         }
 
@@ -120,7 +120,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     return;
 
                 using (var roomUsage = await getLocalUserRoom(userUsage.Item))
-                    await RoomController.LeaveRoom(userUsage, roomUsage);
+                    await RoomController.LeaveRoom(userUsage.Item, roomUsage);
             }
         }
 
@@ -223,7 +223,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         if (targetUserUsage.Item.CurrentRoomID == null)
                             throw new InvalidOperationException();
 
-                        await RoomController.KickUserFromRoom(targetUserUsage, roomUsage, userUsage.Item.UserId);
+                        await RoomController.KickUserFromRoom(targetUserUsage.Item, roomUsage, userUsage.Item.UserId);
                     }
                 }
             }
@@ -500,7 +500,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (state.Item.CurrentRoomID != null)
             {
                 using (var roomUsage = await getLocalUserRoom(state.Item))
-                    await RoomController.LeaveRoom(state, roomUsage);
+                    await RoomController.LeaveRoom(state.Item, roomUsage);
             }
         }
 
