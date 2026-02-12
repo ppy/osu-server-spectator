@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Hubs.Referee.Models.Requests;
 using osu.Server.Spectator.Hubs.Referee.Models.Responses;
 
 namespace osu.Server.Spectator.Hubs.Referee
@@ -33,11 +34,7 @@ namespace osu.Server.Spectator.Hubs.Referee
         /// </list>
         /// by default.
         /// </summary>
-        /// <param name="rulesetId">The ID of the ruleset to play.</param>
-        /// <param name="beatmapId">The ID of the beatmap to play.</param>
-        /// <param name="roomName">The name of the room to create.</param>
-        /// <returns></returns>
-        Task<RoomJoinedResponse> MakeRoom(int rulesetId, int beatmapId, string roomName);
+        Task<RoomJoinedResponse> MakeRoom(MakeRoomRequest request);
 
         /// <summary>
         /// Joins an existing multiplayer room with the given <paramref name="roomId"/>.
@@ -67,5 +64,35 @@ namespace osu.Server.Spectator.Hubs.Referee
         /// Kicks the player with the given <paramref name="userId"/> from the given <paramref name="roomId"/>.
         /// </summary>
         Task KickPlayer(long roomId, int userId);
+
+        /// <summary>
+        /// Changes the settings of the room with the given <paramref name="roomId"/>.
+        /// </summary>
+        Task ChangeRoomSettings(long roomId, ChangeRoomSettingsRequest request);
+
+        /// <summary>
+        /// Edits the current playlist item in the room with the given <paramref name="roomId"/>.
+        /// </summary>
+        Task EditCurrentPlaylistItem(long roomId, EditCurrentPlaylistItemRequest request);
+
+        /// <summary>
+        /// Moves the user to a different team in the given <paramref name="roomId"/>.
+        /// </summary>
+        Task MoveUser(long roomId, MoveUserRequest request);
+
+        /// <summary>
+        /// Starts a match (immediately or with a countdown) in the given <paramref name="roomId"/>.
+        /// </summary>
+        Task StartMatch(long roomId, StartGameplayRequest request);
+
+        /// <summary>
+        /// Stops an ongoing match start countdown in the room with the given <paramref name="roomId"/>.
+        /// </summary>
+        Task StopMatchCountdown(long roomId);
+
+        /// <summary>
+        /// Aborts an ongoing match in the room with the given <paramref name="roomId"/>.
+        /// </summary>
+        Task AbortMatch(long roomId);
     }
 }

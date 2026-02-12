@@ -6,15 +6,15 @@ using System.Text.Json.Serialization;
 namespace osu.Server.Spectator.Hubs.Referee.Models
 {
     /// <summary>
-    /// Enumerates possible types of refereed matches.
+    /// Enumerates possible teams in rooms.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum MatchType
+    public enum MatchTeam
     {
-        [JsonStringEnumMemberName("head_to_head")]
-        HeadToHead = Game.Online.Rooms.MatchType.HeadToHead,
+        [JsonStringEnumMemberName("red")]
+        Red = 0,
 
-        [JsonStringEnumMemberName("team_versus")]
-        TeamVersus = Game.Online.Rooms.MatchType.TeamVersus,
+        [JsonStringEnumMemberName("blue")]
+        Blue = 1,
     }
 }

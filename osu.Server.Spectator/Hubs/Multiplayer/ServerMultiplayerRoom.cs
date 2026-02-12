@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
@@ -1011,7 +1010,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             trackedCountdowns[countdown] = countdownInfo;
             ActiveCountdowns.Add(countdown);
 
-            await eventDispatcher.PostMatchEventAsync(RoomID, new CountdownStartedEvent(countdown));
+            await eventDispatcher.PostCountdownStartedAsync(RoomID, countdown);
 
             countdownInfo.Task = start();
 
@@ -1108,7 +1107,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             trackedCountdowns.Remove(countdown);
             ActiveCountdowns.Remove(countdownInfo.Countdown);
 
-            await eventDispatcher.PostMatchEventAsync(RoomID, new CountdownStoppedEvent(countdownInfo.Countdown.ID));
+            await eventDispatcher.PostCountdownStoppedAsync(RoomID, countdownInfo.Countdown);
         }
 
         /// <summary>
