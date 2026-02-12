@@ -100,7 +100,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                 ]
             });
 
-            long roomId = await sharedInterop.CreateRoomAsync(Context.GetUserId(), room);
+            long roomId = await sharedInterop.CreateRoomAsync(Context.GetUserId(), room, tournamentMode: true);
             await eventDispatcher.PostRoomCreatedAsync(roomId, Context.GetUserId());
 
             using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
