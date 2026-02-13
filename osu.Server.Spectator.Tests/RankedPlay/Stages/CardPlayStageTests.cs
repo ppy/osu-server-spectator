@@ -82,7 +82,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         {
             RoomState.ActiveUserId = USER_ID;
 
-            var card = UserState.Hand.ElementAt(1);
+            var secondCard = UserState.Hand.ElementAt(1);
+            var thirdCard = UserState.Hand.ElementAt(2);
             await Hub.SendMatchRequest(new RankedPlayCardHandReplayRequest
             {
                 Frames = new[]
@@ -92,12 +93,17 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                         Delay = 0,
                         Cards = new Dictionary<Guid, RankedPlayCardState>
                         {
-                            [card.ID] = new RankedPlayCardState
-                            {
-                                Selected = true,
-                                Hovered = false,
-                                Pressed = false,
-                            }
+                            [secondCard.ID] = new RankedPlayCardState { Selected = false, Hovered = false, Pressed = false, },
+                            [thirdCard.ID] = new RankedPlayCardState { Selected = true, Hovered = false, Pressed = false, },
+                        }
+                    },
+                    new RankedPlayCardHandReplayFrame
+                    {
+                        Delay = 0,
+                        Cards = new Dictionary<Guid, RankedPlayCardState>
+                        {
+                            [secondCard.ID] = new RankedPlayCardState { Selected = true, Hovered = false, Pressed = false, },
+                            [thirdCard.ID] = new RankedPlayCardState { Selected = false, Hovered = false, Pressed = false, },
                         }
                     }
                 }
@@ -105,10 +111,10 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             await FinishCountdown();
 
-            Assert.Equal(MatchController.LastActivatedCard, card);
+            Assert.Equal(MatchController.LastActivatedCard, secondCard);
             Assert.Equal(RankedPlayStage.FinishCardPlay, RoomState.Stage);
 
-            Receiver.Verify(r => r.RankedPlayCardPlayed(card), Times.Once);
+            Receiver.Verify(r => r.RankedPlayCardPlayed(secondCard), Times.Once);
         }
 
         [Fact]
