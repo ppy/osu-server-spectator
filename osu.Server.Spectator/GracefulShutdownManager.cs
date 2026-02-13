@@ -55,6 +55,7 @@ namespace osu.Server.Spectator
 
             // Importantly, we don't block on `MultiplayerClientState` because they're only relevant as long as a `ServerMultiplayerRoom` exists in the first place.
             // More so, we want to allow these states to be created so existing rooms can continue to function until they are disbanded.
+            // Same logic applies to `RefereeClientState`.
 
             hostApplicationLifetime.ApplicationStopping.Register(shutdownSafely);
         }

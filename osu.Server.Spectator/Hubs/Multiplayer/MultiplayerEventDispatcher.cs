@@ -15,6 +15,8 @@ using osu.Game.Online.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs.Referee;
+using osu.Server.Spectator.Hubs.Referee.Models.Events;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
@@ -31,15 +33,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     {
         private readonly IDatabaseFactory databaseFactory;
         private readonly IHubContext<MultiplayerHub> multiplayerHubContext;
+        private readonly IHubContext<RefereeHub> refereeHubContext;
         private readonly ILogger<MultiplayerEventDispatcher> logger;
 
         public MultiplayerEventDispatcher(
             IDatabaseFactory databaseFactory,
             IHubContext<MultiplayerHub> multiplayerHubContext,
+            IHubContext<RefereeHub> refereeHubContext,
             ILoggerFactory loggerFactory)
         {
             this.databaseFactory = databaseFactory;
             this.multiplayerHubContext = multiplayerHubContext;
+            this.refereeHubContext = refereeHubContext;
             logger = loggerFactory.CreateLogger<MultiplayerEventDispatcher>();
         }
 
@@ -61,6 +66,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task UnsubscribePlayerAsync(long roomId, string connectionId)
         {
             await multiplayerHubContext.Groups.RemoveFromGroupAsync(connectionId, GetGroupId(roomId));
+        }
+
+        /// <summary>
+        /// Subscribes a connection with the given <paramref name="connectionId"/>
+        /// to multiplayer events relevant to active referees
+        /// which occur in the room with the given <paramref name="roomId"/>.
+        /// </summary>
+        public async Task SubscribeRefereeAsync(long roomId, string connectionId)
+        {
+            await refereeHubContext.Groups.AddToGroupAsync(connectionId, GetGroupId(roomId));
+        }
+
+        /// <summary>
+        /// Unsubscribes a connection with the given <paramref name="connectionId"/>
+        /// from multiplayer events relevant to active referees
+        /// which occur in the room with the given <paramref name="roomId"/>.
+        /// </summary>
+        public async Task UnsubscribeRefereeAsync(long roomId, string connectionId)
+        {
+            await refereeHubContext.Groups.RemoveFromGroupAsync(connectionId, GetGroupId(roomId));
         }
 
         /// <summary>
@@ -150,6 +175,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task PostUserJoinedAsync(long roomId, MultiplayerRoomUser user)
         {
             await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserJoined), user);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserJoined), new UserJoinedEvent
+            {
+                RoomId = roomId,
+                UserId = user.UserID,
+            });
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_joined",
@@ -166,6 +196,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task PostUserLeftAsync(long roomId, MultiplayerRoomUser user)
         {
             await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserLeft), user);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserLeft), new UserLeftEvent
+            {
+                RoomId = roomId,
+                UserId = user.UserID,
+            });
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_left",
@@ -179,11 +214,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         /// <param name="roomId">The ID of the relevant room.</param>
         /// <param name="user">The user who was kicked.</param>
-        public async Task PostUserKickedAsync(long roomId, MultiplayerRoomUser user)
+        /// <param name="kickingUserId">The ID of the user who did the kicking.</param>
+        public async Task PostUserKickedAsync(long roomId, MultiplayerRoomUser user, int kickingUserId)
         {
             // the target user has already been removed from the group, so send the message to them separately.
             await multiplayerHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
             await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserKicked), new UserKickedEvent
+            {
+                RoomId = roomId,
+                KickedUserId = user.UserID,
+                KickingUserId = kickingUserId,
+            });
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_kicked",

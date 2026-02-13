@@ -8,6 +8,7 @@ using osu.Server.Spectator.Hubs;
 using osu.Server.Spectator.Hubs.Metadata;
 using osu.Server.Spectator.Hubs.Multiplayer;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
+using osu.Server.Spectator.Hubs.Referee;
 using osu.Server.Spectator.Hubs.Spectator;
 using osu.Server.Spectator.Services;
 using osu.Server.Spectator.Storage;
@@ -26,6 +27,7 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<EntityStore<ServerMultiplayerRoom>>()
                                     .AddSingleton<EntityStore<ConnectionState>>()
                                     .AddSingleton<EntityStore<MetadataClientState>>()
+                                    .AddSingleton<EntityStore<RefereeClientState>>()
                                     .AddSingleton<GracefulShutdownManager>()
                                     .AddSingleton<MetadataBroadcaster>()
                                     .AddSingleton<IScoreStorage, S3ScoreStorage>()

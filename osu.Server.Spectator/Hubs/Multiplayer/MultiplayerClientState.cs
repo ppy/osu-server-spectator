@@ -3,13 +3,15 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
+using osu.Game.Online.Multiplayer;
 using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     [Serializable]
-    public class MultiplayerClientState : ClientState
+    public class MultiplayerClientState : ClientState, IMultiplayerUserState
     {
         private static int countUsersInRooms;
 
@@ -21,7 +23,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         {
         }
 
-        public void SetRoom(long roomId)
+        int IMultiplayerUserState.UserId => UserId;
+
+        public MultiplayerRoomUser CreateRoomUser()
+            => new MultiplayerRoomUser(UserId) { Role = MultiplayerRoomUserRole.Player };
+
+        public void AssociateWithRoom(long roomId)
         {
             if (CurrentRoomID != null)
                 throw new InvalidOperationException("User is already in a room.");
@@ -30,7 +37,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             DogStatsd.Gauge($"{MultiplayerHub.STATSD_PREFIX}.users", Interlocked.Increment(ref countUsersInRooms));
         }
 
-        public void ClearRoom()
+        public bool IsAssociatedWithRoom(long roomId) => CurrentRoomID == roomId;
+
+        public void DisassociateFromRoom(long roomId)
         {
             if (CurrentRoomID == null)
                 return;
@@ -38,5 +47,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             CurrentRoomID = null;
             DogStatsd.Gauge($"{MultiplayerHub.STATSD_PREFIX}.users", Interlocked.Decrement(ref countUsersInRooms));
         }
+
+        public Task SubscribeToEvents(MultiplayerEventDispatcher eventDispatcher, long roomId)
+            => eventDispatcher.SubscribePlayerAsync(roomId, ConnectionId);
+
+        public Task UnsubscribeFromEvents(MultiplayerEventDispatcher eventDispatcher, long roomId)
+            => eventDispatcher.UnsubscribePlayerAsync(roomId, ConnectionId);
     }
 }

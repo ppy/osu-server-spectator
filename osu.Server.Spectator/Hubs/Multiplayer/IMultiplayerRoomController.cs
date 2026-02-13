@@ -15,34 +15,34 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// Creates a room with a single user in it.
         /// </summary>
-        /// <param name="userUsage">The user creating the room.</param>
+        /// <param name="user">The user creating the room.</param>
         /// <param name="roomId">The ID of the room.</param>
         /// <param name="password">The password to the room.</param>
         /// <returns>Snapshot of the state of the created room.</returns>
         Task<MultiplayerRoom> CreateRoom(
-            ItemUsage<MultiplayerClientState> userUsage,
+            IMultiplayerUserState user,
             long roomId,
             string password);
 
         /// <summary>
         /// Joins a user to a room.
         /// </summary>
-        /// <param name="userUsage">The user joining the room.</param>
+        /// <param name="user">The user joining the room.</param>
         /// <param name="roomId">The ID of the room.</param>
         /// <param name="password">The password to the room.</param>
         /// <returns>Snapshot of the state of the joined room.</returns>
         Task<MultiplayerRoom> JoinRoom(
-            ItemUsage<MultiplayerClientState> userUsage,
+            IMultiplayerUserState user,
             long roomId,
             string password);
 
         /// <summary>
         /// The given user leaves the room.
         /// </summary>
-        /// <param name="userUsage">The user leaving the room.</param>
+        /// <param name="user">The user leaving the room.</param>
         /// <param name="roomUsage">The room being left.</param>
         Task LeaveRoom(
-            ItemUsage<MultiplayerClientState> userUsage,
+            IMultiplayerUserState user,
             ItemUsage<ServerMultiplayerRoom> roomUsage);
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="roomUsage">The room who <paramref name="kickedUser"/> is being kicked from.</param>
         /// <param name="kickedBy">The ID of the user kicking the <paramref name="kickedUser"/>.</param>
         Task KickUserFromRoom(
-            ItemUsage<MultiplayerClientState> kickedUser,
+            IMultiplayerUserState kickedUser,
             ItemUsage<ServerMultiplayerRoom> roomUsage,
             int kickedBy);
 
