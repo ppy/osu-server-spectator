@@ -71,7 +71,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                     if (state.Selected)
                     {
                         lastSelectedCard = State.ActiveUser.Hand.SingleOrDefault(c => c.ID == cardId);
-                        break;
+                        return Task.CompletedTask;
                     }
                 }
             }
