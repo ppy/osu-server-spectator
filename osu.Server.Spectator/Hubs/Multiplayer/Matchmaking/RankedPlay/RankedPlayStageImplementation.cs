@@ -112,6 +112,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             return Task.CompletedTask;
         }
 
+        public virtual Task HandleCardHandReplayRequest(MultiplayerRoomUser user, RankedPlayCardHandReplayRequest request)
+        {
+            return Task.CompletedTask;
+        }
+
         /// <summary>
         /// Kills a user, reducing their life points to zero.
         /// </summary>

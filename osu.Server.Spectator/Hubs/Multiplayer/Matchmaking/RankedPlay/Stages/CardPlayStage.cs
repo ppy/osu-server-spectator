@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
+using osu.Game.Online.RankedPlay;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 {
@@ -21,6 +22,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         protected override TimeSpan Duration => TimeSpan.FromSeconds(45);
 
         private RankedPlayCardItem? playedCard;
+        private RankedPlayCardItem? lastSelectedCard;
 
         protected override async Task Begin()
         {
@@ -36,7 +38,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             Debug.Assert(State.ActiveUserId != null);
             Debug.Assert(State.ActiveUser != null);
 
-            await Controller.ActivateCard(playedCard ?? State.ActiveUser.Hand.First());
+            await Controller.ActivateCard(playedCard ?? lastSelectedCard ?? State.ActiveUser.Hand.First());
             await Controller.GotoStage(RankedPlayStage.FinishCardPlay);
         }
 
@@ -53,6 +55,28 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
             playedCard = card;
             await Finish();
+        }
+
+        public override Task HandleCardHandReplayRequest(MultiplayerRoomUser user, RankedPlayCardHandReplayRequest request)
+        {
+            Debug.Assert(State.ActiveUser != null);
+
+            if (user.UserID != State.ActiveUserId)
+                return Task.CompletedTask;
+
+            foreach (var frame in request.Frames.Reverse())
+            {
+                foreach (var (cardId, state) in frame.Cards)
+                {
+                    if (state.Selected)
+                    {
+                        lastSelectedCard = State.ActiveUser.Hand.SingleOrDefault(c => c.ID == cardId);
+                        return Task.CompletedTask;
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
         }
     }
 }
