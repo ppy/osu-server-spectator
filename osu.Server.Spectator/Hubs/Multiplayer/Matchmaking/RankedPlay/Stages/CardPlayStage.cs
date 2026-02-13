@@ -64,13 +64,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             if (user.UserID != State.ActiveUserId)
                 return Task.CompletedTask;
 
-            foreach (var frame in request.Frames)
+            foreach (var frame in request.Frames.Reverse())
             {
                 foreach (var (cardId, state) in frame.Cards)
                 {
                     if (state.Selected)
                     {
                         lastSelectedCard = State.ActiveUser.Hand.SingleOrDefault(c => c.ID == cardId);
+                        break;
                     }
                 }
             }
