@@ -15,11 +15,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task CreateRoom()
         {
-            LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>()))
+            LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>(), It.IsAny<bool>()))
                     .ReturnsAsync(() => ROOM_ID);
 
             await Hub.CreateRoom(new MultiplayerRoom(0));
-            LegacyIO.Verify(io => io.CreateRoomAsync(USER_ID, It.IsAny<MultiplayerRoom>()), Times.Once);
+            LegacyIO.Verify(io => io.CreateRoomAsync(USER_ID, It.IsAny<MultiplayerRoom>(), It.IsAny<bool>()), Times.Once);
             LegacyIO.Verify(io => io.AddUserToRoomAsync(USER_ID, ROOM_ID, It.IsAny<string>()), Times.Once);
 
             using (var usage = await Hub.GetRoom(ROOM_ID))

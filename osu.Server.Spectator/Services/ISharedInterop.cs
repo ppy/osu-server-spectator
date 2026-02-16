@@ -3,6 +3,7 @@
 
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Hubs.Referee;
 
 namespace osu.Server.Spectator.Services
 {
@@ -16,8 +17,9 @@ namespace osu.Server.Spectator.Services
         /// </remarks>
         /// <param name="hostUserId">The ID of the user that wants to create the room.</param>
         /// <param name="room">The room.</param>
+        /// <param name="tournamentMode">Used by <see cref="RefereeHub"/> to exercise less stringent limits on number of simultaneously active rooms.</param>
         /// <returns>The room's ID.</returns>
-        Task<long> CreateRoomAsync(int hostUserId, MultiplayerRoom room);
+        Task<long> CreateRoomAsync(int hostUserId, MultiplayerRoom room, bool tournamentMode = false);
 
         /// <summary>
         /// Adds a user to an osu!web room.
