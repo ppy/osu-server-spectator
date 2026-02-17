@@ -156,7 +156,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             LegacyIO = new Mock<ISharedInterop>();
             LegacyIO.Setup(io => io.CreateRoomAsync(It.IsAny<int>(), It.IsAny<MultiplayerRoom>(), It.IsAny<bool>()))
-                    .Returns<int, MultiplayerRoom>((_, room) => Task.FromResult(room.RoomID));
+                    .Returns<int, MultiplayerRoom, bool>((_, room, _) => Task.FromResult(room.RoomID));
 
             EventDispatcher = new MultiplayerEventDispatcher(
                 DatabaseFactory.Object,
