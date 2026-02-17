@@ -26,5 +26,33 @@ namespace osu.Server.Spectator.Hubs.Referee
         [DoesNotReturn]
         public static void ThrowUserNotInRoom()
             => throw new RefereeHubException(5, "The specified user is not in the room.");
+
+        [DoesNotReturn]
+        public static void ThrowBeatmapDoesNotExist()
+            => throw new RefereeHubException(6, "The specified beatmap does not exist.");
+
+        [DoesNotReturn]
+        public static void ThrowIncorrectMatchType()
+            => throw new RefereeHubException(7, "Cannot perform this operation with the current match type.");
+
+        [DoesNotReturn]
+        public static void ThrowNoActiveCountdown()
+            => throw new RefereeHubException(8, "No active match start countdown.");
+
+        [DoesNotReturn]
+        public static void ThrowRoomStateInvalidForOperation()
+            => throw new RefereeHubException(9, "Cannot perform this operation in the current room state.");
+
+        [DoesNotReturn]
+        public static void ThrowInvalidRuleset()
+            => throw new RefereeHubException(10, "Invalid ruleset.");
+
+        [DoesNotReturn]
+        public static void ThrowInvalidBeatmapRulesetCombination()
+            => throw new RefereeHubException(11, "Invalid beatmap and ruleset combination.");
+
+        [DoesNotReturn]
+        public static void ThrowInvalidMods(string details)
+            => throw new RefereeHubException(12, $"Invalid mods.\nDetails: {details}");
     }
 }

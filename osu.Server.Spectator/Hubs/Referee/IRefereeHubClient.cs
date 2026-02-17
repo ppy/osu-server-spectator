@@ -33,5 +33,62 @@ namespace osu.Server.Spectator.Hubs.Referee
         /// A user has been kicked from a refereed room.
         /// </summary>
         Task UserKicked(UserKickedEvent info);
+
+        /// <summary>
+        /// A room's settings have changed.
+        /// </summary>
+        Task RoomSettingsChanged(RoomSettingsChangedEvent info);
+
+        /// <summary>
+        /// A playlist item in a room has changed.
+        /// </summary>
+        Task PlaylistItemChanged(PlaylistItemChangedEvent info);
+
+        /// <summary>
+        /// A user's status in a room has changed.
+        /// </summary>
+        Task UserStatusChanged(UserStatusChangedEvent info);
+
+        /// <summary>
+        /// A user's selected free mods in a room have changed.
+        /// </summary>
+        Task UserModsChanged(UserModsChangedEvent info);
+
+        /// <summary>
+        /// A user's selected style in a room has changed.
+        /// </summary>
+        Task UserStyleChanged(UserStyleChangedEvent info);
+
+        /// <summary>
+        /// A user's team in a room has changed.
+        /// </summary>
+        Task UserTeamChanged(UserTeamChangedEvent info);
+
+        /// <summary>
+        /// A countdown in a room has started.
+        /// </summary>
+        Task CountdownStarted(CountdownStartedEvent info);
+
+        /// <summary>
+        /// A countdown in a room has stopped.
+        /// </summary>
+        Task CountdownStopped(CountdownStoppedEvent info);
+
+        /// <summary>
+        /// A match in a room has started.
+        /// </summary>
+        Task MatchStarted(MatchStartedEvent info);
+
+        /// <summary>
+        /// A match in a room has been aborted.
+        /// </summary>
+        /// <param name="info"></param>
+        /// <returns></returns>
+        Task MatchAborted(MatchAbortedEvent info);
+
+        /// <summary>
+        /// A match in a room has completed.
+        /// </summary>
+        Task MatchCompleted(MatchCompletedEvent info);
     }
 }
