@@ -32,11 +32,18 @@ namespace osu.Server.Spectator.Hubs.Referee.Models
     /// </remarks>
     public class Mod
     {
+        /// <summary>
+        /// The acronym of the mod.
+        /// </summary>
         [JsonPropertyName("acronym")]
         public string Acronym { get; set; } = string.Empty;
 
+        /// <summary>
+        /// The mod settings.
+        /// Should not be provided when in the context of specifying allowed / free mods.
+        /// </summary>
         [JsonPropertyName("settings")]
-        public Dictionary<string, object> Settings { get; set; } = [];
+        public Dictionary<string, object>? Settings { get; set; }
 
         public static Mod FromAPIMod(APIMod mod) => new Mod
         {
@@ -47,7 +54,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models
         public APIMod ToAPIMod() => new APIMod
         {
             Acronym = Acronym,
-            Settings = Settings.ToDictionary<KeyValuePair<string, object>, string, object>(
+            Settings = Settings?.ToDictionary<KeyValuePair<string, object>, string, object>(
                 kv => kv.Key,
                 kv =>
                 {
@@ -83,7 +90,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models
                     }
 
                     throw new ArgumentOutOfRangeException(nameof(kv.Value), kv.Value, "Unsupported value");
-                })
+                }) ?? []
         };
     }
 }
