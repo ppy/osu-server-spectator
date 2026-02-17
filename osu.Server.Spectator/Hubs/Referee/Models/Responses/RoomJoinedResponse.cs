@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
@@ -9,6 +10,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
     /// <summary>
     /// Contains information about a room that was just joined.
     /// </summary>
+    [PublicAPI]
     public class RoomJoinedResponse
     {
         /// <summary>
@@ -46,7 +48,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
         {
         }
 
-        public RoomJoinedResponse(MultiplayerRoom room)
+        internal RoomJoinedResponse(MultiplayerRoom room)
         {
             RoomId = room.RoomID;
             ChatChannelId = room.ChannelID;

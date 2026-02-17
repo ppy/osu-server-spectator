@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models
@@ -9,6 +10,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models
     /// <summary>
     /// Enumerates user statuses exposed to referees.
     /// </summary>
+    [PublicAPI]
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum MatchUserStatus
     {

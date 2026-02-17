@@ -1,0 +1,12 @@
+apiRules:
+  - include:
+      uidRegex: ^osu\.Server\.Spectator\.Hubs\.Referee
+      type: Type
+      hasAttribute:
+        uid: JetBrains.Annotations.PublicAPIAttribute
+  - exclude:
+      type: Member
+      hasAttribute:
+        uid: System.Text.Json.Serialization.JsonConstructorAttribute
+  - exclude:
+      type: Type

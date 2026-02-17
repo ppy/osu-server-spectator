@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
@@ -9,6 +10,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
     /// <summary>
     /// A room's settings have changed.
     /// </summary>
+    [PublicAPI]
     public class RoomSettingsChangedEvent
     {
         /// <summary>
@@ -46,7 +48,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
         {
         }
 
-        public RoomSettingsChangedEvent(long roomId, MultiplayerRoomSettings settings)
+        internal RoomSettingsChangedEvent(long roomId, MultiplayerRoomSettings settings)
         {
             RoomId = roomId;
             Name = settings.Name;

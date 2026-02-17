@@ -3,16 +3,17 @@
 
 using System;
 using System.Threading.Tasks;
-using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Rooms;
+using JetBrains.Annotations;
+using osu.Server.Spectator.Hubs.Referee.Models;
 using osu.Server.Spectator.Hubs.Referee.Models.Requests;
 using osu.Server.Spectator.Hubs.Referee.Models.Responses;
 
 namespace osu.Server.Spectator.Hubs.Referee
 {
     /// <summary>
-    /// Defines all operations that a client can perform via the server.
+    /// Defines all operations that a client can perform on the server.
     /// </summary>
+    [PublicAPI]
     public interface IRefereeHubServer
     {
         /// <summary>
@@ -25,15 +26,18 @@ namespace osu.Server.Spectator.Hubs.Referee
 
         /// <summary>
         /// Makes a new multiplayer room.
+        /// Corresponds to the <c>!mp make</c> command on bancho (with the slight adjustment of requiring a beatmap and ruleset).
+        /// </summary>
+        /// <remarks>
         /// Other than the supplied parameters, the room will use:
         /// <list type="bullet">
         /// <item>a random password,</item>
-        /// <item><see cref="MatchType.HeadToHead"/> match type,</item>
-        /// <item><see cref="QueueMode.HostOnly"/> queue mode,</item>
+        /// <item><see cref="MatchType.HeadToHead"></see> match type,</item>
+        /// <item><see cref="osu.Game.Online.Multiplayer.QueueMode.HostOnly">host-only</see> queue mode,</item>
         /// <item>automatic intro skip enabled</item>
         /// </list>
         /// by default.
-        /// </summary>
+        /// </remarks>
         Task<RoomJoinedResponse> MakeRoom(MakeRoomRequest request);
 
         /// <summary>
@@ -52,46 +56,56 @@ namespace osu.Server.Spectator.Hubs.Referee
 
         /// <summary>
         /// Closes the room with the given <paramref name="roomId"/>.
+        /// Corresponds to the <c>!mp close</c> command on bancho.
         /// </summary>
         Task CloseRoom(long roomId);
 
         /// <summary>
         /// Invites the player with the given <paramref name="userId"/> to the given <paramref name="roomId"/>.
+        /// Corresponds to the <c>!mp invite</c> command on bancho.
+        /// Note that success of this operation does **not** confirm receipt of the invite, just a lack of errors when sending it.
         /// </summary>
         Task InvitePlayer(long roomId, int userId);
 
         /// <summary>
         /// Kicks the player with the given <paramref name="userId"/> from the given <paramref name="roomId"/>.
+        /// Corresponds to the <c>!mp kick</c> command on bancho.
         /// </summary>
         Task KickPlayer(long roomId, int userId);
 
         /// <summary>
         /// Changes the settings of the room with the given <paramref name="roomId"/>.
+        /// Encompasses the <c>!mp name</c>, <c>!mp password</c>, and <c>!mp set</c> commands on bancho.
         /// </summary>
         Task ChangeRoomSettings(long roomId, ChangeRoomSettingsRequest request);
 
         /// <summary>
         /// Edits the current playlist item in the room with the given <paramref name="roomId"/>.
+        /// Encompasses the <c>!mp map</c> and <c>!mp mods</c> commands on bancho.
         /// </summary>
         Task EditCurrentPlaylistItem(long roomId, EditCurrentPlaylistItemRequest request);
 
         /// <summary>
         /// Moves the user to a different team in the given <paramref name="roomId"/>.
+        /// Corresponds to the <c>!mp move</c> command on bancho.
         /// </summary>
         Task MoveUser(long roomId, MoveUserRequest request);
 
         /// <summary>
         /// Starts a match (immediately or with a countdown) in the given <paramref name="roomId"/>.
+        /// Corresponds to the <c>!mp start</c> command on bancho.
         /// </summary>
         Task StartMatch(long roomId, StartGameplayRequest request);
 
         /// <summary>
         /// Stops an ongoing match start countdown in the room with the given <paramref name="roomId"/>.
+        /// Corresponds to the <c>!mp aborttimer</c> command on bancho.
         /// </summary>
         Task StopMatchCountdown(long roomId);
 
         /// <summary>
         /// Aborts an ongoing match in the room with the given <paramref name="roomId"/>.
+        /// Corresponds to the <c>!mp abort</c> command on bancho.
         /// </summary>
         Task AbortMatch(long roomId);
     }

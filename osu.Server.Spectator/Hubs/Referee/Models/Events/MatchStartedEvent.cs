@@ -3,12 +3,14 @@
 
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
 {
     /// <summary>
     /// A game has started in a multiplayer room.
     /// </summary>
+    [PublicAPI]
     public class MatchStartedEvent
     {
         /// <summary>
@@ -31,8 +33,10 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
 
         /// <summary>
         /// Mapping containing team membership of players in the room.
+        /// Keys are user IDs, values are their <see cref="MatchTeam"/>s.
         /// Only applicable in <see cref="Models.MatchType.TeamVersus"/>.
         /// </summary>
+        [JsonPropertyName("teams")]
         public Dictionary<int, MatchTeam>? Teams { get; init; }
     }
 }

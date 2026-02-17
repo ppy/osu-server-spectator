@@ -3,6 +3,7 @@
 
 using System.Linq;
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
@@ -10,6 +11,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
     /// <summary>
     /// A playlist item in a multiplayer room has changed.
     /// </summary>
+    [PublicAPI]
     public class PlaylistItemChangedEvent
     {
         /// <summary>
