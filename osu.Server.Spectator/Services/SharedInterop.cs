@@ -142,11 +142,12 @@ namespace osu.Server.Spectator.Services
         // Methods below purposefully async-await on `runCommand()` calls rather than directly returning the underlying calls.
         // This is done for better readability of exception stacks. Directly returning the tasks elides the name of the proxying method.
 
-        public async Task<long> CreateRoomAsync(int hostUserId, MultiplayerRoom room)
+        public async Task<long> CreateRoomAsync(int hostUserId, MultiplayerRoom room, bool tournamentMode)
         {
-            return long.Parse(await runCommand(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new RoomWithHostId(room)
+            return long.Parse(await runCommand(HttpMethod.Post, "multiplayer/rooms", Newtonsoft.Json.JsonConvert.SerializeObject(new SharedInteropRoom(room)
             {
-                HostUserId = hostUserId
+                HostUserId = hostUserId,
+                TournamentMode = tournamentMode
             })));
         }
 
@@ -166,7 +167,7 @@ namespace osu.Server.Spectator.Services
         /// <summary>
         /// A special <see cref="Room"/> that can be serialised with Newtonsoft.Json to create rooms hosted by a given <see cref="HostUserId">user</see>.
         /// </summary>
-        private class RoomWithHostId : Room
+        private class SharedInteropRoom : Room
         {
             /// <summary>
             /// The ID of the user to host the room.
@@ -175,9 +176,15 @@ namespace osu.Server.Spectator.Services
             public required int HostUserId { get; init; }
 
             /// <summary>
+            /// In "tournament mode" the <see cref="HostUserId"/> can have more than one realtime room open at a time.
+            /// </summary>
+            [Newtonsoft.Json.JsonProperty("tournament_mode")]
+            public required bool TournamentMode { get; init; }
+
+            /// <summary>
             /// Creates a <see cref="Room"/> from a <see cref="MultiplayerRoom"/>.
             /// </summary>
-            public RoomWithHostId(MultiplayerRoom room)
+            public SharedInteropRoom(MultiplayerRoom room)
                 : base(room)
             {
             }
