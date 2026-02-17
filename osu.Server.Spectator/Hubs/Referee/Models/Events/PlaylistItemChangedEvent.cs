@@ -57,8 +57,8 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
         /// <summary>
         /// Whether this playlist item has already been played.
         /// </summary>
-        [JsonPropertyName("expired")]
-        public bool Expired { get; set; }
+        [JsonPropertyName("was_played")]
+        public bool WasPlayed { get; set; }
 
         [JsonConstructor]
         public PlaylistItemChangedEvent()
@@ -74,7 +74,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
             RequiredMods = item.RequiredMods.Select(Mod.FromAPIMod).ToArray();
             AllowedMods = item.AllowedMods.Select(Mod.FromAPIMod).ToArray();
             Freestyle = item.Freestyle;
-            Expired = item.Expired;
+            WasPlayed = item.Expired;
         }
     }
 }
