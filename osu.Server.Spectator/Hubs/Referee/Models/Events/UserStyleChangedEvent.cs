@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
 {
@@ -9,6 +10,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
     /// A user has changed the selected style for the current playlist item.
     /// Only applicable when the playlist item in question supports freestyle.
     /// </summary>
+    [PublicAPI]
     public class UserStyleChangedEvent
     {
         /// <summary>

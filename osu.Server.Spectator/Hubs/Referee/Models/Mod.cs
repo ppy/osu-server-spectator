@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using MessagePack;
 using osu.Game.Online.API;
 
@@ -14,7 +15,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models
     /// <summary>
     /// Represents a configured mod.
     /// </summary>
-    /// <remarks>
+    /// <implementation>
     /// <para>
     /// This is basically <see cref="APIMod"/>.
     /// The main reason why <see cref="APIMod"/> isn't used directly is serialisation foibles regarding <see cref="Settings"/>.
@@ -29,7 +30,8 @@ namespace osu.Server.Spectator.Hubs.Referee.Models
     /// Thus, this class applies a conversion step via <see cref="ToAPIMod"/> that ensures <see cref="JsonElement"/>s get converted to actual C# primitive types,
     /// which then can be forwarded to <see cref="MessagePackSerializer"/> without issue.
     /// </para>
-    /// </remarks>
+    /// </implementation>
+    [PublicAPI]
     public class Mod
     {
         /// <summary>
@@ -45,13 +47,13 @@ namespace osu.Server.Spectator.Hubs.Referee.Models
         [JsonPropertyName("settings")]
         public Dictionary<string, object>? Settings { get; set; }
 
-        public static Mod FromAPIMod(APIMod mod) => new Mod
+        internal static Mod FromAPIMod(APIMod mod) => new Mod
         {
             Acronym = mod.Acronym,
             Settings = mod.Settings
         };
 
-        public APIMod ToAPIMod() => new APIMod
+        internal APIMod ToAPIMod() => new APIMod
         {
             Acronym = Acronym,
             Settings = Settings?.ToDictionary<KeyValuePair<string, object>, string, object>(

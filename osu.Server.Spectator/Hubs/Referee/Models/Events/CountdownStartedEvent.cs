@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
@@ -9,6 +10,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
     /// <summary>
     /// A countdown has started in a room.
     /// </summary>
+    [PublicAPI]
     public class CountdownStartedEvent
     {
         /// <summary>
@@ -46,7 +48,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
         /// <remarks>
         /// Some countdowns should not be conveyed to referee clients.
         /// </remarks>
-        public static CountdownStartedEvent? Create(long roomId, MultiplayerCountdown countdown)
+        internal static CountdownStartedEvent? Create(long roomId, MultiplayerCountdown countdown)
         {
             var result = new CountdownStartedEvent
             {

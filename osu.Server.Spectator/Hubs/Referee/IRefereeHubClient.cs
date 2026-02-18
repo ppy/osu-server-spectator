@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using osu.Server.Spectator.Hubs.Referee.Models.Events;
 
 namespace osu.Server.Spectator.Hubs.Referee
@@ -10,6 +11,7 @@ namespace osu.Server.Spectator.Hubs.Referee
     /// <summary>
     /// Defines all messages that a server can send to the client.
     /// </summary>
+    [PublicAPI]
     public interface IRefereeHubClient
     {
         /// <summary>
@@ -82,8 +84,6 @@ namespace osu.Server.Spectator.Hubs.Referee
         /// <summary>
         /// A match in a room has been aborted.
         /// </summary>
-        /// <param name="info"></param>
-        /// <returns></returns>
         Task MatchAborted(MatchAbortedEvent info);
 
         /// <summary>

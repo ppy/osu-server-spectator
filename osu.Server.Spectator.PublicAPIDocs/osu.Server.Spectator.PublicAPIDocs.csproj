@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>osu.Server.Spectator.PublicAPISchemaExporter</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Docfx.App" Version="2.78.4" />
+      <PackageReference Include="Docfx.Plugins" Version="2.78.4" />
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
+      <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.14.0" PrivateAssets="analyzers;build" />
+      <PackageReference Include="System.Text.Json" Version="10.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\osu.Server.Spectator\osu.Server.Spectator.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <Content Include="docfx.json" CopyToOutputDirectory="Always" />
+        <Content Include="*.yml" CopyToOutputDirectory="Always" />
+        <Content Include="*.md" CopyToOutputDirectory="Always" />
+    </ItemGroup>
+
+</Project>

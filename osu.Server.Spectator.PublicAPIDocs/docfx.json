@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "metadata": [{
+    "src": [{
+      "files": ["osu.Server.Spectator.csproj"],
+      "src": "../../../../osu.Server.Spectator"
+    }],
+    "dest": "referee-api/managed-references",
+    "filter": "filter-config.yml",
+    "disableDefaultFilter": true
+  }],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "*.md",
+          "*.yml",
+          "referee-api/managed-references/*.yml"
+        ],
+        "exclude": [
+          "_site/**"
+        ]
+      }
+    ],
+    "overwrite": [
+      "referee-api/overwrites/*.md"
+    ],
+    "resource": [
+      {
+        "files": [
+          "images/**",
+          "referee-api/schemas/*.json"
+        ]
+      }
+    ],
+    "output": "_site",
+    "template": [
+      "default",
+      "modern"
+    ],
+    "globalMetadata": {
+      "_appName": "osu-server-spectator",
+      "_appTitle": "osu-server-spectator",
+      "_enableSearch": true,
+      "_disableBreadcrumb": true,
+      "_disableContribution": true,
+      "pdf": false
+    }
+  }
+}
