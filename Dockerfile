@@ -2,12 +2,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /app
 
 # Copy csproj and restore as distinct layers
-COPY *.csproj ./
+COPY osu.Server.Spectator/*.csproj ./
 
 RUN dotnet restore
 
 # Copy everything else and build
-COPY . ./
+COPY osu.Server.Spectator ./
 RUN dotnet publish -c Release -o out
 # get rid of bloat
 RUN rm -rf ./out/runtimes ./out/osu.Game.Resources.dll
