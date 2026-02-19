@@ -25,5 +25,11 @@
         <Content Include="*.yml" CopyToOutputDirectory="Always" />
         <Content Include="*.md" CopyToOutputDirectory="Always" />
     </ItemGroup>
+    
+    <PropertyGroup>
+        <OutputPath>out</OutputPath>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    </PropertyGroup>
 
 </Project>

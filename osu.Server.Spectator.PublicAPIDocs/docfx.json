@@ -3,7 +3,7 @@
   "metadata": [{
     "src": [{
       "files": ["osu.Server.Spectator.csproj"],
-      "src": "../../../../osu.Server.Spectator"
+      "src": "../../osu.Server.Spectator"
     }],
     "dest": "referee-api/managed-references",
     "filter": "filter-config.yml",
