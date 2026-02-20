@@ -144,6 +144,12 @@ namespace osu.Server.Spectator
                 endpoints.MapHub<MetadataHub>("/metadata");
                 endpoints.MapHub<RefereeHub>("/referee");
             });
+
+            // add serving static files for the sake of docs.
+            // it's a good idea to keep these statement *after* `UseEndpoints()`.
+            // this is because the order of invocations here matters - methods invoked earlier take precedence in ASP.NET's middleware pipeline.
+            // therefore this running *after* `UseEndpoints()` should ensure that actual application use cases take precedence over any docs concerns.
+            app.UseDefaultFiles();
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(Path.Combine(env.WebRootPath, "docs")),
