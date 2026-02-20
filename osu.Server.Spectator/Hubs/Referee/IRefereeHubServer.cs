@@ -86,6 +86,39 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task EditCurrentPlaylistItem(long roomId, EditCurrentPlaylistItemRequest request);
 
         /// <summary>
+        /// <para>
+        /// Adds a playlist item to the room.
+        /// </para>
+        /// <para>
+        /// The use of this method is generally not required; multiplayer rooms always ensure at least one item exists
+        /// and you can use <see cref="EditCurrentPlaylistItem"/> at any point (except for when a match is in progress) to modify it.
+        /// The best use of this method is for managing multiple queued-up predetermined items in succession.
+        /// </para>
+        /// </summary>
+        Task AddPlaylistItem(long roomId, AddPlaylistItemRequest request);
+
+        /// <summary>
+        /// <para>
+        /// Edits a playlist item in the room.
+        /// </para>
+        /// <para>
+        /// To edit the current playlist item, you can use the <see cref="EditCurrentPlaylistItem"/> shorthand.
+        /// The best use of this method is for queueing up multiple predetermined items in succession.
+        /// </para>
+        /// </summary>
+        Task EditPlaylistItem(long roomId, EditPlaylistItemRequest request);
+
+        /// <summary>
+        /// Removes a playlist item from the room.
+        /// </summary>
+        /// <para>
+        /// The use of this method is generally not required; multiplayer rooms always ensure at least one item exists
+        /// and you can use <see cref="EditCurrentPlaylistItem"/> at any point (except for when a match is in progress) to modify it.
+        /// The best use of this method is for managing multiple queued-up predetermined items in succession.
+        /// </para>
+        Task RemovePlaylistItem(long roomId, RemovePlaylistItemRequest request);
+
+        /// <summary>
         /// Moves the user to a different team in the given <paramref name="roomId"/>.
         /// Corresponds to the <c>!mp move</c> command on bancho.
         /// </summary>
