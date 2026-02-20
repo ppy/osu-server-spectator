@@ -7,6 +7,9 @@ using JetBrains.Annotations;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Requests
 {
+    /// <summary>
+    /// Common parameters for playlist item edit requests.
+    /// </summary>
     [PublicAPI]
     public abstract class EditPlaylistItemRequestParameters
     {

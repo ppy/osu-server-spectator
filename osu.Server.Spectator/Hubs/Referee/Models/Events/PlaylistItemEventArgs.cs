@@ -8,6 +8,9 @@ using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
 {
+    /// <summary>
+    /// Common fields for events relating to playlist items.
+    /// </summary>
     [PublicAPI]
     public abstract class PlaylistItemEventArgs
     {
