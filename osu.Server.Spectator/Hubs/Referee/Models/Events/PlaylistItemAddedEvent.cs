@@ -2,23 +2,21 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Text.Json.Serialization;
-using JetBrains.Annotations;
 using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
 {
     /// <summary>
-    /// A playlist item in a multiplayer room has changed.
+    /// A playlist item has been added to a multiplayer room.
     /// </summary>
-    [PublicAPI]
-    public class PlaylistItemChangedEvent : PlaylistItemEventArgs
+    public class PlaylistItemAddedEvent : PlaylistItemEventArgs
     {
         [JsonConstructor]
-        public PlaylistItemChangedEvent()
+        public PlaylistItemAddedEvent()
         {
         }
 
-        internal PlaylistItemChangedEvent(long roomId, MultiplayerPlaylistItem item)
+        internal PlaylistItemAddedEvent(long roomId, MultiplayerPlaylistItem item)
             : base(roomId, item)
         {
         }
