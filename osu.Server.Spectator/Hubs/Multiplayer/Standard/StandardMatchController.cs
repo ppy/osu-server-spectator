@@ -288,10 +288,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));
 
             room.Playlist.Add(item);
-            await eventDispatcher.PostPlaylistItemAddedAsync(room.RoomID, item);
 
             if (room.State == MultiplayerRoomState.Open)
                 await updatePlaylistOrder(db);
+
+            await eventDispatcher.PostPlaylistItemAddedAsync(room.RoomID, item);
         }
 
         public IEnumerable<MultiplayerPlaylistItem> UpcomingItems => room.Playlist.Where(i => !i.Expired).OrderBy(i => i.PlaylistOrder);
