@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using osu.Game.Online.Rooms;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
@@ -9,6 +10,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
     /// <summary>
     /// A playlist item has been added to a multiplayer room.
     /// </summary>
+    [PublicAPI]
     public class PlaylistItemAddedEvent : PlaylistItemEventArgs
     {
         [JsonConstructor]
