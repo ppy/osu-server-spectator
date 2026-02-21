@@ -19,6 +19,7 @@ using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Extensions;
 using osu.Server.Spectator.Hubs.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Standard;
 using osu.Server.Spectator.Hubs.Referee.Models.Requests;
 using osu.Server.Spectator.Hubs.Referee.Models.Responses;
 using osu.Server.Spectator.Services;
@@ -315,65 +316,175 @@ namespace osu.Server.Spectator.Hubs.Referee
                         ThrowHelper.ThrowRoomStateInvalidForOperation();
 
                     var oldPlaylistItem = roomUsage.Item.CurrentPlaylistItem;
-
-                    int newBeatmapId = request.BeatmapId ?? oldPlaylistItem.BeatmapID;
-
-                    using var db = databaseFactory.GetInstance();
-                    database_beatmap? newBeatmap = await db.GetBeatmapAsync(newBeatmapId);
-
-                    if (newBeatmap == null)
-                        ThrowHelper.ThrowBeatmapDoesNotExist();
-
-                    string newBeatmapChecksum = newBeatmap.checksum!;
-
-                    int oldRuleset = oldPlaylistItem.RulesetID;
-                    int newRuleset = request.RulesetId ?? oldRuleset;
-
-                    if (newRuleset < 0 || newRuleset > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
-                        ThrowHelper.ThrowInvalidRuleset();
-
-                    if (newBeatmap.playmode != 0 && newRuleset != newBeatmap.playmode)
-                        ThrowHelper.ThrowInvalidBeatmapRulesetCombination();
-
-                    var newRequiredMods = oldRuleset != newRuleset && request.RequiredMods == null
-                        ? []
-                        : (request.RequiredMods?.Select(mod => mod.ToAPIMod()).ToArray() ?? oldPlaylistItem.RequiredMods);
-
-                    var newAllowedMods = oldRuleset != newRuleset && request.AllowedMods == null
-                        ? []
-                        : (request.AllowedMods?.Select(mod => mod.ToAPIMod()).ToArray() ?? oldPlaylistItem.AllowedMods);
-
-                    var newPlaylistItem = new MultiplayerPlaylistItem
-                    {
-                        ID = oldPlaylistItem.ID,
-                        OwnerID = oldPlaylistItem.OwnerID,
-                        BeatmapID = newBeatmapId,
-                        BeatmapChecksum = newBeatmapChecksum,
-                        RulesetID = newRuleset,
-                        RequiredMods = newRequiredMods,
-                        AllowedMods = newAllowedMods,
-                        Expired = oldPlaylistItem.Expired,
-                        PlaylistOrder = oldPlaylistItem.PlaylistOrder,
-                        PlayedAt = oldPlaylistItem.PlayedAt,
-                        // TODO: this is probably not what users expect because of lack of accounting for mods,
-                        // but client doesn't really try to do any better
-                        // (https://github.com/ppy/osu/blob/815bf9c37bc920231bd024636d4690914f396793/osu.Game/Online/Rooms/MultiplayerPlaylistItem.cs#L105),
-                        // so this is probably fine for now
-                        StarRating = newBeatmap.difficultyrating,
-                        Freestyle = request.Freestyle ?? oldPlaylistItem.Freestyle,
-                    };
-
-                    try
-                    {
-                        newPlaylistItem.EnsureModsValid();
-                    }
-                    catch (Exception ex)
-                    {
-                        ThrowHelper.ThrowInvalidMods(ex.Message);
-                    }
+                    var newPlaylistItem = await applyUpdatesToPlaylistItem(request, oldPlaylistItem);
 
                     await roomUsage.Item.EditPlaylistItem(Context.GetUserId(), newPlaylistItem);
                 }
+            }
+        }
+
+        public async Task AddPlaylistItem(long roomId, AddPlaylistItemRequest request)
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                ensureIsReferee(roomId, userUsage);
+
+                using (var roomUsage = await roomController.GetRoom(roomId))
+                {
+                    if (roomUsage.Item == null)
+                        ThrowHelper.ThrowRoomDoesNotExist();
+
+                    database_beatmap? beatmap;
+
+                    using (var db = databaseFactory.GetInstance())
+                        beatmap = await db.GetBeatmapAsync(request.BeatmapId);
+
+                    if (beatmap == null)
+                        ThrowHelper.ThrowBeatmapDoesNotExist();
+
+                    var newPlaylistItem = new MultiplayerPlaylistItem
+                    {
+                        OwnerID = Context.GetUserId(),
+                        BeatmapID = beatmap.beatmap_id,
+                        BeatmapChecksum = beatmap.checksum!,
+                        RulesetID = request.RulesetId,
+                        RequiredMods = request.RequiredMods.Select(mod => mod.ToAPIMod()).ToArray(),
+                        AllowedMods = request.AllowedMods.Select(mod => mod.ToAPIMod()).ToArray(),
+                        StarRating = beatmap.difficultyrating,
+                        Freestyle = request.Freestyle,
+                    };
+
+                    ensurePlaylistItemValid(newPlaylistItem, beatmap);
+
+                    await roomUsage.Item.AddPlaylistItem(Context.GetUserId(), newPlaylistItem);
+                }
+            }
+        }
+
+        public async Task EditPlaylistItem(long roomId, EditPlaylistItemRequest request)
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                ensureIsReferee(roomId, userUsage);
+
+                using (var roomUsage = await roomController.GetRoom(roomId))
+                {
+                    if (roomUsage.Item == null)
+                        ThrowHelper.ThrowRoomDoesNotExist();
+
+                    var oldPlaylistItem = roomUsage.Item.Playlist.SingleOrDefault(item => item.ID == request.PlaylistItemId);
+
+                    if (oldPlaylistItem == null)
+                        ThrowHelper.ThrowPlaylistItemDoesNotExist();
+
+                    var newPlaylistItem = await applyUpdatesToPlaylistItem(request, oldPlaylistItem);
+
+                    await roomUsage.Item.EditPlaylistItem(Context.GetUserId(), newPlaylistItem);
+                }
+            }
+        }
+
+        public async Task RemovePlaylistItem(long roomId, RemovePlaylistItemRequest request)
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                ensureIsReferee(roomId, userUsage);
+
+                using (var roomUsage = await roomController.GetRoom(roomId))
+                {
+                    if (roomUsage.Item == null)
+                        ThrowHelper.ThrowRoomDoesNotExist();
+
+                    var playlistItem = roomUsage.Item.Playlist.SingleOrDefault(item => item.ID == request.PlaylistItemId);
+
+                    if (playlistItem == null)
+                        ThrowHelper.ThrowPlaylistItemDoesNotExist();
+
+                    if (ReferenceEquals(playlistItem, roomUsage.Item.CurrentPlaylistItem))
+                    {
+                        if ((roomUsage.Item.MatchController as StandardMatchController)?.UpcomingItems.Count() == 1)
+                            ThrowHelper.ThrowRoomStateInvalidForOperation();
+
+                        if (roomUsage.Item.State != MultiplayerRoomState.Open)
+                            ThrowHelper.ThrowRoomStateInvalidForOperation();
+                    }
+
+                    await roomUsage.Item.RemovePlaylistItem(Context.GetUserId(), playlistItem.ID);
+                }
+            }
+        }
+
+        private async Task<MultiplayerPlaylistItem> applyUpdatesToPlaylistItem(EditPlaylistItemRequestParameters request, MultiplayerPlaylistItem oldPlaylistItem)
+        {
+            int newBeatmapId = request.BeatmapId ?? oldPlaylistItem.BeatmapID;
+
+            using var db = databaseFactory.GetInstance();
+            database_beatmap? newBeatmap = await db.GetBeatmapAsync(newBeatmapId);
+
+            if (newBeatmap == null)
+                ThrowHelper.ThrowBeatmapDoesNotExist();
+
+            string newBeatmapChecksum = newBeatmap.checksum!;
+
+            int oldRuleset = oldPlaylistItem.RulesetID;
+            int newRuleset = request.RulesetId ?? oldRuleset;
+
+            var newRequiredMods = oldRuleset != newRuleset && request.RequiredMods == null
+                ? []
+                : (request.RequiredMods?.Select(mod => mod.ToAPIMod()).ToArray() ?? oldPlaylistItem.RequiredMods);
+
+            var newAllowedMods = oldRuleset != newRuleset && request.AllowedMods == null
+                ? []
+                : (request.AllowedMods?.Select(mod => mod.ToAPIMod()).ToArray() ?? oldPlaylistItem.AllowedMods);
+
+            var newPlaylistItem = new MultiplayerPlaylistItem
+            {
+                ID = oldPlaylistItem.ID,
+                OwnerID = oldPlaylistItem.OwnerID,
+                BeatmapID = newBeatmapId,
+                BeatmapChecksum = newBeatmapChecksum,
+                RulesetID = newRuleset,
+                RequiredMods = newRequiredMods,
+                AllowedMods = newAllowedMods,
+                Expired = oldPlaylistItem.Expired,
+                PlaylistOrder = oldPlaylistItem.PlaylistOrder,
+                PlayedAt = oldPlaylistItem.PlayedAt,
+                // TODO: this is probably not what users expect because of lack of accounting for mods,
+                // but client doesn't really try to do any better
+                // (https://github.com/ppy/osu/blob/815bf9c37bc920231bd024636d4690914f396793/osu.Game/Online/Rooms/MultiplayerPlaylistItem.cs#L105),
+                // so this is probably fine for now
+                StarRating = newBeatmap.difficultyrating,
+                Freestyle = request.Freestyle ?? oldPlaylistItem.Freestyle,
+            };
+
+            ensurePlaylistItemValid(newPlaylistItem, newBeatmap);
+            return newPlaylistItem;
+        }
+
+        private static void ensurePlaylistItemValid(MultiplayerPlaylistItem playlistItem, database_beatmap beatmap)
+        {
+            if (playlistItem.RulesetID < 0 || playlistItem.RulesetID > ILegacyRuleset.MAX_LEGACY_RULESET_ID)
+                ThrowHelper.ThrowInvalidRuleset();
+
+            if (beatmap.playmode != 0 && playlistItem.RulesetID != beatmap.playmode)
+                ThrowHelper.ThrowInvalidBeatmapRulesetCombination();
+
+            if (playlistItem.Freestyle && playlistItem.AllowedMods.Any())
+                ThrowHelper.ThrowNoAllowedModsInFreestyle();
+
+            try
+            {
+                playlistItem.EnsureModsValid();
+            }
+            catch (Exception ex)
+            {
+                ThrowHelper.ThrowInvalidMods(ex.Message);
             }
         }
 

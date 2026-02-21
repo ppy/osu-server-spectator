@@ -92,5 +92,19 @@ namespace osu.Server.Spectator.Hubs.Referee
         [DoesNotReturn]
         public static void ThrowInvalidMods(string details)
             => throw new RefereeHubException(12, $"Invalid mods.\nDetails: {details}");
+
+        /// <summary>
+        /// Error 13: Cannot specify allowed mods in freestyle.
+        /// </summary>
+        [DoesNotReturn]
+        public static void ThrowNoAllowedModsInFreestyle()
+            => throw new RefereeHubException(13, "Cannot specify allowed mods in freestyle.");
+
+        /// <summary>
+        /// Error 14: The specified playlist item does not exist.
+        /// </summary>
+        [DoesNotReturn]
+        public static void ThrowPlaylistItemDoesNotExist()
+            => throw new RefereeHubException(14, "The specified playlist item does not exist.");
     }
 }

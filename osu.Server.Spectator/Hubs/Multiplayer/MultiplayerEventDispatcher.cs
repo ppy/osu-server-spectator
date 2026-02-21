@@ -396,6 +396,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task PostPlaylistItemAddedAsync(long roomId, MultiplayerPlaylistItem item)
         {
             await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemAdded), item);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.PlaylistItemAdded), new PlaylistItemAddedEvent(roomId, item));
         }
 
         /// <summary>
@@ -421,6 +422,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task PostPlaylistItemRemovedAsync(long roomId, long playlistItemId)
         {
             await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.PlaylistItemRemoved), playlistItemId);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.PlaylistItemRemoved), new PlaylistItemRemovedEvent
+            {
+                RoomId = roomId,
+                PlaylistItemId = playlistItemId,
+            });
         }
 
         /// <summary>
