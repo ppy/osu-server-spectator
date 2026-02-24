@@ -132,12 +132,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         public virtual async Task AddPlaylistItem(MultiplayerPlaylistItem item, MultiplayerRoomUser user)
         {
             bool isHostOnly = room.Settings.QueueMode == QueueMode.HostOnly;
-            bool isHost = user.Equals(room.Host);
+            bool isHostOrReferee = user.Equals(room.Host) || user.Role == MultiplayerRoomUserRole.Referee;
 
-            if (isHostOnly && !isHost)
+            if (isHostOnly && !isHostOrReferee)
                 throw new NotHostException();
 
-            int limit = isHost ? HOST_PLAYLIST_LIMIT : GUEST_PLAYLIST_LIMIT;
+            int limit = isHostOrReferee ? HOST_PLAYLIST_LIMIT : GUEST_PLAYLIST_LIMIT;
 
             if (room.Playlist.Count(i => i.OwnerID == user.UserID && !i.Expired) >= limit)
                 throw new InvalidStateException($"Can't enqueue more than {limit} items at once.");
@@ -231,6 +231,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         public virtual async Task RemovePlaylistItem(long playlistItemId, MultiplayerRoomUser user)
         {
             var item = room.Playlist.FirstOrDefault(item => item.ID == playlistItemId);
+            bool isHostOrReferee = user.Equals(room.Host) || user.Role == MultiplayerRoomUserRole.Referee;
 
             if (item == null)
                 throw new InvalidStateException("Item does not exist in the room.");
@@ -245,7 +246,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                     throw new InvalidStateException("The current item in the room cannot be removed when currently being played.");
             }
 
-            if (item.OwnerID != user.UserID && !user.Equals(room.Host))
+            if (item.OwnerID != user.UserID && !isHostOrReferee)
                 throw new InvalidStateException("Attempted to remove an item which is not owned by the user.");
 
             if (item.Expired)
