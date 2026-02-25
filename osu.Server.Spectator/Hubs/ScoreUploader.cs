@@ -103,6 +103,7 @@ namespace osu.Server.Spectator.Hubs
                         }
 
                         dropItem(item);
+                        continue;
                     }
 
                     if (dbScore == null)
