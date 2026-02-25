@@ -97,9 +97,9 @@ namespace osu.Server.Spectator.Hubs
                             logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
                             DogStatsd.Increment($"{statsd_prefix}.timed_out");
                         }
+                        // Still waiting for score upload, queue for retry.
                         else
                         {
-                            // Still waiting for score upload, queue for retry after a short delay (to avoid super-tight database query loop).
                             queueForRetry(item);
                         }
 
@@ -144,6 +144,7 @@ namespace osu.Server.Spectator.Hubs
 
                 _ = Task.Run(async () =>
                 {
+                    // retry after a short delay (to avoid super-tight database query loop)
                     await Task.Delay(100, itemCancellation);
                     await channel.Writer.WriteAsync(item, itemCancellation);
                 }, itemCancellation);
