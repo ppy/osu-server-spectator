@@ -2,14 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.IO;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -143,17 +141,6 @@ namespace osu.Server.Spectator
                 endpoints.MapHub<MultiplayerHub>("/multiplayer");
                 endpoints.MapHub<MetadataHub>("/metadata");
                 endpoints.MapHub<RefereeHub>("/referee");
-            });
-
-            // add serving static files for the sake of docs.
-            // it's a good idea to keep these statement *after* `UseEndpoints()`.
-            // this is because the order of invocations here matters - methods invoked earlier take precedence in ASP.NET's middleware pipeline.
-            // therefore this running *after* `UseEndpoints()` should ensure that actual application use cases take precedence over any docs concerns.
-            app.UseDefaultFiles();
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = new PhysicalFileProvider(Path.Combine(env.WebRootPath, "docs")),
-                RequestPath = "/docs"
             });
 
             // Create shutdown manager singleton.
