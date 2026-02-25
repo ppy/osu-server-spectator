@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using OpenSkillSharp.Models;
 using OpenSkillSharp.Rating;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
@@ -98,6 +99,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override Task Finish()
         {
+            return Task.CompletedTask;
+        }
+
+        public override Task HandleUserLeft(MultiplayerRoomUser user)
+        {
+            // The match is over, no need to kill users.
             return Task.CompletedTask;
         }
     }
