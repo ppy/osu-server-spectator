@@ -150,11 +150,15 @@ namespace osu.Server.Spectator.Hubs
             [SuppressMessage("ReSharper", "MethodSupportsCancellation")] // This should not be cancelled, as it's still a valid and tracked upload.
             void queueForRetry(UploadItem item)
             {
-                _ = Task.Run(async () =>
+                Task.Run(async () =>
                 {
                     // retry after a short delay (to avoid super-tight database query loop)
                     await Task.Delay(100);
                     await channel.Writer.WriteAsync(item);
+                }).ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        logger.LogError(t.Exception, "Error an attempting to re-queue score upload");
                 });
             }
 
