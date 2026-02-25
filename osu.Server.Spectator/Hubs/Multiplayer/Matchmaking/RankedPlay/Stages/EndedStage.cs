@@ -69,6 +69,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
                 for (int i = 0; i < stats.Count; i++)
                 {
+                    matchmaking_room_result result;
+
+                    if (State.WinningUserId == null)
+                        result = matchmaking_room_result.draw;
+                    else if (State.WinningUserId == stats[i].user_id)
+                        result = matchmaking_room_result.win;
+                    else
+                        result = matchmaking_room_result.loss;
+
+                    await db.InsertUserEloHistoryEntry(
+                        (ulong)Room.RoomID,
+                        Controller.PoolId,
+                        stats[i].user_id,
+                        stats.First(u => u.user_id != stats[i].user_id).user_id,
+                        result,
+                        (int)Math.Round(stats[i].EloData.Rating.Mu),
+                        (int)Math.Round(newRatings[i].Mu));
+
                     stats[i].EloData.ContestCount++;
                     stats[i].EloData.Rating = new EloRating(newRatings[i].Mu, newRatings[i].Sigma);
                     await db.UpdateMatchmakingUserStatsAsync(stats[i]);
