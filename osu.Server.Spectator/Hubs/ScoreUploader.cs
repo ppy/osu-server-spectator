@@ -70,10 +70,10 @@ namespace osu.Server.Spectator.Hubs
 
             Interlocked.Increment(ref remainingUsages);
 
-            var cancellation = new CancellationTokenSource();
-            cancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
+            var uploadCancellation = new CancellationTokenSource();
+            uploadCancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
 
-            await channel.Writer.WriteAsync(new UploadItem(token, score, beatmap, cancellation), cancellationToken);
+            await channel.Writer.WriteAsync(new UploadItem(token, score, beatmap, uploadCancellation), cancellationToken);
         }
 
         private async Task readLoop()
@@ -88,11 +88,18 @@ namespace osu.Server.Spectator.Hubs
                 try
                 {
                     SoloScore? dbScore = await db.GetScoreFromTokenAsync(item.Token);
+                    CancellationToken itemCancellation = item.Cancellation.Token;
 
-                    if (dbScore == null && !item.Cancellation.IsCancellationRequested)
+                    if (dbScore == null && !itemCancellation.IsCancellationRequested)
                     {
                         // Score is not ready yet - enqueue for the next attempt.
-                        await channel.Writer.WriteAsync(item, cancellationToken);
+                        await Task.Run(async () =>
+                        {
+                            // arbitrary short delay to avoid super-tight database query loop.
+                            await Task.Delay(100, itemCancellation);
+                            await channel.Writer.WriteAsync(item, itemCancellation);
+                        }, itemCancellation);
+
                         itemProcessed = false;
                         continue;
                     }
