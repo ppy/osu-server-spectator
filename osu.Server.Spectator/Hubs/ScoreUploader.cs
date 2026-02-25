@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -88,21 +89,27 @@ namespace osu.Server.Spectator.Hubs
                 {
                     SoloScore? dbScore = await db.GetScoreFromTokenAsync(item.Token);
 
-                    if (dbScore == null)
+                    // Timeout occurred, drop item.
+                    // This could be from score upload not completing in time, or from exception handling.
+                    if (item.Cancellation.IsCancellationRequested)
                     {
-                        // Timeout occurred, drop item.
-                        if (item.Cancellation.IsCancellationRequested)
+                        if (dbScore == null)
                         {
                             logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
                             DogStatsd.Increment($"{statsd_prefix}.timed_out");
-                            dropItem(item);
                         }
-                        // Still waiting for score upload, queue for retry.
                         else
                         {
-                            queueForRetry(item);
+                            logger.LogError("Score failed to upload successfully.");
                         }
 
+                        dropItem(item);
+                    }
+
+                    if (dbScore == null)
+                    {
+                        // Still waiting for score upload, queue for retry.
+                        queueForRetry(item);
                         continue;
                     }
 
@@ -137,16 +144,15 @@ namespace osu.Server.Spectator.Hubs
                 }
             }
 
+            [SuppressMessage("ReSharper", "MethodSupportsCancellation")] // This should not be cancelled, as it's still a valid and tracked upload.
             void queueForRetry(UploadItem item)
             {
-                CancellationToken itemCancellation = item.Cancellation.Token;
-
                 _ = Task.Run(async () =>
                 {
                     // retry after a short delay (to avoid super-tight database query loop)
-                    await Task.Delay(100, itemCancellation);
-                    await channel.Writer.WriteAsync(item, itemCancellation);
-                }, itemCancellation);
+                    await Task.Delay(100);
+                    await channel.Writer.WriteAsync(item);
+                });
             }
 
             void dropItem(UploadItem item)
