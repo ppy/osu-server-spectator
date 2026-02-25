@@ -83,31 +83,26 @@ namespace osu.Server.Spectator.Hubs
                 using var db = databaseFactory.GetInstance();
 
                 var item = await channel.Reader.ReadAsync(cancellationToken);
-                bool itemProcessed = true;
 
                 try
                 {
                     SoloScore? dbScore = await db.GetScoreFromTokenAsync(item.Token);
                     CancellationToken itemCancellation = item.Cancellation.Token;
 
-                    if (dbScore == null && !itemCancellation.IsCancellationRequested)
-                    {
-                        // Score is not ready yet - enqueue for the next attempt.
-                        await Task.Run(async () =>
-                        {
-                            // arbitrary short delay to avoid super-tight database query loop.
-                            await Task.Delay(100, itemCancellation);
-                            await channel.Writer.WriteAsync(item, itemCancellation);
-                        }, itemCancellation);
-
-                        itemProcessed = false;
-                        continue;
-                    }
-
                     if (dbScore == null)
                     {
-                        logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
-                        DogStatsd.Increment($"{statsd_prefix}.timed_out");
+                        // Timeout occurred, drop item.
+                        if (itemCancellation.IsCancellationRequested)
+                        {
+                            logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
+                            DogStatsd.Increment($"{statsd_prefix}.timed_out");
+                        }
+                        else
+                        {
+                            // Still waiting for score upload, queue for retry after a short delay (to avoid super-tight database query loop).
+                            queueForRetry(item);
+                        }
+
                         continue;
                     }
 
@@ -131,20 +126,27 @@ namespace osu.Server.Spectator.Hubs
                     await scoreStorage.WriteAsync(item);
                     await db.MarkScoreHasReplay(item.Score);
                     DogStatsd.Increment($"{statsd_prefix}.uploaded");
+
+                    item.Dispose();
+                    Interlocked.Decrement(ref remainingUsages);
                 }
                 catch (Exception e)
                 {
                     logger.LogError(e, "Error during score upload");
                     DogStatsd.Increment($"{statsd_prefix}.failed");
+                    queueForRetry(item);
                 }
-                finally
+            }
+
+            void queueForRetry(UploadItem item)
+            {
+                CancellationToken itemCancellation = item.Cancellation.Token;
+
+                _ = Task.Run(async () =>
                 {
-                    if (itemProcessed)
-                    {
-                        item.Dispose();
-                        Interlocked.Decrement(ref remainingUsages);
-                    }
-                }
+                    await Task.Delay(100, itemCancellation);
+                    await channel.Writer.WriteAsync(item, itemCancellation);
+                }, itemCancellation);
             }
         }
 
