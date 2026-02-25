@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -147,19 +146,18 @@ namespace osu.Server.Spectator.Hubs
                 }
             }
 
-            [SuppressMessage("ReSharper", "MethodSupportsCancellation")] // This should not be cancelled, as it's still a valid and tracked upload.
             void queueForRetry(UploadItem item)
             {
                 Task.Run(async () =>
                 {
                     // retry after a short delay (to avoid super-tight database query loop)
-                    await Task.Delay(100);
-                    await channel.Writer.WriteAsync(item);
-                }).ContinueWith(t =>
+                    await Task.Delay(100, cancellationToken);
+                    await channel.Writer.WriteAsync(item, cancellationToken);
+                }, cancellationToken).ContinueWith(t =>
                 {
                     if (t.IsFaulted)
                         logger.LogError(t.Exception, "Error an attempting to re-queue score upload");
-                });
+                }, cancellationToken);
             }
 
             void dropItem(UploadItem item)
