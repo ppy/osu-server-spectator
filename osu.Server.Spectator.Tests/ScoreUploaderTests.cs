@@ -183,20 +183,13 @@ namespace osu.Server.Spectator.Tests
                 TimeoutInterval = 1000,
             };
 
-            ManualResetEventSlim failed = new ManualResetEventSlim();
-
             mockStorage.Setup(storage => storage.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()))
-                       .Callback<ScoreUploader.UploadItem>(_ =>
-                       {
-                           failed.Set();
-                           throw new InvalidOperationException();
-                       });
+                       .Callback<ScoreUploader.UploadItem>(_ => throw new InvalidOperationException());
 
-            // Throwing score.
             await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
 
-            failed.Wait();
-
+            // Things are failing badly, exceptions that don't resolve.
+            // We expect the upload to be dropped after the `TimeoutInterval` in such a case.
             await uploadsCompleteAsync(uploader);
         }
 
