@@ -140,6 +140,9 @@ namespace osu.Server.Spectator.Hubs
                 {
                     logger.LogError(e, "Error during score upload");
                     DogStatsd.Increment($"{statsd_prefix}.failed");
+
+                    // Retry in the case of a transient failure.
+                    // If things are really borked, items will still be dropped after the timeout interval.
                     queueForRetry(item);
                 }
             }
