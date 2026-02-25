@@ -147,7 +147,7 @@ namespace osu.Server.Spectator.Tests
                 SaveReplays = true
             };
 
-            uploader.TimeoutInterval = 0;
+            uploader.TimeoutInterval = 100;
 
             // Score with no token.
             await uploader.EnqueueAsync(2, new Score(), new database_beatmap());
