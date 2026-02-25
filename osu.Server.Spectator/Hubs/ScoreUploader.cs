@@ -87,15 +87,15 @@ namespace osu.Server.Spectator.Hubs
                 try
                 {
                     SoloScore? dbScore = await db.GetScoreFromTokenAsync(item.Token);
-                    CancellationToken itemCancellation = item.Cancellation.Token;
 
                     if (dbScore == null)
                     {
                         // Timeout occurred, drop item.
-                        if (itemCancellation.IsCancellationRequested)
+                        if (item.Cancellation.IsCancellationRequested)
                         {
                             logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
                             DogStatsd.Increment($"{statsd_prefix}.timed_out");
+                            dropItem(item);
                         }
                         // Still waiting for score upload, queue for retry.
                         else
@@ -127,8 +127,7 @@ namespace osu.Server.Spectator.Hubs
                     await db.MarkScoreHasReplay(item.Score);
                     DogStatsd.Increment($"{statsd_prefix}.uploaded");
 
-                    item.Dispose();
-                    Interlocked.Decrement(ref remainingUsages);
+                    dropItem(item);
                 }
                 catch (Exception e)
                 {
@@ -148,6 +147,12 @@ namespace osu.Server.Spectator.Hubs
                     await Task.Delay(100, itemCancellation);
                     await channel.Writer.WriteAsync(item, itemCancellation);
                 }, itemCancellation);
+            }
+
+            void dropItem(UploadItem item)
+            {
+                item.Dispose();
+                Interlocked.Decrement(ref remainingUsages);
             }
         }
 
