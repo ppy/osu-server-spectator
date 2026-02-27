@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         {
             // Require players to be in the ready state, signaling they have finished viewing the beatmap details/etc.
             if (Room.Users.All(u => u.BeatmapAvailability.State == DownloadState.LocallyAvailable && u.State == MultiplayerUserState.Ready))
-                await Finish();
+                await FinishWithCountdown(TimeSpan.FromSeconds(10));
         }
     }
 }

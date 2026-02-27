@@ -47,6 +47,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             await Hub.ChangeState(MultiplayerUserState.Ready);
             SetUserContext(ContextUser);
 
+            await FinishCountdown();
             Assert.Equal(RankedPlayStage.GameplayWarmup, RoomState.Stage);
         }
 
@@ -59,6 +60,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             SetUserContext(ContextUser2);
             await MarkCurrentUserReadyAndAvailable();
             SetUserContext(ContextUser);
+
+            await FinishCountdown();
             Assert.Equal(RankedPlayStage.Gameplay, RoomState.Stage);
         }
     }
