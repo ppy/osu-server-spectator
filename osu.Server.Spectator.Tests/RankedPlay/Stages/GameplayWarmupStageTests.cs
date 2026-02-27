@@ -3,7 +3,9 @@
 
 using System.Linq;
 using System.Threading.Tasks;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
+using osu.Game.Online.Rooms;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.RankedPlay.Stages
@@ -20,17 +22,43 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             await base.SetupForEnter();
 
             await MatchController.ActivateCard(UserState.Hand.First());
-
-            await MarkCurrentUserReadyAndAvailable();
-            SetUserContext(ContextUser2);
-            await MarkCurrentUserReadyAndAvailable();
-            SetUserContext(ContextUser);
         }
 
         [Fact]
-        public async Task ContinuesToGameplay()
+        public async Task DoesNotContinueToGameplayWithoutReady()
         {
-            await FinishCountdown();
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+            SetUserContext(ContextUser2);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+            SetUserContext(ContextUser);
+
+            for (int i = 0; i < 5; i++)
+            {
+                await FinishCountdown();
+                Assert.Equal(RankedPlayStage.GameplayWarmup, RoomState.Stage);
+            }
+        }
+
+        [Fact]
+        public async Task DoesNotContinueToGameplayWithoutBeatmapAvailable()
+        {
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            SetUserContext(ContextUser2);
+            await Hub.ChangeState(MultiplayerUserState.Ready);
+            SetUserContext(ContextUser);
+
+            Assert.Equal(RankedPlayStage.GameplayWarmup, RoomState.Stage);
+        }
+
+        [Fact]
+        public async Task ContinuesToGameplayWhenAllPlayersReady()
+        {
+            await MarkCurrentUserReadyAndAvailable();
+            Assert.Equal(RankedPlayStage.GameplayWarmup, RoomState.Stage);
+
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+            SetUserContext(ContextUser);
             Assert.Equal(RankedPlayStage.Gameplay, RoomState.Stage);
         }
     }
