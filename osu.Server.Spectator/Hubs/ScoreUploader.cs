@@ -70,10 +70,10 @@ namespace osu.Server.Spectator.Hubs
 
             Interlocked.Increment(ref remainingUsages);
 
-            var cancellation = new CancellationTokenSource();
-            cancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
+            var uploadCancellation = new CancellationTokenSource();
+            uploadCancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
 
-            await channel.Writer.WriteAsync(new UploadItem(token, score, beatmap, cancellation), cancellationToken);
+            await channel.Writer.WriteAsync(new UploadItem(token, score, beatmap, uploadCancellation), cancellationToken);
         }
 
         private async Task readLoop()
@@ -83,24 +83,33 @@ namespace osu.Server.Spectator.Hubs
                 using var db = databaseFactory.GetInstance();
 
                 var item = await channel.Reader.ReadAsync(cancellationToken);
-                bool itemProcessed = true;
 
                 try
                 {
                     SoloScore? dbScore = await db.GetScoreFromTokenAsync(item.Token);
 
-                    if (dbScore == null && !item.Cancellation.IsCancellationRequested)
+                    // Timeout occurred, drop item.
+                    // This could be from score upload not completing in time, or from exception handling.
+                    if (item.Cancellation.IsCancellationRequested)
                     {
-                        // Score is not ready yet - enqueue for the next attempt.
-                        await channel.Writer.WriteAsync(item, cancellationToken);
-                        itemProcessed = false;
+                        if (dbScore == null)
+                        {
+                            logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
+                            DogStatsd.Increment($"{statsd_prefix}.timed_out");
+                        }
+                        else
+                        {
+                            logger.LogError("Score failed to upload successfully.");
+                        }
+
+                        dropItem(item);
                         continue;
                     }
 
                     if (dbScore == null)
                     {
-                        logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
-                        DogStatsd.Increment($"{statsd_prefix}.timed_out");
+                        // Still waiting for score upload, queue for retry.
+                        queueForRetry(item);
                         continue;
                     }
 
@@ -124,20 +133,38 @@ namespace osu.Server.Spectator.Hubs
                     await scoreStorage.WriteAsync(item);
                     await db.MarkScoreHasReplay(item.Score);
                     DogStatsd.Increment($"{statsd_prefix}.uploaded");
+
+                    dropItem(item);
                 }
                 catch (Exception e)
                 {
                     logger.LogError(e, "Error during score upload");
                     DogStatsd.Increment($"{statsd_prefix}.failed");
+
+                    // Retry in the case of a transient failure.
+                    // If things are really borked, items will still be dropped after the timeout interval.
+                    queueForRetry(item);
                 }
-                finally
+            }
+
+            void queueForRetry(UploadItem item)
+            {
+                Task.Run(async () =>
                 {
-                    if (itemProcessed)
-                    {
-                        item.Dispose();
-                        Interlocked.Decrement(ref remainingUsages);
-                    }
-                }
+                    // retry after a short delay (to avoid super-tight database query loop)
+                    await Task.Delay(100, cancellationToken);
+                    await channel.Writer.WriteAsync(item, cancellationToken);
+                }, cancellationToken).ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        logger.LogError(t.Exception, "Error attempting to re-queue score upload");
+                }, cancellationToken);
+            }
+
+            void dropItem(UploadItem item)
+            {
+                item.Dispose();
+                Interlocked.Decrement(ref remainingUsages);
             }
         }
 

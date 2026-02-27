@@ -147,7 +147,7 @@ namespace osu.Server.Spectator.Tests
                 SaveReplays = true
             };
 
-            uploader.TimeoutInterval = 0;
+            uploader.TimeoutInterval = 100;
 
             // Score with no token.
             await uploader.EnqueueAsync(2, new Score(), new database_beatmap());
@@ -175,7 +175,26 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
-        public async Task FailedScoreHandledGracefully()
+        public async Task FailedUploadDoesRetryAndFail()
+        {
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
+            {
+                SaveReplays = true,
+                TimeoutInterval = 1000,
+            };
+
+            mockStorage.Setup(storage => storage.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()))
+                       .Callback<ScoreUploader.UploadItem>(_ => throw new InvalidOperationException());
+
+            await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+
+            // Things are failing badly, exceptions that don't resolve.
+            // We expect the upload to be dropped after the `TimeoutInterval` in such a case.
+            await uploadsCompleteAsync(uploader);
+        }
+
+        [Fact]
+        public async Task FailedUploadDoesRetryAndSucceed()
         {
             var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
             {
@@ -184,29 +203,29 @@ namespace osu.Server.Spectator.Tests
 
             bool shouldThrow = true;
             int uploadCount = 0;
+            ManualResetEventSlim failed = new ManualResetEventSlim();
 
             mockStorage.Setup(storage => storage.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()))
                        .Callback<ScoreUploader.UploadItem>(_ =>
                        {
                            // ReSharper disable once AccessToModifiedClosure
                            if (shouldThrow)
+                           {
+                               failed.Set();
                                throw new InvalidOperationException();
+                           }
 
                            uploadCount++;
                        });
 
             // Throwing score.
             await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
-            await uploadsCompleteAsync(uploader);
+
+            failed.Wait();
             Assert.Equal(0, uploadCount);
 
             shouldThrow = false;
 
-            // Same score shouldn't reupload.
-            await Task.Delay(1000);
-            Assert.Equal(0, uploadCount);
-
-            await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
             await uploadsCompleteAsync(uploader);
             Assert.Equal(1, uploadCount);
         }
