@@ -34,14 +34,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
-        public async Task DoesNotContinueToGameplayWithoutBeatmapAvailable()
+        public async Task DoesNotContinueToGameplayWarmupWithoutBeatmapAvailable()
         {
-            SetUserContext(ContextUser2);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-
-            SetUserContext(ContextUser);
-            await Hub.ChangeState(MultiplayerUserState.Ready);
-
             for (int i = 0; i < 5; i++)
             {
                 await FinishCountdown();
@@ -52,12 +46,11 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         [Fact]
         public async Task ContinuesToGameplayWarmupWhenAllPlayersReady()
         {
-            await MarkCurrentUserReadyAndAvailable();
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+            Assert.Equal(RankedPlayStage.FinishCardPlay, RoomState.Stage);
 
             SetUserContext(ContextUser2);
-            await MarkCurrentUserReadyAndAvailable();
-
-            await FinishCountdown();
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             Assert.Equal(RankedPlayStage.GameplayWarmup, RoomState.Stage);
         }
     }
