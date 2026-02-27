@@ -157,7 +157,7 @@ namespace osu.Server.Spectator.Hubs
                 }, cancellationToken).ContinueWith(t =>
                 {
                     if (t.IsFaulted)
-                        logger.LogError(t.Exception, "Error an attempting to re-queue score upload");
+                        logger.LogError(t.Exception, "Error attempting to re-queue score upload");
                 }, cancellationToken);
             }
 
