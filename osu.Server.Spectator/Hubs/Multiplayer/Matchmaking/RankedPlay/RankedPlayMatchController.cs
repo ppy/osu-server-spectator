@@ -120,8 +120,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 };
             }
 
-            UserIdsByTurnOrder = users.Select(u => u.UserId).ToArray();
-            Random.Shared.Shuffle(UserIdsByTurnOrder);
+            UserIdsByTurnOrder = users
+                                 .OrderBy(u => u.Rating.Mu)
+                                 .ThenBy(_ => Random.Shared.NextSingle())
+                                 .Select(u => u.UserId)
+                                 .ToArray();
 
             // Populate the initial active user, for use by the client to display the first turn's user.
             State.ActiveUserId = UserIdsByTurnOrder[0];
