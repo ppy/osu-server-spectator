@@ -103,6 +103,25 @@ namespace osu.Server.Spectator.Tests
         }
 
         [Fact]
+        public async Task NonPassingScoreDoesNotUpload()
+        {
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            {
+                id = 2,
+                passed = false
+            }));
+
+            var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
+            {
+                SaveReplays = true
+            };
+
+            await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+            await uploadsCompleteAsync(uploader);
+            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 2)), Times.Never);
+        }
+
+        [Fact]
         public async Task ScoreDoesNotUploadIfDisabled()
         {
             var uploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockStorage.Object, memoryCache)
