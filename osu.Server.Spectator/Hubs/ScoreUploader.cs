@@ -114,7 +114,10 @@ namespace osu.Server.Spectator.Hubs
                     }
 
                     if (!dbScore.passed)
+                    {
+                        dropItem(item);
                         continue;
+                    }
 
                     if (dbScore.build_id != null)
                     {
