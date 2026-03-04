@@ -288,6 +288,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="userId">The ID of the user.</param>
         public async Task PostRefereeAddedAsync(long roomId, int userId)
         {
+            await refereeHubContext.Clients.User(userId.ToString()).SendAsync(nameof(IRefereeHubClient.RefereeInvited), new RefereeInvitedEvent
+            {
+                RoomId = roomId,
+            });
             await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.RefereeAdded), new RefereeAddedEvent
             {
                 RoomId = roomId,

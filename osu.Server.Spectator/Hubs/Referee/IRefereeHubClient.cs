@@ -49,6 +49,12 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task RefereeRemoved(RefereeRemovedEvent info);
 
         /// <summary>
+        /// A user has been invited to referee a room.
+        /// Only sent directly to the user who the invite is intended for.
+        /// </summary>
+        Task RefereeInvited(RefereeInvitedEvent info);
+
+        /// <summary>
         /// A room's settings have changed.
         /// </summary>
         Task RoomSettingsChanged(RoomSettingsChangedEvent info);
