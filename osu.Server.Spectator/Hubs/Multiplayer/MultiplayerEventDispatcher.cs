@@ -282,6 +282,34 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// A user has been given referee privileges to the room.
+        /// </summary>
+        /// <param name="roomId">The ID of the room.</param>
+        /// <param name="userId">The ID of the user.</param>
+        public async Task PostRefereeAddedAsync(long roomId, int userId)
+        {
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.RefereeAdded), new RefereeAddedEvent
+            {
+                RoomId = roomId,
+                UserId = userId,
+            });
+        }
+
+        /// <summary>
+        /// A user's referee privileges to the room have been revoked.
+        /// </summary>
+        /// <param name="roomId">The ID of the room.</param>
+        /// <param name="userId">The ID of the user.</param>
+        public async Task PostRefereeRemovedAsync(long roomId, int userId)
+        {
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.RefereeRemoved), new RefereeRemovedEvent
+            {
+                RoomId = roomId,
+                UserId = userId,
+            });
+        }
+
+        /// <summary>
         /// The user with the given ID was made host of the given room.
         /// </summary>
         /// <param name="roomId">The ID of the relevant room.</param>

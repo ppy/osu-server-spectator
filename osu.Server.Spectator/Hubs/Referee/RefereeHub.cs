@@ -160,6 +160,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                     Debug.Assert(roomUsage.Item != null);
 
                     await roomController.LeaveRoom(userUsage.Item, roomUsage);
+                    await eventDispatcher.PostRefereeRemovedAsync(roomId, userUsage.Item.UserId);
                 }
             }
         }
@@ -293,6 +294,8 @@ namespace osu.Server.Spectator.Hubs.Referee
                         targetUserUsage.Item ??= new RefereeClientState(string.Empty, targetUserId);
                         targetUserUsage.Item.AssociateWithRoom(roomId);
                     }
+
+                    await eventDispatcher.PostRefereeAddedAsync(roomId, targetUserId);
                 }
             }
         }
@@ -330,6 +333,8 @@ namespace osu.Server.Spectator.Hubs.Referee
                             // user has not joined the room yet or is temporarily disconnected. disassociate them from room so they can't join again.
                             targetUserUsage.Item.DisassociateFromRoom(roomId);
                         }
+
+                        await eventDispatcher.PostRefereeRemovedAsync(roomId, targetUserId);
                     }
                 }
             }
@@ -686,6 +691,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                 {
                     using (var roomUsage = await roomController.GetRoom(roomId))
                         await roomController.LeaveRoom(userUsage.Item, roomUsage);
+                    await eventDispatcher.PostRefereeRemovedAsync(roomId, userUsage.Item.UserId);
                 }
 
                 userUsage.Destroy();

@@ -37,6 +37,18 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task UserKicked(UserKickedEvent info);
 
         /// <summary>
+        /// A user has been given referee privileges to the room.
+        /// This does not mean the user has joined the room yet; that is indicated by <see cref="UserJoined"/>.
+        /// </summary>
+        Task RefereeAdded(RefereeAddedEvent info);
+
+        /// <summary>
+        /// A user's referee privileges to the room have been revoked.
+        /// This may be concurrent with a <see cref="UserKickedEvent"/> if the user was joined to the room at the time of revocation.
+        /// </summary>
+        Task RefereeRemoved(RefereeRemovedEvent info);
+
+        /// <summary>
         /// A room's settings have changed.
         /// </summary>
         Task RoomSettingsChanged(RoomSettingsChangedEvent info);
