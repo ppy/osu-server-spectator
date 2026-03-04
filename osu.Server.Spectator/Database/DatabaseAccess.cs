@@ -774,6 +774,23 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task InsertUserEloHistoryEntry(ulong roomId, uint poolId, uint userId, uint opponentId, matchmaking_room_result result, int eloBefore, int eloAfter)
+        {
+            var connection = await getConnectionAsync();
+
+            await connection.ExecuteAsync("INSERT INTO `matchmaking_user_elo_history` (room_id, pool_id, user_id, opponent_id, result, elo_before, elo_after, created_at, updated_at) "
+                                          + "VALUES (@RoomId, @PoolId, @UserId, @OpponentId, @Result, @EloBefore, @EloAfter, NOW(), NOW())", new
+            {
+                RoomId = roomId,
+                PoolId = poolId,
+                UserId = userId,
+                OpponentId = opponentId,
+                Result = result.ToString(),
+                EloBefore = eloBefore,
+                EloAfter = eloAfter
+            });
+        }
+
         public void Dispose()
         {
             openConnection?.Dispose();

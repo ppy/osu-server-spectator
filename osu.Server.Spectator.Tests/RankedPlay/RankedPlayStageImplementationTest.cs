@@ -124,6 +124,11 @@ namespace osu.Server.Spectator.Tests.RankedPlay
                     Assert.Equal(0, UserState.Life);
                     break;
 
+                case RankedPlayStage.Ended:
+                    Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
+                    Assert.Equal(1_000_000, UserState.Life);
+                    break;
+
                 default:
                     Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
                     Assert.Equal(0, UserState.Life);
