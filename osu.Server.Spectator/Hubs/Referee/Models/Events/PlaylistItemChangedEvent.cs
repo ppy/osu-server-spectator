@@ -11,16 +11,29 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
     /// A playlist item in a multiplayer room has changed.
     /// </summary>
     [PublicAPI]
-    public class PlaylistItemChangedEvent : PlaylistItemEventArgs
+    public class PlaylistItemChangedEvent
     {
+        /// <summary>
+        /// The ID of the room.
+        /// </summary>
+        [JsonPropertyName("room_id")]
+        public long RoomId { get; set; }
+
+        /// <summary>
+        /// The playlist item that was changed.
+        /// </summary>
+        [JsonPropertyName("playlist_item")]
+        public PlaylistItem PlaylistItem { get; set; } = null!;
+
         [JsonConstructor]
         public PlaylistItemChangedEvent()
         {
         }
 
         internal PlaylistItemChangedEvent(long roomId, MultiplayerPlaylistItem item)
-            : base(roomId, item)
         {
+            RoomId = roomId;
+            PlaylistItem = new PlaylistItem(item);
         }
     }
 }

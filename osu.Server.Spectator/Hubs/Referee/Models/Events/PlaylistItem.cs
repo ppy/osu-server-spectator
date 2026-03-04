@@ -9,21 +9,15 @@ using osu.Game.Online.Rooms;
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
 {
     /// <summary>
-    /// Common fields for events relating to playlist items.
+    /// Represents a playlist item.
     /// </summary>
     [PublicAPI]
-    public abstract class PlaylistItemEventArgs
+    public class PlaylistItem
     {
-        /// <summary>
-        /// The ID of the room.
-        /// </summary>
-        [JsonPropertyName("room_id")]
-        public long RoomId { get; set; }
-
         /// <summary>
         /// The ID of the playlist item.
         /// </summary>
-        [JsonPropertyName("playlist_item_id")]
+        [JsonPropertyName("id")]
         public long PlaylistItemId { get; set; }
 
         /// <summary>
@@ -70,13 +64,12 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
         public int Order { get; set; }
 
         [JsonConstructor]
-        protected PlaylistItemEventArgs()
+        public PlaylistItem()
         {
         }
 
-        protected PlaylistItemEventArgs(long roomId, MultiplayerPlaylistItem item)
+        public PlaylistItem(MultiplayerPlaylistItem item)
         {
-            RoomId = roomId;
             PlaylistItemId = item.ID;
             RulesetId = item.RulesetID;
             BeatmapId = item.BeatmapID;
