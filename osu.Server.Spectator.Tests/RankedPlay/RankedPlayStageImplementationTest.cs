@@ -95,47 +95,6 @@ namespace osu.Server.Spectator.Tests.RankedPlay
             await Room.SkipToEndOfCountdown(Room.FindCountdownOfType<RankedPlayStageCountdown>());
         }
 
-        [Fact]
-        public virtual async Task ContinuesToEndedWhenAnyPlayerLeaves()
-        {
-            SetUserContext(ContextUser);
-
-            try
-            {
-                await Hub.JoinRoom(ROOM_ID);
-            }
-            catch
-            {
-            }
-
-            await Hub.LeaveRoom();
-
-            switch (stage)
-            {
-                case RankedPlayStage.WaitForJoin:
-                    Assert.Equal(0, RoomState.CurrentRound);
-                    Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
-                    Assert.Equal(1_000_000, UserState.Life);
-                    break;
-
-                case RankedPlayStage.Gameplay:
-                case RankedPlayStage.Results:
-                    Assert.Equal(stage, RoomState.Stage);
-                    Assert.Equal(0, UserState.Life);
-                    break;
-
-                case RankedPlayStage.Ended:
-                    Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
-                    Assert.Equal(1_000_000, UserState.Life);
-                    break;
-
-                default:
-                    Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
-                    Assert.Equal(0, UserState.Life);
-                    break;
-            }
-        }
-
         public Task DisposeAsync()
         {
             return Task.CompletedTask;

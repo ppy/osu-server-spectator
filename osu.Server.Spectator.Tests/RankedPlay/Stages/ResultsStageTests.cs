@@ -144,5 +144,14 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.Equal(1, RoomState.CurrentRound);
             Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
         }
+
+        [Fact]
+        public async Task ContinuesToEndedWhenAnyPlayerLeaves()
+        {
+            await Hub.LeaveRoom();
+
+            Assert.Equal(RankedPlayStage.Results, RoomState.Stage);
+            Assert.Equal(0, UserState.Life);
+        }
     }
 }

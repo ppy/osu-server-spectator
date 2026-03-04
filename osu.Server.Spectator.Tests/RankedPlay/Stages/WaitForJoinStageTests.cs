@@ -51,5 +51,16 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             await Hub.JoinRoom(ROOM_ID);
             Assert.Equal(RankedPlayStage.RoundWarmup, RoomState.Stage);
         }
+
+        [Fact]
+        public async Task ContinuesToEndedWhenAnyPlayerLeaves()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.LeaveRoom();
+
+            Assert.Equal(0, RoomState.CurrentRound);
+            Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
+            Assert.Equal(1_000_000, UserState.Life);
+        }
     }
 }
