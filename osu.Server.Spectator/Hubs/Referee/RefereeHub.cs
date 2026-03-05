@@ -134,6 +134,8 @@ namespace osu.Server.Spectator.Hubs.Referee
 
                 ensureIsReferee(roomId, userUsage);
 
+                string password;
+
                 using (var roomUsage = await roomController.GetRoom(roomId))
                 {
                     Debug.Assert(roomUsage.Item != null);
@@ -141,9 +143,11 @@ namespace osu.Server.Spectator.Hubs.Referee
                     if (!await roomUsage.Item.UserCanJoin(userUsage.Item.UserId))
                         ThrowHelper.ThrowRoomNotJoinable();
 
-                    var joinedRoom = await roomController.JoinRoom(userUsage.Item, roomId, roomUsage.Item.Settings.Password);
-                    return new RoomJoinedResponse(joinedRoom);
+                    password = roomUsage.Item.Settings.Password;
                 }
+
+                var joinedRoom = await roomController.JoinRoom(userUsage.Item, roomId, password);
+                return new RoomJoinedResponse(joinedRoom);
             }
         }
 
