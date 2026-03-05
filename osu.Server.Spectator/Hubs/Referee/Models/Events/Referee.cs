@@ -3,6 +3,7 @@
 
 using System;
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using osu.Game.Online.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
@@ -10,6 +11,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
     /// <summary>
     /// Represents a referee in the room.
     /// </summary>
+    [PublicAPI]
     public class Referee
     {
         /// <summary>

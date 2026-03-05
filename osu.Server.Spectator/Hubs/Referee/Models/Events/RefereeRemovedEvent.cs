@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
 {
@@ -9,6 +10,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
     /// A user's referee privileges to the room have been revoked.
     /// This may be concurrent with a <see cref="UserKickedEvent"/> if the user was joined to the room at the time of revocation.
     /// </summary>
+    [PublicAPI]
     public class RefereeRemovedEvent
     {
         /// <summary>

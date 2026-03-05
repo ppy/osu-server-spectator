@@ -2,12 +2,14 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Events
 {
     /// <summary>
     /// A user has been invited to referee a room.
     /// </summary>
+    [PublicAPI]
     public class RefereeInvitedEvent
     {
         /// <summary>

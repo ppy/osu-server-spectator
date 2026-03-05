@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 
@@ -12,6 +13,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
     /// <summary>
     /// Represents a player in the room.
     /// </summary>
+    [PublicAPI]
     public class Player
     {
         /// <summary>
