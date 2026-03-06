@@ -207,7 +207,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 if (existingItem == null)
                     throw new InvalidStateException("Attempted to change an item that doesn't exist.");
 
-                if (existingItem.OwnerID != user.UserID && !user.Equals(room.Host))
+                bool isHostOrReferee = user.Equals(room.Host) || user.Role == MultiplayerRoomUserRole.Referee;
+                if (existingItem.OwnerID != user.UserID && !isHostOrReferee)
                     throw new InvalidStateException("Attempted to change an item which is not owned by the user.");
 
                 if (existingItem.Expired)

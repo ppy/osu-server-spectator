@@ -134,6 +134,8 @@ namespace osu.Server.Spectator.Hubs.Referee
 
                 ensureIsReferee(roomId, userUsage);
 
+                string password;
+
                 using (var roomUsage = await roomController.GetRoom(roomId))
                 {
                     Debug.Assert(roomUsage.Item != null);
@@ -141,9 +143,11 @@ namespace osu.Server.Spectator.Hubs.Referee
                     if (!await roomUsage.Item.UserCanJoin(userUsage.Item.UserId))
                         ThrowHelper.ThrowRoomNotJoinable();
 
-                    var joinedRoom = await roomController.JoinRoom(userUsage.Item, roomId, roomUsage.Item.Settings.Password);
-                    return new RoomJoinedResponse(joinedRoom);
+                    password = roomUsage.Item.Settings.Password;
                 }
+
+                var joinedRoom = await roomController.JoinRoom(userUsage.Item, roomId, password);
+                return new RoomJoinedResponse(joinedRoom);
             }
         }
 
@@ -160,6 +164,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                     Debug.Assert(roomUsage.Item != null);
 
                     await roomController.LeaveRoom(userUsage.Item, roomUsage);
+                    await eventDispatcher.PostRefereeRemovedAsync(roomId, userUsage.Item.UserId);
                 }
             }
         }
@@ -261,6 +266,79 @@ namespace osu.Server.Spectator.Hubs.Referee
                     {
                         Debug.Assert(targetUserUsage.Item != null);
                         await roomController.KickUserFromRoom(targetUserUsage.Item, roomUsage, userUsage.Item.UserId);
+                    }
+                }
+            }
+        }
+
+        public async Task AddReferee(long roomId, int targetUserId)
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                ensureIsReferee(roomId, userUsage);
+
+                using (var roomUsage = await roomController.GetRoom(roomId))
+                {
+                    if (roomUsage.Item == null)
+                        ThrowHelper.ThrowRoomDoesNotExist();
+
+                    if (targetUserId == userUsage.Item.UserId)
+                        ThrowHelper.ThrowCannotChangeOwnRefereeStatus();
+
+                    using (var db = databaseFactory.GetInstance())
+                    {
+                        if (await db.IsUserRestrictedAsync(targetUserId))
+                            ThrowHelper.ThrowUserRestricted();
+                    }
+
+                    using (var targetUserUsage = await refereeStates.GetForUse(targetUserId))
+                    {
+                        targetUserUsage.Item ??= new RefereeClientState(string.Empty, targetUserId);
+                        targetUserUsage.Item.AssociateWithRoom(roomId);
+                    }
+
+                    await eventDispatcher.PostRefereeAddedAsync(roomId, targetUserId);
+                }
+            }
+        }
+
+        public async Task RemoveReferee(long roomId, int targetUserId)
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                ensureIsReferee(roomId, userUsage);
+
+                using (var roomUsage = await roomController.GetRoom(roomId))
+                {
+                    if (roomUsage.Item == null)
+                        ThrowHelper.ThrowRoomDoesNotExist();
+
+                    if (targetUserId == userUsage.Item.UserId)
+                        ThrowHelper.ThrowCannotChangeOwnRefereeStatus();
+
+                    using (var targetUserUsage = await refereeStates.GetForUse(targetUserId))
+                    {
+                        if (targetUserUsage.Item == null || !targetUserUsage.Item.IsAssociatedWithRoom(roomId))
+                            ThrowHelper.ThrowUserNotInRoom();
+
+                        var targetUser = roomUsage.Item.Users.SingleOrDefault(u => u.UserID == targetUserId);
+
+                        if (targetUser != null)
+                        {
+                            // user is joined to the room. proceed with a full kick to flush them out.
+                            await roomController.KickUserFromRoom(targetUserUsage.Item, roomUsage, userUsage.Item.UserId);
+                        }
+                        else
+                        {
+                            // user has not joined the room yet or is temporarily disconnected. disassociate them from room so they can't join again.
+                            targetUserUsage.Item.DisassociateFromRoom(roomId);
+                        }
+
+                        await eventDispatcher.PostRefereeRemovedAsync(roomId, targetUserId);
                     }
                 }
             }
@@ -617,6 +695,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                 {
                     using (var roomUsage = await roomController.GetRoom(roomId))
                         await roomController.LeaveRoom(userUsage.Item, roomUsage);
+                    await eventDispatcher.PostRefereeRemovedAsync(roomId, userUsage.Item.UserId);
                 }
 
                 userUsage.Destroy();
