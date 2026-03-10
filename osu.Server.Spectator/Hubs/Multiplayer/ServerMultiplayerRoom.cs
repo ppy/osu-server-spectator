@@ -35,6 +35,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly ILogger<ServerMultiplayerRoom> logger;
 
+        private readonly HashSet<int> bannedUsers = [];
+
         private ServerMultiplayerRoom(
             long roomId,
             IMultiplayerRoomController roomController,
@@ -385,7 +387,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (Settings.MatchType.IsMatchmakingType())
                 throw new InvalidStateException("Can't invite players to matchmaking rooms.");
 
+            if (!await UserCanJoin(invitedUserId))
+                throw new InvalidStateException("Player is not eligible to join this room.");
+
             await eventDispatcher.PostUserInvitedAsync(RoomID, invitedUserId, invitedBy, Settings.Password);
+        }
+
+        public void BanUser(int userId)
+        {
+            bannedUsers.Add(userId);
         }
 
         /// <summary>
@@ -1208,9 +1218,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         #endregion
 
+        public async Task<bool> UserCanJoin(int userId) => !bannedUsers.Contains(userId) && await MatchController.UserCanJoin(userId);
+
         #region IMatchController encapsulation
 
-        public async Task<bool> UserCanJoin(int userId) => await MatchController.UserCanJoin(userId);
         public async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request) => await MatchController.HandleUserRequest(user, request);
 
         public new MultiplayerPlaylistItem CurrentPlaylistItem => MatchController.CurrentItem;

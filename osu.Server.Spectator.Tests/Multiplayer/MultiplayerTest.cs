@@ -38,6 +38,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         protected TestMultiplayerHub Hub { get; }
         protected EntityStore<ServerMultiplayerRoom> Rooms { get; }
         protected EntityStore<MultiplayerClientState> UserStates { get; }
+        protected EntityStore<RefereeClientState> RefereeStates { get; }
         protected MatchmakingQueueBackgroundService MatchmakingBackgroundService { get; }
 
         protected readonly Mock<IDatabaseFactory> DatabaseFactory;
@@ -99,6 +100,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             Rooms = new EntityStore<ServerMultiplayerRoom>();
             UserStates = new EntityStore<MultiplayerClientState>();
+            RefereeStates = new EntityStore<RefereeClientState>();
             Clients = new Mock<IHubCallerClients<IMultiplayerClient>>();
             Groups = new Mock<IGroupManager>();
 
@@ -166,6 +168,8 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             RoomController = new MultiplayerRoomController(
                 Rooms,
+                UserStates,
+                RefereeStates,
                 DatabaseFactory.Object,
                 EventDispatcher,
                 LoggerFactory.Object,
