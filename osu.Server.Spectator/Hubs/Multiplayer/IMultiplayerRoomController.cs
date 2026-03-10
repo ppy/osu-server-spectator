@@ -56,6 +56,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             ItemUsage<ServerMultiplayerRoom> roomUsage,
             int kickedBy);
 
+        Task BanUserFromRoom(
+            int userId,
+            ItemUsage<ServerMultiplayerRoom> roomUsage,
+            int bannedBy);
+
         /// <summary>
         /// Retrieves a <see cref="ServerMultiplayerRoom"/> usage for thread-safe operation.
         /// </summary>

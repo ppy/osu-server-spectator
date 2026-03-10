@@ -148,6 +148,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task KickUserFromRoom(IMultiplayerUserState kickedUser, ItemUsage<ServerMultiplayerRoom> roomUsage, int kickedBy)
             => await removeUserFromRoom(kickedUser, roomUsage, kickedBy);
 
+        public Task BanUserFromRoom(int userId, ItemUsage<ServerMultiplayerRoom> roomUsage, int bannedBy)
+            => Task.CompletedTask;
+
         private async Task removeUserFromRoom(IMultiplayerUserState state, ItemUsage<ServerMultiplayerRoom> roomUsage, int removingUserId)
         {
             long? roomId = null;
