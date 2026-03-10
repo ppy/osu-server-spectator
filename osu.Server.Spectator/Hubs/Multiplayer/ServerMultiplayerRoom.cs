@@ -35,6 +35,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly ILogger<ServerMultiplayerRoom> logger;
 
+        public IReadOnlySet<int> BannedUsers => bannedUsers;
         private readonly HashSet<int> bannedUsers = [];
 
         private ServerMultiplayerRoom(

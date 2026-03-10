@@ -107,8 +107,18 @@ namespace osu.Server.Spectator.Hubs.Referee
         public static void ThrowPlaylistItemDoesNotExist()
             => throw new RefereeHubException(14, "The specified playlist item does not exist.");
 
+        /// <summary>
+        /// Error 15: Cannot perform this operation on self.
+        /// </summary>
         [DoesNotReturn]
-        public static void ThrowCannotChangeOwnRefereeStatus()
-            => throw new RefereeHubException(15, "Cannot change own referee status.");
+        public static void ThrowCannotPerformOperationOnSelf()
+            => throw new RefereeHubException(15, "Cannot perform this operation on self.");
+
+        /// <summary>
+        /// Error 16: User is banned from room.
+        /// </summary>
+        [DoesNotReturn]
+        public static void ThrowUserBanned()
+            => throw new RefereeHubException(16, "User is banned from room.");
     }
 }
