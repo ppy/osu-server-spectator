@@ -37,6 +37,11 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task UserKicked(UserKickedEvent info);
 
         /// <summary>
+        /// A user has been banned from a refereed room.
+        /// </summary>
+        Task UserBanned(UserBannedEvent info);
+
+        /// <summary>
         /// A user has been given referee privileges to the room.
         /// This does not mean the user has joined the room yet; that is indicated by <see cref="UserJoined"/>.
         /// </summary>

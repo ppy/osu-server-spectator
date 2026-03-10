@@ -274,7 +274,7 @@ namespace osu.Server.Spectator.Hubs.Referee
             }
         }
 
-        public async Task BanUser(long roomId, int userId)
+        public async Task BanUser(long roomId, int bannedUserId)
         {
             using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
             {
@@ -282,7 +282,7 @@ namespace osu.Server.Spectator.Hubs.Referee
 
                 ensureIsReferee(roomId, userUsage);
 
-                if (userUsage.Item.UserId == userId)
+                if (userUsage.Item.UserId == bannedUserId)
                     ThrowHelper.ThrowCannotPerformOperationOnSelf();
 
                 using (var roomUsage = await roomController.GetRoom(roomId))
@@ -290,7 +290,9 @@ namespace osu.Server.Spectator.Hubs.Referee
                     if (roomUsage.Item == null)
                         ThrowHelper.ThrowRoomDoesNotExist();
 
-                    await roomController.BanUserFromRoom(userId, roomUsage, userUsage.Item.UserId);
+                    await roomController.BanUserFromRoom(bannedUserId, roomUsage, userUsage.Item.UserId);
+
+                    await eventDispatcher.PostUserBannedEvent(roomId, bannedUserId, userUsage.Item.UserId);
                 }
             }
         }

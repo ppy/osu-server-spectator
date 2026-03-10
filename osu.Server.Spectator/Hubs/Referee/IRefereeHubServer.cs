@@ -74,10 +74,10 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task KickPlayer(long roomId, int userId);
 
         /// <summary>
-        /// Bans the user with the given <paramref name="userId"/> from the given <paramref name="roomId"/>.
+        /// Bans the user with the given <paramref name="bannedUserId"/> from the given <paramref name="roomId"/>.
         /// Corresponds to the <c>!mp ban</c> command on bancho.
         /// </summary>
-        Task BanUser(long roomId, int userId);
+        Task BanUser(long roomId, int bannedUserId);
 
         /// <summary>
         /// Adds the user with the given <paramref name="targetUserId"/> as a referee of the room with the given <paramref name="roomId"/>.
