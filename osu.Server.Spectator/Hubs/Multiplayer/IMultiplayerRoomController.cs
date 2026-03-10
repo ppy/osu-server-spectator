@@ -47,17 +47,27 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         /// <summary>
         /// The given user is kicked from the room.
+        /// Permissions for kicking are not checked. Callers are expected to perform relevant checks themselves.
         /// </summary>
         /// <param name="kickedUser">The user being kicked from the room.</param>
-        /// <param name="roomUsage">The room who <paramref name="kickedUser"/> is being kicked from.</param>
+        /// <param name="roomUsage">The room which <paramref name="kickedUser"/> is being kicked from.</param>
         /// <param name="kickedBy">The ID of the user kicking the <paramref name="kickedUser"/>.</param>
         Task KickUserFromRoom(
             IMultiplayerUserState kickedUser,
             ItemUsage<ServerMultiplayerRoom> roomUsage,
             int kickedBy);
 
+        /// <summary>
+        /// The given user is banned from the room.
+        /// If the user is currently in the room, they will be kicked.
+        /// Additionally, the banned user will not be able to <see cref="JoinRoom"/> again, even with the correct credentials.
+        /// Permissions for banning are not checked. Callers are expected to perform relevant checks themselves.
+        /// </summary>
+        /// <param name="bannedUserId">The ID of the user to ban.</param>
+        /// <param name="roomUsage">The room which <paramref name="bannedUserId"/> is being banned from.</param>
+        /// <param name="bannedBy">The ID of the user banning the <paramref name="bannedUserId"/></param>
         Task BanUserFromRoom(
-            int userId,
+            int bannedUserId,
             ItemUsage<ServerMultiplayerRoom> roomUsage,
             int bannedBy);
 

@@ -156,23 +156,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task KickUserFromRoom(IMultiplayerUserState kickedUser, ItemUsage<ServerMultiplayerRoom> roomUsage, int kickedBy)
             => await removeUserFromRoom(kickedUser, roomUsage, kickedBy);
 
-        public async Task BanUserFromRoom(int userId, ItemUsage<ServerMultiplayerRoom> roomUsage, int bannedBy)
+        public async Task BanUserFromRoom(int bannedUserId, ItemUsage<ServerMultiplayerRoom> roomUsage, int bannedBy)
         {
-            if (userId == bannedBy)
+            if (bannedUserId == bannedBy)
                 throw new InvalidStateException("User can't ban self.");
 
             var room = roomUsage.Item;
             if (room == null)
                 throw new InvalidOperationException("Attempted to operate on a null room");
 
-            var userInRoom = room.Users.FirstOrDefault(u => u.UserID == userId);
+            var userInRoom = room.Users.FirstOrDefault(u => u.UserID == bannedUserId);
 
             if (userInRoom != null)
             {
                 switch (userInRoom.Role)
                 {
                     case MultiplayerRoomUserRole.Player:
-                        using (var targetPlayerUsage = await players.GetForUse(userId))
+                        using (var targetPlayerUsage = await players.GetForUse(bannedUserId))
                         {
                             Debug.Assert(targetPlayerUsage.Item != null);
                             await removeUserFromRoom(targetPlayerUsage.Item, roomUsage, bannedBy);
@@ -181,7 +181,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         break;
 
                     case MultiplayerRoomUserRole.Referee:
-                        using (var targetRefereeUsage = await referees.GetForUse(userId))
+                        using (var targetRefereeUsage = await referees.GetForUse(bannedUserId))
                         {
                             Debug.Assert(targetRefereeUsage.Item != null);
                             await removeUserFromRoom(targetRefereeUsage.Item, roomUsage, bannedBy);
@@ -191,7 +191,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 }
             }
 
-            room.BanUser(userId);
+            room.BanUser(bannedUserId);
         }
 
         private async Task removeUserFromRoom(IMultiplayerUserState state, ItemUsage<ServerMultiplayerRoom> roomUsage, int removingUserId)

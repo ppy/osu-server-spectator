@@ -393,6 +393,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             await eventDispatcher.PostUserInvitedAsync(RoomID, invitedUserId, invitedBy, Settings.Password);
         }
 
+        /// <summary>
+        /// Adds the <paramref name="userId"/> to the list of banned users from the room.
+        /// The user will not be able to join the room again.
+        /// Permissions for banning are not checked. Callers are expected to perform relevant checks themselves.
+        /// </summary>
         public void BanUser(int userId)
         {
             bannedUsers.Add(userId);
