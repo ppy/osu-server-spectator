@@ -30,7 +30,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         {
             await base.Initialise();
 
-            await eventDispatcher.PostMatchRoomStateChangedAsync(room.RoomID, room.MatchState);
+            await eventDispatcher.PostMatchRoomStateChangedAsync(room);
         }
 
         public override async Task HandleUserJoined(MultiplayerRoomUser user)
@@ -59,7 +59,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                         break;
 
                     state.Locked = setRoomLock.Locked;
-                    await eventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
+                    await eventDispatcher.PostMatchRoomStateChangedAsync(room);
                     break;
             }
         }

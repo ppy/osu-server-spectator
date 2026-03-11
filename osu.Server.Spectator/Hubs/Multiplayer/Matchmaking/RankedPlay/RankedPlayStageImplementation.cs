@@ -42,7 +42,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             State.Stage = Stage;
 
             await Begin();
-            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room);
 
             await FinishWithCountdown(Duration);
         }
@@ -123,7 +123,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         protected async Task KillUser(MultiplayerRoomUser user)
         {
             State.Users[user.UserID].Life = 0;
-            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room);
         }
 
         /// <summary>

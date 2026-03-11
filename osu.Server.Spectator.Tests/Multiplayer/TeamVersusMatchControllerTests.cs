@@ -50,6 +50,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             // change the match type
             await room.ChangeMatchType(teamVersus);
+            Receiver.Verify(c => c.MatchRoomStateChanged(It.IsAny<MatchRoomState>()), Times.Once());
 
             var user = new MultiplayerRoomUser(1);
 
@@ -58,6 +59,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await room.HandleUserRequest(user, new SetLockStateRequest { Locked = true });
             Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
+            Receiver.Verify(c => c.MatchRoomStateChanged(It.IsAny<MatchRoomState>()), Times.Exactly(2));
 
             int previousTeam = ((TeamVersusUserState)user.MatchState!).TeamID;
 
@@ -69,6 +71,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
             await room.HandleUserRequest(user, new SetLockStateRequest { Locked = false });
             Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
+            Receiver.Verify(c => c.MatchRoomStateChanged(It.IsAny<MatchRoomState>()), Times.Exactly(3));
 
             await teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
             Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Exactly(2));
