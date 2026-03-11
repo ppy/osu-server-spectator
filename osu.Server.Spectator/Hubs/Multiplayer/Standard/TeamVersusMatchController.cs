@@ -48,15 +48,35 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             switch (request)
             {
                 case ChangeTeamRequest changeTeam:
-                    if (state.Teams.All(t => t.ID != changeTeam.TeamID))
-                        throw new InvalidStateException("Attempted to set team out of valid range");
+                    if (state.Locked)
+                        throw new InvalidStateException("Teams are currently locked.");
 
-                    if (user.MatchState is TeamVersusUserState userState)
-                        userState.TeamID = changeTeam.TeamID;
+                    await ChangeUserTeam(user, changeTeam.TeamID);
+                    break;
 
+                case SetLockStateRequest setRoomLock:
+                    if (state.Locked == setRoomLock.Locked)
+                        break;
+
+                    state.Locked = setRoomLock.Locked;
                     await eventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
                     break;
             }
+        }
+
+        /// <summary>
+        /// Changes the <paramref name="user"/>'s team to <paramref name="newTeamId"/>.
+        /// <see cref="TeamVersusRoomState.Locked"/> is purposefully NOT checked. Callers should decide whether they want to check that flag or not.
+        /// </summary>
+        public async Task ChangeUserTeam(MultiplayerRoomUser user, int newTeamId)
+        {
+            if (state.Teams.All(t => t.ID != newTeamId))
+                throw new InvalidStateException("Attempted to set team out of valid range");
+
+            if (user.MatchState is TeamVersusUserState userState)
+                userState.TeamID = newTeamId;
+
+            await eventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
         }
 
         /// <summary>
