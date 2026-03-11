@@ -620,6 +620,28 @@ namespace osu.Server.Spectator.Hubs.Referee
             }
         }
 
+        public async Task SetLockState(long roomId, Models.Requests.SetLockStateRequest request)
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                ensureIsReferee(roomId, userUsage);
+
+                using (var roomUsage = await roomController.GetRoom(roomId))
+                {
+                    if (roomUsage.Item == null)
+                        ThrowHelper.ThrowRoomDoesNotExist();
+
+                    var user = roomUsage.Item.Users.SingleOrDefault(u => u.UserID == userUsage.Item.UserId);
+                    if (user == null)
+                        ThrowHelper.ThrowUserNotInRoom();
+
+                    await roomUsage.Item.HandleUserRequest(user, new osu.Game.Online.Multiplayer.SetLockStateRequest { Locked = request.Locked });
+                }
+            }
+        }
+
         public async Task StartMatch(long roomId, StartGameplayRequest request)
         {
             using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
