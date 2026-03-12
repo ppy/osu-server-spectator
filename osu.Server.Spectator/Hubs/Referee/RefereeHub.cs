@@ -23,6 +23,7 @@ using osu.Server.Spectator.Hubs.Referee.Models.Requests;
 using osu.Server.Spectator.Hubs.Referee.Models.Responses;
 using osu.Server.Spectator.Services;
 using MatchType = osu.Game.Online.Rooms.MatchType;
+using RollRequest = osu.Server.Spectator.Hubs.Referee.Models.Requests.RollRequest;
 
 namespace osu.Server.Spectator.Hubs.Referee
 {
@@ -591,6 +592,28 @@ namespace osu.Server.Spectator.Hubs.Referee
             catch (Exception ex)
             {
                 ThrowHelper.ThrowInvalidMods(ex.Message);
+            }
+        }
+
+        public async Task Roll(long roomId, RollRequest request)
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                ensureIsReferee(roomId, userUsage);
+
+                using (var roomUsage = await roomController.GetRoom(roomId))
+                {
+                    if (roomUsage.Item == null)
+                        ThrowHelper.ThrowRoomDoesNotExist();
+
+                    var user = roomUsage.Item.Users.SingleOrDefault(u => u.UserID == userUsage.Item.UserId);
+                    if (user == null)
+                        ThrowHelper.ThrowUserNotInRoom();
+
+                    await roomUsage.Item.MatchController.HandleUserRequest(user, new Game.Online.Multiplayer.RollRequest { Max = request.Max });
+                }
             }
         }
 

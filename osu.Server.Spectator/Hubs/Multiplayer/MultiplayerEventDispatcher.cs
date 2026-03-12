@@ -181,6 +181,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// A roll has completed in the room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="e">The result of the roll.</param>
+        public async Task PostRollEventAsync(long roomId, RollEvent e)
+        {
+            await PostMatchEventAsync(roomId, e);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.RollCompleted), new RollCompletedEvent(roomId, e));
+        }
+
+        /// <summary>
         /// A <see cref="MultiplayerCountdown"/> has been started in the room.
         /// </summary>
         /// <param name="roomId">The ID of the relevant room.</param>
