@@ -240,6 +240,9 @@ namespace osu.Server.Spectator.Hubs.Referee
                     if (roomUsage.Item == null)
                         ThrowHelper.ThrowRoomDoesNotExist();
 
+                    if (roomUsage.Item.BannedUsers.Contains(userId))
+                        ThrowHelper.ThrowUserBanned();
+
                     await roomUsage.Item.InvitePlayer(userId, invitedBy: userUsage.Item.UserId);
                 }
             }
@@ -271,6 +274,29 @@ namespace osu.Server.Spectator.Hubs.Referee
             }
         }
 
+        public async Task BanUser(long roomId, int bannedUserId)
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                ensureIsReferee(roomId, userUsage);
+
+                if (userUsage.Item.UserId == bannedUserId)
+                    ThrowHelper.ThrowCannotPerformOperationOnSelf();
+
+                using (var roomUsage = await roomController.GetRoom(roomId))
+                {
+                    if (roomUsage.Item == null)
+                        ThrowHelper.ThrowRoomDoesNotExist();
+
+                    await roomController.BanUserFromRoom(bannedUserId, roomUsage, userUsage.Item.UserId);
+
+                    await eventDispatcher.PostUserBannedEvent(roomId, bannedUserId, userUsage.Item.UserId);
+                }
+            }
+        }
+
         public async Task AddReferee(long roomId, int targetUserId)
         {
             using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
@@ -285,7 +311,10 @@ namespace osu.Server.Spectator.Hubs.Referee
                         ThrowHelper.ThrowRoomDoesNotExist();
 
                     if (targetUserId == userUsage.Item.UserId)
-                        ThrowHelper.ThrowCannotChangeOwnRefereeStatus();
+                        ThrowHelper.ThrowCannotPerformOperationOnSelf();
+
+                    if (roomUsage.Item.BannedUsers.Contains(targetUserId))
+                        ThrowHelper.ThrowUserBanned();
 
                     using (var db = databaseFactory.GetInstance())
                     {
@@ -318,7 +347,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                         ThrowHelper.ThrowRoomDoesNotExist();
 
                     if (targetUserId == userUsage.Item.UserId)
-                        ThrowHelper.ThrowCannotChangeOwnRefereeStatus();
+                        ThrowHelper.ThrowCannotPerformOperationOnSelf();
 
                     using (var targetUserUsage = await refereeStates.GetForUse(targetUserId))
                     {
@@ -656,7 +685,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                     if (roomUsage.Item == null)
                         ThrowHelper.ThrowRoomDoesNotExist();
 
-                    if (roomUsage.Item.State != MultiplayerRoomState.WaitingForLoad &&  roomUsage.Item.State != MultiplayerRoomState.Playing)
+                    if (roomUsage.Item.State != MultiplayerRoomState.WaitingForLoad && roomUsage.Item.State != MultiplayerRoomState.Playing)
                         ThrowHelper.ThrowRoomStateInvalidForOperation();
 
                     await roomUsage.Item.AbortMatch();

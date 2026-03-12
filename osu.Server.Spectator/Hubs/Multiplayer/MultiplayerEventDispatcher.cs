@@ -276,6 +276,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// A user has been banned from the room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="bannedUserId">The ID of the user who was banned.</param>
+        /// <param name="banningUserId">The ID of the user who did the ban.</param>
+        public async Task PostUserBannedEvent(long roomId, int bannedUserId, int banningUserId)
+        {
+            var userBannedEvent = new UserBannedEvent
+            {
+                RoomId = roomId,
+                BannedUserId = bannedUserId,
+                BanningUserId = banningUserId,
+            };
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserBanned), userBannedEvent);
+        }
+
+        /// <summary>
         /// A user has been invited to join the given room.
         /// </summary>
         /// <param name="roomId">The ID of the room that the invitation pertains to.</param>
