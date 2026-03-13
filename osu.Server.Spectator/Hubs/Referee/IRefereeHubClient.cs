@@ -65,6 +65,11 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task RoomSettingsChanged(RoomSettingsChangedEvent info);
 
         /// <summary>
+        /// A room's specific <see cref="Models.MatchType"/>-related state has changed.
+        /// </summary>
+        Task MatchStateChanged(MatchStateChangedEvent info);
+
+        /// <summary>
         /// A playlist item has been added to a room.
         /// </summary>
         Task PlaylistItemAdded(PlaylistItemAddedEvent info);
@@ -78,6 +83,11 @@ namespace osu.Server.Spectator.Hubs.Referee
         /// A playlist item has been removed from a room.
         /// </summary>
         Task PlaylistItemRemoved(PlaylistItemRemovedEvent info);
+
+        /// <summary>
+        /// A roll has completed in the room.
+        /// </summary>
+        Task RollCompleted(RollCompletedEvent info);
 
         /// <summary>
         /// A user's status in a room has changed.

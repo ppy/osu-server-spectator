@@ -150,11 +150,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <summary>
         /// The <see cref="MultiplayerRoom.MatchState"/> of the given room changed.
         /// </summary>
-        /// <param name="roomId">The ID of the relevant room.</param>
-        /// <param name="newMatchState">The new match state of the room.</param>
-        public async Task PostMatchRoomStateChangedAsync(long roomId, MatchRoomState? newMatchState)
+        /// <param name="room">The relevant room.</param>
+        public async Task PostMatchRoomStateChangedAsync(ServerMultiplayerRoom room)
         {
-            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchRoomStateChanged), newMatchState);
+            await multiplayerHubContext.Clients.Group(GetGroupId(room.RoomID)).SendAsync(nameof(IMultiplayerClient.MatchRoomStateChanged), room.MatchState);
+
+            if (room.Users.Any(u => u.Role == MultiplayerRoomUserRole.Referee))
+            {
+                await refereeHubContext.Clients.Group(GetGroupId(room.RoomID)).SendAsync(nameof(IRefereeHubClient.MatchStateChanged), new MatchStateChangedEvent
+                {
+                    RoomId = room.RoomID,
+                    State = MatchState.Create(room)
+                });
+            }
         }
 
         /// <summary>
@@ -170,6 +178,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task PostMatchEventAsync(long roomId, MatchServerEvent e)
         {
             await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.MatchEvent), e);
+        }
+
+        /// <summary>
+        /// A roll has completed in the room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="e">The result of the roll.</param>
+        public async Task PostRollEventAsync(long roomId, RollEvent e)
+        {
+            await PostMatchEventAsync(roomId, e);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.RollCompleted), new RollCompletedEvent(roomId, e));
         }
 
         /// <summary>

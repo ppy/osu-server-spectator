@@ -138,10 +138,23 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task RemovePlaylistItem(long roomId, RemovePlaylistItemRequest request);
 
         /// <summary>
+        /// Initiates a random roll in the room.
+        /// Corresponds to the <c>!roll</c> command on bancho.
+        /// </summary>
+        Task Roll(long roomId, RollRequest request);
+
+        /// <summary>
         /// Moves the user to a different team in the given <paramref name="roomId"/>.
         /// Corresponds to the <c>!mp move</c> command on bancho.
         /// </summary>
         Task MoveUser(long roomId, MoveUserRequest request);
+
+        /// <summary>
+        /// Toggles players' ability to change teams in the room.
+        /// Corresponds to the <c>!mp lock</c> and <c>!mp unlock</c> commands on bancho.
+        /// </summary>
+        // TODO: mention slots too once that's implemented
+        Task SetLockState(long roomId, SetLockStateRequest request);
 
         /// <summary>
         /// Starts a match (immediately or with a countdown) in the given <paramref name="roomId"/>.
