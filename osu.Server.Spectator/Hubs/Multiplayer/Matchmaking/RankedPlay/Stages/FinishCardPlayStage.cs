@@ -4,14 +4,16 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using osu.Game.Online;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
-using osu.Server.Spectator.Extensions;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 {
     public class FinishCardPlayStage : RankedPlayStageImplementation
     {
+        private bool userStatesReset;
+
         public FinishCardPlayStage(RankedPlayMatchController controller)
             : base(controller)
         {
@@ -24,6 +26,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         {
             // Reset ready states.
             await Room.HandleSettingsChanged(true);
+
+            // HandleSettingsChanged(true) internally invokes separate events for user state and beatmap availability changes,
+            // which trigger HandleUserStateChanged() in advance of when we want it to actually occur.
+            userStatesReset = true;
+
+            await continueWhenAllPlayersReady();
         }
 
         protected override async Task Finish()
@@ -33,8 +41,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         public override async Task HandleUserStateChanged(MultiplayerRoomUser user)
         {
-            if (Room.Users.All(u => u.IsReadyForGameplay()))
-                await FinishWithCountdown(TimeSpan.FromSeconds(3));
+            if (userStatesReset)
+                await continueWhenAllPlayersReady();
+        }
+
+        private async Task continueWhenAllPlayersReady()
+        {
+            // Only require players to have the beatmap, but not necessarily have it loaded yet.
+            if (Room.Users.All(u => u.BeatmapAvailability.State == DownloadState.LocallyAvailable))
+                await Finish();
         }
     }
 }
