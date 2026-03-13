@@ -39,6 +39,47 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        public async Task UserCannotChangeTeamsWhenRoomLocked(int team)
+        {
+            var hub = new Mock<IMultiplayerRoomController>();
+            var room = await ServerMultiplayerRoom.InitialiseAsync(ROOM_ID, hub.Object, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object);
+
+            var teamVersus = new TeamVersusMatchController(room, DatabaseFactory.Object, EventDispatcher);
+
+            // change the match type
+            await room.ChangeMatchType(teamVersus);
+            Receiver.Verify(c => c.MatchRoomStateChanged(It.IsAny<MatchRoomState>()), Times.Once());
+
+            var user = new MultiplayerRoomUser(1);
+
+            await room.AddUser(user);
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
+
+            await room.HandleUserRequest(user, new SetLockStateRequest { Locked = true });
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
+            Receiver.Verify(c => c.MatchRoomStateChanged(It.IsAny<MatchRoomState>()), Times.Exactly(2));
+
+            int previousTeam = ((TeamVersusUserState)user.MatchState!).TeamID;
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team }));
+
+            checkUserOnTeam(user, previousTeam);
+            // was not called a second time from the invalid change.
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
+
+            await room.HandleUserRequest(user, new SetLockStateRequest { Locked = false });
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Once());
+            Receiver.Verify(c => c.MatchRoomStateChanged(It.IsAny<MatchRoomState>()), Times.Exactly(3));
+
+            await teamVersus.HandleUserRequest(user, new ChangeTeamRequest { TeamID = team });
+            Receiver.Verify(c => c.MatchUserStateChanged(user.UserID, It.IsAny<MatchUserState>()), Times.Exactly(2));
+
+            checkUserOnTeam(user, team);
+        }
+
+        [Theory]
         [InlineData(-1)]
         [InlineData(2)]
         [InlineData(3)]
