@@ -85,6 +85,11 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task PlaylistItemRemoved(PlaylistItemRemovedEvent info);
 
         /// <summary>
+        /// A roll has completed in the room.
+        /// </summary>
+        Task RollCompleted(RollCompletedEvent info);
+
+        /// <summary>
         /// A user's status in a room has changed.
         /// </summary>
         Task UserStatusChanged(UserStatusChangedEvent info);

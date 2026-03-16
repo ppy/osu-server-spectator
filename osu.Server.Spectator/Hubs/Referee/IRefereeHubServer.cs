@@ -138,6 +138,12 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task RemovePlaylistItem(long roomId, RemovePlaylistItemRequest request);
 
         /// <summary>
+        /// Initiates a random roll in the room.
+        /// Corresponds to the <c>!roll</c> command on bancho.
+        /// </summary>
+        Task Roll(long roomId, RollRequest request);
+
+        /// <summary>
         /// Moves the user to a different team in the given <paramref name="roomId"/>.
         /// Corresponds to the <c>!mp move</c> command on bancho.
         /// </summary>

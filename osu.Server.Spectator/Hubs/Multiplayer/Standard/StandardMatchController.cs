@@ -102,9 +102,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             await updateCurrentItem();
         }
 
-        public virtual Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
+        public virtual async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
         {
-            return Task.CompletedTask;
+            switch (request)
+            {
+                case RollRequest rollRequest:
+                    if (rollRequest.Max < 2 || rollRequest.Max > 100)
+                        throw new InvalidStateException("Invalid roll request. Max must be in [2, 100] range inclusive.");
+
+                    uint max = rollRequest.Max ?? 100;
+                    uint result = (uint)Random.Shared.Next(1, 1 + (int)max);
+                    var resultEvent = new RollEvent { UserID = user.UserID, Max = max, Result = result };
+                    await eventDispatcher.PostRollEventAsync(room.RoomID, resultEvent);
+                    break;
+            }
         }
 
         public virtual Task HandleUserJoined(MultiplayerRoomUser user)

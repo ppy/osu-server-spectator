@@ -120,5 +120,12 @@ namespace osu.Server.Spectator.Hubs.Referee
         [DoesNotReturn]
         public static void ThrowUserBanned()
             => throw new RefereeHubException(16, "User is banned from room.");
+
+        /// <summary>
+        /// Error 17: Invalid roll. Max must be in [1, 100] range inclusive.
+        /// </summary>
+        [DoesNotReturn]
+        public static void ThrowInvalidRoll()
+            => throw new RefereeHubException(19, "Invalid roll. Max must be in [1, 100] range inclusive.");
     }
 }
