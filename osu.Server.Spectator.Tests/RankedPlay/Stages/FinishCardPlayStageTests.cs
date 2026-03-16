@@ -16,16 +16,6 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         {
         }
 
-        protected override async Task SetupForEnter()
-        {
-            await base.SetupForEnter();
-
-            await MarkCurrentUserReadyAndAvailable();
-            SetUserContext(ContextUser2);
-            await MarkCurrentUserReadyAndAvailable();
-            SetUserContext(ContextUser);
-        }
-
         [Fact]
         public void UsersUnreadiedOnEnter()
         {
