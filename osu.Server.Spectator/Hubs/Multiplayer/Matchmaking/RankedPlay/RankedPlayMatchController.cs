@@ -76,7 +76,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
         async Task IMatchController.Initialise()
         {
-            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room);
             await GotoStage(RankedPlayStage.WaitForJoin);
         }
 
@@ -129,7 +129,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             // Populate the initial active user, for use by the client to display the first turn's user.
             State.ActiveUserId = UserIdsByTurnOrder[0];
 
-            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room);
         }
 
         Task<bool> IMatchController.UserCanJoin(int userId)
@@ -259,7 +259,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 await EventDispatcher.PostRankedPlayCardRevealed(userId, card, cardToEffectMap[card]);
             }
 
-            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room);
         }
 
         /// <summary>
@@ -275,7 +275,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 await EventDispatcher.PostRankedPlayCardRemoved(Room.RoomID, userId, card);
             }
 
-            await EventDispatcher.PostMatchRoomStateChangedAsync(Room.RoomID, Room.MatchState);
+            await EventDispatcher.PostMatchRoomStateChangedAsync(Room);
         }
 
         /// <summary>

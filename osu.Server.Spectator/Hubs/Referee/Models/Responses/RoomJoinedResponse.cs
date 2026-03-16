@@ -1,9 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using System.Text.Json.Serialization;
 using JetBrains.Annotations;
+using osu.Framework.Extensions.TypeExtensions;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Hubs.Referee.Models.Events;
 
@@ -40,10 +42,10 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
         public string Password { get; set; } = string.Empty;
 
         /// <summary>
-        /// The match type of the joined room.
+        /// The state of the room.
+        /// Includes the <see cref="MatchType"/>, as well as any additional information specific to that match type.
         /// </summary>
-        [JsonPropertyName("type")]
-        public MatchType Type { get; set; }
+        public MatchState State { get; set; } = null!;
 
         [JsonPropertyName("playlist")]
         public PlaylistItem[] Playlist { get; set; } = [];
@@ -65,7 +67,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
             ChatChannelId = room.ChannelID;
             Name = room.Settings.Name;
             Password = room.Settings.Password;
-            Type = (MatchType)room.Settings.MatchType;
+            State = MatchState.Create(room) ?? throw new InvalidOperationException($"Could not create room state (ID: {room.RoomID}, state type: {room.MatchState?.GetType().ReadableName()})");
             Playlist = room.Playlist.Select(item => new PlaylistItem(item)).ToArray();
             Players = room.Users.Where(u => u.Role == MultiplayerRoomUserRole.Player).Select(u => new Player(u)).ToArray();
             Referees = room.Users.Where(u => u.Role == MultiplayerRoomUserRole.Referee).Select(u => new Events.Referee(u)).ToArray();

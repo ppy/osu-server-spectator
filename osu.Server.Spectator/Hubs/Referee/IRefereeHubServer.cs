@@ -144,6 +144,13 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task MoveUser(long roomId, MoveUserRequest request);
 
         /// <summary>
+        /// Toggles players' ability to change teams in the room.
+        /// Corresponds to the <c>!mp lock</c> and <c>!mp unlock</c> commands on bancho.
+        /// </summary>
+        // TODO: mention slots too once that's implemented
+        Task SetLockState(long roomId, SetLockStateRequest request);
+
+        /// <summary>
         /// Starts a match (immediately or with a countdown) in the given <paramref name="roomId"/>.
         /// Corresponds to the <c>!mp start</c> command on bancho.
         /// </summary>

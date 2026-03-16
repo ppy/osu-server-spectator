@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Game.Rulesets;
 using osu.Server.Spectator.Authentication;
@@ -608,19 +607,37 @@ namespace osu.Server.Spectator.Hubs.Referee
                     if (roomUsage.Item == null)
                         ThrowHelper.ThrowRoomDoesNotExist();
 
-                    if (roomUsage.Item.Settings.MatchType != MatchType.TeamVersus)
-                        ThrowHelper.ThrowIncorrectMatchType();
-
                     var targetUser = roomUsage.Item.Users.SingleOrDefault(u => u.UserID == request.UserId);
                     if (targetUser == null)
                         ThrowHelper.ThrowUserNotInRoom();
 
-                    var req = new ChangeTeamRequest
-                    {
-                        TeamID = (int)request.Team
-                    };
+                    var matchController = roomUsage.Item.MatchController as TeamVersusMatchController;
+                    if (matchController == null)
+                        ThrowHelper.ThrowIncorrectMatchType();
 
-                    await roomUsage.Item.HandleUserRequest(targetUser, req);
+                    await matchController.ChangeUserTeam(targetUser, (int)request.Team);
+                }
+            }
+        }
+
+        public async Task SetLockState(long roomId, Models.Requests.SetLockStateRequest request)
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                ensureIsReferee(roomId, userUsage);
+
+                using (var roomUsage = await roomController.GetRoom(roomId))
+                {
+                    if (roomUsage.Item == null)
+                        ThrowHelper.ThrowRoomDoesNotExist();
+
+                    var user = roomUsage.Item.Users.SingleOrDefault(u => u.UserID == userUsage.Item.UserId);
+                    if (user == null)
+                        ThrowHelper.ThrowUserNotInRoom();
+
+                    await roomUsage.Item.HandleUserRequest(user, new osu.Game.Online.Multiplayer.SetLockStateRequest { Locked = request.Locked });
                 }
             }
         }
