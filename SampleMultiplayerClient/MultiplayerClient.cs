@@ -53,7 +53,7 @@ namespace SampleMultiplayerClient
 
             connection.On(nameof(IMatchmakingClient.MatchmakingQueueJoined), ((IMatchmakingClient)this).MatchmakingQueueJoined);
             connection.On(nameof(IMatchmakingClient.MatchmakingQueueLeft), ((IMatchmakingClient)this).MatchmakingQueueLeft);
-            connection.On(nameof(IMatchmakingClient.MatchmakingRoomInvited), ((IMatchmakingClient)this).MatchmakingRoomInvited);
+            connection.On<MatchmakingRoomInvitationParams>(nameof(IMatchmakingClient.MatchmakingRoomInvitedWithParams), ((IMatchmakingClient)this).MatchmakingRoomInvitedWithParams);
             connection.On<long, string>(nameof(IMatchmakingClient.MatchmakingRoomReady), ((IMatchmakingClient)this).MatchmakingRoomReady);
             connection.On<MatchmakingLobbyStatus>(nameof(IMatchmakingClient.MatchmakingLobbyStatusChanged), ((IMatchmakingClient)this).MatchmakingLobbyStatusChanged);
             connection.On<MatchmakingQueueStatus>(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), ((IMatchmakingClient)this).MatchmakingQueueStatusChanged);
@@ -331,7 +331,13 @@ namespace SampleMultiplayerClient
 
         public Task MatchmakingRoomInvited()
         {
-            Console.WriteLine("Invited to a matchmaking match.");
+            // Not implemented.
+            return Task.CompletedTask;
+        }
+
+        public Task MatchmakingRoomInvitedWithParams(MatchmakingRoomInvitationParams invitation)
+        {
+            Console.WriteLine($"Invited to a matchmaking match (type: {invitation.Type}).");
             return Task.CompletedTask;
         }
 

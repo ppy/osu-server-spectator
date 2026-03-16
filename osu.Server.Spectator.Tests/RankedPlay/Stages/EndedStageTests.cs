@@ -62,5 +62,14 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             Database.Verify(db => db.UpdateMatchmakingUserStatsAsync(It.IsAny<matchmaking_user_stats>()), Times.Never);
         }
+
+        [Fact]
+        public async Task ContinuesToEndedWhenAnyPlayerLeaves()
+        {
+            await Hub.LeaveRoom();
+
+            Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
+            Assert.Equal(1_000_000, UserState.Life);
+        }
     }
 }

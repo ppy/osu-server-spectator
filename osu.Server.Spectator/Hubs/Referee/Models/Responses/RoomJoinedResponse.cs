@@ -1,9 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using System.Text.Json.Serialization;
 using JetBrains.Annotations;
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Hubs.Referee.Models.Events;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
 {
@@ -43,6 +45,15 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
         [JsonPropertyName("type")]
         public MatchType Type { get; set; }
 
+        [JsonPropertyName("playlist")]
+        public PlaylistItem[] Playlist { get; set; } = [];
+
+        [JsonPropertyName("players")]
+        public Player[] Players { get; set; } = [];
+
+        [JsonPropertyName("referees")]
+        public Events.Referee[] Referees { get; set; } = [];
+
         [JsonConstructor]
         public RoomJoinedResponse()
         {
@@ -55,6 +66,9 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
             Name = room.Settings.Name;
             Password = room.Settings.Password;
             Type = (MatchType)room.Settings.MatchType;
+            Playlist = room.Playlist.Select(item => new PlaylistItem(item)).ToArray();
+            Players = room.Users.Where(u => u.Role == MultiplayerRoomUserRole.Player).Select(u => new Player(u)).ToArray();
+            Referees = room.Users.Where(u => u.Role == MultiplayerRoomUserRole.Referee).Select(u => new Events.Referee(u)).ToArray();
         }
     }
 }

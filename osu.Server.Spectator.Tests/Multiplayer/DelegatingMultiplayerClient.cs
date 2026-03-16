@@ -181,6 +181,12 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 await c.MatchmakingRoomInvited();
         }
 
+        public virtual async Task MatchmakingRoomInvitedWithParams(MatchmakingRoomInvitationParams invitation)
+        {
+            foreach (var c in Clients.OfType<IMatchmakingClient>())
+                await c.MatchmakingRoomInvitedWithParams(invitation);
+        }
+
         public virtual async Task MatchmakingRoomReady(long roomId, string password)
         {
             foreach (var c in Clients.OfType<IMatchmakingClient>())

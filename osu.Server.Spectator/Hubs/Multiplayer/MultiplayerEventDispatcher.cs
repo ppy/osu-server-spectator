@@ -252,21 +252,44 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// <param name="kickingUserId">The ID of the user who did the kicking.</param>
         public async Task PostUserKickedAsync(long roomId, MultiplayerRoomUser user, int kickingUserId)
         {
-            // the target user has already been removed from the group, so send the message to them separately.
-            await multiplayerHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
-            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
-            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserKicked), new UserKickedEvent
+            var userKickedEvent = new UserKickedEvent
             {
                 RoomId = roomId,
                 KickedUserId = user.UserID,
                 KickingUserId = kickingUserId,
-            });
+            };
+
+            // the target user has already been removed from the group, so send the message to them separately.
+            if (user.Role == MultiplayerRoomUserRole.Player)
+                await multiplayerHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+            else if (user.Role == MultiplayerRoomUserRole.Referee)
+                await refereeHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IRefereeHubClient.UserKicked), userKickedEvent);
+
+            await multiplayerHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserKicked), userKickedEvent);
             await logToDatabase(new multiplayer_realtime_room_event
             {
                 event_type = "player_kicked",
                 room_id = roomId,
                 user_id = user.UserID,
             });
+        }
+
+        /// <summary>
+        /// A user has been banned from the room.
+        /// </summary>
+        /// <param name="roomId">The ID of the relevant room.</param>
+        /// <param name="bannedUserId">The ID of the user who was banned.</param>
+        /// <param name="banningUserId">The ID of the user who did the ban.</param>
+        public async Task PostUserBannedEvent(long roomId, int bannedUserId, int banningUserId)
+        {
+            var userBannedEvent = new UserBannedEvent
+            {
+                RoomId = roomId,
+                BannedUserId = bannedUserId,
+                BanningUserId = banningUserId,
+            };
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.UserBanned), userBannedEvent);
         }
 
         /// <summary>
@@ -279,6 +302,38 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public async Task PostUserInvitedAsync(long roomId, int invitedUserId, int invitedBy, string password)
         {
             await multiplayerHubContext.Clients.User(invitedUserId.ToString()).SendAsync(nameof(IMultiplayerClient.Invited), invitedBy, roomId, password);
+        }
+
+        /// <summary>
+        /// A user has been given referee privileges to the room.
+        /// </summary>
+        /// <param name="roomId">The ID of the room.</param>
+        /// <param name="userId">The ID of the user.</param>
+        public async Task PostRefereeAddedAsync(long roomId, int userId)
+        {
+            await refereeHubContext.Clients.User(userId.ToString()).SendAsync(nameof(IRefereeHubClient.RefereeInvited), new RefereeInvitedEvent
+            {
+                RoomId = roomId,
+            });
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.RefereeAdded), new RefereeAddedEvent
+            {
+                RoomId = roomId,
+                UserId = userId,
+            });
+        }
+
+        /// <summary>
+        /// A user's referee privileges to the room have been revoked.
+        /// </summary>
+        /// <param name="roomId">The ID of the room.</param>
+        /// <param name="userId">The ID of the user.</param>
+        public async Task PostRefereeRemovedAsync(long roomId, int userId)
+        {
+            await refereeHubContext.Clients.Group(GetGroupId(roomId)).SendAsync(nameof(IRefereeHubClient.RefereeRemoved), new RefereeRemovedEvent
+            {
+                RoomId = roomId,
+                UserId = userId,
+            });
         }
 
         /// <summary>

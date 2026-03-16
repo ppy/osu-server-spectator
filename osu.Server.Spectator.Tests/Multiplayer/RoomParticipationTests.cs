@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
@@ -96,6 +97,34 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             await Hub.JoinRoom(ROOM_ID);
 
             await Hub.LeaveRoom();
+        }
+
+        [Fact]
+        public async Task UserCantJoinWhenBanned()
+        {
+            await Hub.CreateRoom(new MultiplayerRoom(ROOM_ID));
+
+            using (var usage = await Rooms.GetForUse(ROOM_ID))
+                await RoomController.BanUserFromRoom(USER_ID_2, usage, USER_ID);
+
+            SetUserContext(ContextUser2);
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.JoinRoom(ROOM_ID));
+        }
+
+        [Fact]
+        public async Task UserKickedFromRoomWhenBanned()
+        {
+            await Hub.CreateRoom(new MultiplayerRoom(ROOM_ID));
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+
+            using (var usage = await Rooms.GetForUse(ROOM_ID))
+            {
+                await RoomController.BanUserFromRoom(USER_ID_2, usage, USER_ID);
+
+                Assert.True(usage.Item!.Users.All(u => u.UserID != USER_ID_2));
+            }
         }
 
         [Fact]

@@ -43,5 +43,14 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             Assert.Equal(RankedPlayStage.GameplayWarmup, RoomState.Stage);
         }
+
+        [Fact]
+        public async Task ContinuesToEndedWhenAnyPlayerLeaves()
+        {
+            await Hub.LeaveRoom();
+
+            Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
+            Assert.Equal(0, UserState.Life);
+        }
     }
 }

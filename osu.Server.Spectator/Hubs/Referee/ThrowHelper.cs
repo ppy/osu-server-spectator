@@ -10,11 +10,11 @@ namespace osu.Server.Spectator.Hubs.Referee
     public static class ThrowHelper
     {
         /// <summary>
-        /// Error 1: You are restricted.
+        /// Error 1: User is restricted.
         /// </summary>
         [DoesNotReturn]
         public static void ThrowUserRestricted()
-            => throw new RefereeHubException(1, "You are restricted.");
+            => throw new RefereeHubException(1, "User is restricted.");
 
         /// <summary>
         /// Error 2: You are not a referee in the specified room.
@@ -106,5 +106,19 @@ namespace osu.Server.Spectator.Hubs.Referee
         [DoesNotReturn]
         public static void ThrowPlaylistItemDoesNotExist()
             => throw new RefereeHubException(14, "The specified playlist item does not exist.");
+
+        /// <summary>
+        /// Error 15: Cannot perform this operation on self.
+        /// </summary>
+        [DoesNotReturn]
+        public static void ThrowCannotPerformOperationOnSelf()
+            => throw new RefereeHubException(15, "Cannot perform this operation on self.");
+
+        /// <summary>
+        /// Error 16: User is banned from room.
+        /// </summary>
+        [DoesNotReturn]
+        public static void ThrowUserBanned()
+            => throw new RefereeHubException(16, "User is banned from room.");
     }
 }

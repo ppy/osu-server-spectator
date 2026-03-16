@@ -22,7 +22,6 @@ namespace osu.Server.Spectator
                 RegionEndpoint = endpoint ?? RegionEndpoint.USWest1,
                 UseHttp = true,
                 ForcePathStyle = true,
-                RetryMode = RequestRetryMode.Legacy,
                 MaxErrorRetry = 5,
                 Timeout = TimeSpan.FromSeconds(10),
             });

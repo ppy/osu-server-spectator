@@ -2,13 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using osu.Game.Online;
-using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Extensions;
@@ -20,6 +19,14 @@ namespace osu.Server.Spectator
         private readonly IDatabaseFactory databaseFactory;
         private readonly IMemoryCache memoryCache;
         private readonly ILogger<ClientVersionChecker> logger;
+
+        /// <remarks>
+        /// The main reason for this existing is that the version hash is only accessible in <see cref="OnConnectedAsync"/>,
+        /// because the hash comes from request headers, and <see cref="OnConnectedAsync"/> is the only period where the request headers are there.
+        /// Note that the <see cref="memoryCache"/> is not used because these entries CANNOT be evicted from the cache for ANY reason other than the user disconnecting.
+        /// Additionally, note that this MUST be static because <see cref="IHubFilter"/> are instantiated per SignalR invocation.
+        /// </remarks>
+        private static readonly ConcurrentDictionary<string, string?> connection_id_to_hash_map = new ConcurrentDictionary<string, string?>();
 
         public ClientVersionChecker(
             IDatabaseFactory databaseFactory,
@@ -33,21 +40,24 @@ namespace osu.Server.Spectator
 
         public async Task OnConnectedAsync(HubLifetimeContext context, Func<HubLifetimeContext, Task> next)
         {
-            memoryCache.GetOrCreate(cacheKeyForClientHash(context.Context.ConnectionId), _ => context.Context.GetVersionHash());
+            connection_id_to_hash_map.TryAdd(context.Context.ConnectionId, context.Context.GetVersionHash());
             await next(context);
         }
 
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            if (!await isValidVersionAsync(invocationContext.Context))
-                throw new InvalidStateException("Realtime online functionality is not supported on this version of the game. Please upgrade to the latest version.");
+            // TODO: remove this and uncomment below block once this is confirmed to be working well
+            _ = await isValidVersionAsync(invocationContext.Context);
+
+            // if (!await isValidVersionAsync(invocationContext.Context))
+            //     throw new InvalidStateException("Realtime online functionality is not supported on this version of the game. Please upgrade to the latest version.");
 
             return await next(invocationContext);
         }
 
         public async Task OnDisconnectedAsync(HubLifetimeContext context, Exception? exception, Func<HubLifetimeContext, Exception?, Task> next)
         {
-            memoryCache.Remove(cacheKeyForClientHash(context.Context.ConnectionId));
+            connection_id_to_hash_map.TryRemove(context.Context.ConnectionId, out _);
             await next(context, exception);
         }
 
@@ -72,9 +82,7 @@ namespace osu.Server.Spectator
                 return true;
             }
 
-            string? hash = memoryCache.Get<string?>(cacheKeyForClientHash(callerContext.ConnectionId));
-
-            if (string.IsNullOrEmpty(hash))
+            if (!connection_id_to_hash_map.TryGetValue(callerContext.ConnectionId, out string? hash) || string.IsNullOrEmpty(hash))
             {
                 logger.LogDebug("[user:{userId}] [connectionId:{connectionId}] Version hash missing", userId, callerContext.ConnectionId);
                 return false;
@@ -110,7 +118,6 @@ namespace osu.Server.Spectator
             return build.allow_bancho;
         }
 
-        private static string cacheKeyForClientHash(string connectionId) => $"{HubClientConnector.VERSION_HASH_HEADER}#{connectionId}";
         private static string cacheKeyForBuild(string buildHash) => $"{nameof(osu_build)}#{buildHash}";
         private const string cache_key_for_exempt_users = $"{nameof(ClientVersionChecker)}#exempt_users";
     }

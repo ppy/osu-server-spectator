@@ -219,5 +219,14 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.NotEqual(MatchController.LastActivatedCard?.ID, cardId);
             Assert.Equal(RankedPlayStage.FinishCardPlay, RoomState.Stage);
         }
+
+        [Fact]
+        public async Task ContinuesToEndedWhenAnyPlayerLeaves()
+        {
+            await Hub.LeaveRoom();
+
+            Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
+            Assert.Equal(0, UserState.Life);
+        }
     }
 }

@@ -4,12 +4,14 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Hubs.Referee;
 using osu.Server.Spectator.Services;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer
@@ -17,6 +19,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
     public class MultiplayerRoomController : IMultiplayerRoomController
     {
         private readonly EntityStore<ServerMultiplayerRoom> rooms;
+        private readonly EntityStore<MultiplayerClientState> players;
+        private readonly EntityStore<RefereeClientState> referees;
         private readonly IDatabaseFactory databaseFactory;
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly ILoggerFactory loggerFactory;
@@ -26,12 +30,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public MultiplayerRoomController(
             EntityStore<ServerMultiplayerRoom> rooms,
+            EntityStore<MultiplayerClientState> players,
+            EntityStore<RefereeClientState> referees,
             IDatabaseFactory databaseFactory,
             MultiplayerEventDispatcher eventDispatcher,
             ILoggerFactory loggerFactory,
             ISharedInterop sharedInterop)
         {
             this.rooms = rooms;
+            this.players = players;
+            this.referees = referees;
             this.databaseFactory = databaseFactory;
             this.eventDispatcher = eventDispatcher;
             this.loggerFactory = loggerFactory;
@@ -147,6 +155,44 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task KickUserFromRoom(IMultiplayerUserState kickedUser, ItemUsage<ServerMultiplayerRoom> roomUsage, int kickedBy)
             => await removeUserFromRoom(kickedUser, roomUsage, kickedBy);
+
+        public async Task BanUserFromRoom(int bannedUserId, ItemUsage<ServerMultiplayerRoom> roomUsage, int bannedBy)
+        {
+            if (bannedUserId == bannedBy)
+                throw new InvalidStateException("User can't ban self.");
+
+            var room = roomUsage.Item;
+            if (room == null)
+                throw new InvalidOperationException("Attempted to operate on a null room");
+
+            var userInRoom = room.Users.FirstOrDefault(u => u.UserID == bannedUserId);
+
+            if (userInRoom != null)
+            {
+                switch (userInRoom.Role)
+                {
+                    case MultiplayerRoomUserRole.Player:
+                        using (var targetPlayerUsage = await players.GetForUse(bannedUserId))
+                        {
+                            Debug.Assert(targetPlayerUsage.Item != null);
+                            await removeUserFromRoom(targetPlayerUsage.Item, roomUsage, bannedBy);
+                        }
+
+                        break;
+
+                    case MultiplayerRoomUserRole.Referee:
+                        using (var targetRefereeUsage = await referees.GetForUse(bannedUserId))
+                        {
+                            Debug.Assert(targetRefereeUsage.Item != null);
+                            await removeUserFromRoom(targetRefereeUsage.Item, roomUsage, bannedBy);
+                        }
+
+                        break;
+                }
+            }
+
+            room.BanUser(bannedUserId);
+        }
 
         private async Task removeUserFromRoom(IMultiplayerUserState state, ItemUsage<ServerMultiplayerRoom> roomUsage, int removingUserId)
         {
