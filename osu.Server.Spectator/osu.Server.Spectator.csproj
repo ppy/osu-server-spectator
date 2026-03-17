@@ -6,23 +6,23 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AWSSDK.S3" Version="4.0.18.7" />
+        <PackageReference Include="AWSSDK.S3" Version="4.0.19" />
         <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
-        <PackageReference Include="Dapper" Version="2.1.66" />
+        <PackageReference Include="Dapper" Version="2.1.72" />
         <PackageReference Include="DogStatsD-CSharp-Client" Version="9.0.0" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.3" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.3" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="9.0.3" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.5" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.5" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="10.0.5" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
         <PackageReference Include="OpenSkillSharp" Version="1.1.0" />
-        <PackageReference Include="ppy.osu.Game" Version="2026.315.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Catch" Version="2026.315.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Mania" Version="2026.315.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.315.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Taiko" Version="2026.315.0" />
-        <PackageReference Include="ppy.osu.Server.OsuQueueProcessor" Version="2026.303.0" />
-        <PackageReference Include="Sentry.AspNetCore" Version="6.1.0" />
+        <PackageReference Include="ppy.osu.Game" Version="2026.317.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Catch" Version="2026.317.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Mania" Version="2026.317.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.317.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Taiko" Version="2026.317.0" />
+        <PackageReference Include="ppy.osu.Server.OsuQueueProcessor" Version="2026.317.0" />
+        <PackageReference Include="Sentry.AspNetCore" Version="6.2.0" />
     </ItemGroup>
 
     <ItemGroup>
