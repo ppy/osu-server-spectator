@@ -37,6 +37,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         {
             await base.HandleUserJoined(user);
 
+            if (user.Role == MultiplayerRoomUserRole.Referee)
+                return;
+
             user.MatchState = new TeamVersusUserState { TeamID = getBestAvailableTeam() };
             await eventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
         }
@@ -72,6 +75,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         {
             if (state.Teams.All(t => t.ID != newTeamId))
                 throw new InvalidStateException("Attempted to set team out of valid range");
+
+            if (user.Role == MultiplayerRoomUserRole.Referee)
+                throw new InvalidStateException("Referees cannot join teams.");
 
             if (user.MatchState is TeamVersusUserState userState)
                 userState.TeamID = newTeamId;
