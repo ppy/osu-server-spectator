@@ -110,7 +110,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 }
             }
 
-            // let's broadcast to every player temporarily. probably won't stay this way.
             await Clients.Group(GetGroupId(userId)).UserBeganPlaying(userId, state);
         }
 
@@ -258,16 +257,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
             int watcherId = Context.GetUserId();
 
             await Clients.User(userId.ToString()).UserEndedWatching(watcherId);
-        }
-
-        public override async Task OnConnectedAsync()
-        {
-            // for now, send *all* player states to users on connect.
-            // we don't want this for long, but while the lazer user base is small it should be okay.
-            foreach (var kvp in GetAllStates())
-                await Clients.Caller.UserBeganPlaying((int)kvp.Key, kvp.Value.State!);
-
-            await base.OnConnectedAsync();
         }
 
         protected override async Task CleanUpState(ItemUsage<SpectatorClientState> state)
