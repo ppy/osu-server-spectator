@@ -260,16 +260,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
             await Clients.User(userId.ToString()).UserEndedWatching(watcherId);
         }
 
-        public override async Task OnConnectedAsync()
-        {
-            // for now, send *all* player states to users on connect.
-            // we don't want this for long, but while the lazer user base is small it should be okay.
-            foreach (var kvp in GetAllStates())
-                await Clients.Caller.UserBeganPlaying((int)kvp.Key, kvp.Value.State!);
-
-            await base.OnConnectedAsync();
-        }
-
         protected override async Task CleanUpState(ItemUsage<SpectatorClientState> state)
         {
             Debug.Assert(state.Item != null);
