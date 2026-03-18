@@ -110,7 +110,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 }
             }
 
-            // let's broadcast to every player temporarily. probably won't stay this way.
             await Clients.Group(GetGroupId(userId)).UserBeganPlaying(userId, state);
         }
 
