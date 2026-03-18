@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Extensions;
@@ -46,11 +47,8 @@ namespace osu.Server.Spectator
 
         public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            // TODO: remove this and uncomment below block once this is confirmed to be working well
-            _ = await isValidVersionAsync(invocationContext.Context);
-
-            // if (!await isValidVersionAsync(invocationContext.Context))
-            //     throw new InvalidStateException("Realtime online functionality is not supported on this version of the game. Please upgrade to the latest version.");
+            if (!await isValidVersionAsync(invocationContext.Context))
+                throw new InvalidStateException("Realtime online functionality is not supported on this version of the game. Please upgrade to the latest version.");
 
             return await next(invocationContext);
         }
