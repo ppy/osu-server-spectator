@@ -55,5 +55,19 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
             Assert.Equal(0, UserState.Life);
         }
+
+        [Fact]
+        public async Task RoundMultiplierAdjustment()
+        {
+            double[] expectedMultipliers = [1, 1, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+
+            for (int i = 0; i < expectedMultipliers.Length; i++)
+            {
+                Assert.Equal(expectedMultipliers[i], RoomState.DamageMultiplier);
+
+                // Go to the next round, for the next iteration.
+                await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
+            }
+        }
     }
 }

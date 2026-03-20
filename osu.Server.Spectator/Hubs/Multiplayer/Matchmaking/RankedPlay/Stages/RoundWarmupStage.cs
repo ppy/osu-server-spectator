@@ -50,8 +50,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         /// <param name="round">The round.</param>
         private static double computeDamageMultiplier(int round)
         {
-            double[] multipliers = [1, 1, 2, 2, 5, 5, 10, 10, 100, 100];
-            return multipliers[Math.Clamp(round - 1, 0, multipliers.Length - 1)];
+            if (round <= 2)
+                return 1;
+
+            return 2 + (round - 3) * 0.5;
         }
     }
 }
