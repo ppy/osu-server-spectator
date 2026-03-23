@@ -73,11 +73,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     {
                         room = roomUsage.Item ??= await ServerMultiplayerRoom.InitialiseAsync(roomId, this, databaseFactory, eventDispatcher, loggerFactory);
 
-                        // this is a sanity check to keep *rooms* in a good state.
-                        // in theory the connection clean-up code should handle this correctly.
-                        if (room.Users.Any(u => u.UserID == roomUser.UserID))
-                            throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
-
                         if (!await room.UserCanJoin(roomUser.UserID))
                             throw new InvalidStateException("Not eligible to join this room.");
 
@@ -92,7 +87,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                         userState.AssociateWithRoom(roomId);
 
-                        await room.AddUser(roomUser);
+                        var existingUser = room.Users.FirstOrDefault(u => u.UserID == roomUser.UserID);
+
+                        if (existingUser == null)
+                            await room.AddUser(roomUser);
+                        else if (!isRefereeSpectatingOwnMatch(userState, existingUser))
+                            throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
+
                         await userState.SubscribeToEvents(eventDispatcher, roomId);
 
                         room.Log(roomUser, "User joined");
@@ -208,7 +209,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                 await state.UnsubscribeFromEvents(eventDispatcher, room.RoomID);
 
-                var user = await room.RemoveUser(state.UserId);
+                var user = room.Users.FirstOrDefault(u => u.UserID == state.UserId);
+                if (user == null)
+                    throw new InvalidStateException("User is not in the room.");
+
+                if (!isRefereeSpectatingOwnMatch(state, user))
+                    await room.RemoveUser(state.UserId);
+
                 bool wasKick = removingUserId != user.UserID;
                 room.Log(user, wasKick ? "User kicked" : "User left");
 
@@ -253,6 +260,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     state.DisassociateFromRoom(roomId.Value);
             }
         }
+
+        /// <remarks>
+        /// We want to allow exceptions wherein existing referees can also join their refereed rooms via the client to spectate them.
+        /// In that case, hook up all associations but don't add/remove the user in the room model.
+        /// Notably this flow requires the user to join as referee <i>first</i> and as spectator in client <i>second</i>.
+        /// </remarks>
+        private static bool isRefereeSpectatingOwnMatch(IMultiplayerUserState state, MultiplayerRoomUser user)
+            => user.Role == MultiplayerRoomUserRole.Referee && state is MultiplayerClientState;
 
         private async Task endMatch(MultiplayerRoom room, int disbandingUserId)
         {
