@@ -26,6 +26,7 @@
         <Content Include="docfx.json" CopyToOutputDirectory="Always" />
         <Content Include="*.yml" CopyToOutputDirectory="Always" />
         <Content Include="*.md" CopyToOutputDirectory="Always" />
+        <Content Include="logo.png" CopyToOutputDirectory="Always" />
     </ItemGroup>
     
     <PropertyGroup>
