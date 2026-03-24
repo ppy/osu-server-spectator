@@ -69,5 +69,20 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
             }
         }
+
+        [Fact]
+        public async Task CardDrawnOnNextPlayerRound()
+        {
+            // First round for each player doesn't draw any cards.
+            int[] expectedCardCounts = [5, 5, 6, 6, 7, 7];
+
+            for (int i = 0; i < expectedCardCounts.Length; i++)
+            {
+                Assert.Equal(expectedCardCounts[i], RoomState.Users[RoomState.ActiveUserId!.Value].Hand.Count);
+
+                // Go to the next round, for the next iteration.
+                await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
+            }
+        }
     }
 }

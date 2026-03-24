@@ -31,9 +31,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             State.CurrentRound++;
             State.DamageMultiplier = computeDamageMultiplier(State.CurrentRound);
 
-            // For the first round, the active user is set during room initialisation.
-            if (State.CurrentRound > 1)
+            // Activate the next player.
+            // For the first round, this is set during room initialisation.
+            if (State.CurrentRound >= 2)
                 State.ActiveUserId = Controller.UserIdsByTurnOrder.Concat(Controller.UserIdsByTurnOrder).SkipWhile(u => u != State.ActiveUserId).Skip(1).First();
+
+            // Draw a card on the player's next (non-first) turn.
+            if (State.CurrentRound >= 3)
+                await Controller.AddCards(State.ActiveUserId!.Value, 1);
         }
 
         protected override async Task Finish()
