@@ -17,7 +17,8 @@ namespace osu.Server.Spectator.PublicAPISchemaExporter
 
         private static async Task generateJsonSchemas()
         {
-            var apiDir = Directory.CreateDirectory("referee-api");
+            var metadataDir = Directory.CreateDirectory("_metadata");
+            var apiDir = metadataDir.CreateSubdirectory("referee-api");
             var overwritesDir = apiDir.CreateSubdirectory("overwrites");
             var schemasDir = apiDir.CreateSubdirectory("schemas");
 

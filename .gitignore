@@ -337,3 +337,6 @@ inspectcode
 
 **/replays/
 .idea/.idea.osu.Server.Spectator/.idea/misc.xml
+
+osu.Server.Spectator.PublicAPIDocs/_metadata/**
+osu.Server.Spectator.PublicAPIDocs/_site/**

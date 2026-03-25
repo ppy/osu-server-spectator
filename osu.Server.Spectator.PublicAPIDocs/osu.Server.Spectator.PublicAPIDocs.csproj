@@ -28,11 +28,5 @@
         <Content Include="*.md" CopyToOutputDirectory="Always" />
         <Content Include="logo.png" CopyToOutputDirectory="Always" />
     </ItemGroup>
-    
-    <PropertyGroup>
-        <OutputPath>out</OutputPath>
-        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-        <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    </PropertyGroup>
 
 </Project>
