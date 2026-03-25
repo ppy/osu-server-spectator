@@ -51,7 +51,7 @@ namespace osu.Server.Spectator.PublicAPISchemaExporter
                             // subsequent occurrences of the same type will not repeat the definition and instead use relative `$ref`.
                             if (jsonObject["$ref"]?.GetValue<string>() == null)
                             {
-                                jsonObject.Add("$id", $"https://osu.ppy.sh/docs/osu-server-spectator/referee-api/schemas/{ctx.TypeInfo.Type.Name}.json");
+                                jsonObject.Add("$id", $"https://ppy.github.io/osu-server-spectator/_metadata/referee-api/schemas/{ctx.TypeInfo.Type.Name}.json");
                                 jsonObject.Add("title", ctx.TypeInfo.Type.Name);
 
                                 // `System.Text.Json`'s default "required" handling is based on... whether the property is required in a constructor
