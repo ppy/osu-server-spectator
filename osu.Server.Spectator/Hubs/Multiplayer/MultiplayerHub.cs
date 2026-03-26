@@ -357,7 +357,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
                     ensureIsHostOrReferee(room);
 
-                    if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready)
+                    if (room.Host != null && room.Host.State != MultiplayerUserState.Spectating && room.Host.State != MultiplayerUserState.Ready && room.Host.Role != MultiplayerRoomUserRole.Referee)
                         throw new InvalidStateException("Can't start match when the host is not ready.");
 
                     if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
