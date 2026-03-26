@@ -186,38 +186,29 @@ namespace osu.Server.Spectator.Hubs.Referee
 
                     log("Closing room", room);
 
-                    foreach (var user in room.Users.Where(u => u.UserID != userUsage.Item.UserId).ToArray())
+                    foreach (var user in room.Users.ToArray())
                     {
-                        switch (user.Role)
+                        using (var targetPlayerUsage = await playerStates.GetForUse(user.UserID))
                         {
-                            case MultiplayerRoomUserRole.Player:
+                            Debug.Assert(targetPlayerUsage.Item != null);
+
+                            if (!targetPlayerUsage.Item.IsAssociatedWithRoom(roomId) && user.Role == MultiplayerRoomUserRole.Player)
+                                ThrowHelper.ThrowUserNotInRoom();
+
+                            if (targetPlayerUsage.Item.IsAssociatedWithRoom(roomId))
+                                await roomController.KickUserFromRoom(targetPlayerUsage.Item, roomUsage, userUsage.Item.UserId);
+                        }
+
+                        if (user.Role == MultiplayerRoomUserRole.Referee && user.UserID != userUsage.Item.UserId)
+                        {
+                            using (var targetRefereeUsage = await refereeStates.GetForUse(user.UserID))
                             {
-                                using (var targetUserUsage = await playerStates.GetForUse(user.UserID))
-                                {
-                                    Debug.Assert(targetUserUsage.Item != null);
+                                Debug.Assert(targetRefereeUsage.Item != null);
 
-                                    if (!targetUserUsage.Item.IsAssociatedWithRoom(roomId))
-                                        ThrowHelper.ThrowUserNotInRoom();
+                                if (!targetRefereeUsage.Item.IsAssociatedWithRoom(roomId))
+                                    ThrowHelper.ThrowUserNotInRoom();
 
-                                    await roomController.KickUserFromRoom(targetUserUsage.Item, roomUsage, userUsage.Item.UserId);
-                                }
-
-                                break;
-                            }
-
-                            case MultiplayerRoomUserRole.Referee:
-                            {
-                                using (var targetUserUsage = await refereeStates.GetForUse(user.UserID))
-                                {
-                                    Debug.Assert(targetUserUsage.Item != null);
-
-                                    if (!targetUserUsage.Item.IsAssociatedWithRoom(roomId))
-                                        ThrowHelper.ThrowUserNotInRoom();
-
-                                    await roomController.KickUserFromRoom(targetUserUsage.Item, roomUsage, userUsage.Item.UserId);
-                                }
-
-                                break;
+                                await roomController.KickUserFromRoom(targetRefereeUsage.Item, roomUsage, userUsage.Item.UserId);
                             }
                         }
                     }

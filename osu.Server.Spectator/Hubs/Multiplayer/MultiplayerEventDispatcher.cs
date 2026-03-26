@@ -294,6 +294,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        public async Task PostSpectatingRefereeKickedFromOwnMatchAsync(MultiplayerRoomUser user)
+        {
+            await multiplayerHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+        }
+
         /// <summary>
         /// A user has been banned from the room.
         /// </summary>

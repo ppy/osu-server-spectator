@@ -214,7 +214,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("User is not in the room.");
 
                 if (isRefereeSpectatingOwnMatch(state, user))
+                {
+                    await eventDispatcher.PostSpectatingRefereeKickedFromOwnMatchAsync(user);
                     return;
+                }
 
                 await room.RemoveUser(state.UserId);
 
