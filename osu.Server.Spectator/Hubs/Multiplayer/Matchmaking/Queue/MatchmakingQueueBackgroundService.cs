@@ -84,6 +84,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public async Task AddToLobbyAsync(MultiplayerClientState state)
         {
             await hub.Groups.AddToGroupAsync(state.ConnectionId, lobby_users_group);
+            await sendLobbyUpdate(hub.Clients.Client(state.ConnectionId));
         }
 
         public async Task RemoveFromLobbyAsync(MultiplayerClientState state)
@@ -210,16 +211,23 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             if (DateTimeOffset.Now - lastLobbyUpdateTime < lobby_update_rate)
                 return;
 
+            await sendLobbyUpdate(hub.Clients.Group(lobby_users_group));
+
+            lastLobbyUpdateTime = DateTimeOffset.Now;
+        }
+
+        private async Task sendLobbyUpdate(IClientProxy clients)
+        {
             MatchmakingQueueUser[] users = poolQueues.Values.SelectMany(queue => queue.GetAllUsers()).ToArray();
             Random.Shared.Shuffle(users);
             int[] usersSample = users.Take(50).Select(u => u.UserId).ToArray();
 
-            await hub.Clients.Group(lobby_users_group).SendAsync(nameof(IMatchmakingClient.MatchmakingLobbyStatusChanged), new MatchmakingLobbyStatus
+            var status = new MatchmakingLobbyStatus
             {
                 UsersInQueue = usersSample
-            });
+            };
 
-            lastLobbyUpdateTime = DateTimeOffset.Now;
+            await clients.SendAsync(nameof(IMatchmakingClient.MatchmakingLobbyStatusChanged), status);
         }
 
         private async Task refreshQueues()
