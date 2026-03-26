@@ -3,9 +3,9 @@
   "metadata": [{
     "src": [{
       "files": ["osu.Server.Spectator.csproj"],
-      "src": "../../osu.Server.Spectator"
+      "src": "../osu.Server.Spectator"
     }],
-    "dest": "referee-api/managed-references",
+    "dest": "_metadata/referee-api/managed-references",
     "filter": "filter-config.yml",
     "disableDefaultFilter": true
   }],
@@ -13,9 +13,10 @@
     "content": [
       {
         "files": [
-          "*.md",
-          "*.yml",
-          "referee-api/managed-references/*.yml"
+          "index.md",
+          "referee-hub-api.md",
+          "toc.yml",
+          "_metadata/referee-api/managed-references/*.yml"
         ],
         "exclude": [
           "_site/**"
@@ -23,13 +24,13 @@
       }
     ],
     "overwrite": [
-      "referee-api/overwrites/*.md"
+      "_metadata/referee-api/overwrites/*.md"
     ],
     "resource": [
       {
         "files": [
-          "images/**",
-          "referee-api/schemas/*.json"
+          "logo.png",
+          "_metadata/referee-api/schemas/*.json"
         ]
       }
     ],
@@ -41,6 +42,8 @@
     "globalMetadata": {
       "_appName": "osu-server-spectator",
       "_appTitle": "osu-server-spectator",
+      "_appFaviconPath": "/images/favicon/favicon-32x32.png",
+      "_appLogoPath": "logo.png",
       "_enableSearch": true,
       "_disableBreadcrumb": true,
       "_disableContribution": true,
