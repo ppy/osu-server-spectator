@@ -626,6 +626,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             if (user == null)
                 throw new InvalidStateException("User is not in the room.");
 
+            if (user.Role == MultiplayerRoomUserRole.Referee)
+                throw new InvalidStateException("Referees do not participate in the match and cannot set their own style.");
+
             await changeUserStyle(user, beatmapId, rulesetId);
         }
 
@@ -687,6 +690,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             if (user == null)
                 throw new InvalidStateException("User is not in the room.");
+
+            if (user.Role == MultiplayerRoomUserRole.Referee)
+                throw new InvalidStateException("Referees do not participate in the match and cannot set their own mods.");
 
             await changeUserMods(user, newMods);
         }
@@ -925,6 +931,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             var user = Users.FirstOrDefault(u => u.UserID == userId);
             if (user == null)
                 throw new InvalidStateException("User is not in the room.");
+
+            if (user.Role == MultiplayerRoomUserRole.Referee)
+                throw new InvalidStateException("Referees do not participate in the match and cannot vote to skip.");
 
             if (!user.State.IsGameplayState())
                 throw new InvalidStateException("Cannot skip while not in gameplay.");
