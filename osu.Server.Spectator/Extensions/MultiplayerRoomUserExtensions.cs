@@ -12,6 +12,8 @@ namespace osu.Server.Spectator.Extensions
         /// Whether a user is in a state capable of starting gameplay.
         /// </summary>
         public static bool IsReadyForGameplay(this MultiplayerRoomUser user)
-            => user.BeatmapAvailability.State == DownloadState.LocallyAvailable && (user.State == MultiplayerUserState.Ready || user.State == MultiplayerUserState.Idle);
+            => user.Role == MultiplayerRoomUserRole.Player
+               && user.BeatmapAvailability.State == DownloadState.LocallyAvailable
+               && (user.State == MultiplayerUserState.Ready || user.State == MultiplayerUserState.Idle);
     }
 }

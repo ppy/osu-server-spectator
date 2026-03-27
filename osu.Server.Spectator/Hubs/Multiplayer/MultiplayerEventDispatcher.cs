@@ -295,6 +295,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         }
 
         /// <summary>
+        /// A referee spectating the match inside the lazer client needs to be kicked from spectate.
+        /// </summary>
+        public async Task PostSpectatingRefereeKickedFromOwnMatchAsync(MultiplayerRoomUser user)
+        {
+            await multiplayerHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
+        }
+
+        /// <summary>
         /// A user has been banned from the room.
         /// </summary>
         /// <param name="roomId">The ID of the relevant room.</param>

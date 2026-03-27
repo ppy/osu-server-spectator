@@ -127,4 +127,34 @@ in cases of known failures related to user input or other cases wherein the oper
 adjusted or it is performed in a different state of the room.
 These errors are listed in [`ThrowHelper`](xref:osu.Server.Spectator.Hubs.Referee.ThrowHelper).
 
+## Spectating your match
+
+In order to facilitate spectating or streaming of the match, referees are permitted to join matches using one account
+in a dual capacity: firstly via a refereeing client in order to invoke refereeing commands, and secondly, via the lazer
+client in order to spectate the match.
+
+> [!WARNING]
+> Currently, to achieve this setup, a referee must join the room via the referee hub **first** and join the room via
+> the lazer client **second**. Attempting to perform these operations in the reverse order will not succeed.
+>
+> Similarly, disconnecting from the referee hub in any way (by leaving the room willfully, getting removed as referee,
+> or a transient disconnection), as well as closing the room, will kick the user from the room in the lazer client.
+> 
+> In other words, the spectating session in lazer should be considered **completely secondary** to the refereeing
+> session in the referee hub.
+
+In this setup:
+- Referees can perform room management actions both via the referee API and via the lazer client,
+  to identical effect.
+- Some operations available via the referee API may not be exposed in the client.
+  Currently that list includes:
+  - [banning players](xref:osu.Server.Spectator.Hubs.Referee.IRefereeHubServer.BanUser(System.Int64,System.Int32)),
+  - [adding](xref:osu.Server.Spectator.Hubs.Referee.IRefereeHubServer.AddReferee(System.Int64,System.Int32)) and
+    [removing](xref:osu.Server.Spectator.Hubs.Referee.IRefereeHubServer.RemoveReferee(System.Int64,System.Int32))
+    referees,
+  - [moving users to a given team](xref:osu.Server.Spectator.Hubs.Referee.IRefereeHubServer.MoveUser(System.Int64,osu.Server.Spectator.Hubs.Referee.Models.Requests.MoveUserRequest)),
+  - [(un)locking the room](xref:osu.Server.Spectator.Hubs.Referee.IRefereeHubServer.SetLockState(System.Int64,osu.Server.Spectator.Hubs.Referee.Models.Requests.SetLockStateRequest)).
+- Referees cannot participate in gameplay or perform actions relevant to gameplay participation, such as: readying up,
+  progressing to gameplay, joining teams, selecting user mods or user style.
+
 <!-- TODO: handling disconnections -->
