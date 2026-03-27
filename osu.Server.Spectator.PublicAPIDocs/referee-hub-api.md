@@ -136,6 +136,12 @@ client in order to spectate the match.
 > [!WARNING]
 > Currently, to achieve this setup, a referee must join the room via the referee hub **first** and join the room via
 > the lazer client **second**. Attempting to perform these operations in the reverse order will not succeed.
+>
+> Similarly, disconnecting from the referee hub in any way (by leaving the room willfully, getting removed as referee,
+> or a transient disconnection), as well as closing the room, will kick the user from the room in the lazer client.
+> 
+> In other words, the spectating session in lazer should be considered **completely secondary** to the refereeing
+> session in the referee hub.
 
 In this setup:
 - Referees can perform room management actions both via the referee API and via the lazer client,

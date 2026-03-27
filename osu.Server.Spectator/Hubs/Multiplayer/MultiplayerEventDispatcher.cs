@@ -294,6 +294,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             });
         }
 
+        /// <summary>
+        /// A referee spectating the match inside the lazer client needs to be kicked from spectate.
+        /// </summary>
         public async Task PostSpectatingRefereeKickedFromOwnMatchAsync(MultiplayerRoomUser user)
         {
             await multiplayerHubContext.Clients.User(user.UserID.ToString()).SendAsync(nameof(IMultiplayerClient.UserKicked), user);
