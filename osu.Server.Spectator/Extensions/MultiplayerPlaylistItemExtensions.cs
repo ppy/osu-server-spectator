@@ -64,6 +64,15 @@ namespace osu.Server.Spectator.Extensions
         {
             var ruleset = LegacyHelper.GetRulesetFromLegacyID(item.RulesetID);
 
+            // defensively change all mod acronyms to uppercase.
+            // while lazer client will consistently use uppercase, referee API clients are largely uncontrolled and may use any casing.
+            // aside from cosmetic reasons (the acronyms are later used in this method inside error messages, and they look nicer uppercase),
+            // this is also applying Postel's law - all other clients and readers will henceforth see acronyms normalised to uppercase.
+            foreach (var requiredMod in item.RequiredMods)
+                requiredMod.Acronym = requiredMod.Acronym.ToUpperInvariant();
+            foreach (var allowedMod in item.AllowedMods)
+                allowedMod.Acronym = allowedMod.Acronym.ToUpperInvariant();
+
             // check against ruleset
             if (!ModUtils.InstantiateValidModsForRuleset(ruleset, item.RequiredMods, out var requiredMods))
             {
