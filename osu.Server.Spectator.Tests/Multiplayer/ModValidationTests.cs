@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -168,6 +169,46 @@ namespace osu.Server.Spectator.Tests.Multiplayer
                 Debug.Assert(room != null);
                 Assert.Equal(setMods, room.Users.First().Mods);
             }
+        }
+
+        [Fact]
+        public async Task ModAcronymComparisonsAreCaseInsensitive()
+        {
+            await Hub.JoinRoom(ROOM_ID);
+
+            await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
+            {
+                ID = 1,
+                BeatmapChecksum = "checksum",
+                AllowedMods = new[]
+                {
+                    new APIMod { Acronym = "fL" },
+                    new APIMod { Acronym = "ad" },
+                },
+            });
+
+            await Hub.ChangeUserMods([new APIMod { Acronym = "fl" }]);
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+                Assert.Collection(room.Users.First().Mods,
+                    mod => Assert.Equal("FL", mod.Acronym, StringComparer.OrdinalIgnoreCase));
+            }
+
+            await Hub.ChangeUserMods([new APIMod { Acronym = "AD" }, new APIMod { Acronym = "Fl" }]);
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+                Assert.Collection(room.Users.First().Mods,
+                    mod => Assert.Equal("AD", mod.Acronym, StringComparer.OrdinalIgnoreCase),
+                    mod => Assert.Equal("FL", mod.Acronym, StringComparer.OrdinalIgnoreCase));
+            }
+
+            await Assert.ThrowsAsync<InvalidStateException>(() => Hub.ChangeUserMods([new APIMod { Acronym = "Fg" }]));
         }
 
         [Fact]
