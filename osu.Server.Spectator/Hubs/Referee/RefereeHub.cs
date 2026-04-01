@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
@@ -29,11 +28,10 @@ using RollRequest = osu.Server.Spectator.Hubs.Referee.Models.Requests.RollReques
 namespace osu.Server.Spectator.Hubs.Referee
 {
     [Authorize(ConfigureJwtBearerOptions.REFEREE_CLIENT_SCHEME)]
-    public class RefereeHub : Hub, IRefereeHubServer
+    public class RefereeHub : LoggingHub<IRefereeHubClient>, IRefereeHubServer
     {
         private readonly IDatabaseFactory databaseFactory;
         private readonly ISharedInterop sharedInterop;
-        private readonly ILogger<RefereeHub> logger;
         private readonly IMultiplayerRoomController roomController;
         private readonly MultiplayerEventDispatcher eventDispatcher;
         private readonly EntityStore<RefereeClientState> refereeStates;
@@ -49,9 +47,9 @@ namespace osu.Server.Spectator.Hubs.Referee
             EntityStore<RefereeClientState> refereeStates,
             EntityStore<MultiplayerClientState> playerStates,
             ChatFilters chatFilters)
+            : base(loggerFactory)
         {
             this.databaseFactory = databaseFactory;
-            logger = loggerFactory.CreateLogger<RefereeHub>();
             this.sharedInterop = sharedInterop;
             this.roomController = roomController;
             this.eventDispatcher = eventDispatcher;
@@ -76,6 +74,7 @@ namespace osu.Server.Spectator.Hubs.Referee
             await base.OnConnectedAsync();
         }
 
+        [Obsolete]
         public async Task Ping(string message)
         {
             string? username;
@@ -83,7 +82,7 @@ namespace osu.Server.Spectator.Hubs.Referee
             using (var db = databaseFactory.GetInstance())
                 username = await db.GetUsernameAsync(Context.GetUserId());
 
-            await Clients.Caller.SendAsync(nameof(IRefereeHubClient.Pong), $"Hi {username}! Here's your message back: {message}");
+            await Clients.Caller.Pong($"Hi {username}! Here's your message back: {message}");
         }
 
         public async Task<RoomJoinedResponse> MakeRoom(MakeRoomRequest request)
@@ -632,7 +631,7 @@ namespace osu.Server.Spectator.Hubs.Referee
             }
         }
 
-        public async Task Roll(long roomId, RollRequest request)
+        public async Task Roll(long roomId, RollRequest? request)
         {
             using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
             {
@@ -649,7 +648,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                     if (user == null)
                         ThrowHelper.ThrowUserNotInRoom();
 
-                    await roomUsage.Item.MatchController.HandleUserRequest(user, new Game.Online.Multiplayer.RollRequest { Max = request.Max });
+                    await roomUsage.Item.MatchController.HandleUserRequest(user, new Game.Online.Multiplayer.RollRequest { Max = request?.Max });
                 }
             }
         }
@@ -823,6 +822,6 @@ namespace osu.Server.Spectator.Hubs.Referee
         }
 
         private void log(string message, ServerMultiplayerRoom? room, LogLevel level = LogLevel.Information)
-            => logger.Log(level, "[user:{userId}] [room:{roomId}] {message}", Context.UserIdentifier, room?.RoomID.ToString() ?? "none", message);
+            => Log($"[room:{room?.RoomID.ToString() ?? "none"}] {message}", level);
     }
 }
