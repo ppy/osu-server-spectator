@@ -631,7 +631,7 @@ namespace osu.Server.Spectator.Hubs.Referee
             }
         }
 
-        public async Task Roll(long roomId, RollRequest request)
+        public async Task Roll(long roomId, RollRequest? request)
         {
             using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
             {
@@ -648,7 +648,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                     if (user == null)
                         ThrowHelper.ThrowUserNotInRoom();
 
-                    await roomUsage.Item.MatchController.HandleUserRequest(user, new Game.Online.Multiplayer.RollRequest { Max = request.Max });
+                    await roomUsage.Item.MatchController.HandleUserRequest(user, new Game.Online.Multiplayer.RollRequest { Max = request?.Max });
                 }
             }
         }

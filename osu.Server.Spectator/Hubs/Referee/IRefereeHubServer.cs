@@ -141,7 +141,7 @@ namespace osu.Server.Spectator.Hubs.Referee
         /// Initiates a random roll in the room.
         /// Corresponds to the <c>!roll</c> command on bancho.
         /// </summary>
-        Task Roll(long roomId, RollRequest request);
+        Task Roll(long roomId, RollRequest? request);
 
         /// <summary>
         /// Moves the user to a different team in the given <paramref name="roomId"/>.
