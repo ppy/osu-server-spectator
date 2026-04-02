@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -34,7 +35,7 @@ namespace osu.Server.Spectator.Extensions
                 // check allowed by room
                 foreach (var mod in valid.ToList())
                 {
-                    if (item.AllowedMods.All(m => m.Acronym != mod.Acronym))
+                    if (item.AllowedMods.All(m => !string.Equals(m.Acronym, mod.Acronym, StringComparison.OrdinalIgnoreCase)))
                     {
                         valid.Remove(mod);
                         proposedWereValid = false;
@@ -63,16 +64,31 @@ namespace osu.Server.Spectator.Extensions
         {
             var ruleset = LegacyHelper.GetRulesetFromLegacyID(item.RulesetID);
 
+            // defensively change all mod acronyms to uppercase.
+            // while lazer client will consistently use uppercase, referee API clients are largely uncontrolled and may use any casing.
+            // aside from cosmetic reasons (the acronyms are later used in this method inside error messages, and they look nicer uppercase),
+            // this is also applying Postel's law - all other clients and readers will henceforth see acronyms normalised to uppercase.
+            foreach (var requiredMod in item.RequiredMods)
+                requiredMod.Acronym = requiredMod.Acronym.ToUpperInvariant();
+            foreach (var allowedMod in item.AllowedMods)
+                allowedMod.Acronym = allowedMod.Acronym.ToUpperInvariant();
+
             // check against ruleset
             if (!ModUtils.InstantiateValidModsForRuleset(ruleset, item.RequiredMods, out var requiredMods))
             {
-                var invalidRequiredAcronyms = string.Join(',', item.RequiredMods.Where(m => requiredMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
+                var invalidRequiredAcronyms = string.Join(',',
+                    item.RequiredMods
+                        .Where(m => requiredMods.All(valid => !string.Equals(valid.Acronym, m.Acronym, StringComparison.OrdinalIgnoreCase)))
+                        .Select(m => m.Acronym));
                 throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidRequiredAcronyms}");
             }
 
             if (!ModUtils.InstantiateValidModsForRuleset(ruleset, item.AllowedMods, out var allowedMods))
             {
-                var invalidAllowedAcronyms = string.Join(',', item.AllowedMods.Where(m => allowedMods.All(valid => valid.Acronym != m.Acronym)).Select(m => m.Acronym));
+                var invalidAllowedAcronyms = string.Join(',',
+                    item.AllowedMods
+                        .Where(m => allowedMods.All(valid => !string.Equals(valid.Acronym, m.Acronym, StringComparison.OrdinalIgnoreCase)))
+                        .Select(m => m.Acronym));
                 throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidAllowedAcronyms}");
             }
 
