@@ -394,6 +394,19 @@ namespace osu.Server.Spectator.Hubs.Referee
             refereeUsage.Item.DisassociateFromRoom(roomUsage.Item.RoomID);
         }
 
+        public async Task<ListRoomsResponse> ListRooms()
+        {
+            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
+            {
+                Debug.Assert(userUsage.Item != null);
+
+                return new ListRoomsResponse
+                {
+                    RoomIDs = userUsage.Item.RefereedRoomIds.ToArray()
+                };
+            }
+        }
+
         public async Task ChangeRoomSettings(long roomId, ChangeRoomSettingsRequest request)
         {
             using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))

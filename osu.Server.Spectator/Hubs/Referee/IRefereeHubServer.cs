@@ -87,6 +87,11 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task RemoveReferee(long roomId, int targetUserId);
 
         /// <summary>
+        /// Lists all rooms that the caller is a referee in.
+        /// </summary>
+        Task<ListRoomsResponse> ListRooms();
+
+        /// <summary>
         /// Changes the settings of the room with the given <paramref name="roomId"/>.
         /// Encompasses the <c>!mp name</c>, <c>!mp password</c>, and <c>!mp set</c> commands on bancho.
         /// </summary>
