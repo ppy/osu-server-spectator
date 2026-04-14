@@ -75,13 +75,14 @@ namespace osu.Server.Spectator.Hubs.Referee
         /// <summary>
         /// Adds the user with the given <paramref name="targetUserId"/> as a referee of the room with the given <paramref name="roomId"/>.
         /// The user has to call <see cref="JoinRoom"/> to start performing referee actions.
+        /// Only the room host can call this method, and they cannot call it on themselves.
         /// </summary>
         Task AddReferee(long roomId, int targetUserId);
 
         /// <summary>
         /// Removes the user with the given <paramref name="targetUserId"/> from the set of referees of the room with the given <paramref name="roomId"/>.
         /// If the user was joined to the room at the time of this call, they will be kicked from the room.
-        /// A user cannot call this method on themselves; for that purpose <see cref="LeaveRoom"/> should be used instead.
+        /// Only the room host can call this method, and they cannot call it on themselves.
         /// </summary>
         Task RemoveReferee(long roomId, int targetUserId);
 

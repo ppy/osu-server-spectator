@@ -126,6 +126,13 @@ namespace osu.Server.Spectator.Hubs.Referee
         /// </summary>
         [DoesNotReturn]
         public static void ThrowInvalidRoll()
-            => throw new RefereeHubException(19, "Invalid roll. Max must be in [1, 100] range inclusive.");
+            => throw new RefereeHubException(17, "Invalid roll. Max must be in [1, 100] range inclusive.");
+
+        /// <summary>
+        /// Error 18: You are not the host of the room.
+        /// </summary>
+        [DoesNotReturn]
+        public static void ThrowUserNotHost()
+            => throw new RefereeHubException(18, "You are not the host of the room.");
     }
 }

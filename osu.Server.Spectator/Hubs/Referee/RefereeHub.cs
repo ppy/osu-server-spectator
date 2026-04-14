@@ -277,8 +277,6 @@ namespace osu.Server.Spectator.Hubs.Referee
             {
                 Debug.Assert(userUsage.Item != null);
 
-                ensureIsReferee(roomId, userUsage);
-
                 using (var roomUsage = await roomController.GetRoom(roomId))
                 {
                     if (roomUsage.Item == null)
@@ -286,6 +284,11 @@ namespace osu.Server.Spectator.Hubs.Referee
 
                     if (targetUserId == userUsage.Item.UserId)
                         ThrowHelper.ThrowCannotPerformOperationOnSelf();
+
+                    // referee addition is unique in that it can only be performed by the room host
+                    // this mirrors bancho
+                    if (userUsage.Item.UserId != roomUsage.Item.Host?.UserID)
+                        ThrowHelper.ThrowUserNotHost();
 
                     if (roomUsage.Item.BannedUsers.Contains(targetUserId))
                         ThrowHelper.ThrowUserBanned();
@@ -313,12 +316,15 @@ namespace osu.Server.Spectator.Hubs.Referee
             {
                 Debug.Assert(userUsage.Item != null);
 
-                ensureIsReferee(roomId, userUsage);
-
                 using (var roomUsage = await roomController.GetRoom(roomId))
                 {
                     if (roomUsage.Item == null)
                         ThrowHelper.ThrowRoomDoesNotExist();
+
+                    // referee removal is unique in that it can only be performed by the room host
+                    // this mirrors bancho
+                    if (userUsage.Item.UserId != roomUsage.Item.Host?.UserID)
+                        ThrowHelper.ThrowUserNotHost();
 
                     if (targetUserId == userUsage.Item.UserId)
                         ThrowHelper.ThrowCannotPerformOperationOnSelf();
