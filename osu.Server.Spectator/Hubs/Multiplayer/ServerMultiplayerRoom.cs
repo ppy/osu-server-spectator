@@ -38,6 +38,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public IReadOnlySet<int> BannedUsers => bannedUsers;
         private readonly HashSet<int> bannedUsers = [];
 
+        public bool TournamentMode { get; private set; }
+        public DateTimeOffset? EndDate { get; private set; }
+
         private ServerMultiplayerRoom(
             long roomId,
             IMultiplayerRoomController roomController,
@@ -102,10 +105,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 foreach (var item in await db.GetAllPlaylistItemsAsync(roomId))
                     room.Playlist.Add(item.ToMultiplayerPlaylistItem());
 
+                room.TournamentMode = databaseRoom.tournament_mode;
+
                 await room.ChangeMatchType(room.Settings.MatchType);
 
                 room.Log("Marking room active");
-                await db.MarkRoomActiveAsync(room);
+                await room.setEndDateAsync(db, null);
             }
 
             return room;
@@ -165,6 +170,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         #endregion
 
         #region Room state management
+
+        public async Task SetEndDateAsync(DateTimeOffset? endDate)
+        {
+            using (var db = dbFactory.GetInstance())
+                await setEndDateAsync(db, endDate);
+        }
+
+        private async Task setEndDateAsync(IDatabaseAccess db, DateTimeOffset? endDate)
+        {
+            await db.SetRoomEndDateAsync(this, endDate);
+            EndDate = endDate;
+        }
+
+        public async Task Disband(int? disbandingUserId)
+        {
+            using (var db = dbFactory.GetInstance())
+                await db.EndMatchAsync(this);
+
+            await eventDispatcher.PostRoomDisbandedAsync(RoomID, disbandingUserId);
+        }
 
         private async Task changeRoomState(MultiplayerRoomState newState)
         {
@@ -1242,7 +1267,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         #endregion
 
-        public async Task<bool> UserCanJoin(int userId) => !bannedUsers.Contains(userId) && await MatchController.UserCanJoin(userId);
+        public async Task<bool> UserCanJoin(int userId)
+        {
+            if (bannedUsers.Contains(userId))
+                return false;
+
+            if (EndDate != null && DateTimeOffset.Now >= EndDate)
+                return false;
+
+            return await MatchController.UserCanJoin(userId);
+        }
 
         #region IMatchController encapsulation
 

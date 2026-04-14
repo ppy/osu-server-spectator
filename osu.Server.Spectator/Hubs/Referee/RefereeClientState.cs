@@ -36,6 +36,22 @@ namespace osu.Server.Spectator.Hubs.Referee
         public void DisassociateFromRoom(long roomId)
             => refereedRoomIds.Remove(roomId);
 
+        public void DisassociateFromRooms(IEnumerable<long> roomIds)
+            => refereedRoomIds.ExceptWith(roomIds);
+
+        public void HandleRoomJoined(long roomId)
+            => AssociateWithRoom(roomId);
+
+        public void HandleRoomLeft(long roomId)
+        {
+            // intentionally a no-op.
+            // a referee leaving a room intentionally has no real consequences.
+            // the expectation is that it should NOT disassociate the referee from the room since they may want to return later for whatever reason.
+            // the only way in which a referee CAN be disassociated from the room are as follows:
+            // - getting removed as referee by another referee,
+            // - closing the room entirely.
+        }
+
         public Task SubscribeToEvents(MultiplayerEventDispatcher eventDispatcher, long roomId)
             => eventDispatcher.SubscribeRefereeAsync(roomId, ConnectionId);
 

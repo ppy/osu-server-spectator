@@ -218,7 +218,7 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         [Fact]
         public async Task UserJoinPreJoinFailureCleansUpRoom()
         {
-            Database.Setup(db => db.MarkRoomActiveAsync(It.IsAny<MultiplayerRoom>()))
+            Database.Setup(db => db.SetRoomEndDateAsync(It.IsAny<MultiplayerRoom>(), It.IsAny<DateTimeOffset?>()))
                     .ThrowsAsync(new Exception("error"));
 
             await Assert.ThrowsAnyAsync<Exception>(() => Hub.JoinRoom(ROOM_ID));

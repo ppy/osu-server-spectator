@@ -28,7 +28,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public MultiplayerRoomUser CreateRoomUser()
             => new MultiplayerRoomUser(UserId) { Role = MultiplayerRoomUserRole.Player };
 
-        public void AssociateWithRoom(long roomId)
+        public void HandleRoomJoined(long roomId)
         {
             if (CurrentRoomID != null)
                 throw new InvalidOperationException("User is already in a room.");
@@ -39,7 +39,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public bool IsAssociatedWithRoom(long roomId) => CurrentRoomID == roomId;
 
-        public void DisassociateFromRoom(long roomId)
+        public void HandleRoomLeft(long roomId)
         {
             if (CurrentRoomID == null)
                 return;

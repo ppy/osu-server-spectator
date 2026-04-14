@@ -40,7 +40,8 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<MultiplayerEventDispatcher>()
                                     .AddSingleton<IMatchmakingQueueBackgroundService, MatchmakingQueueBackgroundService>()
                                     .AddHostedService<IMatchmakingQueueBackgroundService>(ctx => ctx.GetRequiredService<IMatchmakingQueueBackgroundService>())
-                                    .AddSingleton<IMultiplayerRoomController, MultiplayerRoomController>();
+                                    .AddSingleton<IMultiplayerRoomController, MultiplayerRoomController>()
+                                    .AddHostedService<MultiplayerRoomLifetimeBackgroundService>();
         }
 
         /// <summary>

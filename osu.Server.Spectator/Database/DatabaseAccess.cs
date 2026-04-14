@@ -134,13 +134,14 @@ namespace osu.Server.Spectator.Database
                 })).ToArray();
         }
 
-        public async Task MarkRoomActiveAsync(MultiplayerRoom room)
+        public async Task SetRoomEndDateAsync(MultiplayerRoom room, DateTimeOffset? endDate)
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = null WHERE id = @RoomID", new
+            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET ends_at = @EndDate WHERE id = @RoomID", new
             {
-                RoomID = room.RoomID
+                RoomID = room.RoomID,
+                EndDate = endDate
             });
         }
 

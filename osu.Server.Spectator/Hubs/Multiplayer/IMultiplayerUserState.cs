@@ -32,21 +32,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         MultiplayerRoomUser CreateRoomUser();
 
         /// <summary>
-        /// Associates this <see cref="IMultiplayerUserState"/> with the given <paramref name="roomId"/>.
-        /// Performed on room join.
+        /// Ran when this <see cref="IMultiplayerUserState"/> joins the room with the given <paramref name="roomId"/>.
         /// </summary>
-        void AssociateWithRoom(long roomId);
+        void HandleRoomJoined(long roomId);
+
+        /// <summary>
+        /// Ran when this <see cref="IMultiplayerUserState"/> leaves the room with the given <paramref name="roomId"/>.
+        /// </summary>
+        void HandleRoomLeft(long roomId);
 
         /// <summary>
         /// Whether this <see cref="IMultiplayerUserState"/> is currently associated with the given <paramref name="roomId"/>.
         /// </summary>
         bool IsAssociatedWithRoom(long roomId);
-
-        /// <summary>
-        /// Disassociates this <see cref="IMultiplayerUserState"/> from the given <paramref name="roomId"/>.
-        /// Performed on room leave.
-        /// </summary>
-        void DisassociateFromRoom(long roomId);
 
         /// <summary>
         /// Subscribes to relevant event groups for the given <paramref name="roomId"/> via the supplied <paramref name="eventDispatcher"/>.

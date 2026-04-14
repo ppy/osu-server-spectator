@@ -85,7 +85,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         if (isNewRoom && !room.Settings.MatchType.IsMatchmakingType())
                             room.Host = roomUser;
 
-                        userState.AssociateWithRoom(roomId);
+                        userState.HandleRoomJoined(roomId);
 
                         var existingUser = room.Users.FirstOrDefault(u => u.UserID == roomUser.UserID);
 
@@ -95,6 +95,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                             throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
 
                         await userState.SubscribeToEvents(eventDispatcher, roomId);
+
+                        if (room.EndDate != null)
+                        {
+                            room.Log("Clearing pending end date.");
+                            await room.SetEndDateAsync(null);
+                        }
 
                         room.Log(roomUser, "User joined");
                     }
@@ -114,7 +120,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                                 {
                                     // the room was retrieved and associated to the usage, but something failed before the user (host) could join.
                                     // for now, let's mark the room as ended if this happens.
-                                    await endMatch(room, roomUser.UserID);
+                                    await room.Disband(roomUser.UserID);
                                 }
 
                                 roomUsage.Destroy();
@@ -123,7 +129,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         finally
                         {
                             // no matter how we end up cleaning up the room, ensure the user's state is cleared.
-                            userState.DisassociateFromRoom(roomId);
+                            userState.HandleRoomLeft(roomId);
                         }
 
                         throw;
@@ -151,8 +157,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             return roomSnapshot;
         }
 
-        public async Task LeaveRoom(IMultiplayerUserState user, ItemUsage<ServerMultiplayerRoom> roomUsage)
-            => await removeUserFromRoom(user, roomUsage, user.UserId);
+        public async Task LeaveRoom(IMultiplayerUserState user, ItemUsage<ServerMultiplayerRoom> roomUsage, bool forceCloseOnEmpty = false)
+            => await removeUserFromRoom(user, roomUsage, user.UserId, forceCloseOnEmpty);
 
         public async Task KickUserFromRoom(IMultiplayerUserState kickedUser, ItemUsage<ServerMultiplayerRoom> roomUsage, int kickedBy)
             => await removeUserFromRoom(kickedUser, roomUsage, kickedBy);
@@ -195,7 +201,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             room.BanUser(bannedUserId);
         }
 
-        private async Task removeUserFromRoom(IMultiplayerUserState state, ItemUsage<ServerMultiplayerRoom> roomUsage, int removingUserId)
+        private async Task removeUserFromRoom(IMultiplayerUserState state, ItemUsage<ServerMultiplayerRoom> roomUsage, int removingUserId, bool forceCloseOnEmpty = false)
         {
             long? roomId = null;
 
@@ -234,19 +240,29 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     // Errors are logged internally by SharedInterop.
                 }
 
-                // handle closing the room if the only participant is the user which is leaving.
+                // special handling if the only participant is the user which is leaving.
                 if (room.Users.Count == 0)
                 {
-                    await endMatch(room, removingUserId);
+                    if (!room.TournamentMode || forceCloseOnEmpty)
+                    {
+                        await room.Disband(removingUserId);
 
-                    // only destroy the usage after the database operation succeeds.
-                    room.Log("Stopping tracking of room (all users left).");
-                    roomUsage.Destroy();
-                    return;
+                        // only destroy the usage after the database operation succeeds.
+                        room.Log("Stopping tracking of room (all users left).");
+                        roomUsage.Destroy();
+                        return;
+                    }
+                    else
+                    {
+                        var endDate = DateTimeOffset.Now.AddMinutes(30);
+                        room.Log($"All users left tournament room; setting room to close on {endDate}");
+                        await room.SetEndDateAsync(endDate);
+                    }
                 }
 
                 // if this user was the host, we need to arbitrarily transfer host so the room can continue to exist.
-                if (room.Host?.Equals(user) == true)
+                // this only applies to non-tournament rooms; in tournament rooms host is not transferable.
+                if (room.Host?.Equals(user) == true && !room.TournamentMode)
                 {
                     // there *has* to still be at least one user in the room (see user check above).
                     var newHost = room.Users.First();
@@ -262,7 +278,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             finally
             {
                 if (roomId != null)
-                    state.DisassociateFromRoom(roomId.Value);
+                    state.HandleRoomLeft(roomId.Value);
             }
         }
 
@@ -273,14 +289,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </remarks>
         private static bool isRefereeSpectatingOwnMatch(IMultiplayerUserState state, MultiplayerRoomUser user)
             => user.Role == MultiplayerRoomUserRole.Referee && state is MultiplayerClientState;
-
-        private async Task endMatch(MultiplayerRoom room, int disbandingUserId)
-        {
-            using (var db = databaseFactory.GetInstance())
-                await db.EndMatchAsync(room);
-
-            await eventDispatcher.PostRoomDisbandedAsync(room.RoomID, disbandingUserId);
-        }
 
         public Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId)
             => rooms.GetForUse(roomId);

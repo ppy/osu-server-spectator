@@ -41,9 +41,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         /// <param name="user">The user leaving the room.</param>
         /// <param name="roomUsage">The room being left.</param>
+        /// <param name="forceCloseOnEmpty">
+        /// Whether to force the room to close if it is empty after the user has left.
+        /// Only has an observable effect in rooms with <see cref="ServerMultiplayerRoom.TournamentMode"/> enabled,
+        /// as tournament mode rooms are the only ones which are allowed to remain open while empty for 30 minutes as counted from the time when the last user leaves.
+        /// </param>
         Task LeaveRoom(
             IMultiplayerUserState user,
-            ItemUsage<ServerMultiplayerRoom> roomUsage);
+            ItemUsage<ServerMultiplayerRoom> roomUsage,
+            bool forceCloseOnEmpty = false);
 
         /// <summary>
         /// The given user is kicked from the room.

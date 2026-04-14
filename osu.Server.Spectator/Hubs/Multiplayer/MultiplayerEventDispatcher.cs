@@ -112,7 +112,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         /// </summary>
         /// <param name="roomId">The ID of the disbanded room.</param>
         /// <param name="userId">The ID of the user that disbanded the room.</param>
-        public async Task PostRoomDisbandedAsync(long roomId, int userId)
+        public async Task PostRoomDisbandedAsync(long roomId, int? userId)
         {
             await logToDatabase(new multiplayer_realtime_room_event
             {

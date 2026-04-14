@@ -67,9 +67,9 @@ namespace osu.Server.Spectator.Database
         Task<database_beatmap[]> GetBeatmapsAsync(int beatmapSetId);
 
         /// <summary>
-        /// Marks the given <paramref name="room"/> as active and accepting new players.
+        /// Sets the end date of the <paramref name="room"/>.
         /// </summary>
-        Task MarkRoomActiveAsync(MultiplayerRoom room);
+        Task SetRoomEndDateAsync(MultiplayerRoom room, DateTimeOffset? endDate);
 
         /// <summary>
         /// Updates the current settings of <paramref name="room"/> in the database.
