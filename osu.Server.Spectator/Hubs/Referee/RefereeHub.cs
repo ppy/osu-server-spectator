@@ -151,26 +151,6 @@ namespace osu.Server.Spectator.Hubs.Referee
             }
         }
 
-        public async Task LeaveRoom(long roomId)
-        {
-            using (var userUsage = await refereeStates.GetForUse(Context.GetUserId()))
-            {
-                Debug.Assert(userUsage.Item != null);
-
-                ensureIsReferee(roomId, userUsage);
-
-                using (var roomUsage = await roomController.GetRoom(roomId))
-                {
-                    Debug.Assert(roomUsage.Item != null);
-
-                    await tryKickRefereeFromMultiplayerHub(roomUsage, userUsage.Item.UserId, userUsage.Item.UserId);
-                    await kickRefereeFromRefereeHub(roomUsage, userUsage, userUsage.Item.UserId);
-
-                    await eventDispatcher.PostRefereeRemovedAsync(roomId, userUsage.Item.UserId);
-                }
-            }
-        }
-
         public async Task CloseRoom(long roomId)
         {
             using (var closingUserUsage = await refereeStates.GetForUse(Context.GetUserId()))

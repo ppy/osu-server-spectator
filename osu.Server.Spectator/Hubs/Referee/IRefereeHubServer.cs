@@ -48,13 +48,6 @@ namespace osu.Server.Spectator.Hubs.Referee
         Task<RoomJoinedResponse> JoinRoom(long roomId);
 
         /// <summary>
-        /// Leaves the multiplayer room with the given <paramref name="roomId"/>.
-        /// This operation removes the caller's referee privileges;
-        /// they will not be able to <see cref="JoinRoom"/> again unless granted referee privileges again by another referee in the room.
-        /// </summary>
-        Task LeaveRoom(long roomId);
-
-        /// <summary>
         /// Closes the room with the given <paramref name="roomId"/>.
         /// Corresponds to the <c>!mp close</c> command on bancho.
         /// </summary>
