@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Moq;
@@ -45,6 +46,48 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 500_000,
                 OldLife = 1_000_000,
                 NewLife = 500_000,
+            });
+        }
+
+        [Fact]
+        public async Task DamageTakenWithLateArrivingScore()
+        {
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 500_000 }
+                    ]));
+
+            Task enterTask = MatchController.Stage.Enter();
+
+            await Task.Delay(1000);
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 500_000 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
+                    ]));
+
+            await enterTask;
+
+            Assert.Equal(1_000_000, UserState.Life);
+            Assert.Equal(750_000, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 0,
+                Damage = 0,
+                OldLife = 1_000_000,
+                NewLife = 1_000_000,
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 250_000,
+                Damage = 250_000,
+                OldLife = 1_000_000,
+                NewLife = 750_000,
             });
         }
 

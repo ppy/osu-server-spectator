@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
@@ -53,6 +54,13 @@ namespace osu.Server.Spectator.Tests.RankedPlay
                         user_id = (uint)userId,
                         pool_id = poolId
                     }));
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 1_000_000 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 1_000_000 },
+                    ]));
         }
 
         public async Task InitializeAsync()
