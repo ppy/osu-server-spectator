@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.RankedPlay.Stages
@@ -21,6 +22,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         [Fact]
         public async Task DamageTakenWithMissingScore()
         {
+            ((ResultsStage)MatchController.Stage).ScoreRetrievalWaitTime = TimeSpan.FromSeconds(1);
+
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
                     .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
                     [
