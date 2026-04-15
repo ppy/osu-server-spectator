@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
@@ -13,6 +14,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 {
     public class ResultsStage : RankedPlayStageImplementation
     {
+        /// <summary>
+        /// Amount of time to wait for scores to arrive in the database before continuing.
+        /// </summary>
+        public TimeSpan ScoreRetrievalWaitTime { get; set; } = TimeSpan.FromSeconds(10);
+
         public ResultsStage(RankedPlayMatchController controller)
             : base(controller)
         {
@@ -25,8 +31,27 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         {
             // Collect all scores from the database.
             List<SoloScore> scores = [];
+
             using (var db = DbFactory.GetInstance())
-                scores.AddRange(await db.GetAllScoresForPlaylistItem(Room.Settings.PlaylistItemId));
+            {
+                // Wait up to 10 seconds to retrieve scores for all players, before continuing and giving them 0 score.
+                using (var cts = new CancellationTokenSource(ScoreRetrievalWaitTime))
+                {
+                    SoloScore[] retrievedScores = [];
+
+                    while (!cts.IsCancellationRequested)
+                    {
+                        retrievedScores = (await db.GetAllScoresForPlaylistItem(Room.Settings.PlaylistItemId)).ToArray();
+
+                        if (retrievedScores.Length == State.Users.Count)
+                            break;
+
+                        await Task.Delay(1000, CancellationToken.None);
+                    }
+
+                    scores.AddRange(retrievedScores);
+                }
+            }
 
             // Add dummy scores for all users that did not play the map.
             foreach ((int userId, _) in State.Users)
