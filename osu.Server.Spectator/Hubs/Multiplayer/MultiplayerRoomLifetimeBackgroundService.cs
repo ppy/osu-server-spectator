@@ -49,7 +49,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         // double-check inside the lock to be safe.
                         if (roomUsage?.Item?.EndDate == null || DateTimeOffset.Now <= roomUsage.Item.EndDate)
                         {
-                            logger.LogDebug("Skipping attempt to destroy usage of room ID:{RoomId} due as its end date has changed to {EndDate}", roomId, roomUsage.Item?.EndDate);
+                            logger.LogDebug("Skipping attempt to destroy usage of room ID:{RoomId} due as its end date has changed to {EndDate}", roomId, roomUsage?.Item?.EndDate);
                             continue;
                         }
 
