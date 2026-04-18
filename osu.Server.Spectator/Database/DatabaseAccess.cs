@@ -796,7 +796,7 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            return (await connection.QueryAsync<int>("SELECT rating FROM matchmaking_user_stats WHERE pool_id = @PoolId", new
+            return (await connection.QueryAsync<int>("SELECT rating FROM matchmaking_user_stats WHERE pool_id = @PoolId AND plays > 0", new
             {
                 PoolId = poolId
             })).ToArray();
