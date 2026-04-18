@@ -78,7 +78,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                     if (State.WinningUserId == null)
                         result = matchmaking_room_result.draw;
                     else if (State.WinningUserId == stats[i].user_id)
+                    {
+                        stats[i].first_placements++;
                         result = matchmaking_room_result.win;
+                    }
                     else
                         result = matchmaking_room_result.loss;
 
