@@ -16,7 +16,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
         public double Mu { get; set; } = 1500;
 
         [JsonProperty("sig")]
-        public double Sig { get; set; } = 350;
+        public double Sig { get; set; } = 150;
 
         public EloRating()
         {

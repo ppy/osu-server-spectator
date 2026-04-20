@@ -47,9 +47,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 PlackettLuce model = new PlackettLuce
                 {
                     Mu = 1500,
-                    Sigma = 350,
-                    Beta = 175,
-                    Tau = 3.5
+                    Sigma = 150,
+                    Beta = 75,
+                    Tau = 1.5
                 };
 
                 List<matchmaking_user_stats> stats = [];
