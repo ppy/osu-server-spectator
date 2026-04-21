@@ -87,11 +87,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             PoolId = poolId;
 
             // Build the deck.
-            matchmaking_pool_beatmap[] beatmaps = beatmapSelector.GetAppropriateBeatmaps(users.Select(u => u.Rating).ToArray());
-
-            if (beatmaps.Length < DECK_SIZE)
-                throw new InvalidOperationException($"There should be at least {DECK_SIZE} beatmaps, but only {beatmaps.Length} were selected.");
-
+            matchmaking_pool_beatmap[] beatmaps = beatmapSelector.GetAppropriateBeatmaps(50, users.Select(u => u.Rating).ToArray());
             Random.Shared.Shuffle(beatmaps);
 
             foreach (var beatmap in beatmaps)

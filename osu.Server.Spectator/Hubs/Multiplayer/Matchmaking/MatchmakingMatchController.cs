@@ -130,7 +130,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 
             using (var db = dbFactory.GetInstance())
             {
-                foreach (var beatmap in beatmapSelector.GetAppropriateBeatmaps(users.Select(u => u.Rating).ToArray()))
+                foreach (var beatmap in beatmapSelector.GetAppropriateBeatmaps(AppSettings.MatchmakingPoolSize, users.Select(u => u.Rating).ToArray()))
                 {
                     MultiplayerPlaylistItem item = beatmap.ToPlaylistItem();
                     item.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(room.RoomID, item));

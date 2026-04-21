@@ -12,8 +12,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
     public class MatchmakingBeatmapSelector
     {
-        public int PoolSize { get; set; } = AppSettings.MatchmakingPoolSize;
-
         private readonly matchmaking_pool_beatmap[] beatmaps;
 
         public MatchmakingBeatmapSelector(matchmaking_pool_beatmap[] beatmaps)
@@ -59,8 +57,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// Retrieves a set of playlist items from the pool within an appropriate difficulty range for the lobby.
         /// </summary>
+        /// <param name="count">The number of beatmaps to retrieve.</param>
         /// <param name="ratings">The lobby user ratings.</param>
-        public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(EloRating[] ratings)
+        public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(int count, EloRating[] ratings)
         {
             // Pick from maps around the minimum rating.
             double ratingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
@@ -74,7 +73,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                double weight = Math.Clamp(Math.Exp(-Math.Pow(beatmapRating - ratingMu, 2) / (2 * rating_sig * rating_sig)), 1e-6, 1);
                                return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
                            })
-                           .Take(PoolSize)
+                           .Take(count)
                            .ToArray();
         }
     }
