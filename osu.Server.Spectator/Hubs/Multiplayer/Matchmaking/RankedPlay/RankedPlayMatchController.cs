@@ -21,7 +21,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
     public class RankedPlayMatchController : IMatchController, IMatchmakingMatchController
     {
         public const int PLAYER_HAND_SIZE = 5;
-        public const int DECK_SIZE = PLAYER_HAND_SIZE * 2 + 1;
+        public const int DECK_SIZE = 50;
 
         public MultiplayerPlaylistItem CurrentItem => Room.Playlist.Single(item => item.ID == Room.Settings.PlaylistItemId);
 
@@ -87,7 +87,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             PoolId = poolId;
 
             // Build the deck.
-            matchmaking_pool_beatmap[] beatmaps = beatmapSelector.GetAppropriateBeatmaps(50, users.Select(u => u.Rating).ToArray());
+            matchmaking_pool_beatmap[] beatmaps = beatmapSelector.GetAppropriateBeatmaps(DECK_SIZE, users.Select(u => u.Rating).ToArray());
             Random.Shared.Shuffle(beatmaps);
 
             foreach (var beatmap in beatmaps)
