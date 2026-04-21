@@ -12,6 +12,7 @@ using osu.Game.Online.RankedPlay;
 using osu.Game.Online.Rooms;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages;
 
@@ -52,6 +53,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// All users participating in this match ordered by their turn order.
         /// </summary>
         public int[] UserIdsByTurnOrder { get; private set; } = [];
+
+        public EloRating AverageRating { get; private set; } = new EloRating();
 
         /// <summary>
         /// Mapping of cards to their associated effect.
@@ -123,6 +126,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                                  .ThenBy(_ => Random.Shared.NextSingle())
                                  .Select(u => u.UserId)
                                  .ToArray();
+
+            AverageRating = new EloRating
+            (
+                users.Select(u => u.Rating.Mu).Average(),
+                Math.Sqrt(users.Average(u => Math.Pow(u.Rating.Sig, 2)))
+            );
 
             // Populate the initial active user, for use by the client to display the first turn's user.
             State.ActiveUserId = UserIdsByTurnOrder[0];

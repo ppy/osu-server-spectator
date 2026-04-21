@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
@@ -52,6 +54,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private DateTimeOffset lastLobbyUpdateTime = DateTimeOffset.UnixEpoch;
         private DateTimeOffset lastQueueRefreshTime = DateTimeOffset.UnixEpoch;
+        private DateTimeOffset lastPoolUpdateTime = DateTimeOffset.UnixEpoch;
         private DateTimeOffset lastPoolRefreshTime = DateTimeOffset.UnixEpoch;
 
         public MatchmakingQueueBackgroundService(IHubContext<MultiplayerHub> hub, ISharedInterop sharedInterop, IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory,
@@ -77,6 +80,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             lobby.RecordMatch(status);
             return Task.CompletedTask;
+        }
+
+        public async Task RecordBeatmapResult(uint poolId, int beatmapId, APIMod[] mods, int score, EloRating rating)
+        {
+            if (!poolQueues.TryGetValue((int)poolId, out MatchmakingQueue? queue))
+                return;
+
+            if (!poolSelectors.TryGetValue(poolId, out MatchmakingBeatmapSelector? selector))
+                poolSelectors[poolId] = selector = await MatchmakingBeatmapSelector.Initialise(queue.Pool, databaseFactory);
+
+            selector.AdjustRating(
+                new MatchmakingBeatmapSelector.BeatmapLookupKey(beatmapId, mods.Length == 0 ? string.Empty : JsonConvert.SerializeObject(mods)),
+                score,
+                rating);
         }
 
         public bool IsInQueue(MultiplayerClientState state)
@@ -262,15 +279,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             lastQueueRefreshTime = DateTimeOffset.Now;
         }
 
-        private Task refreshPools()
+        private async Task refreshPools()
         {
-            if (DateTimeOffset.Now - lastPoolRefreshTime < TimeSpan.FromHours(1))
-                return Task.CompletedTask;
+            if (DateTimeOffset.Now - lastPoolUpdateTime >= TimeSpan.FromSeconds(5))
+            {
+                foreach (var selector in poolSelectors.Values)
+                    await selector.Update();
 
-            poolSelectors.Clear();
+                lastPoolUpdateTime = DateTimeOffset.Now;
+            }
 
-            lastPoolRefreshTime = DateTimeOffset.Now;
-            return Task.CompletedTask;
+            if (DateTimeOffset.Now - lastPoolRefreshTime >= TimeSpan.FromHours(1))
+            {
+                foreach (var selector in poolSelectors.Values)
+                    await selector.Update();
+
+                poolSelectors.Clear();
+
+                lastPoolRefreshTime = DateTimeOffset.Now;
+            }
         }
 
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)

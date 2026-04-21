@@ -714,6 +714,22 @@ namespace osu.Server.Spectator.Database
             })).ToArray();
         }
 
+        public async Task UpdateMatchmakingPoolBeatmapRatingAsync(matchmaking_pool_beatmap beatmap)
+        {
+            var conn = await getConnectionAsync();
+
+            await conn.ExecuteAsync("INSERT INTO `matchmaking_pool_beatmaps` (pool_id, beatmap_id, mods, rating, rating_sig) "
+                                    + "VALUES (@PoolId, @BeatmapId, @Mods, @Rating, @RatingSig) "
+                                    + "ON DUPLICATE KEY UPDATE rating = @Rating, rating_sig = @RatingSig", new
+            {
+                PoolId = beatmap.pool_id,
+                BeatmapId = beatmap.beatmap_id,
+                Mods = beatmap.mods,
+                Rating = beatmap.rating,
+                RatingSig = beatmap.rating_sig
+            });
+        }
+
         public async Task<database_beatmap[]> GetMatchmakingGlobalPoolBeatmapsAsync(int rulesetId, int variant)
         {
             var connection = await getConnectionAsync();

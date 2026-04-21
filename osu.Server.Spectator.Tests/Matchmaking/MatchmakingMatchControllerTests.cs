@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
                 room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0, [USER_ID, USER_ID_2],
-                    new MatchmakingBeatmapSelector([]));
+                    new MatchmakingBeatmapSelector(Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
         }
 
@@ -211,7 +211,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
                 room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0,
-                    [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector([]));
+                    [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector(Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
 
             await Hub.JoinRoom(ROOM_ID);
@@ -305,7 +305,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
                 room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0,
-                    [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector([]));
+                    [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector(Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
 
             await Hub.JoinRoom(ROOM_ID);
@@ -342,7 +342,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
                 room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0,
-                    [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector([]));
+                    [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector(Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
 
             await Hub.JoinRoom(ROOM_ID);
@@ -660,7 +660,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             using (var roomUsage = await Rooms.GetForUse(ROOM_ID, true))
             {
                 roomUsage.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0,
-                    [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector([]));
+                    [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector(Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
 
             await Hub.JoinRoom(ROOM_ID);

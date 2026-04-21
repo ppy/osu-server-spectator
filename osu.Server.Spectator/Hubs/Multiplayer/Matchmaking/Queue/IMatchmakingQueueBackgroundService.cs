@@ -3,7 +3,9 @@
 
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
+using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
@@ -13,6 +15,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// Records the current state of a match.
         /// </summary>
         Task RecordMatch(int poolId, MatchRoomState state);
+
+        /// <summary>
+        /// Records the result of a beatmap, adjusting the beatmap's rating as appropriate.
+        /// </summary>
+        /// <param name="poolId">The pool on which the beatmap was played.</param>
+        /// <param name="beatmapId">The beatmap that was played.</param>
+        /// <param name="mods">Any mods the beatmap was played with.</param>
+        /// <param name="score">The resultant score.</param>
+        /// <param name="rating">The resultant rating.</param>
+        Task RecordBeatmapResult(uint poolId, int beatmapId, APIMod[] mods, int score, EloRating rating);
 
         /// <summary>
         /// Whether a user is in the matchmaking queue.
