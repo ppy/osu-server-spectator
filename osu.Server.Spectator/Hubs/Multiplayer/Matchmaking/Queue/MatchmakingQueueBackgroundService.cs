@@ -354,13 +354,28 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 foreach (double rating in group.DeltaRatings())
                     DogStatsd.Histogram($"{statsd_prefix}.groups.ratingdelta", rating, tags: [$"queue:{bundle.Queue.Pool.DisplayName}"]);
 
-                string password = Guid.NewGuid().ToString();
+                string roomName;
+
+                switch (bundle.Queue.Pool.type)
+                {
+                    case matchmaking_pool_type.ranked_play:
+                        roomName = $"{bundle.Queue.Pool.DisplayName}: {group.Users[0].UserId} vs {group.Users[1].UserId}";
+                        break;
+
+                    default:
+                        roomName = bundle.Queue.Pool.DisplayName;
+                        break;
+                }
+
+                string roomPassword = Guid.NewGuid().ToString();
+
                 long roomId = await sharedInterop.CreateRoomAsync(AppSettings.BanchoBotUserId, new MultiplayerRoom(0)
                 {
                     Settings =
                     {
+                        Name = roomName,
                         MatchType = bundle.Queue.Pool.type.ToMatchType(),
-                        Password = password
+                        Password = roomPassword
                     }
                 });
 
@@ -374,7 +389,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         group.Users, beatmapSelector, this);
                 }
 
-                await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, password);
+                await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, roomPassword);
 
                 foreach (var user in group.Users)
                     await hub.Groups.RemoveFromGroupAsync(user.Identifier, group.Identifier);
