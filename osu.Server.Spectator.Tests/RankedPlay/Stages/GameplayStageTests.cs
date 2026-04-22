@@ -62,12 +62,15 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
-        public async Task ContinuesToEndedWhenAnyPlayerLeaves()
+        public async Task ContinuesToResultsWhenAnyPlayerLeaves()
         {
             await Hub.LeaveRoom();
 
             Assert.Equal(RankedPlayStage.Gameplay, RoomState.Stage);
             Assert.Equal(0, UserState.Life);
+
+            await LoadAndFinishGameplay(ContextUser2);
+            Assert.Equal(RankedPlayStage.Results, RoomState.Stage);
         }
 
         [Fact]
