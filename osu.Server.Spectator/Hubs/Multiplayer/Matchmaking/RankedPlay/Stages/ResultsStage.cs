@@ -80,18 +80,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                     OldLife = oldLife,
                     NewLife = newLife,
                 };
-
-                await Controller.MatchmakingService.RecordBeatmapResult(
-                    Controller.PoolId,
-                    Room.CurrentPlaylistItem.BeatmapID,
-                    Room.CurrentPlaylistItem.RequiredMods.ToArray(),
-                    (int)score.total_score,
-                    Controller.RatingByUser[(int)score.user_id]);
             }
 
             SoloScore[] winningScores = scores.Where(u => u.total_score == maxTotalScore).ToArray();
             if (winningScores.Length == 1)
                 State.Users[(int)winningScores.Single().user_id].RoundsWon += 1;
+
+            await Controller.MatchmakingService.RecordBeatmapResult(
+                Controller.PoolId,
+                Room.CurrentPlaylistItem.BeatmapID,
+                Room.CurrentPlaylistItem.RequiredMods.ToArray(),
+                scores.Select(s => (int)s.total_score).ToArray(),
+                scores.Select(s => Controller.RatingByUser[(int)s.user_id]).ToArray());
         }
 
         protected override async Task Finish()

@@ -86,7 +86,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
         }
 
-        public void AdjustRating(BeatmapLookupKey key, int playerScore, EloRating playerRating)
+        public void AdjustRating(BeatmapLookupKey key, int[] playerScores, EloRating[] playerRatings)
         {
             lock (beatmaps)
             {
@@ -112,13 +112,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 IRating[] ratings = model.Rate(
                                              [
-                                                 new Team { Players = [model.Rating(playerRating.Mu, playerRating.Sig)] },
-                                                 new Team { Players = [model.Rating(beatmap.rating, beatmap.rating_sig)] }
+                                                 new Team { Players = [model.Rating(beatmap.rating, beatmap.rating_sig)] },
+                                                 .. playerRatings.Select(p => new Team { Players = [model.Rating(p.Mu, p.Sig)] }).ToArray()
                                              ],
                                              scores:
                                              [
-                                                 playerScore,
-                                                 scoreToWin
+                                                 scoreToWin,
+                                                 .. playerScores
                                              ])
                                          .Select(t => t.Players.Single())
                                          .ToArray();

@@ -22,9 +22,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="poolId">The pool on which the beatmap was played.</param>
         /// <param name="beatmapId">The beatmap that was played.</param>
         /// <param name="mods">Any mods the beatmap was played with.</param>
-        /// <param name="score">The resultant score.</param>
-        /// <param name="rating">The resultant rating.</param>
-        Task RecordBeatmapResult(uint poolId, int beatmapId, APIMod[] mods, int score, EloRating rating);
+        /// <param name="scores">The achieved scores.</param>
+        /// <param name="ratings">The ratings corresponding to each of the scores.</param>
+        Task RecordBeatmapResult(uint poolId, int beatmapId, APIMod[] mods, int[] scores, EloRating[] ratings);
 
         /// <summary>
         /// Whether a user is in the matchmaking queue.

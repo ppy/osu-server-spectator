@@ -82,7 +82,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             return Task.CompletedTask;
         }
 
-        public async Task RecordBeatmapResult(uint poolId, int beatmapId, APIMod[] mods, int score, EloRating rating)
+        public async Task RecordBeatmapResult(uint poolId, int beatmapId, APIMod[] mods, int[] scores, EloRating[] ratings)
         {
             if (!poolQueues.TryGetValue((int)poolId, out MatchmakingQueue? queue))
                 return;
@@ -90,10 +90,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             if (!poolSelectors.TryGetValue(poolId, out MatchmakingBeatmapSelector? selector))
                 poolSelectors[poolId] = selector = await MatchmakingBeatmapSelector.Initialise(queue.Pool, databaseFactory);
 
-            selector.AdjustRating(
-                new MatchmakingBeatmapSelector.BeatmapLookupKey(beatmapId, mods.Length == 0 ? string.Empty : JsonConvert.SerializeObject(mods)),
-                score,
-                rating);
+            selector.AdjustRating(new MatchmakingBeatmapSelector.BeatmapLookupKey(beatmapId, mods.Length == 0 ? string.Empty : JsonConvert.SerializeObject(mods)), scores, ratings);
         }
 
         public bool IsInQueue(MultiplayerClientState state)
