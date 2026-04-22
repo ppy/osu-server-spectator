@@ -15,19 +15,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
     public class MatchmakingBeatmapSelector
     {
+        private readonly matchmaking_pool pool;
         private readonly Dictionary<BeatmapLookupKey, matchmaking_pool_beatmap> beatmaps;
         private readonly IDatabaseFactory dbFactory;
 
         private readonly HashSet<BeatmapLookupKey> pendingBeatmapUpdates = [];
 
-        public MatchmakingBeatmapSelector(Dictionary<BeatmapLookupKey, matchmaking_pool_beatmap> beatmaps, IDatabaseFactory dbFactory)
+        public MatchmakingBeatmapSelector(matchmaking_pool pool, Dictionary<BeatmapLookupKey, matchmaking_pool_beatmap> beatmaps, IDatabaseFactory dbFactory)
         {
+            this.pool = pool;
             this.beatmaps = beatmaps;
             this.dbFactory = dbFactory;
         }
 
-        public MatchmakingBeatmapSelector(matchmaking_pool_beatmap[] beatmaps, IDatabaseFactory dbFactory)
-            : this(beatmaps.ToDictionary(b => new BeatmapLookupKey(b.beatmap_id, b.mods), b => b), dbFactory)
+        public MatchmakingBeatmapSelector(matchmaking_pool pool, matchmaking_pool_beatmap[] beatmaps, IDatabaseFactory dbFactory)
+            : this(pool, beatmaps.ToDictionary(b => new BeatmapLookupKey(b.beatmap_id, b.mods), b => b), dbFactory)
         {
         }
 
@@ -63,7 +65,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 foreach ((int beatmapId, matchmaking_pool_beatmap beatmap) in rankedBeatmaps)
                     poolBeatmaps.TryAdd(new BeatmapLookupKey(beatmapId, string.Empty), beatmap);
 
-                return new MatchmakingBeatmapSelector(poolBeatmaps, dbFactory);
+                return new MatchmakingBeatmapSelector(pool, poolBeatmaps, dbFactory);
             }
         }
 
@@ -99,6 +101,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     Tau = 1.5
                 };
 
+                double scoreToWin = pool.ruleset_id switch
+                {
+                    0 => 600_000,
+                    1 => 700_000,
+                    2 => 600_000,
+                    3 => 800_000,
+                    _ => throw new ArgumentException("Unknown ruleset ID.")
+                };
+
                 IRating[] ratings = model.Rate(
                                              [
                                                  new Team { Players = [model.Rating(playerRating.Mu, playerRating.Sig)] },
@@ -107,7 +118,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                              scores:
                                              [
                                                  playerScore,
-                                                 700_000
+                                                 scoreToWin
                                              ])
                                          .Select(t => t.Players.Single())
                                          .ToArray();

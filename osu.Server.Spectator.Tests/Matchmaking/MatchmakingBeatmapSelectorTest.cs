@@ -18,7 +18,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void OnlyEasyBeatmaps()
         {
-            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
+            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     beatmap_id = i,
@@ -35,7 +35,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void OnlyAverageBeatmaps()
         {
-            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
+            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     beatmap_id = i,
@@ -52,7 +52,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void OnlyHardBeatmaps()
         {
-            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
+            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     beatmap_id = i,
@@ -69,7 +69,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void WideSelection()
         {
-            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(
+            MatchmakingBeatmapSelector beatmapSelector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     beatmap_id = i,
@@ -91,7 +91,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public void NoDuplicates()
         {
-            MatchmakingBeatmapSelector selector = new MatchmakingBeatmapSelector(
+            MatchmakingBeatmapSelector selector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
             [
                 new matchmaking_pool_beatmap { beatmap_id = 0, rating = 1000 },
                 new matchmaking_pool_beatmap { beatmap_id = 1, rating = 1000 },
