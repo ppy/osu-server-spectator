@@ -125,6 +125,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         {
             State.Users[user.UserID].Life = 0;
             await EventDispatcher.PostMatchRoomStateChangedAsync(Room);
+
+            if (!HasGameplayRoundsRemaining())
+                await Controller.HandleMatchCompleted();
         }
 
         /// <summary>

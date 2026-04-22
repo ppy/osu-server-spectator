@@ -92,6 +92,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 Room.CurrentPlaylistItem.RequiredMods.ToArray(),
                 scores.Select(s => (int)s.total_score).ToArray(),
                 scores.Select(s => Controller.RatingByUser[(int)s.user_id]).ToArray());
+
+            if (!HasGameplayRoundsRemaining())
+                await Controller.HandleMatchCompleted();
         }
 
         protected override async Task Finish()

@@ -36,7 +36,9 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         [Fact]
         public async Task WinnerIsUserWithMaxLife()
         {
+            MatchController.UserRatingsUpdated = false;
             User2State.Life = 500_000;
+
             await MatchController.Stage.Enter();
 
             Assert.Equal(USER_ID, RoomState.WinningUserId);
@@ -70,6 +72,12 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
             Assert.Equal(1_000_000, UserState.Life);
+        }
+
+        [Fact]
+        public void UserRatingUpdatedImmediately()
+        {
+            Assert.True(MatchController.UserRatingsUpdated);
         }
     }
 }

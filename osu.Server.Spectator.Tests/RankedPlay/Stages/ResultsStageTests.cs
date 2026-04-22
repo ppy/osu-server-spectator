@@ -199,5 +199,29 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.Equal(RankedPlayStage.Results, RoomState.Stage);
             Assert.Equal(0, UserState.Life);
         }
+
+        [Fact]
+        public void UserRatingNotUpdatedWithRoundsRemaining()
+        {
+            Assert.False(MatchController.UserRatingsUpdated);
+        }
+
+        [Fact]
+        public async Task UserRatingUpdatedImmediatelyInFinalRound()
+        {
+            UserState.Life = 0;
+            await MatchController.Stage.Enter();
+
+            Assert.True(MatchController.UserRatingsUpdated);
+        }
+
+        [Fact]
+        public async Task UserRatingUpdatedImmediatelyOnPlayerLeave()
+        {
+            await Hub.LeaveRoom();
+
+            Assert.Equal(RankedPlayStage.Results, RoomState.Stage);
+            Assert.True(MatchController.UserRatingsUpdated);
+        }
     }
 }
