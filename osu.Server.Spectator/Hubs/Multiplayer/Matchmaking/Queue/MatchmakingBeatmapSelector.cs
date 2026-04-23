@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,16 +16,21 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
     public class MatchmakingBeatmapSelector
     {
+        /// <summary>
+        /// Contains all ranked beatmaps.
+        /// </summary>
+        public Dictionary<int, matchmaking_pool_beatmap> GlobalBeatmaps { get; init; } = [];
+
         private readonly matchmaking_pool pool;
-        private readonly Dictionary<BeatmapLookupKey, matchmaking_pool_beatmap> beatmaps;
+        private readonly ConcurrentDictionary<BeatmapLookupKey, matchmaking_pool_beatmap> beatmaps;
         private readonly IDatabaseFactory dbFactory;
 
-        private readonly HashSet<BeatmapLookupKey> pendingBeatmapUpdates = [];
+        private readonly ConcurrentQueue<matchmaking_pool_beatmap> pendingUpdates = [];
 
         public MatchmakingBeatmapSelector(matchmaking_pool pool, Dictionary<BeatmapLookupKey, matchmaking_pool_beatmap> beatmaps, IDatabaseFactory dbFactory)
         {
             this.pool = pool;
-            this.beatmaps = beatmaps;
+            this.beatmaps = new ConcurrentDictionary<BeatmapLookupKey, matchmaking_pool_beatmap>(beatmaps);
             this.dbFactory = dbFactory;
         }
 
@@ -43,7 +49,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             using (var db = dbFactory.GetInstance())
             {
                 // Get all ranked beatmaps.
-                Dictionary<int, matchmaking_pool_beatmap> rankedBeatmaps =
+                Dictionary<int, matchmaking_pool_beatmap> globalBeatmaps =
                     (await db.GetMatchmakingGlobalPoolBeatmapsAsync(pool.ruleset_id, pool.variant_id))
                     .Select(b => new matchmaking_pool_beatmap
                     {
@@ -62,72 +68,73 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     .ToDictionary(b => new BeatmapLookupKey(b.beatmap_id, b.mods), b => b);
 
                 // The pool may not contain all ranked beatmaps, so back-fill it.
-                foreach ((int beatmapId, matchmaking_pool_beatmap beatmap) in rankedBeatmaps)
+                foreach ((int beatmapId, matchmaking_pool_beatmap beatmap) in globalBeatmaps)
                     poolBeatmaps.TryAdd(new BeatmapLookupKey(beatmapId, string.Empty), beatmap);
 
-                return new MatchmakingBeatmapSelector(pool, poolBeatmaps, dbFactory);
+                return new MatchmakingBeatmapSelector(pool, poolBeatmaps, dbFactory)
+                {
+                    GlobalBeatmaps = globalBeatmaps
+                };
             }
         }
 
         public async Task Update()
         {
-            matchmaking_pool_beatmap[] toUpdate;
-
-            lock (beatmaps)
-            {
-                toUpdate = pendingBeatmapUpdates.Select(id => beatmaps[id]).ToArray();
-                pendingBeatmapUpdates.Clear();
-            }
-
             using (var db = dbFactory.GetInstance())
             {
-                foreach (var beatmap in toUpdate)
+                while (pendingUpdates.TryDequeue(out matchmaking_pool_beatmap? beatmap))
                     await db.UpdateMatchmakingPoolBeatmapRatingAsync(beatmap);
             }
         }
 
-        public void AdjustRating(BeatmapLookupKey key, int[] playerScores, EloRating[] playerRatings)
+        public async Task AdjustRating(BeatmapLookupKey key, int[] playerScores, EloRating[] playerRatings)
         {
-            lock (beatmaps)
+            // Always use the most-recent databased rating values.
+            matchmaking_pool_beatmap? beatmap;
+            using (var db = dbFactory.GetInstance())
+                beatmap = await db.GetMatchmakingPoolBeatmapAsync(pool.id, key.BeatmapId, key.Mods) ?? GlobalBeatmaps[key.BeatmapId];
+
+            PlackettLuce model = new PlackettLuce
             {
-                if (!beatmaps.TryGetValue(key, out matchmaking_pool_beatmap? beatmap))
-                    return;
+                Mu = 1500,
+                Sigma = 150,
+                Beta = 75,
+                Tau = 1.5
+            };
 
-                PlackettLuce model = new PlackettLuce
-                {
-                    Mu = 1500,
-                    Sigma = 150,
-                    Beta = 75,
-                    Tau = 1.5
-                };
+            double clearThreshold = pool.ruleset_id switch
+            {
+                0 => 550_000,
+                1 => 850_000,
+                2 => 850_000,
+                3 => 850_000,
+                _ => throw new ArgumentException("Unknown ruleset ID.")
+            };
 
-                double clearThreshold = pool.ruleset_id switch
-                {
-                    0 => 550_000,
-                    1 => 850_000,
-                    2 => 850_000,
-                    3 => 850_000,
-                    _ => throw new ArgumentException("Unknown ruleset ID.")
-                };
+            IRating[] ratings = model.Rate(
+                                         [
+                                             new Team { Players = [model.Rating(beatmap.rating, beatmap.rating_sig)] },
+                                             .. playerRatings.Select(p => new Team { Players = [model.Rating(p.Mu, p.Sig)] }).ToArray()
+                                         ],
+                                         scores:
+                                         [
+                                             clearThreshold,
+                                             .. playerScores
+                                         ])
+                                     .Select(t => t.Players.Single())
+                                     .ToArray();
 
-                IRating[] ratings = model.Rate(
-                                             [
-                                                 new Team { Players = [model.Rating(beatmap.rating, beatmap.rating_sig)] },
-                                                 .. playerRatings.Select(p => new Team { Players = [model.Rating(p.Mu, p.Sig)] }).ToArray()
-                                             ],
-                                             scores:
-                                             [
-                                                 clearThreshold,
-                                                 .. playerScores
-                                             ])
-                                         .Select(t => t.Players.Single())
-                                         .ToArray();
+            matchmaking_pool_beatmap newBeatmap = new matchmaking_pool_beatmap(beatmap)
+            {
+                rating = ratings[0].Mu,
+                rating_sig = ratings[0].Sigma
+            };
 
-                beatmap.rating = ratings[0].Mu;
-                beatmap.rating_sig = ratings[0].Sigma;
+            // Store the beatmap back so that it can be used for subsequent lookups.
+            beatmaps[key] = beatmap;
 
-                pendingBeatmapUpdates.Add(key);
-            }
+            // Write the beatmap to the database in the next update cycle.
+            pendingUpdates.Enqueue(newBeatmap);
         }
 
         /// <summary>
@@ -137,22 +144,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="ratings">The lobby user ratings.</param>
         public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(int count, EloRating[] ratings)
         {
-            lock (beatmaps)
-            {
-                // Pick from maps around the minimum rating.
-                double userRatingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
-                // Constant standard deviation to give a wide breadth around mu.
-                const double rating_sig = 100;
+            // Pick from maps around the minimum rating.
+            double userRatingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
+            // Constant standard deviation to give a wide breadth around mu.
+            const double rating_sig = 100;
 
-                return beatmaps.Values.OrderByDescending(b =>
-                               {
-                                   // The clamp attempts to ensure all beatmaps are given some chance of being selected.
-                                   double weight = Math.Clamp(Math.Exp(-Math.Pow(b.rating - userRatingMu, 2) / (2 * rating_sig * rating_sig)), 1e-6, 1);
-                                   return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
-                               })
-                               .Take(count)
-                               .ToArray();
-            }
+            return beatmaps.Values.OrderByDescending(b =>
+                           {
+                               // The clamp attempts to ensure all beatmaps are given some chance of being selected.
+                               double weight = Math.Clamp(Math.Exp(-Math.Pow(b.rating - userRatingMu, 2) / (2 * rating_sig * rating_sig)), 1e-6, 1);
+                               return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
+                           })
+                           .Take(count)
+                           .ToArray();
         }
 
         public readonly record struct BeatmapLookupKey(int BeatmapId, string Mods);

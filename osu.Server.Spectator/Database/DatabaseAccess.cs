@@ -714,6 +714,22 @@ namespace osu.Server.Spectator.Database
             })).ToArray();
         }
 
+        public async Task<matchmaking_pool_beatmap?> GetMatchmakingPoolBeatmapAsync(uint poolId, int beatmapId, string mods)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<matchmaking_pool_beatmap>("SELECT p.*, b.playmode, b.checksum, b.difficultyrating FROM `matchmaking_pool_beatmaps` p "
+                                                                                        + "JOIN `osu_beatmaps` b ON p.beatmap_id = b.beatmap_id "
+                                                                                        + "WHERE p.pool_id = @PoolId "
+                                                                                        + "AND p.beatmap_id = @BeatmapId "
+                                                                                        + "AND p.mods = @Mods", new
+            {
+                PoolId = poolId,
+                BeatmapId = beatmapId,
+                Mods = mods
+            });
+        }
+
         public async Task UpdateMatchmakingPoolBeatmapRatingAsync(matchmaking_pool_beatmap beatmap)
         {
             var conn = await getConnectionAsync();

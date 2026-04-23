@@ -28,6 +28,24 @@ namespace osu.Server.Spectator.Database.Models
         public string? checksum { get; set; }
         public double difficultyrating { get; set; }
 
+        public matchmaking_pool_beatmap()
+        {
+        }
+
+        public matchmaking_pool_beatmap(matchmaking_pool_beatmap other)
+        {
+            id = other.id;
+            pool_id = other.pool_id;
+            beatmap_id = other.beatmap_id;
+            mods = other.mods;
+            rating = other.rating;
+            rating_sig = other.rating_sig;
+            selection_count = other.selection_count;
+            playmode = other.playmode;
+            checksum = other.checksum;
+            difficultyrating = other.difficultyrating;
+        }
+
         public MultiplayerPlaylistItem ToPlaylistItem() => new MultiplayerPlaylistItem
         {
             BeatmapID = beatmap_id,

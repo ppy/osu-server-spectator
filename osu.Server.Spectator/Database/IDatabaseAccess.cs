@@ -277,6 +277,8 @@ namespace osu.Server.Spectator.Database
 
         Task<matchmaking_pool_beatmap[]> GetMatchmakingPoolBeatmapsAsync(uint poolId);
 
+        Task<matchmaking_pool_beatmap?> GetMatchmakingPoolBeatmapAsync(uint poolId, int beatmapId, string mods);
+
         Task UpdateMatchmakingPoolBeatmapRatingAsync(matchmaking_pool_beatmap beatmap);
 
         Task<database_beatmap[]> GetMatchmakingGlobalPoolBeatmapsAsync(int rulesetId, int variant);
