@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Game.Online;
@@ -27,10 +28,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Finish()
         {
+            Debug.Assert(State.ActiveUserId != null);
+            Debug.Assert(Controller.LastActivatedCard != null);
+
             if (allPlayersReady())
                 await Controller.GotoStage(RankedPlayStage.GameplayWarmup);
             else
             {
+                await Controller.RemoveCards(State.ActiveUserId.Value, [Controller.LastActivatedCard]);
+
                 // Subtract 100K HP from every player that failed to load the beatmap in time.
                 // Although this seems unfair, it means that players are not able to purposefully block the others' picks.
                 foreach (var player in Room.Users.Where(p => p.BeatmapAvailability.State != DownloadState.LocallyAvailable))
