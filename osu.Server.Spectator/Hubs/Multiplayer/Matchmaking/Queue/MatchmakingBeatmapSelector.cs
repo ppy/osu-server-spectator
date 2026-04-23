@@ -101,12 +101,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     Tau = 1.5
                 };
 
-                double scoreToWin = pool.ruleset_id switch
+                double clearThreshold = pool.ruleset_id switch
                 {
-                    0 => 600_000,
-                    1 => 700_000,
-                    2 => 600_000,
-                    3 => 800_000,
+                    0 => 550_000,
+                    1 => 850_000,
+                    2 => 850_000,
+                    3 => 850_000,
                     _ => throw new ArgumentException("Unknown ruleset ID.")
                 };
 
@@ -117,7 +117,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                              ],
                                              scores:
                                              [
-                                                 scoreToWin,
+                                                 clearThreshold,
                                                  .. playerScores
                                              ])
                                          .Select(t => t.Players.Single())
