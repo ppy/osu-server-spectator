@@ -123,8 +123,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                          .Select(t => t.Players.Single())
                                          .ToArray();
 
-                beatmap.rating = ratings[1].Mu;
-                beatmap.rating_sig = ratings[1].Sigma;
+                beatmap.rating = ratings[0].Mu;
+                beatmap.rating_sig = ratings[0].Sigma;
 
                 pendingBeatmapUpdates.Add(key);
             }
