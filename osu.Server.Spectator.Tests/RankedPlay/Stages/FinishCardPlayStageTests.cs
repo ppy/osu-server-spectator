@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
@@ -14,6 +15,13 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         public FinishCardPlayStageTests()
             : base(RankedPlayStage.FinishCardPlay)
         {
+        }
+
+        protected override async Task SetupForEnter()
+        {
+            await base.SetupForEnter();
+
+            await MatchController.ActivateCard(RoomState.ActiveUser!.Hand.First());
         }
 
         [Fact]
@@ -46,11 +54,20 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         [Fact]
         public async Task ContinuesToNextRoundWhenAnyPlayerFailsToBecomeReady()
         {
+            int firstActiveUser = RoomState.ActiveUserId!.Value;
+
             await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
             Assert.Equal(RankedPlayStage.FinishCardPlay, RoomState.Stage);
 
             await FinishCountdown();
             Assert.Equal(RankedPlayStage.CardPlay, RoomState.Stage);
+
+            int secondActiveUser = RoomState.ActiveUserId!.Value;
+
+            Assert.NotEqual(firstActiveUser, secondActiveUser);
+
+            Assert.Equal(4, RoomState.Users[firstActiveUser].Hand.Count);
+            Assert.Equal(5, RoomState.Users[secondActiveUser].Hand.Count);
 
             Assert.Equal(1_000_000, RoomState.Users[USER_ID].Life);
             Assert.Equal(900_000, RoomState.Users[USER_ID_2].Life);
@@ -59,8 +76,17 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         [Fact]
         public async Task ContinuesToNextRoundWhenAllPlayersFailToBecomeReady()
         {
+            int firstActiveUser = RoomState.ActiveUserId!.Value;
+
             await FinishCountdown();
             Assert.Equal(RankedPlayStage.CardPlay, RoomState.Stage);
+
+            int secondActiveUser = RoomState.ActiveUserId!.Value;
+
+            Assert.NotEqual(firstActiveUser, secondActiveUser);
+
+            Assert.Equal(4, RoomState.Users[firstActiveUser].Hand.Count);
+            Assert.Equal(5, RoomState.Users[secondActiveUser].Hand.Count);
 
             Assert.Equal(900_000, RoomState.Users[USER_ID].Life);
             Assert.Equal(900_000, RoomState.Users[USER_ID_2].Life);
