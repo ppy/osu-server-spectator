@@ -53,12 +53,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         /// Retrieves the damage multiplier for a given round.
         /// </summary>
         /// <param name="round">The round.</param>
-        private static double computeDamageMultiplier(int round)
+        private double computeDamageMultiplier(int round)
         {
-            if (round <= 2)
-                return 1;
+            switch (Controller.Pool.ruleset_id)
+            {
+                // [ 1, 1, 2, 2.5, 3, 3.5, ... ]
+                case 0:
+                    if (round <= 2)
+                        return 1;
 
-            return 2 + (round - 3) * 0.5;
+                    return 2 + (round - 3) * 0.5;
+
+                // [ 1, 1, 2.5, 3.5, 4.5, 5.5, ... ]
+                default:
+                    if (round <= 2)
+                        return 1;
+
+                    return 2.5 + (round - 3) * 1.0;
+            }
         }
     }
 }
