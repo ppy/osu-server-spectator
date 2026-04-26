@@ -327,6 +327,33 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             LastActivatedCard = card;
         }
 
+        /// <summary>
+        /// Causes a player to take damage.
+        /// </summary>
+        /// <param name="userId">The user ID of the player taking damage.</param>
+        /// <param name="amount">The amount of damage (before any multipliers are added) to take.</param>
+        /// <returns>A descriptor for the damage taken.</returns>
+        public RankedPlayDamageInfo Damage(int userId, int amount)
+        {
+            RankedPlayUserInfo userInfo = State.Users[userId];
+
+            int rawDamage = amount;
+            int damage = (int)Math.Ceiling(rawDamage * State.DamageMultiplier);
+
+            int oldLife = userInfo.Life;
+            int newLife = Math.Max(0, oldLife - damage);
+
+            userInfo.Life = newLife;
+
+            return new RankedPlayDamageInfo
+            {
+                RawDamage = rawDamage,
+                Damage = damage,
+                OldLife = oldLife,
+                NewLife = newLife,
+            };
+        }
+
         public async Task HandleMatchCompleted()
         {
             if (UserRatingsUpdated)

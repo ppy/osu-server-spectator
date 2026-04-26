@@ -65,21 +65,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             foreach (var score in scores)
             {
                 var userInfo = State.Users[(int)score.user_id];
-
-                int rawDamage = maxTotalScore - (int)score.total_score;
-                int damage = (int)Math.Ceiling(rawDamage * State.DamageMultiplier);
-
-                int oldLife = userInfo.Life;
-                int newLife = Math.Max(0, oldLife - damage);
-
-                userInfo.Life = newLife;
-                userInfo.DamageInfo = new RankedPlayDamageInfo
-                {
-                    RawDamage = rawDamage,
-                    Damage = damage,
-                    OldLife = oldLife,
-                    NewLife = newLife,
-                };
+                userInfo.DamageInfo = Controller.Damage((int)score.user_id, maxTotalScore - (int)score.total_score);
             }
 
             SoloScore[] winningScores = scores.Where(u => u.total_score == maxTotalScore).ToArray();
