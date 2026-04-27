@@ -77,6 +77,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await matchmakingQueueService.AcceptInvitationAsync(userUsage.Item!);
         }
 
+        public async Task<MatchmakingIssueDuelResponse> MatchmakingIssueDuel(MatchmakingIssueDuelRequest request)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+                return await matchmakingQueueService.IssueDuelAsync(userUsage.Item!, request);
+        }
+
+        public async Task<MatchmakingAcceptDuelResponse> MatchmakingAcceptDuel(MatchmakingAcceptDuelRequest request)
+        {
+            using (var userUsage = await GetOrCreateLocalUserState())
+                return await matchmakingQueueService.AcceptDuelAsync(userUsage.Item!, request);
+        }
+
         public async Task MatchmakingDeclineInvitation()
         {
             using (var userUsage = await GetOrCreateLocalUserState())

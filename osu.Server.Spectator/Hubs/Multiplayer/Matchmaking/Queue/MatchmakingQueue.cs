@@ -22,6 +22,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public TimeSpan InviteTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
+        /// The time before users are removed from the queue if they haven't been paired up.
+        /// </summary>
+        public TimeSpan SearchTimeout { get; set; } = TimeSpan.MaxValue;
+
+        /// <summary>
         /// The system clock.
         /// </summary>
         public ISystemClock Clock { get; set; } = new SystemClock();
@@ -228,15 +233,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     bundle.FormedGroups.Add(group);
                 }
 
-                List<MatchmakingQueueUser> timedOutUsers = [];
+                List<MatchmakingQueueUser> inviteTimeoutUsers = [];
 
                 foreach (var user in matchmakingUsers.Where(u => u.Group != null && !u.InviteAccepted))
                 {
                     if (Clock.UtcNow - user.InviteStartTime > InviteTimeout)
-                        timedOutUsers.Add(user);
+                        inviteTimeoutUsers.Add(user);
                 }
 
-                bundle.Append(removeFromQueue(timedOutUsers, true));
+                bundle.Append(removeFromQueue(inviteTimeoutUsers, true));
+
+                List<MatchmakingQueueUser> searchTimeoutUsers = [];
+
+                foreach (var user in matchmakingUsers.Where(u => u.Group == null))
+                {
+                    if (Clock.UtcNow - user.SearchStartTime > SearchTimeout)
+                        searchTimeoutUsers.Add(user);
+                }
+
+                bundle.Append(removeFromQueue(searchTimeoutUsers, false));
             }
 
             return bundle;

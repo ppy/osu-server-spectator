@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using osu.Game.Online.API;
 using osu.Game.Online.Matchmaking;
+using osu.Game.Online.Matchmaking.Requests;
+using osu.Game.Online.Matchmaking.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
@@ -40,6 +42,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private readonly ConcurrentDictionary<int, MatchmakingLobby> poolLobbies = new ConcurrentDictionary<int, MatchmakingLobby>();
         private readonly ConcurrentDictionary<int, MatchmakingQueue> poolQueues = new ConcurrentDictionary<int, MatchmakingQueue>();
+        private readonly ConcurrentDictionary<Guid, MatchmakingQueue> duelQueues = new ConcurrentDictionary<Guid, MatchmakingQueue>();
         private readonly ConcurrentDictionary<uint, MatchmakingBeatmapSelector> poolSelectors = new ConcurrentDictionary<uint, MatchmakingBeatmapSelector>();
 
         private readonly IHubContext<MultiplayerHub> hub;
@@ -139,41 +142,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 if (!pool.active)
                     throw new InvalidStateException("The selected matchmaking pool is no longer active.");
 
-                matchmaking_user_stats? stats = await db.GetMatchmakingUserStatsAsync(state.UserId, (uint)poolId);
-
-                if (stats == null)
-                {
-                    // Estimate initial elo from PP.
-                    double pp = await db.GetUserPPAsync(state.UserId, pool.ruleset_id, pool.variant_id);
-                    double eloEstimate = -4000 + 600 * Math.Log(pp + 4000);
-
-                    await db.UpdateMatchmakingUserStatsAsync(stats = new matchmaking_user_stats
-                    {
-                        user_id = (uint)state.UserId,
-                        pool_id = pool.id,
-                        EloData =
-                        {
-                            InitialRating = new EloRating(eloEstimate),
-                            Rating = new EloRating(eloEstimate)
-                        }
-                    });
-                }
-
-                MatchmakingQueueUser user = new MatchmakingQueueUser(state.ConnectionId)
-                {
-                    UserId = state.UserId,
-                    Rating = stats.EloData.Rating,
-                    QueueBanStartTime = memoryCache.Get<DateTimeOffset?>(queue_ban_start_time(state.UserId)) ?? DateTimeOffset.MinValue
-                };
-
                 MatchmakingQueue queue = poolQueues.GetOrAdd(poolId, _ => new MatchmakingQueue(pool));
-                await processBundle(queue.Add(user));
+                await processBundle(queue.Add(await createUserAsync(state, pool)));
             }
         }
 
         public async Task RemoveFromQueueAsync(MultiplayerClientState state)
         {
             foreach ((_, MatchmakingQueue queue) in poolQueues)
+                await processBundle(queue.Remove(new MatchmakingQueueUser(state.ConnectionId)));
+
+            foreach ((_, MatchmakingQueue queue) in duelQueues)
                 await processBundle(queue.Remove(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
@@ -184,12 +163,66 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             foreach ((_, MatchmakingQueue queue) in poolQueues)
                 await processBundle(queue.MarkInvitationAccepted(new MatchmakingQueueUser(state.ConnectionId)));
+
+            foreach ((_, MatchmakingQueue queue) in duelQueues)
+                await processBundle(queue.MarkInvitationAccepted(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
         public async Task DeclineInvitationAsync(MultiplayerClientState state)
         {
             foreach ((_, MatchmakingQueue queue) in poolQueues)
                 await processBundle(queue.MarkInvitationDeclined(new MatchmakingQueueUser(state.ConnectionId)));
+
+            foreach ((_, MatchmakingQueue queue) in duelQueues)
+                await processBundle(queue.MarkInvitationDeclined(new MatchmakingQueueUser(state.ConnectionId)));
+        }
+
+        public async Task<MatchmakingIssueDuelResponse> IssueDuelAsync(MultiplayerClientState state, MatchmakingIssueDuelRequest request)
+        {
+            using (var db = databaseFactory.GetInstance())
+            {
+                matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)request.PoolId) ?? throw new InvalidStateException($"Pool not found: {request.PoolId}");
+                pool.lobby_size = 2;
+                pool.rating_search_radius = int.MaxValue;
+
+                if (!pool.active)
+                    throw new InvalidStateException("The selected matchmaking pool is no longer active.");
+
+                Guid duelGuid = Guid.NewGuid();
+                MatchmakingQueue queue;
+
+                if (!duelQueues.TryAdd(duelGuid, queue = new MatchmakingQueue(pool) { SearchTimeout = TimeSpan.FromMinutes(5) }))
+                    throw new InvalidStateException("Failed to issue the duel.");
+
+                MatchmakingQueueUser user = await createUserAsync(state, pool);
+                user.QueueBanStartTime = DateTimeOffset.MinValue;
+                await processBundle(queue.Add(user));
+
+                await hub.Clients.User(request.UserId.ToString()).SendAsync(nameof(IMatchmakingClient.MatchmakingDuelIssued), new MatchmakingDuelIssuedParams
+                {
+                    Id = duelGuid,
+                    Pool = pool.ToMatchmakingPool(),
+                    UserId = state.UserId
+                });
+
+                return new MatchmakingIssueDuelResponse();
+            }
+        }
+
+        public async Task<MatchmakingAcceptDuelResponse> AcceptDuelAsync(MultiplayerClientState state, MatchmakingAcceptDuelRequest request)
+        {
+            if (!duelQueues.TryGetValue(request.Id, out MatchmakingQueue? queue))
+            {
+                // This could happen if the challenger cancelled the request. In which case, return an empty success.
+                return new MatchmakingAcceptDuelResponse();
+            }
+
+            MatchmakingQueueUser user = await createUserAsync(state, queue.Pool);
+            user.QueueBanStartTime = DateTimeOffset.MinValue;
+            await processBundle(queue.Add(user));
+            await processBundle(queue.Update());
+
+            return new MatchmakingAcceptDuelResponse();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -241,6 +274,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     logger.LogError(ex, "Failed to update the matchmaking queue for pool {poolId}.", queue.Pool.id);
                 }
+            }
+
+            foreach ((Guid duelGuid, MatchmakingQueue queue) in duelQueues.ToArray())
+            {
+                if (queue.Count == 0)
+                    duelQueues.Remove(duelGuid, out _);
+                else
+                    await processBundle(queue.Update());
             }
         }
 
@@ -383,6 +424,39 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     pool_id = (int)bundle.Queue.Pool.id
                 });
+            }
+        }
+
+        private async Task<MatchmakingQueueUser> createUserAsync(MultiplayerClientState state, matchmaking_pool pool)
+        {
+            using (var db = databaseFactory.GetInstance())
+            {
+                matchmaking_user_stats? stats = await db.GetMatchmakingUserStatsAsync(state.UserId, pool.id);
+
+                if (stats == null)
+                {
+                    // Estimate initial elo from PP.
+                    double pp = await db.GetUserPPAsync(state.UserId, pool.ruleset_id, pool.variant_id);
+                    double eloEstimate = -4000 + 600 * Math.Log(pp + 4000);
+
+                    await db.UpdateMatchmakingUserStatsAsync(stats = new matchmaking_user_stats
+                    {
+                        user_id = (uint)state.UserId,
+                        pool_id = pool.id,
+                        EloData =
+                        {
+                            InitialRating = new EloRating(eloEstimate),
+                            Rating = new EloRating(eloEstimate)
+                        }
+                    });
+                }
+
+                return new MatchmakingQueueUser(state.ConnectionId)
+                {
+                    UserId = state.UserId,
+                    Rating = stats.EloData.Rating,
+                    QueueBanStartTime = memoryCache.Get<DateTimeOffset?>(queue_ban_start_time(state.UserId)) ?? DateTimeOffset.MinValue
+                };
             }
         }
     }

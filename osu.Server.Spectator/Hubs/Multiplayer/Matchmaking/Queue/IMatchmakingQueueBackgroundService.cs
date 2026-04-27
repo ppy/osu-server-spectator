@@ -4,6 +4,8 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using osu.Game.Online.API;
+using osu.Game.Online.Matchmaking.Requests;
+using osu.Game.Online.Matchmaking.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 
@@ -60,5 +62,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// User declines an invitation.
         /// </summary>
         Task DeclineInvitationAsync(MultiplayerClientState state);
+
+        Task<MatchmakingIssueDuelResponse> IssueDuelAsync(MultiplayerClientState state, MatchmakingIssueDuelRequest request);
+
+        Task<MatchmakingAcceptDuelResponse> AcceptDuelAsync(MultiplayerClientState state, MatchmakingAcceptDuelRequest request);
     }
 }
