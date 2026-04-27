@@ -359,7 +359,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 switch (bundle.Queue.Pool.type)
                 {
                     case matchmaking_pool_type.ranked_play:
-                        roomName = $"{bundle.Queue.Pool.DisplayName}: {group.Users[0].UserId} vs {group.Users[1].UserId}";
+                        string userName1;
+                        string userName2;
+
+                        using (var db = databaseFactory.GetInstance())
+                        {
+                            userName1 = (await db.GetUsernameAsync(group.Users[0].UserId))!;
+                            userName2 = (await db.GetUsernameAsync(group.Users[1].UserId))!;
+                        }
+
+                        roomName = $"{bundle.Queue.Pool.DisplayName}: {userName1} vs {userName2}";
                         break;
 
                     default:
