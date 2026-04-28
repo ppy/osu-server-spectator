@@ -170,6 +170,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)request.PoolId) ?? throw new InvalidStateException($"Pool not found: {request.PoolId}");
                 pool.lobby_size = 2;
                 pool.rating_search_radius = int.MaxValue;
+                pool.ranked = false;
 
                 if (!pool.active)
                     throw new InvalidStateException("The selected matchmaking pool is no longer active.");
@@ -428,7 +429,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
                 {
-                    roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, databaseFactory, eventDispatcher, loggerFactory, bundle.Queue.Pool.id,
+                    roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, databaseFactory, eventDispatcher, loggerFactory, bundle.Queue.Pool,
                         group.Users, beatmapSelector, this);
                 }
 

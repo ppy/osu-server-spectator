@@ -51,7 +51,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         {
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
-                room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0, [USER_ID, USER_ID_2],
+                room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, new matchmaking_pool(), [USER_ID, USER_ID_2],
                     new MatchmakingBeatmapSelector(new matchmaking_pool(), Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
         }
@@ -210,7 +210,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
-                room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0,
+                room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, new matchmaking_pool(),
                     [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector(new matchmaking_pool(), Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
 
@@ -304,7 +304,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
-                room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0,
+                room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, new matchmaking_pool(),
                     [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector(new matchmaking_pool(), Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
 
@@ -341,7 +341,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             using (var room = await Rooms.GetForUse(ROOM_ID, true))
             {
-                room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0,
+                room.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, new matchmaking_pool(),
                     [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector(new matchmaking_pool(), Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
 
@@ -659,7 +659,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             using (var roomUsage = await Rooms.GetForUse(ROOM_ID, true))
             {
-                roomUsage.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, 0,
+                roomUsage.Item = await initialiseMatchmakingRoomAsync(ROOM_ID, RoomController, DatabaseFactory.Object, EventDispatcher, LoggerFactory.Object, new matchmaking_pool(),
                     [USER_ID, USER_ID_2, 3], new MatchmakingBeatmapSelector(new matchmaking_pool(), Array.Empty<matchmaking_pool_beatmap>(), DatabaseFactory.Object));
             }
 
@@ -928,8 +928,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
         private static Task<ServerMultiplayerRoom> initialiseMatchmakingRoomAsync(long roomId, IMultiplayerRoomController roomController, IDatabaseFactory dbFactory,
                                                                                   MultiplayerEventDispatcher eventDispatcher, ILoggerFactory loggerFactory,
-                                                                                  uint poolId, int[] users, MatchmakingBeatmapSelector beatmapSelector)
-            => ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, dbFactory, eventDispatcher, loggerFactory, poolId,
+                                                                                  matchmaking_pool pool, int[] users, MatchmakingBeatmapSelector beatmapSelector)
+            => ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, dbFactory, eventDispatcher, loggerFactory, pool,
                 users.Select(u => new MatchmakingQueueUser(u.ToString()) { UserId = u }).ToArray(), beatmapSelector, new Mock<IMatchmakingQueueBackgroundService>().Object);
 
         public Task DisposeAsync()

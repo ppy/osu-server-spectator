@@ -17,6 +17,7 @@ namespace osu.Server.Spectator.Database.Models
         public string name { get; set; } = string.Empty;
         public matchmaking_pool_type type { get; set; } = matchmaking_pool_type.quick_play;
         public bool active { get; set; }
+        public bool ranked { get; set; } = true; // Not yet databased.
 
         /// <summary>
         /// The number of players required for a match to be found.

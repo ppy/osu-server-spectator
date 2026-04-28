@@ -2,13 +2,14 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Threading.Tasks;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking
 {
     public interface IMatchmakingMatchController
     {
-        Task Initialise(uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector, IMatchmakingQueueBackgroundService matchmakingService);
+        Task Initialise(matchmaking_pool pool, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector, IMatchmakingQueueBackgroundService matchmakingService);
 
         void SkipToNextStage(out Task countdownTask);
     }

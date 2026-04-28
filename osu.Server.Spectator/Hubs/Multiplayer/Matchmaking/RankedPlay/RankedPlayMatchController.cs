@@ -29,6 +29,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public MultiplayerPlaylistItem CurrentItem => Room.Playlist.Single(item => item.ID == Room.Settings.PlaylistItemId);
 
         public uint PoolId { get; private set; }
+        public bool Ranked { get; private set; }
+
         public IMatchmakingQueueBackgroundService MatchmakingService { get; private set; } = null!;
 
         public readonly ServerMultiplayerRoom Room;
@@ -92,10 +94,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             await GotoStage(RankedPlayStage.WaitForJoin);
         }
 
-        async Task IMatchmakingMatchController.Initialise(uint poolId, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector, IMatchmakingQueueBackgroundService matchmakingService)
+        async Task IMatchmakingMatchController.Initialise(matchmaking_pool pool, MatchmakingQueueUser[] users, MatchmakingBeatmapSelector beatmapSelector,
+                                                          IMatchmakingQueueBackgroundService matchmakingService)
         {
             MatchmakingService = matchmakingService;
-            PoolId = poolId;
+            PoolId = pool.id;
+            Ranked = pool.ranked;
 
             // Build the deck.
             matchmaking_pool_beatmap[] beatmaps = beatmapSelector.GetAppropriateBeatmaps(DECK_SIZE, users.Select(u => u.Rating).ToArray());
@@ -374,63 +378,66 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             if (winningUsers.Length == 1)
                 State.WinningUserId = winningUsers.Single();
 
-            using (var db = DbFactory.GetInstance())
+            if (Ranked)
             {
-                PlackettLuce model = new PlackettLuce
+                using (var db = DbFactory.GetInstance())
                 {
-                    Mu = 1500,
-                    Sigma = 150,
-                    Beta = 75,
-                    Tau = 1.5
-                };
-
-                List<matchmaking_user_stats> stats = [];
-                List<ITeam> teams = [];
-                List<double> scores = [];
-
-                foreach ((int userId, RankedPlayUserInfo user) in State.Users)
-                {
-                    matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(userId, PoolId) ?? new matchmaking_user_stats
+                    PlackettLuce model = new PlackettLuce
                     {
-                        user_id = (uint)userId,
-                        pool_id = PoolId
+                        Mu = 1500,
+                        Sigma = 150,
+                        Beta = 75,
+                        Tau = 1.5
                     };
 
-                    stats.Add(userStats);
-                    teams.Add(new Team { Players = [model.Rating(userStats.EloData.Rating.Mu, userStats.EloData.Rating.Sig)] });
-                    scores.Add(user.Life);
-                }
+                    List<matchmaking_user_stats> stats = [];
+                    List<ITeam> teams = [];
+                    List<double> scores = [];
 
-                IRating[] newRatings = model.Rate(teams, scores: scores).Select(t => t.Players.Single()).ToArray();
-
-                for (int i = 0; i < stats.Count; i++)
-                {
-                    matchmaking_room_result result;
-
-                    if (State.WinningUserId == null)
-                        result = matchmaking_room_result.draw;
-                    else if (State.WinningUserId == stats[i].user_id)
+                    foreach ((int userId, RankedPlayUserInfo user) in State.Users)
                     {
-                        stats[i].first_placements++;
-                        result = matchmaking_room_result.win;
+                        matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(userId, PoolId) ?? new matchmaking_user_stats
+                        {
+                            user_id = (uint)userId,
+                            pool_id = PoolId
+                        };
+
+                        stats.Add(userStats);
+                        teams.Add(new Team { Players = [model.Rating(userStats.EloData.Rating.Mu, userStats.EloData.Rating.Sig)] });
+                        scores.Add(user.Life);
                     }
-                    else
-                        result = matchmaking_room_result.loss;
 
-                    await db.InsertUserEloHistoryEntry(
-                        (ulong)Room.RoomID,
-                        PoolId,
-                        stats[i].user_id,
-                        stats.First(u => u.user_id != stats[i].user_id).user_id,
-                        result,
-                        (int)Math.Round(stats[i].EloData.Rating.Mu),
-                        (int)Math.Round(newRatings[i].Mu));
+                    IRating[] newRatings = model.Rate(teams, scores: scores).Select(t => t.Players.Single()).ToArray();
 
-                    stats[i].EloData.ContestCount++;
-                    stats[i].EloData.Rating = new EloRating(newRatings[i].Mu, newRatings[i].Sigma);
-                    await db.UpdateMatchmakingUserStatsAsync(stats[i]);
+                    for (int i = 0; i < stats.Count; i++)
+                    {
+                        matchmaking_room_result result;
 
-                    State.Users[(int)stats[i].user_id].RatingAfter = (int)Math.Round(newRatings[i].Mu);
+                        if (State.WinningUserId == null)
+                            result = matchmaking_room_result.draw;
+                        else if (State.WinningUserId == stats[i].user_id)
+                        {
+                            stats[i].first_placements++;
+                            result = matchmaking_room_result.win;
+                        }
+                        else
+                            result = matchmaking_room_result.loss;
+
+                        await db.InsertUserEloHistoryEntry(
+                            (ulong)Room.RoomID,
+                            PoolId,
+                            stats[i].user_id,
+                            stats.First(u => u.user_id != stats[i].user_id).user_id,
+                            result,
+                            (int)Math.Round(stats[i].EloData.Rating.Mu),
+                            (int)Math.Round(newRatings[i].Mu));
+
+                        stats[i].EloData.ContestCount++;
+                        stats[i].EloData.Rating = new EloRating(newRatings[i].Mu, newRatings[i].Sigma);
+                        await db.UpdateMatchmakingUserStatsAsync(stats[i]);
+
+                        State.Users[(int)stats[i].user_id].RatingAfter = (int)Math.Round(newRatings[i].Mu);
+                    }
                 }
             }
 
