@@ -175,15 +175,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 if (!pool.active)
                     throw new InvalidStateException("The selected matchmaking pool is no longer active.");
 
-                Guid duelGuid = Guid.NewGuid();
-                MatchmakingQueue queue;
-
-                if (!duelQueues.TryAdd(duelGuid, queue = new MatchmakingQueue(pool) { SearchTimeout = TimeSpan.FromMinutes(5) }))
-                    throw new InvalidStateException("Failed to issue the duel.");
-
+                // The user is added to the queue before the queue is added to the dictionary
+                // so that the periodic update doesn't discard the queue due to a lack of users.
+                MatchmakingQueue queue = new MatchmakingQueue(pool) { SearchTimeout = TimeSpan.FromMinutes(5) };
                 MatchmakingQueueUser user = await createUserAsync(state, pool);
                 user.QueueBanStartTime = DateTimeOffset.MinValue;
-                await processBundle(queue.Add(user));
+                MatchmakingQueueUpdateBundle updateBundle = queue.Add(user);
+
+                Guid duelGuid = Guid.NewGuid();
+                if (!duelQueues.TryAdd(duelGuid, queue))
+                    throw new InvalidStateException("Failed to issue the duel.");
+
+                await processBundle(updateBundle);
 
                 await hub.Clients.User(request.UserId.ToString()).SendAsync(nameof(IMatchmakingClient.MatchmakingDuelIssued), new MatchmakingDuelIssuedParams
                 {
@@ -217,7 +220,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             MatchmakingQueueUser user = await createUserAsync(state, queue.Pool);
             user.QueueBanStartTime = DateTimeOffset.MinValue;
             await processBundle(queue.Add(user));
-            await processBundle(queue.Update());
 
             return new MatchmakingAcceptDuelResponse();
         }
