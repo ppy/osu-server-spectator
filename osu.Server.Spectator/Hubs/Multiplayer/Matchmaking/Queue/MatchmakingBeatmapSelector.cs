@@ -157,7 +157,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                double weight = Math.Clamp(Math.Exp(-Math.Pow(b.rating - userRatingMu, 2) / (2 * ratingSig * ratingSig)), 1e-6, 1);
                                return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
                            })
-                           .Take(count)
+                           // First wide-range filter - at high star ratings there are fewer maps closer to the mean so we'll pick from a larger subset.
+                           .Take(1000)
+                           // Second filter down to the required count while giving some variety (randomness) to the pool.
+                           .OrderBy(_ => Random.Shared.NextDouble()).Take(count)
                            .ToArray();
         }
 
