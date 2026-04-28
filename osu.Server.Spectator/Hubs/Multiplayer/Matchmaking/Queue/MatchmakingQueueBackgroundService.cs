@@ -109,6 +109,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public async Task AddToLobbyAsync(MultiplayerClientState state, int poolId)
         {
+            // Users should only ever be in one lobby at a time.
             await RemoveFromLobbyAsync(state);
 
             using (var db = databaseFactory.GetInstance())
@@ -135,6 +136,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public async Task AddToQueueAsync(MultiplayerClientState state, int poolId)
         {
+            // Users should only ever be in one queue at a time.
+            await RemoveFromQueueAsync(state);
+
             using (var db = databaseFactory.GetInstance())
             {
                 matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)poolId) ?? throw new InvalidStateException($"Pool not found: {poolId}");
@@ -156,29 +160,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 await processBundle(queue.Remove(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
-        public async Task AcceptInvitationAsync(MultiplayerClientState state)
-        {
-            // Immediately notify the incoming user of their intent to join the match.
-            await hub.Clients.Client(state.ConnectionId).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.JoiningMatch());
-
-            foreach ((_, MatchmakingQueue queue) in poolQueues)
-                await processBundle(queue.MarkInvitationAccepted(new MatchmakingQueueUser(state.ConnectionId)));
-
-            foreach ((_, MatchmakingQueue queue) in duelQueues)
-                await processBundle(queue.MarkInvitationAccepted(new MatchmakingQueueUser(state.ConnectionId)));
-        }
-
-        public async Task DeclineInvitationAsync(MultiplayerClientState state)
-        {
-            foreach ((_, MatchmakingQueue queue) in poolQueues)
-                await processBundle(queue.MarkInvitationDeclined(new MatchmakingQueueUser(state.ConnectionId)));
-
-            foreach ((_, MatchmakingQueue queue) in duelQueues)
-                await processBundle(queue.MarkInvitationDeclined(new MatchmakingQueueUser(state.ConnectionId)));
-        }
-
         public async Task<MatchmakingIssueDuelResponse> IssueDuelAsync(MultiplayerClientState state, MatchmakingIssueDuelRequest request)
         {
+            // Users should only ever be in one queue at a time.
+            await RemoveFromQueueAsync(state);
+
             using (var db = databaseFactory.GetInstance())
             {
                 matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)request.PoolId) ?? throw new InvalidStateException($"Pool not found: {request.PoolId}");
@@ -211,18 +197,49 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public async Task<MatchmakingAcceptDuelResponse> AcceptDuelAsync(MultiplayerClientState state, MatchmakingAcceptDuelRequest request)
         {
+            // This could happen if the challenger cancelled the request. In which case, return an empty success.
             if (!duelQueues.TryGetValue(request.Id, out MatchmakingQueue? queue))
-            {
-                // This could happen if the challenger cancelled the request. In which case, return an empty success.
                 return new MatchmakingAcceptDuelResponse();
+
+            // Remove the user from all matchmaking queues.
+            foreach ((_, MatchmakingQueue q) in poolQueues)
+                await processBundle(q.Remove(new MatchmakingQueueUser(state.ConnectionId)));
+
+            // Remove the user from all other duel queues.
+            foreach ((_, MatchmakingQueue q) in duelQueues)
+            {
+                if (q != queue)
+                    await processBundle(q.Remove(new MatchmakingQueueUser(state.ConnectionId)));
             }
 
+            // Add the user to the duel queue.
             MatchmakingQueueUser user = await createUserAsync(state, queue.Pool);
             user.QueueBanStartTime = DateTimeOffset.MinValue;
             await processBundle(queue.Add(user));
             await processBundle(queue.Update());
 
             return new MatchmakingAcceptDuelResponse();
+        }
+
+        public async Task AcceptInvitationAsync(MultiplayerClientState state)
+        {
+            // Immediately notify the incoming user of their intent to join the match.
+            await hub.Clients.Client(state.ConnectionId).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueStatusChanged), new MatchmakingQueueStatus.JoiningMatch());
+
+            foreach ((_, MatchmakingQueue queue) in poolQueues)
+                await processBundle(queue.MarkInvitationAccepted(new MatchmakingQueueUser(state.ConnectionId)));
+
+            foreach ((_, MatchmakingQueue queue) in duelQueues)
+                await processBundle(queue.MarkInvitationAccepted(new MatchmakingQueueUser(state.ConnectionId)));
+        }
+
+        public async Task DeclineInvitationAsync(MultiplayerClientState state)
+        {
+            foreach ((_, MatchmakingQueue queue) in poolQueues)
+                await processBundle(queue.MarkInvitationDeclined(new MatchmakingQueueUser(state.ConnectionId)));
+
+            foreach ((_, MatchmakingQueue queue) in duelQueues)
+                await processBundle(queue.MarkInvitationDeclined(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
