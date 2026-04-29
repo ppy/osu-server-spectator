@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private static readonly TimeSpan lobby_update_rate = AppSettings.MatchmakingLobbyUpdateRate;
 
         private const string statsd_prefix = "matchmaking";
-        private static string queue_ban_start_time(int userId) => $"matchmaking-ban-start-time:{userId}";
+        private static string queue_ban_end_time(int userId) => $"matchmaking-ban-end-time:{userId}";
 
         private readonly ConcurrentDictionary<int, MatchmakingLobby> poolLobbies = new ConcurrentDictionary<int, MatchmakingLobby>();
         private readonly ConcurrentDictionary<int, MatchmakingQueue> poolQueues = new ConcurrentDictionary<int, MatchmakingQueue>();
@@ -179,7 +179,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 // so that the periodic update doesn't discard the queue due to a lack of users.
                 MatchmakingQueue queue = new MatchmakingQueue(pool) { SearchTimeout = TimeSpan.FromMinutes(5) };
                 MatchmakingQueueUser user = await createUserAsync(state, pool);
-                user.QueueBanStartTime = DateTimeOffset.MinValue;
+                user.BanEndTime = DateTimeOffset.MinValue;
                 MatchmakingQueueUpdateBundle updateBundle = queue.Add(user);
 
                 Guid duelGuid = Guid.NewGuid();
@@ -218,7 +218,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             // Add the user to the duel queue.
             MatchmakingQueueUser user = await createUserAsync(state, queue.Pool);
-            user.QueueBanStartTime = DateTimeOffset.MinValue;
+            user.BanEndTime = DateTimeOffset.MinValue;
             await processBundle(queue.Add(user));
 
             return new MatchmakingAcceptDuelResponse();
@@ -366,7 +366,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 // This will be silent to users affected (see `MatchmakingQueue.matchUsers`).
                 //
                 // TODO: we should probably let the players know that they have been penalised.
-                memoryCache.Set(queue_ban_start_time(user.UserId), bundle.Queue.Clock.UtcNow);
+                memoryCache.Set(queue_ban_end_time(user.UserId), bundle.Queue.Clock.UtcNow + TimeSpan.FromMinutes(1));
             }
 
             foreach (var user in bundle.RemovedUsers)
@@ -499,7 +499,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     UserId = state.UserId,
                     Rating = stats.EloData.Rating,
-                    QueueBanStartTime = memoryCache.Get<DateTimeOffset?>(queue_ban_start_time(state.UserId)) ?? DateTimeOffset.MinValue
+                    BanEndTime = memoryCache.Get<DateTimeOffset?>(queue_ban_end_time(state.UserId)) ?? DateTimeOffset.MinValue
                 };
             }
         }

@@ -183,12 +183,11 @@ namespace osu.Server.Spectator.Tests.Matchmaking
 
             queue.Pool.lobby_size = 2;
             queue.Clock = clock;
-            queue.BanDuration = TimeSpan.FromMinutes(1);
 
             queue.Add(new MatchmakingQueueUser("1"));
             queue.Add(new MatchmakingQueueUser("2")
             {
-                QueueBanStartTime = clock.UtcNow
+                BanEndTime = clock.UtcNow + TimeSpan.FromMinutes(1)
             });
 
             var bundle = queue.Update();

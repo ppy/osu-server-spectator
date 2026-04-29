@@ -53,11 +53,6 @@ namespace osu.Server.Spectator
         public static TimeSpan MatchmakingQueueUpdateRate { get; } = TimeSpan.FromSeconds(1);
 
         /// <summary>
-        /// The duration for which users are temporarily banned from the matchmaking queue after declining an invitation.
-        /// </summary>
-        public static TimeSpan MatchmakingQueueBanDuration { get; } = TimeSpan.FromMinutes(1);
-
-        /// <summary>
         /// The total number of beatmaps per matchmaking room.
         /// </summary>
         public static int MatchmakingPoolSize { get; } = 50;
@@ -119,10 +114,6 @@ namespace osu.Server.Spectator
             MatchmakingQueueUpdateRate = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_UPDATE_RATE"), out int mmQueueUpdateRate)
                 ? TimeSpan.FromSeconds(mmQueueUpdateRate)
                 : MatchmakingQueueUpdateRate;
-
-            MatchmakingQueueBanDuration = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_BAN_DURATION"), out int mmQueueBanDuration)
-                ? TimeSpan.FromSeconds(mmQueueBanDuration)
-                : MatchmakingQueueBanDuration;
 
             MatchmakingPoolSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_POOL_SIZE"), out int mmPoolSize)
                 ? mmPoolSize
