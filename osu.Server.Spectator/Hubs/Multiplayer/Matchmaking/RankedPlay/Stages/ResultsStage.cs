@@ -72,12 +72,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             if (winningScores.Length == 1)
                 State.Users[(int)winningScores.Single().user_id].RoundsWon += 1;
 
-            await Controller.MatchmakingService.RecordBeatmapResult(
-                Controller.PoolId,
-                Room.CurrentPlaylistItem.BeatmapID,
-                Room.CurrentPlaylistItem.RequiredMods.ToArray(),
-                scores.Select(s => (int)s.total_score).ToArray(),
-                scores.Select(s => Controller.RatingByUser[(int)s.user_id]).ToArray());
+            if (Controller.Ranked)
+            {
+                await Controller.MatchmakingService.RecordBeatmapResult(
+                    Controller.PoolId,
+                    Room.CurrentPlaylistItem.BeatmapID,
+                    Room.CurrentPlaylistItem.RequiredMods.ToArray(),
+                    scores.Select(s => (int)s.total_score).ToArray(),
+                    scores.Select(s => Controller.RatingByUser[(int)s.user_id]).ToArray());
+            }
 
             if (!HasGameplayRoundsRemaining())
                 await Controller.HandleMatchCompleted();
