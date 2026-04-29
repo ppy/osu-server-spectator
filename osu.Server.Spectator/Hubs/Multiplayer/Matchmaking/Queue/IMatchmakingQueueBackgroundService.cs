@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using osu.Game.Online.API;
@@ -66,5 +67,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         Task<MatchmakingIssueDuelResponse> IssueDuelAsync(MultiplayerClientState state, MatchmakingIssueDuelRequest request);
 
         Task<MatchmakingAcceptDuelResponse> AcceptDuelAsync(MultiplayerClientState state, MatchmakingAcceptDuelRequest request);
+
+        /// <summary>
+        /// Bans a user from the matchmaking queue for at least the given time period.
+        /// </summary>
+        /// <param name="userId">The user to ban.</param>
+        /// <param name="duration">The duration of the ban.</param>
+        void BanUser(int userId, TimeSpan duration);
     }
 }

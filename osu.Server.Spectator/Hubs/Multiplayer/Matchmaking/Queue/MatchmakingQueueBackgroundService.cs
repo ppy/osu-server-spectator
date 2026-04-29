@@ -245,6 +245,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 await processBundle(queue.MarkInvitationDeclined(new MatchmakingQueueUser(state.ConnectionId)));
         }
 
+        public void BanUser(int userId, TimeSpan duration)
+        {
+            // TODO: we should probably let the players know that they have been penalised.
+            memoryCache.Set(queue_ban_end_time(userId), DateTimeOffset.Now + duration);
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -361,13 +367,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)
         {
             foreach (var user in bundle.DeclinedUsers)
-            {
-                // Right now this will just delay the user from being included in matchmaking for a set period.
-                // This will be silent to users affected (see `MatchmakingQueue.matchUsers`).
-                //
-                // TODO: we should probably let the players know that they have been penalised.
-                memoryCache.Set(queue_ban_end_time(user.UserId), bundle.Queue.Clock.UtcNow + TimeSpan.FromMinutes(1));
-            }
+                BanUser(user.UserId, TimeSpan.FromMinutes(1));
 
             foreach (var user in bundle.RemovedUsers)
                 await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueLeft));
