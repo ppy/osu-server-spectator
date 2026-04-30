@@ -170,6 +170,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)request.PoolId) ?? throw new InvalidStateException($"Pool not found: {request.PoolId}");
                 pool.lobby_size = 2;
                 pool.rating_search_radius = int.MaxValue;
+                pool.rating_search_radius_max = int.MaxValue;
                 pool.ranked = false;
 
                 if (!pool.active)
