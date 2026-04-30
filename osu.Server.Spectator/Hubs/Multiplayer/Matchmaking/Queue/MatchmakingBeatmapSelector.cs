@@ -17,11 +17,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
     public class MatchmakingBeatmapSelector
     {
         /// <summary>
-        /// The approximate number of osu! ruleset beatmaps that should be filtered down to for relevancy purposes.
-        /// </summary>
-        private const double osu_beatmap_proportion = 1 / 12.0;
-
-        /// <summary>
         /// Contains all ranked beatmaps.
         /// </summary>
         public Dictionary<int, matchmaking_pool_beatmap> GlobalBeatmaps { get; init; } = [];
@@ -162,10 +157,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                double weight = Math.Clamp(Math.Exp(-Math.Pow(b.rating - userRatingMu, 2) / (2 * ratingSig * ratingSig)), 1e-6, 1);
                                return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
                            })
-                           // Relevancy filter: at high star ratings there are fewer maps closer to the mean so we'll filter to a larger set.
-                           .Take(Math.Max(count, (int)Math.Round(beatmaps.Count * osu_beatmap_proportion)))
-                           // Variety filter: down to the required count.
-                           .OrderBy(_ => Random.Shared.NextDouble()).Take(count)
+                           .Take(count)
                            .ToArray();
         }
 
