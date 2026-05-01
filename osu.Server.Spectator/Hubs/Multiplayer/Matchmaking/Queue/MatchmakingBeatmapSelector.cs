@@ -104,7 +104,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             double clearThreshold = pool.ruleset_id switch
             {
-                0 => 550_000,
+                0 => 420_000,
                 1 => 850_000,
                 2 => 850_000,
                 3 => 850_000,
