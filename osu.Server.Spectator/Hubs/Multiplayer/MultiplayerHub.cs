@@ -126,28 +126,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task InvitePlayer(int userId)
         {
-            using (var db = databaseFactory.GetInstance())
-            {
-                bool isRestricted = await db.IsUserRestrictedAsync(userId);
-                if (isRestricted)
-                    throw new InvalidStateException("Can't invite a restricted user to a room.");
-
-                var relation = await db.GetUserRelation(Context.GetUserId(), userId);
-
-                // The local user has the player they are trying to invite blocked.
-                if (relation?.foe == true)
-                    throw new UserBlockedException();
-
-                var inverseRelation = await db.GetUserRelation(userId, Context.GetUserId());
-
-                // The player being invited has the local user blocked.
-                if (inverseRelation?.foe == true)
-                    throw new UserBlockedException();
-
-                // The player being invited disallows unsolicited PMs and the local user is not their friend.
-                if (inverseRelation?.friend != true && !await db.GetUserAllowsPMs(userId))
-                    throw new UserBlocksPMsException();
-            }
+            await checkUserToUserPermissionsAsync(userId);
 
             using (var userUsage = await GetOrCreateLocalUserState())
             {
@@ -528,6 +507,31 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 throw new NotJoinedRoomException();
 
             return await GetRoom(state.CurrentRoomID.Value);
+        }
+
+        private async Task checkUserToUserPermissionsAsync(int targetUser)
+        {
+            using (var db = databaseFactory.GetInstance())
+            {
+                if (await db.IsUserRestrictedAsync(targetUser))
+                    throw new InvalidStateException("Can't perform that action on a restricted user.");
+
+                var relation = await db.GetUserRelation(Context.GetUserId(), targetUser);
+
+                // The local user has the player they are trying to invite blocked.
+                if (relation?.foe == true)
+                    throw new UserBlockedException();
+
+                var inverseRelation = await db.GetUserRelation(targetUser, Context.GetUserId());
+
+                // The player being invited has the local user blocked.
+                if (inverseRelation?.foe == true)
+                    throw new UserBlockedException();
+
+                // The player being invited disallows unsolicited PMs and the local user is not their friend.
+                if (inverseRelation?.friend != true && !await db.GetUserAllowsPMs(targetUser))
+                    throw new UserBlocksPMsException();
+            }
         }
 
         internal Task<ItemUsage<ServerMultiplayerRoom>> GetRoom(long roomId) => RoomController.GetRoom(roomId);

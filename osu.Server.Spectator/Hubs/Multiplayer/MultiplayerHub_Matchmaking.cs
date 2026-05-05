@@ -91,6 +91,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     throw new InvalidStateException("Can't duel when restricted.");
             }
 
+            await checkUserToUserPermissionsAsync(request.UserId);
+
             using (var userUsage = await GetOrCreateLocalUserState())
                 return await matchmakingQueueService.IssueDuelAsync(userUsage.Item!, request);
         }
