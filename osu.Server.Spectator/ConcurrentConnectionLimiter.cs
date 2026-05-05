@@ -110,6 +110,9 @@ namespace osu.Server.Spectator
         {
             // if `exception` isn't null then the disconnection is not clean,
             // so don't unregister yet in hopes that the user will return after a transient network failure or similar.
+            //
+            // TODO: This is never cleaned up properly, leading to gradual user state leakage.
+            // Maybe not a huge concern, but is persistent in memory until restart.
             if (exception == null)
                 await unregisterConnection(context, exception);
             await next(context, exception);

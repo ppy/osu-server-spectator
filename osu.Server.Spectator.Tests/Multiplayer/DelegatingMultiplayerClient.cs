@@ -264,5 +264,11 @@ namespace osu.Server.Spectator.Tests.Multiplayer
             foreach (var c in Clients.OfType<IMultiplayerClient>())
                 await c.DisconnectRequested();
         }
+
+        public async Task ServerShuttingDown()
+        {
+            foreach (var c in Clients.OfType<IMultiplayerClient>())
+                await c.ServerShuttingDown();
+        }
     }
 }

@@ -410,5 +410,10 @@ namespace SampleMultiplayerClient
             Console.WriteLine("Disconnect requested");
             await LeaveRoom();
         }
+
+        public Task ServerShuttingDown()
+        {
+            return Task.CompletedTask;
+        }
     }
 }

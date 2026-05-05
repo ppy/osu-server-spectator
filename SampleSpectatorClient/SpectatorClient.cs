@@ -90,5 +90,11 @@ namespace SampleSpectatorClient
             Console.WriteLine($"{connection.ConnectionId} Disconnect requested");
             return Task.CompletedTask;
         }
+
+        public Task ServerShuttingDown()
+        {
+            Console.WriteLine($"{connection.ConnectionId} Shutdown requested");
+            return Task.CompletedTask;
+        }
     }
 }
