@@ -75,7 +75,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             if (Controller.Ranked)
             {
                 await Controller.MatchmakingService.RecordBeatmapResult(
-                    Controller.PoolId,
+                    Controller.Pool.id,
                     Room.CurrentPlaylistItem.BeatmapID,
                     Room.CurrentPlaylistItem.RequiredMods.ToArray(),
                     scores.Select(s => (int)s.total_score).ToArray(),

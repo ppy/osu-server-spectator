@@ -28,10 +28,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
         public MultiplayerPlaylistItem CurrentItem => Room.Playlist.Single(item => item.ID == Room.Settings.PlaylistItemId);
 
-        public uint PoolId { get; private set; }
-        public bool Ranked { get; private set; }
-
         public IMatchmakingQueueBackgroundService MatchmakingService { get; private set; } = null!;
+        public matchmaking_pool Pool { get; private set; } = null!;
+        public bool Ranked { get; private set; }
 
         public readonly ServerMultiplayerRoom Room;
         public readonly IDatabaseFactory DbFactory;
@@ -98,7 +97,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                                                           IMatchmakingQueueBackgroundService matchmakingService)
         {
             MatchmakingService = matchmakingService;
-            PoolId = pool.id;
+            Pool = pool;
             Ranked = pool.ranked;
 
             // Build the deck.
@@ -369,7 +368,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             // Naturally, this also means we don't have a winner to crown.
             if (State.CurrentRound == 0)
             {
-                await MatchmakingService.RecordMatch((int)PoolId, State);
+                await MatchmakingService.RecordMatch((int)Pool.id, State);
                 return;
             }
 
@@ -396,10 +395,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
                     foreach ((int userId, RankedPlayUserInfo user) in State.Users)
                     {
-                        matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(userId, PoolId) ?? new matchmaking_user_stats
+                        matchmaking_user_stats userStats = await db.GetMatchmakingUserStatsAsync(userId, Pool.id) ?? new matchmaking_user_stats
                         {
                             user_id = (uint)userId,
-                            pool_id = PoolId
+                            pool_id = Pool.id
                         };
 
                         stats.Add(userStats);
@@ -425,7 +424,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
                         await db.InsertUserEloHistoryEntry(
                             (ulong)Room.RoomID,
-                            PoolId,
+                            Pool.id,
                             stats[i].user_id,
                             stats.First(u => u.user_id != stats[i].user_id).user_id,
                             result,
@@ -441,7 +440,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                 }
             }
 
-            await MatchmakingService.RecordMatch((int)PoolId, State);
+            await MatchmakingService.RecordMatch((int)Pool.id, State);
         }
 
         public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
