@@ -141,9 +141,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             using (var db = databaseFactory.GetInstance())
             {
-                if (await db.IsUserRestrictedAsync(state.UserId))
-                    throw new InvalidStateException("Can't queue when restricted.");
-
                 matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)poolId) ?? throw new InvalidStateException($"Pool not found: {poolId}");
 
                 if (!pool.active)
@@ -170,9 +167,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             using (var db = databaseFactory.GetInstance())
             {
-                if (await db.IsUserRestrictedAsync(state.UserId))
-                    throw new InvalidStateException("Can't duel when restricted.");
-
                 matchmaking_pool pool = await db.GetMatchmakingPoolAsync((uint)request.PoolId) ?? throw new InvalidStateException($"Pool not found: {request.PoolId}");
                 pool.lobby_size = 2;
                 pool.rating_search_radius = int.MaxValue;
