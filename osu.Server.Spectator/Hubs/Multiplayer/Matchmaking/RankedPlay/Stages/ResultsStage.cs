@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Server.Spectator.Database.Models;
@@ -59,18 +60,30 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 if (scores.All(s => s.user_id != userId))
                     scores.Add(new SoloScore { user_id = (uint)userId });
             }
+            
+            SoloScore attackingScore = scores.MaxBy(s => s.total_score)!;
+            SoloScore[] winningScores = scores.Where(u => u.total_score == (int)attackingScore.total_score).ToArray();
+            SoloScore[] losingScores =  scores.Where(u => u.total_score < (int)attackingScore.total_score).ToArray();
+            if (winningScores.Length == 1){
+                State.Users[(int)winningScores.Single().user_id].RoundsWon += 1;  
+                State.Users[(int)winningScores.Single().user_id].WinStreak += 1;        
+            }
+            if (winningScores.Length >= 2) //super rare tie, it matters in winstreak so I need to account for it, this implementation is a double winstreak reset, can be changed later
+            {
+                State.Users[(int)winningScores.Single().user_id].WinStreak = 0; 
+            }
 
-            int maxTotalScore = (int)scores.Select(s => s.total_score).Max();
+            if (losingScores.Length == 1)
+                State.Users[(int)losingScores.Single().user_id].WinStreak = 0; //WinStreak reset on lose
+
+            State.Users.ForEach(u=>u.Value.PersonalMultiplier = computePersonalMultiplier(u.Value.WinStreak));
 
             foreach (var score in scores)
             {
                 var userInfo = State.Users[(int)score.user_id];
-                userInfo.DamageInfo = Controller.Damage((int)score.user_id, maxTotalScore - (int)score.total_score);
+                userInfo.DamageInfo = Controller.Damage((int)attackingScore.user_id,(int)score.user_id, (int)attackingScore.total_score - (int)score.total_score);
             }
 
-            SoloScore[] winningScores = scores.Where(u => u.total_score == maxTotalScore).ToArray();
-            if (winningScores.Length == 1)
-                State.Users[(int)winningScores.Single().user_id].RoundsWon += 1;
 
             if (Controller.Ranked)
             {
@@ -104,6 +117,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 await KillUser(user);
 
             // Remain in the results stage, which will naturally transition to the ended stage once the countdown expires.
+        }
+
+        private double computePersonalMultiplier(int winstreak)
+        {
+            return 1+0.5*winstreak;
         }
     }
 }

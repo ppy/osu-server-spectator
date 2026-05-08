@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 
@@ -29,7 +30,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             }
 
             State.CurrentRound++;
-            State.DamageMultiplier = computeDamageMultiplier(State.CurrentRound);
+            State.GlobalMultiplier = computeGlobalMultiplier(State.CurrentRound);
 
             // Activate the next player.
             // For the first round, this is set during room initialisation.
@@ -50,10 +51,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         }
 
         /// <summary>
-        /// Retrieves the damage multiplier for a given round.
+        /// Retrieves the global multiplier for a given round.
         /// </summary>
         /// <param name="round">The round.</param>
-        private double computeDamageMultiplier(int round)
+        private double computeGlobalMultiplier(int round)
         {
             switch (Controller.Pool.ruleset_id)
             {

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 using OpenSkillSharp.Models;
 using OpenSkillSharp.Rating;
 using osu.Game.Online.Multiplayer;
@@ -336,17 +337,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// <param name="userId">The user ID of the player taking damage.</param>
         /// <param name="amount">The amount of damage (before any multipliers are added) to take.</param>
         /// <returns>A descriptor for the damage taken.</returns>
-        public RankedPlayDamageInfo Damage(int userId, int amount)
+        public RankedPlayDamageInfo Damage(int attackingUserId, int recievingUserId, int amount)
         {
-            RankedPlayUserInfo userInfo = State.Users[userId];
+            RankedPlayUserInfo recievingUserInfo = State.Users[recievingUserId];
+            RankedPlayUserInfo attackingUserInfo = State.Users[attackingUserId];
 
             int rawDamage = amount;
-            int damage = (int)Math.Ceiling(rawDamage * State.DamageMultiplier);
+            int damage = (int)Math.Ceiling(rawDamage * State.GlobalMultiplier * attackingUserInfo.PersonalMultiplier);
 
-            int oldLife = userInfo.Life;
+            int oldLife = recievingUserInfo.Life;
             int newLife = Math.Max(0, oldLife - damage);
 
-            userInfo.Life = newLife;
+            recievingUserInfo.Life = newLife;
 
             return new RankedPlayDamageInfo
             {
@@ -447,5 +449,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         {
             room_type = database_match_type.ranked_play
         };
+
+                /// <summary>
+        /// Retrieves the personal multiplier for a given player.
+        /// </summary>
+        /// <param name="winstreak">The winstreak of the given player.</param>
     }
 }
