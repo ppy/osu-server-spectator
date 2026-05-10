@@ -359,7 +359,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 double distance = Math.Min(leftDistance, rightDistance);
 
                 TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
-                double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp));
+                /// Speedup of user pairing window expansion by a coefficient based on elo
+                /// 1500: 1
+                /// 1800: 1.17
+                /// 2000: 1.56
+                /// 2200: 2.39
+                /// 2400: 4.22
+                /// 2600: 8.59
+                /// subject to future changes if the elo distribution changes, but it is fine for now I think
+                double searchRadiusEloBonus = Math.Exp(Math.Pow((pivotUser.Rating.Mu - 1500) / 750, 2));
+                double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * searchRadiusEloBonus * Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp));
 
                 if (distance > searchRadius)
                     break;
