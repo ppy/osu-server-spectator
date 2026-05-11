@@ -114,7 +114,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                     foreach (int rating in await db.GetMatchmakingPoolRatingsAsync((uint)poolId))
                     {
-                        int ratingRounded = (int)Math.Round((float)rating / 25) * 25;
+                        int ratingRounded = (int)Math.Floor((float)rating / 25) * 25;
                         ratingCounts[ratingRounded] = ratingCounts.GetValueOrDefault(ratingRounded) + 1;
                     }
 
