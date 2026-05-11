@@ -56,7 +56,6 @@ namespace osu.Server.Spectator.Hubs.Referee
         /// <summary>
         /// Invites the player with the given <paramref name="userId"/> to the given <paramref name="roomId"/>.
         /// Corresponds to the <c>!mp invite</c> command on bancho.
-        /// Note that success of this operation does **not** confirm receipt of the invite, just a lack of errors when sending it.
         /// </summary>
         Task InvitePlayer(long roomId, int userId);
 
