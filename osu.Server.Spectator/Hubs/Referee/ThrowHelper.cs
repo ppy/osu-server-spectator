@@ -134,5 +134,12 @@ namespace osu.Server.Spectator.Hubs.Referee
         [DoesNotReturn]
         public static void ThrowUserNotHost()
             => throw new RefereeHubException(18, "You are not the host of the room.");
+
+        /// <summary>
+        /// Error 19: The specified user is not connected to multiplayer.
+        /// </summary>
+        [DoesNotReturn]
+        public static void ThrowUserNotConnected()
+            => throw new RefereeHubException(19, "The specified user is not connected to multiplayer.");
     }
 }
