@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -111,8 +112,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
             foreach (var user in room.Users)
             {
-                if (user.MatchState is TeamVersusUserState userState)
-                    teams[user.UserID] = userState.TeamID == 0 ? room_team.red : room_team.blue;
+                if (user.MatchState is TeamVersusUserState userState && Enum.IsDefined(typeof(room_team), userState.TeamID))
+                    teams[user.UserID] = (room_team)userState.TeamID;
             }
 
             return new MatchStartedEventDetail
