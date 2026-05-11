@@ -344,7 +344,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             int damage = (int)Math.Ceiling(rawDamage * State.DamageMultiplier);
 
             int oldLife = userInfo.Life;
-            int newLife = Math.Max(0, oldLife - damage);
+            // Last-stand mechanic: fatal attacks bring players 1HP first before killing them.
+            int newLife = Math.Max(oldLife <= 1 ? 0 : 1, oldLife - damage);
 
             userInfo.Life = newLife;
 

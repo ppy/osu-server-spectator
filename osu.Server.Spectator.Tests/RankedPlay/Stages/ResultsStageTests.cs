@@ -161,6 +161,59 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
+        public async Task DeathDamageLeadsToLastStand()
+        {
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 1_000_000 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 0 },
+                    ]));
+
+            await MatchController.Stage.Enter();
+
+            Assert.Equal(1_000_000, UserState.Life);
+            Assert.Equal(1, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 0,
+                Damage = 0,
+                OldLife = 1_000_000,
+                NewLife = 1_000_000,
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 1_000_000,
+                Damage = 1_000_000,
+                OldLife = 1_000_000,
+                NewLife = 1,
+            });
+
+            await MatchController.Stage.Enter();
+
+            Assert.Equal(1_000_000, UserState.Life);
+            Assert.Equal(0, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 0,
+                Damage = 0,
+                OldLife = 1_000_000,
+                NewLife = 1_000_000,
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 1_000_000,
+                Damage = 1_000_000,
+                OldLife = 1,
+                NewLife = 0,
+            });
+        }
+
+        [Fact]
         public async Task UserNotKilledIfQuitInFinalRound()
         {
             UserState.Life = 0;
