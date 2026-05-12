@@ -342,8 +342,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * ratingBonus * timeBonus);
 
-            HashSet<MatchmakingQueueUser> result = [];
-            result.AddRange(users.Where(u => Math.Abs(pivotUser.Rating.Mu - u.Rating.Mu) <= searchRadius));
+            IEnumerable<MatchmakingQueueUser> allMatches = users.Where(u => !u.Equals(pivotUser) && Math.Abs(pivotUser.Rating.Mu - u.Rating.Mu) <= searchRadius);
+
+            HashSet<MatchmakingQueueUser> result = [pivotUser];
+            result.AddRange(
+                allMatches
+                    .OrderBy(_ => Random.Shared.Next())
+                    .Take(Pool.lobby_size)
+            );
 
             return result;
         }
