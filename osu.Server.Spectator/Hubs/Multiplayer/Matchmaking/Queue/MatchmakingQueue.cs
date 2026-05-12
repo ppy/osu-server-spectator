@@ -337,6 +337,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             MatchmakingQueueUser pivotUser = users[pivotIndex];
             HashSet<MatchmakingQueueUser> result = [pivotUser];
 
+            // Speedup user pairing by a coefficient based on rating
+            double ratingBonus = Math.Exp(Math.Pow((pivotUser.Rating.Mu - 1500) / 750, 2));
+            TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
+            double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * ratingBonus * Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp));
+
             int leftIndex = pivotIndex - 1;
             int rightIndex = pivotIndex + 1;
 
@@ -357,12 +362,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     : double.MaxValue;
 
                 double distance = Math.Min(leftDistance, rightDistance);
-
-                // Speedup user pairing by a coefficient based on rating
-                double ratingBonus = Math.Exp(Math.Pow((pivotUser.Rating.Mu - 1500) / 750, 2));
-
-                TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
-                double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * ratingBonus * Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp));
 
                 if (distance > searchRadius)
                     break;
