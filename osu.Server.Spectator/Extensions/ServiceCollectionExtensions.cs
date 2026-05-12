@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using Microsoft.Extensions.DependencyInjection;
+using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Entities;
 using osu.Server.Spectator.Hubs;
@@ -30,6 +31,8 @@ namespace osu.Server.Spectator.Extensions
                                     .AddSingleton<EntityStore<RefereeClientState>>()
                                     .AddSingleton<GracefulShutdownManager>()
                                     .AddSingleton<MetadataBroadcaster>()
+                                    .AddSingleton<EntityStore<Score>>()
+                                    .AddSingleton<ScoreBuffer>()
                                     .AddSingleton<IScoreStorage, S3ScoreStorage>()
                                     .AddSingleton<ScoreUploader>()
                                     .AddSingleton<IScoreProcessedSubscriber, ScoreProcessedSubscriber>()

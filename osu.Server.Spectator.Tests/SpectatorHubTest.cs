@@ -60,12 +60,14 @@ namespace osu.Server.Spectator.Tests
             loggerFactory.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                          .Returns(new Mock<ILogger>().Object);
 
+            var scoreBuffer = new ScoreBuffer(new EntityStore<Score>());
+
             mockScoreStorage = new Mock<IScoreStorage>();
             scoreUploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockScoreStorage.Object, new MemoryCache(new MemoryCacheOptions()));
 
             var mockScoreProcessedSubscriber = new Mock<IScoreProcessedSubscriber>();
 
-            hub = new SpectatorHub(loggerFactory.Object, clientStates, databaseFactory.Object, scoreUploader, mockScoreProcessedSubscriber.Object);
+            hub = new SpectatorHub(loggerFactory.Object, clientStates, databaseFactory.Object, scoreBuffer, scoreUploader, mockScoreProcessedSubscriber.Object);
         }
 
         [Fact]
