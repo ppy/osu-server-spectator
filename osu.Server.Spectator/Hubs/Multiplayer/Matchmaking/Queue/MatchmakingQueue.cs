@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Internal;
+using osu.Game.Extensions;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
@@ -330,44 +331,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <returns></returns>
         private HashSet<MatchmakingQueueUser> findMatchesForUser(IReadOnlyList<MatchmakingQueueUser> users, int pivotIndex)
         {
-            const double uncertainty = 0;
-
             // Gradually expand a search from the pivot user until the rating search radius is exhausted.
-
             MatchmakingQueueUser pivotUser = users[pivotIndex];
-            HashSet<MatchmakingQueueUser> result = [pivotUser];
 
             // Speedup user pairing by a coefficient based on rating
             double ratingBonus = Math.Exp(Math.Pow((pivotUser.Rating.Mu - 1500) / 750, 2));
             TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
             double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * ratingBonus * Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp));
 
-            int leftIndex = pivotIndex - 1;
-            int rightIndex = pivotIndex + 1;
-
-            while (result.Count < Pool.lobby_size)
-            {
-                MatchmakingQueueUser? leftUser = leftIndex < 0 ? null : users[leftIndex];
-                MatchmakingQueueUser? rightUser = rightIndex >= users.Count ? null : users[rightIndex];
-
-                if (leftUser == null && rightUser == null)
-                    break;
-
-                double leftDistance = leftUser != null
-                    ? Math.Abs(Math.Abs(pivotUser.Rating.Mu - leftUser.Rating.Mu) - (pivotUser.Rating.Sig - leftUser.Rating.Sig) * uncertainty)
-                    : double.MaxValue;
-
-                double rightDistance = rightUser != null
-                    ? Math.Abs(Math.Abs(pivotUser.Rating.Mu - rightUser.Rating.Mu) - (pivotUser.Rating.Sig - rightUser.Rating.Sig) * uncertainty)
-                    : double.MaxValue;
-
-                double distance = Math.Min(leftDistance, rightDistance);
-
-                if (distance > searchRadius)
-                    break;
-
-                result.Add(leftDistance < rightDistance ? users[leftIndex--] : users[rightIndex++]);
-            }
+            HashSet<MatchmakingQueueUser> result = [];
+            result.AddRange(users.Where(u => Math.Abs(pivotUser.Rating.Mu - u.Rating.Mu) <= searchRadius));
 
             return result;
         }
