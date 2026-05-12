@@ -348,7 +348,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             result.AddRange(
                 allMatches
                     .OrderBy(_ => Random.Shared.Next())
-                    .Take(Pool.lobby_size)
+                    .Take(Pool.lobby_size - 1) // pivotUser is already in collection, so we need the number of opponents
             );
 
             return result;
