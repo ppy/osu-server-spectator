@@ -45,6 +45,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private readonly object queueLock = new object();
 
         /// <summary>
+        /// The top-100 player's rating from the pool. This is populated upon the first <see cref="Refresh"/>.
+        /// </summary>
+        private int top100Rating = 99999;
+
+        /// <summary>
         /// A running counter for the next group ID.
         /// </summary>
         private uint nextGroupId = 1;
@@ -80,6 +85,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
             if (!newPool.active)
                 return Clear();
+
+            int[] topRatings = await db.GetMatchmakingPoolTop100RatingsAsync(Pool.id);
+            top100Rating = topRatings.LastOrDefault();
 
             return new MatchmakingQueueUpdateBundle(this);
         }
@@ -344,13 +352,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             // Gradually expand a search from the pivot user until the rating search radius is exhausted.
             MatchmakingQueueUser pivotUser = users[pivotIndex];
 
-            // Speedup user pairing by a coefficient based on rating
+            // Search bonus based on the user's rating to cover gaps in the rating distribution.
             double ratingBonus = Math.Exp(Math.Pow((pivotUser.Rating.Mu - 1500) / 750, 2));
 
+            // Search bonus based on how much time the user spent in the queue.
             TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
-            double timeBonus = Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp);
+            double searchTimeBonus = Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp);
 
-            double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * ratingBonus * timeBonus);
+            // Distance bonus such that top-100 players can always match against each other.
+            double top100Bonus = Math.Max(1, (pivotUser.Rating.Mu - top100Rating) / Pool.rating_search_radius_max);
+
+            double searchRadius = Math.Min(
+                Pool.rating_search_radius_max * top100Bonus,
+                Pool.rating_search_radius * ratingBonus * searchTimeBonus);
 
             IEnumerable<MatchmakingQueueUser> allMatches = users.Where(u => !u.Equals(pivotUser) && Math.Abs(pivotUser.Rating.Mu - u.Rating.Mu) <= searchRadius);
 
