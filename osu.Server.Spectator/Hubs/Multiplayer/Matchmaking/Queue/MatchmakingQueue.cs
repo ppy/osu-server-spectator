@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Internal;
 using osu.Game.Extensions;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
@@ -67,11 +69,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// Refreshes this <see cref="MatchmakingQueue"/> with a new pool.
         /// </summary>
-        /// <param name="pool">The new pool.</param>
-        public void Refresh(matchmaking_pool pool)
+        public async Task<MatchmakingQueueUpdateBundle> Refresh(IDatabaseAccess db)
         {
-            lock (queueLock)
-                Pool = pool;
+            matchmaking_pool? newPool = await db.GetMatchmakingPoolAsync(Pool.id);
+
+            if (newPool == null)
+                return Clear();
+
+            Pool = newPool;
+
+            if (!newPool.active)
+                return Clear();
+
+            return new MatchmakingQueueUpdateBundle(this);
         }
 
         /// <summary>

@@ -339,14 +339,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             using (var db = databaseFactory.GetInstance())
             {
                 foreach ((_, MatchmakingQueue queue) in poolQueues)
-                {
-                    matchmaking_pool? newPool = await db.GetMatchmakingPoolAsync(queue.Pool.id);
-
-                    if (newPool?.active != true)
-                        await processBundle(queue.Clear());
-                    else
-                        queue.Refresh(newPool);
-                }
+                    await processBundle(await queue.Refresh(db));
             }
 
             lastQueueRefreshTime = DateTimeOffset.Now;
