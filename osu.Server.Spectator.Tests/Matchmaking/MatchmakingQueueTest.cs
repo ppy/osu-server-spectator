@@ -231,6 +231,34 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Equal(2, bundle.FormedGroups[0].Users.Length);
         }
 
+        [Fact]
+        public void Top100MatchesWithTop1()
+        {
+            CustomSystemClock clock = new CustomSystemClock();
+
+            queue.Pool.lobby_size = 2;
+            queue.Pool.rating_search_radius = 20;
+            queue.Pool.rating_search_radius_max = 200;
+            queue.Clock = clock;
+            queue.Top100Rating = 2000;
+
+            queue.Add(new MatchmakingQueueUser("1")
+            {
+                Rating = new EloRating(2600)
+            });
+
+            queue.Add(new MatchmakingQueueUser("2")
+            {
+                Rating = new EloRating(2000)
+            });
+
+            // Maximise search bonus.
+            clock.UtcNow += TimeSpan.FromMinutes(10);
+
+            var bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+        }
+
         private class CustomSystemClock : ISystemClock
         {
             public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;

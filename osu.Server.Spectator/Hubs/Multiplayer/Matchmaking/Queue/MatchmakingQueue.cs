@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Internal;
 using osu.Game.Extensions;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
@@ -31,6 +33,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// The system clock.
         /// </summary>
         public ISystemClock Clock { get; set; } = new SystemClock();
+
+        /// <summary>
+        /// The top-100 player's rating from the pool. This is populated upon the first <see cref="Refresh"/>.
+        /// </summary>
+        public int Top100Rating { get; set; } = 99999;
 
         /// <summary>
         /// All users active in the matchmaking queue.
@@ -67,11 +74,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// Refreshes this <see cref="MatchmakingQueue"/> with a new pool.
         /// </summary>
-        /// <param name="pool">The new pool.</param>
-        public void Refresh(matchmaking_pool pool)
+        public async Task<MatchmakingQueueUpdateBundle> Refresh(IDatabaseAccess db)
         {
-            lock (queueLock)
-                Pool = pool;
+            matchmaking_pool? newPool = await db.GetMatchmakingPoolAsync(Pool.id);
+
+            if (newPool == null)
+                return Clear();
+
+            Pool = newPool;
+
+            if (!newPool.active)
+                return Clear();
+
+            int[] topRatings = await db.GetMatchmakingPoolTop100RatingsAsync(Pool.id);
+            Top100Rating = topRatings.LastOrDefault();
+
+            return new MatchmakingQueueUpdateBundle(this);
         }
 
         /// <summary>
@@ -334,13 +352,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             // Gradually expand a search from the pivot user until the rating search radius is exhausted.
             MatchmakingQueueUser pivotUser = users[pivotIndex];
 
-            // Speedup user pairing by a coefficient based on rating
+            // Search bonus based on the user's rating to cover gaps in the rating distribution.
             double ratingBonus = Math.Exp(Math.Pow((pivotUser.Rating.Mu - 1500) / 750, 2));
 
+            // Search bonus based on how much time the user spent in the queue.
             TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
-            double timeBonus = Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp);
+            double searchTimeBonus = Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp);
 
-            double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * ratingBonus * timeBonus);
+            // Distance bonus such that top-100 players can always match against each other.
+            double top100Bonus = Math.Max(1, (pivotUser.Rating.Mu - Top100Rating) / Pool.rating_search_radius_max);
+
+            double searchRadius = Math.Min(
+                Pool.rating_search_radius_max * top100Bonus,
+                Pool.rating_search_radius * ratingBonus * searchTimeBonus);
 
             IEnumerable<MatchmakingQueueUser> allMatches = users.Where(u => !u.Equals(pivotUser) && Math.Abs(pivotUser.Rating.Mu - u.Rating.Mu) <= searchRadius);
 
