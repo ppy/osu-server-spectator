@@ -217,6 +217,20 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Empty(bundle.DeclinedUsers);
         }
 
+        [Fact]
+        public void CorrectNumberOfUsersMatched()
+        {
+            queue.Pool.lobby_size = 2;
+
+            queue.Add(new MatchmakingQueueUser("1"));
+            queue.Add(new MatchmakingQueueUser("2"));
+            queue.Add(new MatchmakingQueueUser("3"));
+
+            var bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+            Assert.Equal(2, bundle.FormedGroups[0].Users.Length);
+        }
+
         private class CustomSystemClock : ISystemClock
         {
             public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;
