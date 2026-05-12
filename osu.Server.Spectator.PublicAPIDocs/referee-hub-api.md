@@ -137,8 +137,8 @@ client in order to spectate the match.
 > Currently, to achieve this setup, a referee must join the room via the referee hub **first** and join the room via
 > the lazer client **second**. Attempting to perform these operations in the reverse order will not succeed.
 >
-> Similarly, disconnecting from the referee hub in any way (by leaving the room willfully, getting removed as referee,
-> or a transient disconnection), as well as closing the room, will kick the user from the room in the lazer client.
+> Similarly, disassociating from the room by getting removed as referee, as well as by closing the room, will kick the
+> user from the room in the lazer client.
 > 
 > In other words, the spectating session in lazer should be considered **completely secondary** to the refereeing
 > session in the referee hub.
@@ -157,4 +157,31 @@ In this setup:
 - Referees cannot participate in gameplay or perform actions relevant to gameplay participation, such as: readying up,
   progressing to gameplay, joining teams, selecting user mods or user style.
 
-<!-- TODO: handling disconnections -->
+## Handling disconnections
+
+When a referee disconnects from the referee hub, their association to the room is not severed.
+They can reconnect to the hub and rejoin the room by calling
+[`JoinRoom`](xref:osu.Server.Spectator.Hubs.Referee.IRefereeHubServer.JoinRoom(System.Int64)).
+
+Referees can additionally list all rooms they are refereeing with the
+[`ListRooms`](xref:osu.Server.Spectator.Hubs.Referee.IRefereeHubServer.ListRooms)
+operation.
+
+To avoid empty rooms lingering after being abandoned by their referees, a timed contingency also exists.
+If a room created via the referee hub has no users for 30 minutes, it automatically closes.
+
+## Handling server reboots
+
+The spectator server is single-instance in principle, but when new changes are deployed, multiple instances of
+the server can be active at a time.
+When this happens, users of the referee hub will receive a
+[`CountdownStartedEvent`](xref:osu.Server.Spectator.Hubs.Referee.Models.Events.CountdownStartedEvent)
+with the type of `server_shutting_down`.
+
+> [!WARNING]
+> While the instance that is shutting down will remain online for up to 6 hours, users of the referee hub are **strongly**
+> encouraged to switch over to the new instance as soon as possible by closing all of their open rooms, disconnecting
+> from the hub, and then reconnecting to it again to switch to the new instance.
+> During the period of instance switch-over, it is possible for functionality like
+> [inviting players](xref:osu.Server.Spectator.Hubs.Referee.IRefereeHubServer.InvitePlayer(System.Int64,System.Int32))
+> to not work as expected until the switch-over is complete.
