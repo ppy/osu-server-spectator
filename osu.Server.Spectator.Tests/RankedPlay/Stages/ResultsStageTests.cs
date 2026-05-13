@@ -182,7 +182,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
                     ]));
 
-            RoomState.DamageMultiplier = 2;
+            RoomState.DamageMultiplier = 1.5;
 
             await MatchController.Stage.Enter();
 
@@ -236,7 +236,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
                     ]));
 
-            UserState.DamageMultiplier = 2;
+            UserState.DamageMultiplier = 1.5;
 
             await MatchController.Stage.Enter();
 
@@ -296,7 +296,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             await MatchController.Stage.Enter();
 
             Assert.Equal(1_000_000, UserState.Life);
-            Assert.Equal(940_000, User2State.Life);
+            Assert.Equal(950_000, User2State.Life);
 
             Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
             {
@@ -309,9 +309,9 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
             {
                 RawDamage = 10_000,
-                Damage = 60_000,
+                Damage = 50_000,
                 OldLife = 1_000_000,
-                NewLife = 940_000,
+                NewLife = 950_000,
                 Sources =
                 [
                     new RankedPlayDamageSource
@@ -323,8 +323,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                     new RankedPlayDamageSource
                     {
                         Type = RankedPlayDamageType.Multiplier,
-                        RawValue = 6,
-                        Damage = 50_000
+                        RawValue = 5,
+                        Damage = 40_000
                     }
                 ]
             });
@@ -419,7 +419,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
                     ]));
 
-            RoomState.DamageMultiplier = 2;
+            RoomState.DamageMultiplier = 1.5;
 
             await MatchController.Stage.Enter();
 
@@ -520,9 +520,9 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
-        public async Task UserMultiplierIncreasesForWinner()
+        public async Task MultipliersIncrease()
         {
-            // Single winner.
+            // Definite winner.
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
                     .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
                     [
@@ -533,8 +533,9 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             await MatchController.Stage.Enter();
             await FinishCountdown();
 
-            Assert.Equal(2, UserState.DamageMultiplier);
-            Assert.Equal(1, User2State.DamageMultiplier);
+            Assert.Equal(1, RoomState.DamageMultiplier);
+            Assert.Equal(1, UserState.DamageMultiplier);
+            Assert.Equal(0.5, User2State.DamageMultiplier);
 
             // Tie.
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
@@ -547,8 +548,9 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             await MatchController.GotoStage(RankedPlayStage.Results);
             await FinishCountdown();
 
-            Assert.Equal(3, UserState.DamageMultiplier);
-            Assert.Equal(2, User2State.DamageMultiplier);
+            Assert.Equal(1.5, RoomState.DamageMultiplier);
+            Assert.Equal(1, UserState.DamageMultiplier);
+            Assert.Equal(0.5, User2State.DamageMultiplier);
         }
 
         [Fact]

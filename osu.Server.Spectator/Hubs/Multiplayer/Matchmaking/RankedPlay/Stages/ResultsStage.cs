@@ -80,7 +80,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 SoloScore losingScore = scores.Single(u => u.user_id != winningUserId);
 
                 int attackDamage = winningTotalScore - (int)losingScore.total_score;
-                double attackMultiplier = State.DamageMultiplier * State.Users[winningUserId.Value].DamageMultiplier;
+                double attackMultiplier = State.DamageMultiplier + State.Users[winningUserId.Value].DamageMultiplier;
 
                 State.Users[(int)losingScore.user_id].DamageInfo = Controller.Damage((int)losingScore.user_id, attackDamage, attackMultiplier, BaseDamage);
             }
@@ -107,17 +107,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Finish()
         {
+            // Increase room tension by increasing the global multiplier.
+            State.DamageMultiplier += 0.5;
+
+            // Award the winning player with their own multiplier boost.
             if (winningUserId != null)
-            {
-                // Winner: only increase their multiplier.
                 State.Users[winningUserId.Value].DamageMultiplier += 0.5;
-            }
-            else
-            {
-                // Tie: increase multiplier of both players - this is a very edge-case scenario.
-                foreach ((_, RankedPlayUserInfo info) in State.Users)
-                    info.DamageMultiplier += 0.5;
-            }
 
             foreach ((_, RankedPlayUserInfo userInfo) in State.Users)
                 userInfo.DamageInfo = null;
