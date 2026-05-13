@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using OpenSkillSharp.Models;
 using OpenSkillSharp.Rating;
+using osu.Framework.Utils;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.RankedPlay;
@@ -334,28 +335,58 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// Causes a player to take damage.
         /// </summary>
         /// <param name="userId">The user ID of the player taking damage.</param>
-        /// <param name="amount">The amount of damage (before any multipliers are added) to take.</param>
+        /// <param name="attackDamage">Amount of damage dealt from an attack.</param>
+        /// <param name="attackMultiplier">Scales the <paramref name="attackDamage"/> damage.</param>
+        /// <param name="bonusDamage">Amount of damage dealt from any other source. Does not scale with <paramref name="attackMultiplier"/>.</param>
         /// <returns>A descriptor for the damage taken.</returns>
-        public RankedPlayDamageInfo Damage(int userId, int amount)
+        public RankedPlayDamageInfo Damage(int userId, int attackDamage = 0, double attackMultiplier = 1, int bonusDamage = 0)
         {
             RankedPlayUserInfo userInfo = State.Users[userId];
+            RankedPlayDamageInfo damageInfo = new RankedPlayDamageInfo();
 
-            int rawDamage = amount;
-            int damage = (int)Math.Ceiling(rawDamage * State.DamageMultiplier);
-
-            int oldLife = userInfo.Life;
-            // Last-stand mechanic: fatal attacks bring players 1HP first before killing them.
-            int newLife = Math.Max(oldLife <= 1 ? 0 : 1, oldLife - damage);
-
-            userInfo.Life = newLife;
-
-            return new RankedPlayDamageInfo
+            if (attackDamage != 0)
             {
-                RawDamage = rawDamage,
-                Damage = damage,
-                OldLife = oldLife,
-                NewLife = newLife,
-            };
+                damageInfo.Sources.Add(new RankedPlayDamageSource
+                {
+                    Type = RankedPlayDamageType.Attack,
+                    RawValue = attackDamage,
+                    Damage = attackDamage
+                });
+
+                if (!Precision.AlmostEquals(1, attackMultiplier))
+                {
+                    damageInfo.Sources.Add(new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Multiplier,
+                        RawValue = attackMultiplier,
+                        Damage = (int)Math.Ceiling(attackDamage * (attackMultiplier - 1))
+                    });
+                }
+            }
+
+            if (bonusDamage != 0)
+            {
+                damageInfo.Sources.Add(new RankedPlayDamageSource
+                {
+                    Type = RankedPlayDamageType.Bonus,
+                    RawValue = bonusDamage,
+                    Damage = bonusDamage
+                });
+            }
+
+            foreach (var source in damageInfo.Sources)
+            {
+                damageInfo.Damage += source.Damage;
+                if (source.Type != RankedPlayDamageType.Multiplier)
+                    damageInfo.RawDamage += source.Damage;
+            }
+
+            damageInfo.OldLife = userInfo.Life;
+            damageInfo.NewLife = Math.Max(damageInfo.OldLife <= 1 ? 0 : 1, damageInfo.OldLife - damageInfo.Damage);
+
+            userInfo.Life = damageInfo.NewLife;
+
+            return damageInfo;
         }
 
         public async Task HandleMatchCompleted()

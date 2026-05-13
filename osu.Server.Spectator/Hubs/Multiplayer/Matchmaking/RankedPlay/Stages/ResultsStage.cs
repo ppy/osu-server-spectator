@@ -19,6 +19,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         /// </summary>
         public TimeSpan ScoreRetrievalWaitTime { get; set; } = TimeSpan.FromSeconds(10);
 
+        /// <summary>
+        /// Base amount of damage taken per round.
+        /// </summary>
+        public int BaseDamage { get; set; } = 50_000;
+
         public ResultsStage(RankedPlayMatchController controller)
             : base(controller)
         {
@@ -53,24 +58,36 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 }
             }
 
-            // Add dummy scores for all users that did not play the map.
-            foreach ((int userId, _) in State.Users)
+            foreach ((int userId, RankedPlayUserInfo info) in State.Users)
             {
+                // Add dummy scores for all users that did not play the map.
                 if (scores.All(s => s.user_id != userId))
                     scores.Add(new SoloScore { user_id = (uint)userId });
+
+                // Populate the models with a default damage info.
+                info.DamageInfo = Controller.Damage(userId);
             }
 
-            int maxTotalScore = (int)scores.Select(s => s.total_score).Max();
+            int winningTotalScore = (int)scores.Select(s => s.total_score).Max();
+            SoloScore[] winningScores = scores.Where(u => u.total_score == winningTotalScore).ToArray();
 
-            foreach (var score in scores)
-            {
-                var userInfo = State.Users[(int)score.user_id];
-                userInfo.DamageInfo = Controller.Damage((int)score.user_id, maxTotalScore - (int)score.total_score);
-            }
-
-            SoloScore[] winningScores = scores.Where(u => u.total_score == maxTotalScore).ToArray();
             if (winningScores.Length == 1)
-                State.Users[(int)winningScores.Single().user_id].RoundsWon += 1;
+            {
+                // Single winner: losing player takes damage.
+                int winningUserId = (int)winningScores.Single().user_id;
+                SoloScore losingScore = scores.Single(u => u.user_id != winningUserId);
+
+                int attackDamage = winningTotalScore - (int)losingScore.total_score;
+                double attackMultiplier = State.DamageMultiplier;
+
+                State.Users[(int)losingScore.user_id].DamageInfo = Controller.Damage((int)losingScore.user_id, attackDamage, attackMultiplier, BaseDamage);
+            }
+            else
+            {
+                // Tie: both players take the base amount of damage.
+                foreach ((int userId, RankedPlayUserInfo info) in State.Users)
+                    info.DamageInfo = Controller.Damage(userId, bonusDamage: BaseDamage);
+            }
 
             if (Controller.Ranked)
             {

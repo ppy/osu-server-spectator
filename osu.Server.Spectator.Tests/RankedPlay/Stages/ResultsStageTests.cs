@@ -22,6 +22,10 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         [Fact]
         public async Task DamageTakenWithMissingScore()
         {
+            UserState.Life = 1_000_000;
+            User2State.Life = 1_000_000;
+
+            ((ResultsStage)MatchController.Stage).BaseDamage = 0;
             ((ResultsStage)MatchController.Stage).ScoreRetrievalWaitTime = TimeSpan.FromSeconds(1);
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
@@ -35,26 +39,40 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.Equal(1_000_000, UserState.Life);
             Assert.Equal(500_000, User2State.Life);
 
-            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            Assert.Equal(new RankedPlayDamageInfo
             {
                 RawDamage = 0,
                 Damage = 0,
                 OldLife = 1_000_000,
                 NewLife = 1_000_000,
-            });
+            }, UserState.DamageInfo);
 
-            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            Assert.Equal(new RankedPlayDamageInfo
             {
                 RawDamage = 500_000,
                 Damage = 500_000,
                 OldLife = 1_000_000,
                 NewLife = 500_000,
-            });
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Attack,
+                        RawValue = 500_000,
+                        Damage = 500_000
+                    }
+                ]
+            }, User2State.DamageInfo);
         }
 
         [Fact]
         public async Task DamageTakenWithLateArrivingScore()
         {
+            UserState.Life = 1_000_000;
+            User2State.Life = 1_000_000;
+
+            ((ResultsStage)MatchController.Stage).BaseDamage = 0;
+
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
                     .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
                     [
@@ -77,26 +95,40 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.Equal(1_000_000, UserState.Life);
             Assert.Equal(750_000, User2State.Life);
 
-            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            Assert.Equal(new RankedPlayDamageInfo
             {
                 RawDamage = 0,
                 Damage = 0,
                 OldLife = 1_000_000,
                 NewLife = 1_000_000,
-            });
+            }, UserState.DamageInfo);
 
-            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            Assert.Equal(new RankedPlayDamageInfo
             {
                 RawDamage = 250_000,
                 Damage = 250_000,
                 OldLife = 1_000_000,
                 NewLife = 750_000,
-            });
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Attack,
+                        RawValue = 250_000,
+                        Damage = 250_000
+                    }
+                ]
+            }, User2State.DamageInfo);
         }
 
         [Fact]
         public async Task DamageTakenIsDifferenceBetweenScores()
         {
+            UserState.Life = 1_000_000;
+            User2State.Life = 1_000_000;
+
+            ((ResultsStage)MatchController.Stage).BaseDamage = 0;
+
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
                     .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
                     [
@@ -109,26 +141,40 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.Equal(1_000_000, UserState.Life);
             Assert.Equal(750_000, User2State.Life);
 
-            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            Assert.Equal(new RankedPlayDamageInfo
             {
                 RawDamage = 0,
                 Damage = 0,
                 OldLife = 1_000_000,
                 NewLife = 1_000_000,
-            });
+            }, UserState.DamageInfo);
 
-            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            Assert.Equal(new RankedPlayDamageInfo
             {
                 RawDamage = 250_000,
                 Damage = 250_000,
                 OldLife = 1_000_000,
                 NewLife = 750_000,
-            });
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Attack,
+                        RawValue = 250_000,
+                        Damage = 250_000
+                    }
+                ]
+            }, User2State.DamageInfo);
         }
 
         [Fact]
-        public async Task DamageMultiplierAdded()
+        public async Task RoomDamageMultiplierAdded()
         {
+            UserState.Life = 1_000_000;
+            User2State.Life = 1_000_000;
+
+            ((ResultsStage)MatchController.Stage).BaseDamage = 0;
+
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
                     .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
                     [
@@ -157,12 +203,86 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 500_000,
                 OldLife = 1_000_000,
                 NewLife = 500_000,
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Attack,
+                        RawValue = 250_000,
+                        Damage = 250_000
+                    },
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Multiplier,
+                        RawValue = 2,
+                        Damage = 250_000
+                    }
+                ]
+            });
+        }
+
+        [Fact]
+        public async Task RoomUserMultiplierAdded()
+        {
+            UserState.Life = 1_000_000;
+            User2State.Life = 1_000_000;
+
+            ((ResultsStage)MatchController.Stage).BaseDamage = 0;
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 500_000 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
+                    ]));
+
+            UserState.DamageMultiplier = 2;
+
+            await MatchController.Stage.Enter();
+
+            Assert.Equal(1_000_000, UserState.Life);
+            Assert.Equal(500_000, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 0,
+                Damage = 0,
+                OldLife = 1_000_000,
+                NewLife = 1_000_000,
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 250_000,
+                Damage = 500_000,
+                OldLife = 1_000_000,
+                NewLife = 500_000,
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Attack,
+                        RawValue = 250_000,
+                        Damage = 250_000
+                    },
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Multiplier,
+                        RawValue = 2,
+                        Damage = 250_000
+                    }
+                ]
             });
         }
 
         [Fact]
         public async Task DeathDamageLeadsToLastStand()
         {
+            UserState.Life = 1_000_000;
+            User2State.Life = 1_000_000;
+
+            ((ResultsStage)MatchController.Stage).BaseDamage = 0;
+
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
                     .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
                     [
@@ -189,6 +309,15 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 1_000_000,
                 OldLife = 1_000_000,
                 NewLife = 1,
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Attack,
+                        RawValue = 1_000_000,
+                        Damage = 1_000_000
+                    }
+                ]
             });
 
             await MatchController.Stage.Enter();
@@ -210,12 +339,135 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 1_000_000,
                 OldLife = 1,
                 NewLife = 0,
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Attack,
+                        RawValue = 1_000_000,
+                        Damage = 1_000_000
+                    }
+                ]
+            });
+        }
+
+        [Fact]
+        public async Task BonusDamageSource()
+        {
+            UserState.Life = 1_000_000;
+            User2State.Life = 1_000_000;
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 500_000 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
+                    ]));
+
+            RoomState.DamageMultiplier = 2;
+
+            await MatchController.Stage.Enter();
+
+            Assert.Equal(1_000_000, UserState.Life);
+            Assert.Equal(450_000, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 0,
+                Damage = 0,
+                OldLife = 1_000_000,
+                NewLife = 1_000_000,
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 300_000,
+                Damage = 550_000,
+                OldLife = 1_000_000,
+                NewLife = 450_000,
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Attack,
+                        RawValue = 250_000,
+                        Damage = 250_000
+                    },
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Multiplier,
+                        RawValue = 2,
+                        Damage = 250_000
+                    },
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Bonus,
+                        RawValue = 50_000,
+                        Damage = 50_000
+                    }
+                ]
+            });
+        }
+
+        [Fact]
+        public async Task TieDamage()
+        {
+            UserState.Life = 1_000_000;
+            User2State.Life = 1_000_000;
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 500_000 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 500_000 },
+                    ]));
+
+            RoomState.DamageMultiplier = 2;
+
+            await MatchController.Stage.Enter();
+
+            Assert.Equal(950_000, UserState.Life);
+            Assert.Equal(950_000, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 50_000,
+                Damage = 50_000,
+                OldLife = 1_000_000,
+                NewLife = 950_000,
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Bonus,
+                        RawValue = 50_000,
+                        Damage = 50_000
+                    }
+                ]
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 50_000,
+                Damage = 50_000,
+                OldLife = 1_000_000,
+                NewLife = 950_000,
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Bonus,
+                        RawValue = 50_000,
+                        Damage = 50_000
+                    }
+                ]
             });
         }
 
         [Fact]
         public async Task UserNotKilledIfQuitInFinalRound()
         {
+            User2State.Life = 1_000_000;
             UserState.Life = 0;
 
             SetUserContext(ContextUser2);
