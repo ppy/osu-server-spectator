@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Beatmaps;
 using osu.Game.Online.API;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Rulesets.Osu.Mods;
@@ -61,7 +62,7 @@ namespace osu.Server.Spectator.Tests
             loggerFactory.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                          .Returns(new Mock<ILogger>().Object);
 
-            scoreBuffer = new ScoreBuffer(new EntityStore<Score>());
+            scoreBuffer = new ScoreBuffer(new EntityStore<ScoreBuffer.BufferedScore>());
 
             mockScoreStorage = new Mock<IScoreStorage>();
             scoreUploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockScoreStorage.Object, new MemoryCache(new MemoryCacheOptions()));
@@ -772,6 +773,7 @@ namespace osu.Server.Spectator.Tests
         public async Task ReplayFramesAreEventuallyDroppedIfClientIsGoneForTooLong()
         {
             scoreUploader.SaveReplays = true;
+            scoreBuffer.TimeoutInterval = 1000;
 
             Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
             Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
