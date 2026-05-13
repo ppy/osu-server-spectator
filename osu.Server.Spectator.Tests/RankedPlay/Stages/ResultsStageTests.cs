@@ -222,7 +222,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
-        public async Task RoomUserMultiplierAdded()
+        public async Task UserMultiplierAdded()
         {
             UserState.Life = 1_000_000;
             User2State.Life = 1_000_000;
@@ -270,6 +270,61 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                         Type = RankedPlayDamageType.Multiplier,
                         RawValue = 2,
                         Damage = 250_000
+                    }
+                ]
+            });
+        }
+
+        [Fact]
+        public async Task CombinedMultipliers()
+        {
+            UserState.Life = 1_000_000;
+            User2State.Life = 1_000_000;
+
+            ((ResultsStage)MatchController.Stage).BaseDamage = 0;
+
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 500_000 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 490_000 },
+                    ]));
+
+            RoomState.DamageMultiplier = 2;
+            UserState.DamageMultiplier = 3;
+
+            await MatchController.Stage.Enter();
+
+            Assert.Equal(1_000_000, UserState.Life);
+            Assert.Equal(940_000, User2State.Life);
+
+            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 0,
+                Damage = 0,
+                OldLife = 1_000_000,
+                NewLife = 1_000_000,
+            });
+
+            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
+            {
+                RawDamage = 10_000,
+                Damage = 60_000,
+                OldLife = 1_000_000,
+                NewLife = 940_000,
+                Sources =
+                [
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Attack,
+                        RawValue = 10_000,
+                        Damage = 10_000
+                    },
+                    new RankedPlayDamageSource
+                    {
+                        Type = RankedPlayDamageType.Multiplier,
+                        RawValue = 6,
+                        Damage = 50_000
                     }
                 ]
             });
