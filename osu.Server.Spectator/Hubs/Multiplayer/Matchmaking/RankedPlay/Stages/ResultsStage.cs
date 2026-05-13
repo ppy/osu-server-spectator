@@ -32,6 +32,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         protected override RankedPlayStage Stage => RankedPlayStage.Results;
         protected override TimeSpan Duration => TimeSpan.FromSeconds(15);
 
+        private int? winningUserId;
+
         protected override async Task Begin()
         {
             // Collect all scores from the database.
@@ -70,15 +72,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
             int winningTotalScore = (int)scores.Select(s => s.total_score).Max();
             SoloScore[] winningScores = scores.Where(u => u.total_score == winningTotalScore).ToArray();
+            winningUserId = winningScores.Length == 1 ? (int)winningScores.Single().user_id : null;
 
-            if (winningScores.Length == 1)
+            if (winningUserId != null)
             {
-                // Single winner: losing player takes damage.
-                int winningUserId = (int)winningScores.Single().user_id;
+                // Winner: losing player takes damage.
                 SoloScore losingScore = scores.Single(u => u.user_id != winningUserId);
 
                 int attackDamage = winningTotalScore - (int)losingScore.total_score;
-                double attackMultiplier = State.DamageMultiplier;
+                double attackMultiplier = State.DamageMultiplier * State.Users[winningUserId.Value].DamageMultiplier;
 
                 State.Users[(int)losingScore.user_id].DamageInfo = Controller.Damage((int)losingScore.user_id, attackDamage, attackMultiplier, BaseDamage);
             }
@@ -105,6 +107,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Finish()
         {
+            if (winningUserId != null)
+            {
+                // Winner: only increase their multiplier.
+                State.Users[winningUserId.Value].DamageMultiplier++;
+            }
+            else
+            {
+                // Tie: increase multiplier of both players - this is a very edge-case scenario.
+                foreach ((_, RankedPlayUserInfo info) in State.Users)
+                    info.DamageMultiplier++;
+            }
+
             foreach ((_, RankedPlayUserInfo userInfo) in State.Users)
                 userInfo.DamageInfo = null;
 

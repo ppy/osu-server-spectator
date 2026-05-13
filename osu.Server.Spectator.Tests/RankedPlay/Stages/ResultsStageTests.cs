@@ -465,6 +465,38 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
+        public async Task UserMultiplierIncreasesForWinner()
+        {
+            // Single winner.
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 500_000 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
+                    ]));
+
+            await MatchController.Stage.Enter();
+            await FinishCountdown();
+
+            Assert.Equal(2, UserState.DamageMultiplier);
+            Assert.Equal(1, User2State.DamageMultiplier);
+
+            // Tie.
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 500_000 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 500_000 },
+                    ]));
+
+            await MatchController.GotoStage(RankedPlayStage.Results);
+            await FinishCountdown();
+
+            Assert.Equal(3, UserState.DamageMultiplier);
+            Assert.Equal(2, User2State.DamageMultiplier);
+        }
+
+        [Fact]
         public async Task UserNotKilledIfQuitInFinalRound()
         {
             User2State.Life = 1_000_000;
