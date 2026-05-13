@@ -42,14 +42,13 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task UpdateAsync(long scoreTokenId, FrameDataBundle data)
         {
-            using (var usage = await store.GetForUse(scoreTokenId, createOnMissing: true))
+            using (var usage = await store.TryGetForUse(scoreTokenId))
             {
-                var buffered = usage.Item;
+                var buffered = usage?.Item;
 
                 if (buffered == null)
                 {
-                    // TODO: probably log or something.
-                    usage.Destroy();
+                    usage?.Destroy();
                     return;
                 }
 
@@ -72,10 +71,10 @@ namespace osu.Server.Spectator.Hubs
 
         public async Task<Score?> RemoveAsync(long scoreTokenId)
         {
-            using (var usage = await store.GetForUse(scoreTokenId, createOnMissing: true))
+            using (var usage = await store.TryGetForUse(scoreTokenId))
             {
-                var buffered = usage.Item;
-                usage.Destroy();
+                var buffered = usage?.Item;
+                usage?.Destroy();
                 return buffered?.Score;
             }
         }
@@ -93,10 +92,10 @@ namespace osu.Server.Spectator.Hubs
 
                 foreach (long scoreToken in expiredScoreTokens)
                 {
-                    using (var usage = await store.GetForUse(scoreToken, createOnMissing: true))
+                    using (var usage = await store.TryGetForUse(scoreToken))
                     {
-                        if (usage.Item == null || usage.Item.LastUpdated < threshold)
-                            usage.Destroy();
+                        if (usage?.Item == null || usage.Item.LastUpdated < threshold)
+                            usage?.Destroy();
                     }
                 }
 
