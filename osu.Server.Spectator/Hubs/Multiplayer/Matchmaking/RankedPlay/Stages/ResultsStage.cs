@@ -84,12 +84,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
                 State.Users[(int)losingScore.user_id].DamageInfo = Controller.Damage((int)losingScore.user_id, attackDamage, attackMultiplier, BaseDamage);
             }
-            else
-            {
-                // Tie: both players take the base amount of damage.
-                foreach ((int userId, RankedPlayUserInfo info) in State.Users)
-                    info.DamageInfo = Controller.Damage(userId, bonusDamage: BaseDamage);
-            }
 
             if (Controller.Ranked)
             {

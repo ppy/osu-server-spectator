@@ -465,7 +465,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
-        public async Task TieDamage()
+        public async Task NoDamageOnTie()
         {
             UserState.Life = 1_000_000;
             User2State.Life = 1_000_000;
@@ -477,46 +477,10 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                         new SoloScore { user_id = USER_ID_2, total_score = 500_000 },
                     ]));
 
-            RoomState.DamageMultiplier = 2;
-
             await MatchController.Stage.Enter();
 
-            Assert.Equal(950_000, UserState.Life);
-            Assert.Equal(950_000, User2State.Life);
-
-            Assert.Equal(UserState.DamageInfo, new RankedPlayDamageInfo
-            {
-                RawDamage = 50_000,
-                Damage = 50_000,
-                OldLife = 1_000_000,
-                NewLife = 950_000,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Bonus,
-                        RawValue = 50_000,
-                        Damage = 50_000
-                    }
-                ]
-            });
-
-            Assert.Equal(User2State.DamageInfo, new RankedPlayDamageInfo
-            {
-                RawDamage = 50_000,
-                Damage = 50_000,
-                OldLife = 1_000_000,
-                NewLife = 950_000,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Bonus,
-                        RawValue = 50_000,
-                        Damage = 50_000
-                    }
-                ]
-            });
+            Assert.Equal(1_000_000, UserState.Life);
+            Assert.Equal(1_000_000, User2State.Life);
         }
 
         [Fact]
