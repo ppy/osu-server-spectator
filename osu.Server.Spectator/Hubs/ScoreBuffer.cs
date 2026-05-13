@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Entities;
+using StatsdClient;
 
 namespace osu.Server.Spectator.Hubs
 {
@@ -15,7 +16,7 @@ namespace osu.Server.Spectator.Hubs
     {
         public double TimeoutInterval = 30000;
 
-        // TODO: probably get some ddog observability on this. some is already provided via the inner entity store.
+        private const string statsd_prefix = "score_buffer";
 
         private readonly EntityStore<BufferedScore> store;
         private readonly CancellationTokenSource expiryLoopCancellation;
@@ -69,12 +70,13 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task<Score?> RemoveAsync(long scoreTokenId)
+        public async Task<Score?> DequeueAsync(long scoreTokenId)
         {
             using (var usage = await store.TryGetForUse(scoreTokenId))
             {
                 var buffered = usage?.Item;
                 usage?.Destroy();
+                DogStatsd.Increment($@"{statsd_prefix}.dequeued");
                 return buffered?.Score;
             }
         }
@@ -95,7 +97,10 @@ namespace osu.Server.Spectator.Hubs
                     using (var usage = await store.TryGetForUse(scoreToken))
                     {
                         if (usage?.Item == null || usage.Item.LastUpdated < threshold)
+                        {
                             usage?.Destroy();
+                            DogStatsd.Increment($@"{statsd_prefix}.expired");
+                        }
                     }
                 }
 

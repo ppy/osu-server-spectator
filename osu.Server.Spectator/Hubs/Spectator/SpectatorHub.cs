@@ -145,7 +145,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     if (scoreToken == null || usage.Item?.Beatmap == null)
                         return;
 
-                    var score = await scoreBuffer.RemoveAsync(scoreToken.Value);
+                    var score = await scoreBuffer.DequeueAsync(scoreToken.Value);
                     if (score == null)
                         return;
 
