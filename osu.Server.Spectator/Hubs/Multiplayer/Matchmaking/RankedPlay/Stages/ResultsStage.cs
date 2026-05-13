@@ -110,13 +110,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             if (winningUserId != null)
             {
                 // Winner: only increase their multiplier.
-                State.Users[winningUserId.Value].DamageMultiplier++;
+                State.Users[winningUserId.Value].DamageMultiplier += 0.5;
             }
             else
             {
                 // Tie: increase multiplier of both players - this is a very edge-case scenario.
                 foreach ((_, RankedPlayUserInfo info) in State.Users)
-                    info.DamageMultiplier++;
+                    info.DamageMultiplier += 0.5;
             }
 
             foreach ((_, RankedPlayUserInfo userInfo) in State.Users)
