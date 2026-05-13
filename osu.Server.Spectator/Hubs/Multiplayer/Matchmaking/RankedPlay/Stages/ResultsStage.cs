@@ -107,9 +107,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Finish()
         {
-            // Increase room tension by increasing the global multiplier.
-            State.DamageMultiplier += 0.5;
-
             // Award the winning player with their own multiplier boost.
             if (winningUserId != null)
                 State.Users[winningUserId.Value].DamageMultiplier += 0.5;

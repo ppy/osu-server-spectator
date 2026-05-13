@@ -30,6 +30,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
             State.CurrentRound++;
 
+            // Increase tension by increasing the global multiplier.
+            if (State.CurrentRound > 1)
+                State.DamageMultiplier += 0.5;
+
             // Activate the next player.
             // For the first round, this is set during room initialisation.
             if (State.CurrentRound >= 2)
