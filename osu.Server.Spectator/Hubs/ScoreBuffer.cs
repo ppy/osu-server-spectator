@@ -14,7 +14,20 @@ namespace osu.Server.Spectator.Hubs
 {
     public class ScoreBuffer : IEntityStore, IDisposable
     {
-        public double TimeoutInterval = 30000;
+        /// <summary>
+        /// The amount of time after which a score can be dropped from the buffer
+        /// because the relevant client updating its data is considered to be permanently dead.
+        /// Note that:
+        /// <list type="bullet">
+        /// <item>The client is expected to <see cref="UpdateAsync"/> a score's data at most every <see cref="SpectatorClient.TIME_BETWEEN_SENDS"/> ms.</item>
+        /// <item>Every successful invocation of <see cref="UpdateAsync"/> bumps a score's last update date, therefore resetting its expiry timeout to zero.</item>
+        /// <item>
+        /// As per <see href="https://learn.microsoft.com/en-us/aspnet/signalr/overview/guide-to-the-api/handling-connection-lifetime-events#timeout-and-keepalive-settings">default timeout
+        /// and keepalive settings</see>, unless some of the values mentioned in the above link are tweaked, timeouts lower than 110 seconds probably do not make sense at all ever.
+        /// </item>
+        /// </list>
+        /// </summary>
+        public double TimeoutInterval = 300_000; // ms = 5 min
 
         private const string statsd_prefix = "score_buffer";
 
