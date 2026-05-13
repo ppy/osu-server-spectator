@@ -40,7 +40,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 // Subtract 100K HP from every player that failed to load the beatmap in time.
                 // Although this seems unfair, it means that players are not able to purposefully block the others' picks.
                 foreach (var player in Room.Users.Where(p => p.BeatmapAvailability.State != DownloadState.LocallyAvailable))
-                    Controller.Damage(player.UserID, bonusDamage: 100_000);
+                    Controller.Damage(player.UserID, 100_000, State.DamageMultiplier);
 
                 if (HasGameplayRoundsRemaining())
                     await Controller.GotoStage(RankedPlayStage.RoundWarmup);
