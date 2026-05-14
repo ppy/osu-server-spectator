@@ -89,7 +89,6 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         [Fact]
         public async Task ContinuesToEndedWhenPlayerDiesFromFailingToBecomeReady()
         {
-            // Needs to be 1HP to bypass the last stand mechanic.
             RoomState.Users[USER_ID].Life = 1;
 
             await FinishCountdown();
