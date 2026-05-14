@@ -382,7 +382,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             }
 
             damageInfo.OldLife = userInfo.Life;
-            damageInfo.NewLife = Math.Max(damageInfo.OldLife <= 1 ? 0 : 1, damageInfo.OldLife - damageInfo.Damage);
+            damageInfo.NewLife = Math.Max(damageInfo.OldLife == 1_000_000 ? 1 : 0, damageInfo.OldLife - damageInfo.Damage);
 
             userInfo.Life = damageInfo.NewLife;
 

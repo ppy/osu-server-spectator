@@ -290,5 +290,7 @@ namespace osu.Server.Spectator.Database
         Task InsertUserEloHistoryEntry(ulong roomId, uint poolId, uint userId, uint opponentId, matchmaking_room_result result, int eloBefore, int eloAfter);
 
         Task<int[]> GetMatchmakingPoolRatingsAsync(uint poolId);
+
+        Task<int[]> GetMatchmakingPoolTop100RatingsAsync(uint poolId);
     }
 }

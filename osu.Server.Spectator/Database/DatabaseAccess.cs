@@ -834,6 +834,16 @@ namespace osu.Server.Spectator.Database
             })).ToArray();
         }
 
+        public async Task<int[]> GetMatchmakingPoolTop100RatingsAsync(uint poolId)
+        {
+            var connection = await getConnectionAsync();
+
+            return (await connection.QueryAsync<int>("SELECT rating FROM matchmaking_user_stats WHERE pool_id = @PoolId AND plays > 0 ORDER BY rating DESC LIMIT 100", new
+            {
+                PoolId = poolId
+            })).ToArray();
+        }
+
         public void Dispose()
         {
             openConnection?.Dispose();
