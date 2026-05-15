@@ -53,15 +53,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 500_000,
                 OldLife = 1_000_000,
                 NewLife = 500_000,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 500_000,
-                        Damage = 500_000
-                    }
-                ]
+                DirectDamage = 500_000
             }, User2State.DamageInfo);
         }
 
@@ -109,15 +101,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 250_000,
                 OldLife = 1_000_000,
                 NewLife = 750_000,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 250_000,
-                        Damage = 250_000
-                    }
-                ]
+                DirectDamage = 250_000
             }, User2State.DamageInfo);
         }
 
@@ -155,15 +139,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 250_000,
                 OldLife = 1_000_000,
                 NewLife = 750_000,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 250_000,
-                        Damage = 250_000
-                    }
-                ]
+                DirectDamage = 250_000
             }, User2State.DamageInfo);
         }
 
@@ -203,21 +179,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 500_000,
                 OldLife = 1_000_000,
                 NewLife = 500_000,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 250_000,
-                        Damage = 250_000
-                    },
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Multiplier,
-                        RawValue = 2,
-                        Damage = 250_000
-                    }
-                ]
+                DirectDamage = 250_000,
+                Multiplier = 2
             });
         }
 
@@ -257,21 +220,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 500_000,
                 OldLife = 1_000_000,
                 NewLife = 500_000,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 250_000,
-                        Damage = 250_000
-                    },
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Multiplier,
-                        RawValue = 2,
-                        Damage = 250_000
-                    }
-                ]
+                DirectDamage = 250_000,
+                Multiplier = 2
             });
         }
 
@@ -312,21 +262,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 50_000,
                 OldLife = 1_000_000,
                 NewLife = 950_000,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 10_000,
-                        Damage = 10_000
-                    },
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Multiplier,
-                        RawValue = 5,
-                        Damage = 40_000
-                    }
-                ]
+                DirectDamage = 10_000,
+                Multiplier = 5
             });
         }
 
@@ -364,15 +301,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 1_000_000,
                 OldLife = 1_000_000,
                 NewLife = 1,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 1_000_000,
-                        Damage = 1_000_000
-                    }
-                ]
+                DirectDamage = 1_000_000
             });
 
             await MatchController.Stage.Enter();
@@ -394,15 +323,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 1_000_000,
                 OldLife = 1,
                 NewLife = 0,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 1_000_000,
-                        Damage = 1_000_000
-                    }
-                ]
+                DirectDamage = 1_000_000
             });
         }
 
@@ -440,15 +361,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 1_000_000,
                 OldLife = 999_999,
                 NewLife = 0,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 1_000_000,
-                        Damage = 1_000_000
-                    }
-                ]
+                DirectDamage = 1_000_000
             });
         }
 
@@ -486,27 +399,9 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
                 Damage = 550_000,
                 OldLife = 1_000_000,
                 NewLife = 450_000,
-                Sources =
-                [
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Attack,
-                        RawValue = 250_000,
-                        Damage = 250_000
-                    },
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Multiplier,
-                        RawValue = 2,
-                        Damage = 250_000
-                    },
-                    new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Bonus,
-                        RawValue = 50_000,
-                        Damage = 50_000
-                    }
-                ]
+                DirectDamage = 250_000,
+                Multiplier = 2,
+                BonusDamage = 50_000
             });
         }
 

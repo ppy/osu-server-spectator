@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using OpenSkillSharp.Models;
 using OpenSkillSharp.Rating;
-using osu.Framework.Utils;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.RankedPlay;
@@ -335,54 +334,26 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// Causes a player to take damage.
         /// </summary>
         /// <param name="userId">The user ID of the player taking damage.</param>
-        /// <param name="attackDamage">Amount of damage dealt from an attack.</param>
-        /// <param name="attackMultiplier">Scales the <paramref name="attackDamage"/> damage.</param>
-        /// <param name="bonusDamage">Amount of damage dealt from any other source. Does not scale with <paramref name="attackMultiplier"/>.</param>
+        /// <param name="directDamage">Direct amount of damage before any multipliers are added.</param>
+        /// <param name="multiplier">A multiplier of <paramref name="directDamage"/>.</param>
+        /// <param name="bonusDamage">Damage dealt for winning a round. Does not scale with <paramref name="multiplier"/>.</param>
         /// <returns>A descriptor for the damage taken.</returns>
-        public RankedPlayDamageInfo Damage(int userId, int attackDamage = 0, double attackMultiplier = 1, int bonusDamage = 0)
+        public RankedPlayDamageInfo Damage(int userId, int directDamage = 0, double multiplier = 1, int bonusDamage = 0)
         {
             RankedPlayUserInfo userInfo = State.Users[userId];
-            RankedPlayDamageInfo damageInfo = new RankedPlayDamageInfo();
 
-            if (attackDamage != 0)
+            int totalDamage = (int)Math.Ceiling(directDamage * multiplier) + bonusDamage;
+
+            RankedPlayDamageInfo damageInfo = new RankedPlayDamageInfo
             {
-                damageInfo.Sources.Add(new RankedPlayDamageSource
-                {
-                    Type = RankedPlayDamageType.Attack,
-                    RawValue = attackDamage,
-                    Damage = attackDamage
-                });
-
-                if (!Precision.AlmostEquals(1, attackMultiplier))
-                {
-                    damageInfo.Sources.Add(new RankedPlayDamageSource
-                    {
-                        Type = RankedPlayDamageType.Multiplier,
-                        RawValue = attackMultiplier,
-                        Damage = (int)Math.Ceiling(attackDamage * (attackMultiplier - 1))
-                    });
-                }
-            }
-
-            if (bonusDamage != 0)
-            {
-                damageInfo.Sources.Add(new RankedPlayDamageSource
-                {
-                    Type = RankedPlayDamageType.Bonus,
-                    RawValue = bonusDamage,
-                    Damage = bonusDamage
-                });
-            }
-
-            foreach (var source in damageInfo.Sources)
-            {
-                damageInfo.Damage += source.Damage;
-                if (source.Type != RankedPlayDamageType.Multiplier)
-                    damageInfo.RawDamage += source.Damage;
-            }
-
-            damageInfo.OldLife = userInfo.Life;
-            damageInfo.NewLife = Math.Max(damageInfo.OldLife == 1_000_000 ? 1 : 0, damageInfo.OldLife - damageInfo.Damage);
+                RawDamage = directDamage + bonusDamage,
+                Damage = totalDamage,
+                OldLife = userInfo.Life,
+                NewLife = Math.Max(userInfo.Life == 1_000_000 ? 1 : 0, userInfo.Life - totalDamage),
+                DirectDamage = directDamage,
+                Multiplier = multiplier,
+                BonusDamage = bonusDamage,
+            };
 
             userInfo.Life = damageInfo.NewLife;
 
