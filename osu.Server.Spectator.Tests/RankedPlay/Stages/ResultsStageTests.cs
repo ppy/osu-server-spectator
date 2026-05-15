@@ -471,6 +471,38 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
+        public async Task RoundsWonIncrementedForWinner()
+        {
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 1 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 0 }
+                    ]));
+
+            await MatchController.Stage.Enter();
+
+            Assert.Equal(1, UserState.RoundsWon);
+            Assert.Equal(0, User2State.RoundsWon);
+        }
+
+        [Fact]
+        public async Task RoundsWonNotIncrementedOnTie()
+        {
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore { user_id = USER_ID, total_score = 1 },
+                        new SoloScore { user_id = USER_ID_2, total_score = 1 }
+                    ]));
+
+            await MatchController.Stage.Enter();
+
+            Assert.Equal(0, UserState.RoundsWon);
+            Assert.Equal(0, User2State.RoundsWon);
+        }
+
+        [Fact]
         public async Task ContinuesToRoundWarmupAndCardPlayNotInFinalRound()
         {
             await FinishCountdown();
