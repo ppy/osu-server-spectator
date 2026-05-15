@@ -83,6 +83,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 double attackMultiplier = State.DamageMultiplier + State.Users[winningUserId.Value].DamageMultiplier;
 
                 State.Users[(int)losingScore.user_id].DamageInfo = Controller.Damage((int)losingScore.user_id, attackDamage, attackMultiplier, BaseDamage);
+                State.Users[(int)winningUserId].RoundsWon += 1;
             }
 
             if (Controller.Ranked)
