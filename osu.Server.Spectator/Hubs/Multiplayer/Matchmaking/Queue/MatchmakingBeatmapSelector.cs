@@ -98,8 +98,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 Mu = 1500,
                 Sigma = 150,
-                Beta = 75,
-                Tau = 1.5
+                Beta = 0,
+                Tau = 15.0,
+                Gamma = (_, _, _, _, _, _, _) => 1.0
             };
 
             double clearThreshold = pool.ruleset_id switch
