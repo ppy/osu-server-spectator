@@ -159,10 +159,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                   .Where(b => !maps.Contains(b))
                                   .Where(b =>
                                   {
-                                      double p = mapProbability(b);
-                                      if (1 <= p) return true;
-
-                                      return Random.Shared.NextDouble() <= p;
+                                      double p = beatmapProbability(b, targetRating);
+                                      return p switch
+                                      {
+                                          >= 1 => true,
+                                          <= 0 => false,
+                                          _ => Random.Shared.NextDouble() <= p
+                                      };
                                   })
                                   .MinBy(b => Math.Abs(b.rating - rating));
 
@@ -175,9 +178,41 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             return maps.ToArray();
         }
 
-        private static double mapProbability(matchmaking_pool_beatmap map)
+        /// <summary>
+        /// Calculates the threshold for an extra probability check a map must pass in order to be considered for pooling.
+        /// </summary>
+        /// <param name="beatmap">Map to calculate probability for</param>
+        /// <param name="targetRating">Rating to target the pool for</param>
+        /// <returns>Number between 0 and 1 representing the probability</returns>
+        private static double beatmapProbability(matchmaking_pool_beatmap beatmap, double targetRating)
         {
-            return 1.0;
+            // The goal is to improve user perception of standard pools in lower elo.
+            // The lower the target elo, the less likely we want to show massive positive rating outliers.
+
+            const double min_target = 800;
+            const double max_target = 1500;
+            const double max_map_diff = 300;
+            const double min_probability = 0.25;
+
+            if (beatmap.playmode == 0) return 1;
+            if (targetRating >= max_target) return 1;
+
+            double originalRating = matchmaking_pool_beatmap.DifficultyRatingToEloRating(beatmap.difficultyrating);
+            if (originalRating < beatmap.rating) return 1;
+
+            // Step 1: Determine the size of the probability interval
+            // Scale the target rating: [min_target, max_target] -> [0, 1]
+            double relativeTargetRating = Math.Clamp((max_target - beatmap.rating) / (max_target - min_target), 0, 1);
+            // Scale [0, 1] -> [min_probability, 1] (inverse)
+            double lowerBound = min_probability + (1 - min_probability) * (1 - relativeTargetRating);
+
+            // Step 2: Determine what point to use in the probability interval
+            // Scale rating diff: [0, 300] -> [0, 1]
+            double relativeMapRatingDiff = Math.Clamp((beatmap.rating - originalRating) / max_map_diff, 0, 1);
+            // Scale [0, 1] -> [lowerBound, 1]  (inverse)
+            double probability = lowerBound + (1 - lowerBound) * (1 - relativeMapRatingDiff);
+
+            return probability;
         }
 
         private static IEnumerable<double> randomNumberSamples(int n, double mu, double sigma)
