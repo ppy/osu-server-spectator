@@ -146,17 +146,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(int count, EloRating[] ratings)
         {
             // Pick from maps around the minimum rating.
-            double userRatingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
+            double targetRating = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
 
             const double rating_sig = 100;
 
             HashSet<matchmaking_pool_beatmap> maps = [];
 
-            foreach (double rating in randomNumberSamples(count, userRatingMu, rating_sig))
+            foreach (double rating in randomNumberSamples(count, targetRating, rating_sig))
             {
                 // Could optimize with binary search?
                 var map = beatmaps.Values
                                   .Where(b => !maps.Contains(b))
+                                  .Where(b =>
+                                  {
+                                      double p = mapProbability(b);
+                                      if (1 <= p) return true;
+
+                                      return Random.Shared.NextDouble() <= p;
+                                  })
                                   .MinBy(b => Math.Abs(b.rating - rating));
 
                 if (map == null)
@@ -166,6 +173,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
 
             return maps.ToArray();
+        }
+
+        private static double mapProbability(matchmaking_pool_beatmap map)
+        {
+            return 1.0;
         }
 
         private static IEnumerable<double> randomNumberSamples(int n, double mu, double sigma)
