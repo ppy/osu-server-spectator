@@ -58,7 +58,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         playmode = b.playmode,
                         checksum = b.checksum,
                         difficultyrating = b.difficultyrating,
-                        rating = (int)Math.Round(800 + 500 * (Math.Exp(0.16 * b.difficultyrating) - 1)),
+                        rating = matchmaking_pool_beatmap.DifficultyRatingToEloRating(b.difficultyrating),
                     })
                     .ToDictionary(b => b.beatmap_id, b => b);
 
