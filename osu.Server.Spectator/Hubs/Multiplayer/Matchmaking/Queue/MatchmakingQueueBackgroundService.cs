@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -16,6 +17,7 @@ using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Matchmaking.Requests;
 using osu.Game.Online.Matchmaking.Responses;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
@@ -82,7 +84,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             if (!poolLobbies.TryGetValue(poolId, out MatchmakingLobby? lobby))
                 return Task.CompletedTask;
 
+            if (!poolQueues.TryGetValue(poolId, out MatchmakingQueue? queue))
+                return Task.CompletedTask;
+
             lobby.RecordMatch(status);
+
+            if (status is RankedPlayRoomState rpState)
+            {
+                int[] users = rpState.Users.Keys.ToArray();
+
+                for (int i = 0; i < users.Length; i++)
+                {
+                    for (int j = i + 1; j < users.Length; j++)
+                        queue.MarkRecentMatchup(users[i], users[j]);
+                }
+            }
+
             return Task.CompletedTask;
         }
 

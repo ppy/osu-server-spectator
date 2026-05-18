@@ -259,6 +259,40 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Single(bundle.FormedGroups);
         }
 
+        [Fact]
+        public void RecentMatchupsAvoided()
+        {
+            CustomSystemClock clock = new CustomSystemClock();
+
+            queue.Pool.lobby_size = 2;
+            queue.Pool.rating_search_radius = 9999;
+            queue.Clock = clock;
+            queue.RecentMatchupTimeout = TimeSpan.FromMinutes(10);
+
+            queue.Add(new MatchmakingQueueUser("1") { UserId = 1, Rating = new EloRating(1500) });
+            queue.Add(new MatchmakingQueueUser("2") { UserId = 2, Rating = new EloRating(1400) });
+            queue.Add(new MatchmakingQueueUser("3") { UserId = 3, Rating = new EloRating(1300) });
+
+            // Expires at +10m
+            queue.MarkRecentMatchup(1, 2);
+
+            // Expires at +15m
+            clock.UtcNow += TimeSpan.FromMinutes(5);
+            queue.MarkRecentMatchup(1, 3);
+            queue.MarkRecentMatchup(2, 3);
+
+            var bundle = queue.Update();
+            Assert.Empty(bundle.FormedGroups);
+
+            // Expire the first recent matchup.
+            clock.UtcNow += TimeSpan.FromMinutes(6);
+
+            bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+            Assert.NotEqual("3", bundle.FormedGroups[0].Users[0].Identifier);
+            Assert.NotEqual("3", bundle.FormedGroups[0].Users[1].Identifier);
+        }
+
         private class CustomSystemClock : ISystemClock
         {
             public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;

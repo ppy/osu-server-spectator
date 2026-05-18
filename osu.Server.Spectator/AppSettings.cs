@@ -51,6 +51,7 @@ namespace osu.Server.Spectator
 
         public static TimeSpan MatchmakingLobbyUpdateRate { get; } = TimeSpan.FromSeconds(5);
         public static TimeSpan MatchmakingQueueUpdateRate { get; } = TimeSpan.FromSeconds(1);
+        public static TimeSpan MatchmakingRecentMatchupTimeout { get; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         /// The total number of beatmaps per matchmaking room.
@@ -114,6 +115,10 @@ namespace osu.Server.Spectator
             MatchmakingQueueUpdateRate = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_UPDATE_RATE"), out int mmQueueUpdateRate)
                 ? TimeSpan.FromSeconds(mmQueueUpdateRate)
                 : MatchmakingQueueUpdateRate;
+
+            MatchmakingRecentMatchupTimeout = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RECENT_MATCHUP_TIMEOUT"), out int mmRecentMatchupTimeout)
+                ? TimeSpan.FromSeconds(mmRecentMatchupTimeout)
+                : MatchmakingRecentMatchupTimeout;
 
             MatchmakingPoolSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_POOL_SIZE"), out int mmPoolSize)
                 ? mmPoolSize
