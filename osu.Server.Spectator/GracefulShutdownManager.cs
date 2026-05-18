@@ -45,6 +45,7 @@ namespace osu.Server.Spectator
             IHubContext<MultiplayerHub> multiplayerHub,
             IHubContext<SpectatorHub> spectatorHub,
             IHostApplicationLifetime hostApplicationLifetime,
+            ScoreBuffer scoreBuffer,
             ScoreUploader scoreUploader,
             EntityStore<MetadataClientState> metadataClientStore,
             BuildUserCountUpdater buildUserCountUpdater,
@@ -61,6 +62,7 @@ namespace osu.Server.Spectator
 
             dependentStores.Add(roomStore);
             dependentStores.Add(spectatorState);
+            dependentStores.Add(scoreBuffer);
             dependentStores.Add(scoreUploader);
             dependentStores.Add(metadataClientStore);
 
