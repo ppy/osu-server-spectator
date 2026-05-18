@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
     public class MatchmakingQueue
     {
-        private static string recent_matchup(int userId, int opponentId) => $"matchmaking-recent-matchup:{Math.Min(userId, opponentId)}-{Math.Max(userId, opponentId)}";
+        private static string recent_matchup_expiry(int userId, int opponentId) => $"matchmaking-recent-matchup:{Math.Min(userId, opponentId)}-{Math.Max(userId, opponentId)}";
 
         /// <summary>
         /// The pool for this queue.
@@ -248,7 +248,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="opponentId">The second user.</param>
         public void MarkRecentMatchup(int userId, int opponentId)
         {
-            cache.Set(recent_matchup(userId, opponentId), true, Clock.UtcNow + RecentMatchupTimeout);
+            DateTimeOffset expireTime = Clock.UtcNow + RecentMatchupTimeout;
+            cache.Set(recent_matchup_expiry(userId, opponentId), expireTime, expireTime);
         }
 
         /// <summary>
@@ -258,7 +259,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="opponentId">The second user.</param>
         public bool IsRecentMatchup(int userId, int opponentId)
         {
-            return cache.Get<bool?>(recent_matchup(userId, opponentId)) ?? false;
+            DateTimeOffset expireTime = cache.Get<DateTimeOffset?>(recent_matchup_expiry(userId, opponentId)) ?? DateTimeOffset.MinValue;
+            return expireTime >= Clock.UtcNow;
         }
 
         /// <summary>
