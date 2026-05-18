@@ -35,7 +35,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <summary>
         /// Controls how often two players may be matched together.
         /// </summary>
-        public TimeSpan RecentMatchupTimeout { get; set; } = TimeSpan.FromMinutes(10);
+        public TimeSpan RecentMatchupTimeout { get; set; } = AppSettings.MatchmakingRecentMatchupTimeout;
 
         /// <summary>
         /// The top-100 player's rating from the pool. This is populated upon the first <see cref="Refresh"/>.
