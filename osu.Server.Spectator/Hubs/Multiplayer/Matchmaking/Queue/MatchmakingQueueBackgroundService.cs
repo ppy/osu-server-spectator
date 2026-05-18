@@ -84,10 +84,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             if (!poolLobbies.TryGetValue(poolId, out MatchmakingLobby? lobby))
                 return Task.CompletedTask;
 
+            lobby.RecordMatch(status);
+
             if (!poolQueues.TryGetValue(poolId, out MatchmakingQueue? queue))
                 return Task.CompletedTask;
-
-            lobby.RecordMatch(status);
 
             if (status is RankedPlayRoomState rpState)
             {
