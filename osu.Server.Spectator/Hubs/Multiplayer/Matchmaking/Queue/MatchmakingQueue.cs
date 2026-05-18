@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Internal;
 using osu.Game.Extensions;
 using osu.Server.Spectator.Database;
@@ -14,6 +15,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
     public class MatchmakingQueue
     {
+        private static string recent_matchup(int userId, int opponentId) => $"matchmaking-recent-matchup:{userId}-{opponentId}";
+
         /// <summary>
         /// The pool for this queue.
         /// </summary>
@@ -30,9 +33,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public TimeSpan SearchTimeout { get; set; } = TimeSpan.MaxValue;
 
         /// <summary>
-        /// The system clock.
+        /// Controls how often two players may be matched together.
         /// </summary>
-        public ISystemClock Clock { get; set; } = new SystemClock();
+        public TimeSpan RecentMatchupTimeout { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         /// The top-100 player's rating from the pool. This is populated upon the first <see cref="Refresh"/>.
@@ -48,6 +51,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// Lock for <see cref="matchmakingUsers"/>.
         /// </summary>
         private readonly object queueLock = new object();
+
+        private ISystemClock clock = new SystemClock();
+        private IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
 
         /// <summary>
         /// A running counter for the next group ID.
@@ -68,6 +74,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 lock (queueLock)
                     return matchmakingUsers.Count;
+            }
+        }
+
+        /// <summary>
+        /// The system clock.
+        /// </summary>
+        public ISystemClock Clock
+        {
+            get => clock;
+            set
+            {
+                clock = value;
+                cache = new MemoryCache(new MemoryCacheOptions { Clock = clock });
             }
         }
 
@@ -223,6 +242,27 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
+        /// Marks a recent matchup between two users.
+        /// </summary>
+        /// <param name="userId">The first user.</param>
+        /// <param name="opponentId">The second user.</param>
+        public void MarkRecentMatchup(int userId, int opponentId)
+        {
+            cache.Set(recent_matchup(userId, opponentId), true, Clock.UtcNow + RecentMatchupTimeout);
+            cache.Set(recent_matchup(opponentId, userId), true, Clock.UtcNow + RecentMatchupTimeout);
+        }
+
+        /// <summary>
+        /// Whether there is a recent matchup between two users.
+        /// </summary>
+        /// <param name="userId">The first user.</param>
+        /// <param name="opponentId">The second user.</param>
+        public bool IsRecentMatchup(int userId, int opponentId)
+        {
+            return cache.Get<bool?>(recent_matchup(userId, opponentId)) ?? false;
+        }
+
+        /// <summary>
         /// Performs a single update of the matchmaking queue.
         /// </summary>
         public MatchmakingQueueUpdateBundle Update()
@@ -366,7 +406,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 Pool.rating_search_radius_max * top100Bonus,
                 Pool.rating_search_radius * ratingBonus * searchTimeBonus);
 
-            IEnumerable<MatchmakingQueueUser> allMatches = users.Where(u => !u.Equals(pivotUser) && Math.Abs(pivotUser.Rating.Mu - u.Rating.Mu) <= searchRadius);
+            IEnumerable<MatchmakingQueueUser> allMatches = users.Where(u =>
+                !u.Equals(pivotUser)
+                && !IsRecentMatchup(pivotUser.UserId, u.UserId)
+                && Math.Abs(pivotUser.Rating.Mu - u.Rating.Mu) <= searchRadius);
 
             HashSet<MatchmakingQueueUser> result = [pivotUser];
             result.AddRange(
