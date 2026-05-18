@@ -70,7 +70,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.Equal(5, RoomState.Users[secondActiveUser].Hand.Count);
 
             Assert.Equal(1_000_000, RoomState.Users[USER_ID].Life);
-            Assert.Equal(900_000, RoomState.Users[USER_ID_2].Life);
+            Assert.Equal(950_000, RoomState.Users[USER_ID_2].Life);
         }
 
         [Fact]
@@ -88,8 +88,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             Assert.Equal(4, RoomState.Users[firstActiveUser].Hand.Count);
             Assert.Equal(5, RoomState.Users[secondActiveUser].Hand.Count);
 
-            Assert.Equal(900_000, RoomState.Users[USER_ID].Life);
-            Assert.Equal(900_000, RoomState.Users[USER_ID_2].Life);
+            Assert.Equal(1_000_000, RoomState.Users[USER_ID].Life);
+            Assert.Equal(1_000_000, RoomState.Users[USER_ID_2].Life);
         }
 
         [Fact]
@@ -97,11 +97,14 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         {
             RoomState.Users[USER_ID].Life = 1;
 
+            SetUserContext(ContextUser2);
+            await MarkCurrentUserReadyAndAvailable();
+
             await FinishCountdown();
             Assert.Equal(RankedPlayStage.Ended, RoomState.Stage);
 
             Assert.Equal(0, RoomState.Users[USER_ID].Life);
-            Assert.Equal(900_000, RoomState.Users[USER_ID_2].Life);
+            Assert.Equal(1_000_000, RoomState.Users[USER_ID_2].Life);
         }
     }
 }

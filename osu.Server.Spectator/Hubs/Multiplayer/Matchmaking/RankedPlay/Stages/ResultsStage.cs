@@ -19,6 +19,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
         /// </summary>
         public TimeSpan ScoreRetrievalWaitTime { get; set; } = TimeSpan.FromSeconds(10);
 
+        /// <summary>
+        /// Base amount of damage taken per round.
+        /// </summary>
+        public int BaseDamage { get; set; } = 50_000;
+
         public ResultsStage(RankedPlayMatchController controller)
             : base(controller)
         {
@@ -26,6 +31,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override RankedPlayStage Stage => RankedPlayStage.Results;
         protected override TimeSpan Duration => TimeSpan.FromSeconds(15);
+
+        private int? winningUserId;
 
         protected override async Task Begin()
         {
@@ -53,24 +60,31 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 }
             }
 
-            // Add dummy scores for all users that did not play the map.
-            foreach ((int userId, _) in State.Users)
+            foreach ((int userId, RankedPlayUserInfo info) in State.Users)
             {
+                // Add dummy scores for all users that did not play the map.
                 if (scores.All(s => s.user_id != userId))
                     scores.Add(new SoloScore { user_id = (uint)userId });
+
+                // Populate the models with a default damage info.
+                info.DamageInfo = Controller.Damage(userId);
             }
 
-            int maxTotalScore = (int)scores.Select(s => s.total_score).Max();
+            int winningTotalScore = (int)scores.Select(s => s.total_score).Max();
+            SoloScore[] winningScores = scores.Where(u => u.total_score == winningTotalScore).ToArray();
+            winningUserId = winningScores.Length == 1 ? (int)winningScores.Single().user_id : null;
 
-            foreach (var score in scores)
+            if (winningUserId != null)
             {
-                var userInfo = State.Users[(int)score.user_id];
-                userInfo.DamageInfo = Controller.Damage((int)score.user_id, maxTotalScore - (int)score.total_score);
-            }
+                // Winner: losing player takes damage.
+                SoloScore losingScore = scores.Single(u => u.user_id != winningUserId);
 
-            SoloScore[] winningScores = scores.Where(u => u.total_score == maxTotalScore).ToArray();
-            if (winningScores.Length == 1)
-                State.Users[(int)winningScores.Single().user_id].RoundsWon += 1;
+                int attackDamage = winningTotalScore - (int)losingScore.total_score;
+                double attackMultiplier = State.DamageMultiplier + State.Users[winningUserId.Value].DamageMultiplier;
+
+                State.Users[(int)losingScore.user_id].DamageInfo = Controller.Damage((int)losingScore.user_id, attackDamage, attackMultiplier, BaseDamage);
+                State.Users[(int)winningUserId].RoundsWon += 1;
+            }
 
             if (Controller.Ranked)
             {
@@ -88,6 +102,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
 
         protected override async Task Finish()
         {
+            // Award the winning player with their own multiplier boost.
+            if (winningUserId != null)
+                State.Users[winningUserId.Value].DamageMultiplier += 0.5;
+
             foreach ((_, RankedPlayUserInfo userInfo) in State.Users)
                 userInfo.DamageInfo = null;
 
