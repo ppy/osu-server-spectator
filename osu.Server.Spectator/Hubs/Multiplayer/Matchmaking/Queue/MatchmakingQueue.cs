@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
     public class MatchmakingQueue
     {
-        private static string recent_matchup_expiry(int userId, int opponentId) => $"matchmaking-recent-matchup:{Math.Min(userId, opponentId)}-{Math.Max(userId, opponentId)}";
+        private static string recent_matchup_expiry(int userId, int opponentId) => $"matchmaking-recent-matchup-expiry:{Math.Min(userId, opponentId)}-{Math.Max(userId, opponentId)}";
 
         /// <summary>
         /// The pool for this queue.
@@ -249,7 +249,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public void MarkRecentMatchup(int userId, int opponentId)
         {
             DateTimeOffset expireTime = Clock.UtcNow + RecentMatchupTimeout;
-            cache.Set(recent_matchup_expiry(userId, opponentId), expireTime, expireTime);
+            cache.Set(recent_matchup_expiry(userId, opponentId), expireTime, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpiration = expireTime,
+                Priority = CacheItemPriority.NeverRemove
+            });
         }
 
         /// <summary>
