@@ -159,7 +159,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                   .Where(b => !maps.Contains(b))
                                   .Where(b =>
                                   {
-                                      double p = BeatmapProbability(b, targetRating);
+                                      double p = BeatmapWeight(b, targetRating);
                                       return p switch
                                       {
                                           >= 1 => true,
@@ -184,12 +184,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="beatmap">Map to calculate probability for</param>
         /// <param name="targetRating">Rating to target the pool for</param>
         /// <returns>Number between 0 and 1 representing the probability</returns>
-        public static double BeatmapProbability(matchmaking_pool_beatmap beatmap, double targetRating)
+        public static double BeatmapWeight(matchmaking_pool_beatmap beatmap, double targetRating)
         {
-            return RatingDiffProbability(beatmap, targetRating);
+            return RatingDiffWeight(beatmap, targetRating);
         }
 
-        public static double RatingDiffProbability(matchmaking_pool_beatmap beatmap, double targetRating)
+        public static double RatingDiffWeight(matchmaking_pool_beatmap beatmap, double targetRating)
         {
             // The goal is to improve user perception of standard pools in lower elo.
             // The lower the target elo, the less likely we want to show massive positive rating outliers.
@@ -202,10 +202,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             // Parameters for logistic curve
             const double target_center = 1300;
             const double target_radius = 75;
-            const double min_probability = 0.25;
+            const double min_weight = 0.25;
 
             // Use logistic curve: targetRating => [min_probability, 1.0]
-            double lowerBound = min_probability + (1 - min_probability) / (1 + Math.Exp(-(targetRating - target_center) / target_radius));
+            double lowerBound = min_weight + (1 - min_weight) / (1 + Math.Exp(-(targetRating - target_center) / target_radius));
 
             const double max_rating_diff = 300;
             double ratingDiff = beatmap.rating - originalRating; // >0 because of early return earlier
@@ -213,9 +213,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             // Map ratingDiff => [lowerBound, 1.0]
             double relativeRatingDiff = Math.Clamp(ratingDiff / max_rating_diff, 0, 1);
             double inverseRatingDiffSquared = Math.Pow(1 - relativeRatingDiff, 2);
-            double probability = lowerBound + (1 - lowerBound) * inverseRatingDiffSquared;
+            double weight = lowerBound + (1 - lowerBound) * inverseRatingDiffSquared;
 
-            return probability;
+            return weight;
         }
 
         private static IEnumerable<double> randomNumberSamples(int n, double mu, double sigma)
