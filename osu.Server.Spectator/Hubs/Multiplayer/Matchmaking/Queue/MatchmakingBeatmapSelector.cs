@@ -159,7 +159,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                                   .Where(b => !maps.Contains(b))
                                   .Where(b =>
                                   {
-                                      double p = beatmapProbability(b, targetRating);
+                                      double p = BeatmapProbability(b, targetRating);
                                       return p switch
                                       {
                                           >= 1 => true,
@@ -184,33 +184,36 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="beatmap">Map to calculate probability for</param>
         /// <param name="targetRating">Rating to target the pool for</param>
         /// <returns>Number between 0 and 1 representing the probability</returns>
-        private static double beatmapProbability(matchmaking_pool_beatmap beatmap, double targetRating)
+        public static double BeatmapProbability(matchmaking_pool_beatmap beatmap, double targetRating)
+        {
+            return RatingDiffProbability(beatmap, targetRating);
+        }
+
+        public static double RatingDiffProbability(matchmaking_pool_beatmap beatmap, double targetRating)
         {
             // The goal is to improve user perception of standard pools in lower elo.
             // The lower the target elo, the less likely we want to show massive positive rating outliers.
 
-            const double min_target = 800;
-            const double max_target = 1500;
-            const double max_map_diff = 300;
-            const double min_probability = 0.25;
-
-            if (beatmap.playmode == 0) return 1;
-            if (targetRating >= max_target) return 1;
+            if (beatmap.playmode != 0) return 1;
 
             double originalRating = matchmaking_pool_beatmap.DifficultyRatingToEloRating(beatmap.difficultyrating);
-            if (originalRating < beatmap.rating) return 1;
+            if (beatmap.rating <= originalRating) return 1;
 
-            // Step 1: Determine the size of the probability interval
-            // Scale the target rating: [min_target, max_target] -> [0, 1]
-            double relativeTargetRating = Math.Clamp((max_target - beatmap.rating) / (max_target - min_target), 0, 1);
-            // Scale [0, 1] -> [min_probability, 1] (inverse)
-            double lowerBound = min_probability + (1 - min_probability) * (1 - relativeTargetRating);
+            // Parameters for logistic curve
+            const double target_center = 1300;
+            const double target_radius = 75;
+            const double min_probability = 0.25;
 
-            // Step 2: Determine what point to use in the probability interval
-            // Scale rating diff: [0, 300] -> [0, 1]
-            double relativeMapRatingDiff = Math.Clamp((beatmap.rating - originalRating) / max_map_diff, 0, 1);
-            // Scale [0, 1] -> [lowerBound, 1]  (inverse)
-            double probability = lowerBound + (1 - lowerBound) * (1 - relativeMapRatingDiff);
+            // Use logistic curve: targetRating => [min_probability, 1.0]
+            double lowerBound = min_probability + (1 - min_probability) / (1 + Math.Exp(-(targetRating - target_center) / target_radius));
+
+            const double max_rating_diff = 300;
+            double ratingDiff = beatmap.rating - originalRating; // >0 because of early return earlier
+
+            // Map ratingDiff => [lowerBound, 1.0]
+            double relativeRatingDiff = Math.Clamp(ratingDiff / max_rating_diff, 0, 1);
+            double inverseRatingDiffSquared = Math.Pow(1 - relativeRatingDiff, 2);
+            double probability = lowerBound + (1 - lowerBound) * inverseRatingDiffSquared;
 
             return probability;
         }
