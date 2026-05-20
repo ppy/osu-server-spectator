@@ -81,8 +81,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         {
             MatchmakingBeatmapSelector selector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
             [
-                new matchmaking_pool_beatmap { beatmap_id = 0, rating = 1000 },
-                new matchmaking_pool_beatmap { beatmap_id = 1, rating = 1000 },
+                new matchmaking_pool_beatmap { beatmap_id = 0, rating = 1000, difficultyrating = 10.0 },
+                new matchmaking_pool_beatmap { beatmap_id = 1, rating = 1000, difficultyrating = 10.0 },
             ], new Mock<IDatabaseFactory>().Object);
 
             matchmaking_pool_beatmap[] result = selector.GetAppropriateBeatmaps(50, [new EloRating(1000, 350), new EloRating(1000, 350)]);
