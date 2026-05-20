@@ -58,7 +58,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         playmode = b.playmode,
                         checksum = b.checksum,
                         difficultyrating = b.difficultyrating,
-                        rating = (int)Math.Round(800 + 500 * (Math.Exp(0.16 * b.difficultyrating) - 1)),
+                        rating = matchmaking_pool_beatmap.DifficultyRatingToEloRating(b.difficultyrating),
                     })
                     .ToDictionary(b => b.beatmap_id, b => b);
 
@@ -146,17 +146,27 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(int count, EloRating[] ratings)
         {
             // Pick from maps around the minimum rating.
-            double userRatingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
+            double targetRating = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
 
             const double rating_sig = 100;
 
             HashSet<matchmaking_pool_beatmap> maps = [];
 
-            foreach (double rating in randomNumberSamples(count, userRatingMu, rating_sig))
+            foreach (double rating in randomNumberSamples(count, targetRating, rating_sig))
             {
                 // Could optimize with binary search?
                 var map = beatmaps.Values
                                   .Where(b => !maps.Contains(b))
+                                  .Where(b =>
+                                  {
+                                      double p = BeatmapWeight(b, targetRating);
+                                      return p switch
+                                      {
+                                          >= 1 => true,
+                                          <= 0 => false,
+                                          _ => Random.Shared.NextDouble() <= p
+                                      };
+                                  })
                                   .MinBy(b => Math.Abs(b.rating - rating));
 
                 if (map == null)
@@ -166,6 +176,46 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
 
             return maps.ToArray();
+        }
+
+        /// <summary>
+        /// Calculates the threshold for an extra probability check a map must pass in order to be considered for pooling.
+        /// </summary>
+        /// <param name="beatmap">Map to calculate probability for</param>
+        /// <param name="targetRating">Rating to target the pool for</param>
+        /// <returns>Number between 0 and 1 representing the probability</returns>
+        public static double BeatmapWeight(matchmaking_pool_beatmap beatmap, double targetRating)
+        {
+            return RatingDiffWeight(beatmap, targetRating);
+        }
+
+        public static double RatingDiffWeight(matchmaking_pool_beatmap beatmap, double targetRating)
+        {
+            // The goal is to improve user perception of standard pools in lower elo.
+            // The lower the target elo, the less likely we want to show massive positive rating outliers.
+
+            if (beatmap.playmode != 0) return 1;
+
+            double originalRating = matchmaking_pool_beatmap.DifficultyRatingToEloRating(beatmap.difficultyrating);
+            if (beatmap.rating <= originalRating) return 1;
+
+            // Parameters for logistic curve
+            const double target_center = 1300;
+            const double target_radius = 75;
+            const double min_weight = 0.25;
+
+            // Use logistic curve: targetRating => [min_probability, 1.0]
+            double lowerBound = min_weight + (1 - min_weight) / (1 + Math.Exp(-(targetRating - target_center) / target_radius));
+
+            const double max_rating_diff = 300;
+            double ratingDiff = beatmap.rating - originalRating; // >0 because of early return earlier
+
+            // Map ratingDiff => [lowerBound, 1.0]
+            double relativeRatingDiff = Math.Clamp(ratingDiff / max_rating_diff, 0, 1);
+            double inverseRatingDiffSquared = Math.Pow(1 - relativeRatingDiff, 2);
+            double weight = lowerBound + (1 - lowerBound) * inverseRatingDiffSquared;
+
+            return weight;
         }
 
         private static IEnumerable<double> randomNumberSamples(int n, double mu, double sigma)
