@@ -277,6 +277,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public void BanUser(int userId, TimeSpan duration)
         {
+            if (!AppSettings.MatchmakingQueueAllowBans)
+                return;
+
             // TODO: we should probably let the players know that they have been penalised.
 
             DateTimeOffset expireTime = DateTimeOffset.Now + duration;

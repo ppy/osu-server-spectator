@@ -58,6 +58,11 @@ namespace osu.Server.Spectator
         /// </summary>
         public static int MatchmakingPoolSize { get; } = 50;
 
+        /// <summary>
+        /// Whether to issue bans from the matchmaking queue for various abuse.
+        /// </summary>
+        public static bool MatchmakingQueueAllowBans { get; } = true;
+
         static AppSettings()
         {
             SaveReplays = bool.TryParse(Environment.GetEnvironmentVariable("SAVE_REPLAYS"), out bool saveReplays) ? saveReplays : SaveReplays;
@@ -123,6 +128,10 @@ namespace osu.Server.Spectator
             MatchmakingPoolSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_POOL_SIZE"), out int mmPoolSize)
                 ? mmPoolSize
                 : MatchmakingPoolSize;
+
+            MatchmakingQueueAllowBans = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_ALLOW_BANS"), out bool mmQueueAllowBans)
+                ? mmQueueAllowBans
+                : MatchmakingQueueAllowBans;
         }
     }
 }
