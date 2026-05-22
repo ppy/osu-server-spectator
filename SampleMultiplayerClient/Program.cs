@@ -142,7 +142,7 @@ namespace SampleMultiplayerClient
                             break;
 
                         case "mmjoinqueue":
-                            await targetClient.MatchmakingJoinQueue(int.Parse(args[0]));
+                            await targetClient.MatchmakingJoinQueueWithParams(new MatchmakingJoinQueueRequest { PoolId = int.Parse(args[0]) });
                             break;
 
                         case "mmleavequeue":
