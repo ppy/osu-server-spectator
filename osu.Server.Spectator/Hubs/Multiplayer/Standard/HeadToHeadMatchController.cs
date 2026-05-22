@@ -4,7 +4,6 @@
 using System.Threading.Tasks;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Database;
-using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 {
@@ -32,10 +31,5 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 await eventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
             }
         }
-
-        public override MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
-        {
-            room_type = database_match_type.head_to_head
-        };
     }
 }

@@ -26,6 +26,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
         public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentPlaylistItemIndex];
 
+        protected StandardMatchRoomState State { get; }
+
         private readonly ServerMultiplayerRoom room;
         private readonly IDatabaseFactory dbFactory;
         private readonly MultiplayerEventDispatcher eventDispatcher;
@@ -40,7 +42,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             this.eventDispatcher = eventDispatcher;
 
             queueMode = room.Settings.QueueMode;
+            room.MatchState = State = CreateRoomState();
         }
+
+        protected virtual StandardMatchRoomState CreateRoomState() => new StandardMatchRoomState();
 
         /// <summary>
         /// Initialises the queue from the database.
@@ -51,15 +56,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 await updatePlaylistOrder(db);
 
             await updateCurrentItem();
+            updateSlotsFromSettings();
+            await eventDispatcher.PostMatchRoomStateChangedAsync(room);
         }
 
         public Task<bool> UserCanJoin(int userId)
-            => Task.FromResult(true);
+            => Task.FromResult(room.Settings.MaxParticipants == null || room.Users.Count < room.Settings.MaxParticipants);
 
         /// <summary>
         /// Updates the queue as a result of a change in the queueing mode.
         /// </summary>
         public virtual async Task HandleSettingsChanged()
+        {
+            await updateQueueFromModeChange();
+
+            if (updateSlotsFromSettings())
+                await eventDispatcher.PostMatchRoomStateChangedAsync(room);
+        }
+
+        private async Task updateQueueFromModeChange()
         {
             if (queueMode == room.Settings.QueueMode)
                 return;
@@ -115,23 +130,173 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                     var resultEvent = new RollEvent { UserID = user.UserID, Max = max, Result = result };
                     await eventDispatcher.PostRollEventAsync(room.RoomID, resultEvent);
                     break;
+
+                case SetLockStateRequest setRoomLock:
+                    if (State.Locked == setRoomLock.Locked)
+                        break;
+
+                    State.Locked = setRoomLock.Locked;
+                    await eventDispatcher.PostMatchRoomStateChangedAsync(room);
+                    break;
+
+                case ChangeSlotRequest changeSlotRequest:
+                    if (State.Locked)
+                        throw new InvalidStateException("Slots are currently locked.");
+
+                    await ChangeUserSlot(user, changeSlotRequest.SlotID);
+                    break;
             }
         }
 
-        public virtual Task HandleUserJoined(MultiplayerRoomUser user)
+        public virtual async Task HandleUserJoined(MultiplayerRoomUser user)
         {
-            return Task.CompletedTask;
+            await assignUserSlot(user);
         }
 
-        public virtual Task HandleUserLeft(MultiplayerRoomUser user)
+        public virtual async Task HandleUserLeft(MultiplayerRoomUser user)
         {
-            return Task.CompletedTask;
+            await clearUserSlot(user);
         }
 
         public virtual Task HandleUserStateChanged(MultiplayerRoomUser user)
         {
             return Task.CompletedTask;
         }
+
+        #region Slot management
+
+        private bool updateSlotsFromSettings()
+        {
+            // participant limit has been unset, no slots in state => nothing to do
+            if (room.Settings.MaxParticipants == null && State.Slots == null)
+                return false;
+
+            // participant limit has been unset, slots in state => discard slots
+            if (room.Settings.MaxParticipants == null && State.Slots != null)
+            {
+                State.Slots = null;
+                return true;
+            }
+
+            // at this point max participants are guaranteed to be not null
+
+            if (room.Settings.MaxParticipants < room.Users.Count)
+                throw new InvalidStateException("There are more players currently in the room than your new requested max participant limit. Please kick some players first.");
+
+            // participant limit has been set, no slots in state => initialise slots
+            if (room.Settings.MaxParticipants != null && State.Slots == null)
+            {
+                State.Slots = new int?[room.Settings.MaxParticipants.Value];
+
+                for (int i = 0; i < room.Users.Count; i++)
+                {
+                    var user = room.Users[i];
+                    int slot = GetNextBestSlot(user, State.Slots);
+                    State.Slots[slot] = user.UserID;
+                }
+
+                return true;
+            }
+
+            // participant limit has been set, slots in state
+            if (room.Settings.MaxParticipants != null && State.Slots != null)
+            {
+                // no change in slot count => nothing to do
+                if (room.Settings.MaxParticipants.Value == State.Slots.Length)
+                    return false;
+
+                int?[] oldSlots = State.Slots;
+                State.Slots = new int?[room.Settings.MaxParticipants.Value];
+
+                // slot count increased => pad with empty slots
+                if (room.Settings.MaxParticipants > oldSlots.Length)
+                {
+                    Array.Copy(oldSlots, State.Slots, oldSlots.Length);
+                    return true;
+                }
+
+                // slot count decreased => move users around from removed slots into previously-empty slots
+                for (int i = 0; i < State.Slots.Length; i++)
+                {
+                    if (oldSlots[i] != null)
+                    {
+                        State.Slots[i] = oldSlots[i];
+                        oldSlots[i] = null;
+                    }
+                    else
+                    {
+                        int removedSlotWithUser = Array.FindIndex(oldSlots, State.Slots.Length, j => j != null);
+
+                        if (removedSlotWithUser > 0)
+                        {
+                            State.Slots[i] = oldSlots[removedSlotWithUser];
+                            oldSlots[removedSlotWithUser] = null;
+                        }
+                    }
+                }
+
+                if (oldSlots.Any(j => j != null))
+                    throw new InvalidOperationException("Dropped a user when attempting to update slots!");
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public async Task ChangeUserSlot(MultiplayerRoomUser user, byte newSlotId)
+        {
+            if (State.Slots == null)
+                throw new InvalidStateException("The room does not have slots.");
+
+            if (newSlotId >= State.Slots.Length)
+                throw new InvalidStateException("Invalid slot.");
+
+            int oldSlotId = Array.IndexOf(State.Slots, user.UserID);
+
+            if (oldSlotId < 0)
+                throw new InvalidStateException("User is not in the room.");
+            if (State.Slots[newSlotId] != null)
+                throw new InvalidStateException("The requested slot is already taken.");
+
+            (State.Slots[oldSlotId], State.Slots[newSlotId]) = (State.Slots[newSlotId], State.Slots[oldSlotId]);
+            await eventDispatcher.PostMatchRoomStateChangedAsync(room);
+        }
+
+        private async Task assignUserSlot(MultiplayerRoomUser user)
+        {
+            // assign a slot to the user if they already don't have one.
+            // them having one can be the case particularly on match type changes, as they also call this method on every user in the room.
+            if (State.Slots != null && Array.IndexOf(State.Slots, user.UserID) < 0)
+            {
+                int slot = GetNextBestSlot(user, State.Slots);
+                State.Slots[slot] = user.UserID;
+                await eventDispatcher.PostMatchRoomStateChangedAsync(room);
+            }
+        }
+
+        protected virtual int GetNextBestSlot(MultiplayerRoomUser user, int?[] slots)
+        {
+            int nextEmptySlot = Array.FindIndex(slots, item => item == null);
+            if (nextEmptySlot < 0)
+                throw new InvalidOperationException("Ran out of slots in the room. This should never happen, as the user should not have been able to join the room to begin with.");
+
+            return nextEmptySlot;
+        }
+
+        private async Task clearUserSlot(MultiplayerRoomUser user)
+        {
+            if (State.Slots == null)
+                return;
+
+            int userSlot = Array.IndexOf(State.Slots, user.UserID);
+            if (userSlot >= 0)
+                State.Slots[userSlot] = null;
+
+            await eventDispatcher.PostMatchRoomStateChangedAsync(room);
+        }
+
+        #endregion
 
         private bool isHostOrReferee(MultiplayerRoomUser user)
             => user.Equals(room.Host) || user.Role == MultiplayerRoomUserRole.Referee;
@@ -289,7 +454,27 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             await eventDispatcher.PostPlaylistItemRemovedAsync(room.RoomID, playlistItemId);
         }
 
-        public abstract MatchStartedEventDetail GetMatchDetails();
+        public virtual MatchStartedEventDetail GetMatchDetails()
+        {
+            var details = new MatchStartedEventDetail
+            {
+                room_type = room.Settings.MatchType.ToDatabaseMatchType()
+            };
+
+            if (State.Slots != null)
+            {
+                details.slots = new Dictionary<int, byte>();
+
+                for (int i = 0; i < State.Slots.Length; i++)
+                {
+                    int? userId = State.Slots[i];
+                    if (userId != null)
+                        details.slots.Add(userId.Value, (byte)i);
+                }
+            }
+
+            return details;
+        }
 
         private async Task addItem(IDatabaseAccess db, MultiplayerPlaylistItem item)
         {
