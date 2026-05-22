@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task AddToQueue()
         {
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1, []);
             await MatchmakingBackgroundService.ExecuteOnceAsync();
 
             UserReceiver.Verify(u => u.MatchmakingQueueJoined(), Times.Once);
@@ -48,7 +48,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task RemoveFromQueue()
         {
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1, []);
             await MatchmakingBackgroundService.RemoveFromQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!);
             await MatchmakingBackgroundService.ExecuteOnceAsync();
 
@@ -59,13 +59,13 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task MatchReady()
         {
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1, []);
             await MatchmakingBackgroundService.ExecuteOnceAsync();
 
             UserReceiver.Verify(u => u.MatchmakingRoomInvitedWithParams(It.IsAny<MatchmakingRoomInvitationParams>()), Times.Never);
             User2Receiver.Verify(u => u.MatchmakingRoomInvitedWithParams(It.IsAny<MatchmakingRoomInvitationParams>()), Times.Never);
 
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1, []);
             await MatchmakingBackgroundService.ExecuteOnceAsync();
 
             UserReceiver.Verify(u => u.MatchmakingRoomInvitedWithParams(It.IsAny<MatchmakingRoomInvitationParams>()), Times.Once);
@@ -75,8 +75,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task AcceptInvitation()
         {
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1);
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1, []);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1, []);
             await MatchmakingBackgroundService.ExecuteOnceAsync();
 
             UserReceiver.Verify(u => u.MatchmakingRoomInvitedWithParams(It.IsAny<MatchmakingRoomInvitationParams>()), Times.Once);
@@ -98,8 +98,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task DeclineInvitation()
         {
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1);
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1, []);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1, []);
             await MatchmakingBackgroundService.ExecuteOnceAsync();
 
             UserReceiver.Verify(u => u.MatchmakingRoomInvitedWithParams(It.IsAny<MatchmakingRoomInvitationParams>()), Times.Once);
@@ -121,8 +121,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task LeaveQueueAfterInvite()
         {
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1);
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1, []);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1, []);
             await MatchmakingBackgroundService.ExecuteOnceAsync();
 
             UserReceiver.Verify(u => u.MatchmakingRoomInvitedWithParams(It.IsAny<MatchmakingRoomInvitationParams>()), Times.Once);
@@ -146,8 +146,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         [Fact]
         public async Task QueueLeftOnDisconnect()
         {
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1);
-            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID)!, 1, []);
+            await MatchmakingBackgroundService.AddToQueueAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, 1, []);
             await MatchmakingBackgroundService.ExecuteOnceAsync();
 
             UserReceiver.Verify(u => u.MatchmakingRoomInvitedWithParams(It.IsAny<MatchmakingRoomInvitationParams>()), Times.Once);

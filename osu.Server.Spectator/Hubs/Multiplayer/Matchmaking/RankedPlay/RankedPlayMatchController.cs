@@ -8,10 +8,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using OpenSkillSharp.Models;
 using OpenSkillSharp.Rating;
+using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Game.Online.RankedPlay;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets;
+using osu.Game.Rulesets.Mods;
+using osu.Game.Utils;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
@@ -57,7 +61,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// </summary>
         public int[] UserIdsByTurnOrder { get; private set; } = [];
 
-        public Dictionary<int, EloRating> RatingByUser { get; private set; } = [];
+        public readonly Dictionary<int, EloRating> RatingByUser = [];
+
+        private readonly Dictionary<int, APIMod[]> modsByUser = [];
 
         /// <summary>
         /// Mapping of cards to their associated effect.
@@ -107,7 +113,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             foreach (var beatmap in beatmaps)
             {
                 var card = new RankedPlayCardItem();
-                cardToEffectMap[card] = beatmap.ToPlaylistItem();
+                cardToEffectMap[card] = createPlaylistItem(beatmap);
                 deck.Add(card);
             }
 
@@ -116,7 +122,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             // Create an initial playlist item for the room. Clients require this to operate correctly.
             using (var db = DbFactory.GetInstance())
             {
-                MultiplayerPlaylistItem initialItem = new MultiplayerPlaylistItem();
+                MultiplayerPlaylistItem initialItem = createPlaylistItem(null);
                 initialItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, initialItem));
 
                 Room.Playlist.Add(initialItem);
@@ -127,6 +133,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             foreach (var user in users)
             {
                 RatingByUser[user.UserId] = user.Rating;
+                modsByUser[user.UserId] = user.Mods;
                 State.Users[user.UserId] = new RankedPlayUserInfo
                 {
                     Rating = (int)Math.Round(user.Rating.Mu),
@@ -191,6 +198,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         {
             await EventDispatcher.PostPlayerJoinedMatchmakingRoomAsync(Room.RoomID, user.UserID);
             await Stage.HandleUserJoined(user);
+
+            ModUtils.InstantiateValidModsForRuleset(LegacyHelper.GetRulesetFromLegacyID(Pool.ruleset_id), modsByUser[user.UserID], out List<Mod> validMods);
+            await Room.ChangeUserMods(user.UserID, validMods.Where(isUserModAllowed).Select(m => new APIMod(m)).ToArray());
         }
 
         async Task IMatchController.HandleUserLeft(MultiplayerRoomUser user)
@@ -446,6 +456,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
             await MatchmakingService.RecordMatch((int)Pool.id, State);
         }
+
+        private MultiplayerPlaylistItem createPlaylistItem(matchmaking_pool_beatmap? beatmap)
+        {
+            var item = beatmap?.ToPlaylistItem() ?? new MultiplayerPlaylistItem();
+
+            Ruleset ruleset = LegacyHelper.GetRulesetFromLegacyID(Pool.ruleset_id);
+            item.AllowedMods = ruleset.AllMods.OfType<ModHidden>().Select(m => new APIMod(m)).ToArray();
+
+            return item;
+        }
+
+        private bool isUserModAllowed(Mod mod)
+            => mod is ModHidden;
 
         public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
         {

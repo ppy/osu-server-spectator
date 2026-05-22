@@ -74,7 +74,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             using (var userUsage = await GetOrCreateLocalUserState())
-                await matchmakingQueueService.AddToQueueAsync(userUsage.Item!, request.PoolId);
+                await matchmakingQueueService.AddToQueueAsync(userUsage.Item!, request.PoolId, request.Mods);
 
             return new MatchmakingJoinQueueResponse();
         }
