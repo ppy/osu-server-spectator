@@ -43,6 +43,10 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
         [JsonPropertyName("playlist_item_id")]
         public long PlaylistItemId { get; set; }
 
+        /// <inheritdoc cref="Requests.MakeRoomRequest.MaxParticipants"/>
+        [JsonPropertyName("max_participants")]
+        public byte? MaxParticipants { get; set; }
+
         [JsonConstructor]
         public RoomSettingsChangedEvent()
         {
@@ -55,6 +59,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
             Password = settings.Password;
             Type = (MatchType)settings.MatchType;
             PlaylistItemId = settings.PlaylistItemId;
+            MaxParticipants = settings.MaxParticipants;
         }
     }
 }
