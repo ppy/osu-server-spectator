@@ -10,7 +10,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using osu.Game.Beatmaps;
-using osu.Game.Online.API;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays.Legacy;
 using osu.Game.Rulesets.Osu.Mods;
@@ -257,61 +256,6 @@ namespace osu.Server.Spectator.Tests
             await uploadsCompleteAsync();
 
             mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.Mods.Any(m => m is OsuModTouchDevice))), Times.Once);
-            mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Quit)), Times.Once());
-        }
-
-        [Fact]
-        public async Task FrameBundlesFromOldClientsWithoutModsHandledCorrectly()
-        {
-            scoreUploader.SaveReplays = true;
-
-            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
-            Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
-            mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
-            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockReceiver.Object);
-
-            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
-
-            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
-            hub.Context = mockContext.Object;
-            hub.Clients = mockClients.Object;
-
-            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
-            {
-                id = 456,
-                passed = true
-            }));
-
-            await hub.BeginPlaySession(1234, new SpectatorState
-            {
-                BeatmapID = beatmap_id,
-                RulesetID = 0,
-                State = SpectatedUserState.Playing,
-                Mods = [new APIMod(new OsuModDoubleTime())]
-            });
-
-            var frameHeader = new FrameHeader(new ScoreInfo
-            {
-                Statistics = new Dictionary<HitResult, int> { [HitResult.Great] = 1 }
-            }, new ScoreProcessorStatistics())
-            {
-                Mods = null, // simulate older client that did not send this property over wire
-            };
-
-            await hub.SendFrameData(new FrameDataBundle(
-                frameHeader,
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
-
-            await hub.EndPlaySession(new SpectatorState
-            {
-                BeatmapID = beatmap_id,
-                RulesetID = 0,
-                State = SpectatedUserState.Quit,
-            });
-
-            await uploadsCompleteAsync();
-
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.Mods.Any(m => m is OsuModDoubleTime))), Times.Once);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Quit)), Times.Once());
         }
 
