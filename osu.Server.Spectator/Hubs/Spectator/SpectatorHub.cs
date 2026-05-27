@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Database;
+using osu.Game.Extensions;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Scoring;
@@ -130,11 +131,18 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 score.ScoreInfo.MaxCombo = data.Header.MaxCombo;
                 score.ScoreInfo.Combo = data.Header.Combo;
                 score.ScoreInfo.TotalScore = data.Header.TotalScore;
+                score.ScoreInfo.APIMods = data.Header.Mods;
 
-                // null here means the frame bundle is from an old client that can't send mod data
-                // can be removed (along with making property non-nullable on `FrameDataBundle`) 20250407
-                if (data.Header.Mods != null)
-                    score.ScoreInfo.APIMods = data.Header.Mods;
+                // handle frame bundles from old clients that don't send both of these properties
+                // null checks can be elided when property is made non-nullable on `FrameDataBundle` 20261126
+                if (data.Header.TotalScoreWithoutMods != null)
+                    score.ScoreInfo.TotalScoreWithoutMods = data.Header.TotalScoreWithoutMods.Value;
+
+                if (data.Header.Pauses != null)
+                {
+                    score.ScoreInfo.Pauses.Clear();
+                    score.ScoreInfo.Pauses.AddRange(data.Header.Pauses);
+                }
 
                 score.Replay.Frames.AddRange(data.Frames);
 
