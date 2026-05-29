@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Matchmaking;
+using osu.Game.Online.Matchmaking.Requests;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Tests.Multiplayer;
 using Xunit;
@@ -166,6 +167,42 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             User2Receiver.Verify(u => u.MatchmakingRoomReady(It.IsAny<long>(), It.IsAny<string>()), Times.Never);
             User2Receiver.Verify(u => u.MatchmakingQueueJoined(), Times.Once);
             User2Receiver.Verify(u => u.MatchmakingQueueLeft(), Times.Once);
+        }
+
+        [Fact]
+        public async Task CancelledDuelDoesNotRequeue()
+        {
+            Guid duelId = Guid.NewGuid();
+
+            User2Receiver.Setup(u => u.MatchmakingDuelIssued(It.IsAny<MatchmakingDuelIssuedParams>()))
+                         .Callback<MatchmakingDuelIssuedParams>(p => duelId = p.Id);
+
+            await MatchmakingBackgroundService.IssueDuelAsync(UserStates.GetEntityUnsafe(USER_ID)!, new MatchmakingIssueDuelRequest
+            {
+                PoolId = 1,
+                UserId = USER_ID_2
+            });
+
+            User2Receiver.Verify(u => u.MatchmakingDuelIssued(It.IsAny<MatchmakingDuelIssuedParams>()), Times.Once);
+
+            SetUserContext(ContextUser2);
+
+            await MatchmakingBackgroundService.AcceptDuelAsync(UserStates.GetEntityUnsafe(USER_ID_2)!, new MatchmakingAcceptDuelRequest
+            {
+                Id = duelId
+            });
+
+            await MatchmakingBackgroundService.ExecuteOnceAsync();
+
+            UserReceiver.Verify(u => u.MatchmakingRoomInvitedWithParams(It.IsAny<MatchmakingRoomInvitationParams>()), Times.Once);
+            User2Receiver.Verify(u => u.MatchmakingRoomInvitedWithParams(It.IsAny<MatchmakingRoomInvitationParams>()), Times.Once);
+
+            SetUserContext(ContextUser);
+            User2Receiver.Invocations.Clear();
+
+            await MatchmakingBackgroundService.DeclineInvitationAsync(UserStates.GetEntityUnsafe(USER_ID)!);
+
+            User2Receiver.Verify(u => u.MatchmakingQueueStatusChanged(It.IsAny<MatchmakingQueueStatus.Searching>()), Times.Never);
         }
     }
 }

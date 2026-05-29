@@ -43,6 +43,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public int Top100Rating { get; set; } = 99999;
 
         /// <summary>
+        /// Whether to requeue users when a player declines the queue invitation.
+        /// </summary>
+        public bool RequeueOnDecline { get; set; } = true;
+
+        /// <summary>
         /// All users active in the matchmaking queue.
         /// </summary>
         private readonly HashSet<MatchmakingQueueUser> matchmakingUsers = new HashSet<MatchmakingQueueUser>();
@@ -341,15 +346,28 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     bundle.RecycledGroups.Add(group.Key!);
 
-                    foreach (var user in group.Key!.Users)
+                    if (RequeueOnDecline)
                     {
-                        if (!matchmakingUsers.Contains(user))
-                            continue;
+                        foreach (var user in group.Key!.Users)
+                        {
+                            if (!matchmakingUsers.Contains(user))
+                                continue;
 
-                        user.Group = null;
-                        user.InviteAccepted = false;
+                            user.Group = null;
+                            user.InviteAccepted = false;
 
-                        bundle.AddedUsers.Add(user);
+                            bundle.AddedUsers.Add(user);
+                        }
+                    }
+                    else
+                    {
+                        foreach (var user in group.Key!.Users)
+                        {
+                            if (!matchmakingUsers.Remove(user))
+                                continue;
+
+                            bundle.RemovedUsers.Add(user);
+                        }
                     }
                 }
             }
