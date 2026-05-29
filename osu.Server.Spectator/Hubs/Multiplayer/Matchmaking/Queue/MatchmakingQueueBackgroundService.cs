@@ -496,8 +496,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
                 {
-                    roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, databaseFactory, eventDispatcher, loggerFactory, bundle.Queue.Pool,
+                    ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, databaseFactory, eventDispatcher, loggerFactory, bundle.Queue.Pool,
                         group.Users, beatmapSelector, this);
+
+                    await room.SetEndDateAsync(DateTimeOffset.Now + TimeSpan.FromMinutes(5));
+
+                    roomUsage.Item = room;
                 }
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, roomPassword);
