@@ -205,11 +205,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 if (!pool.active)
                     throw new InvalidStateException("The selected matchmaking pool is no longer active.");
 
-                // The user is added to the queue before the queue is added to the dictionary
-                // so that the periodic update doesn't discard the queue due to a lack of users.
-                MatchmakingQueue queue = new MatchmakingQueue(pool) { SearchTimeout = TimeSpan.FromMinutes(5) };
+                MatchmakingQueue queue = new MatchmakingQueue(pool)
+                {
+                    SearchTimeout = TimeSpan.FromMinutes(5),
+                    RequeueOnDecline = false
+                };
+
                 MatchmakingQueueUser user = await createUserAsync(state, pool);
                 user.BanEndTime = DateTimeOffset.MinValue;
+
+                // The user is added to the queue before the queue is added to the dictionary
+                // so that the periodic update doesn't discard the queue due to a lack of users.
                 MatchmakingQueueUpdateBundle updateBundle = queue.Add(user);
 
                 Guid duelGuid = Guid.NewGuid();
