@@ -404,8 +404,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)
         {
-            foreach (var user in bundle.DeclinedUsers)
-                BanUser(user.UserId, TimeSpan.FromMinutes(1));
+            if (bundle.Queue.Pool.ranked)
+            {
+                foreach (var user in bundle.DeclinedUsers)
+                    BanUser(user.UserId, TimeSpan.FromMinutes(1));
+            }
 
             foreach (var user in bundle.RemovedUsers)
                 await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueLeft));
