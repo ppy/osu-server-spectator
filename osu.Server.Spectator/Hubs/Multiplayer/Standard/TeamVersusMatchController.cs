@@ -96,15 +96,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
         protected override int GetNextBestSlot(MultiplayerRoomUser user, int?[] slots)
         {
-            if (user.MatchState is not TeamVersusUserState userState)
-                return base.GetNextBestSlot(user, slots);
+            if (user.MatchState is TeamVersusUserState userState)
+            {
+                int teamSize = slots.Length / State.Teams.Count;
+                int teamStartIndex = userState.TeamID * teamSize;
 
-            int teamSize = slots.Length / State.Teams.Count;
-            int teamStartIndex = userState.TeamID * teamSize;
-
-            int nextEmptySlotInTeam = Array.FindIndex(slots, teamStartIndex, teamSize, item => item == null);
-            if (nextEmptySlotInTeam > 0)
-                return nextEmptySlotInTeam;
+                int nextEmptySlotInTeam = Array.FindIndex(slots, teamStartIndex, teamSize, item => item == null);
+                if (nextEmptySlotInTeam > 0)
+                    return nextEmptySlotInTeam;
+            }
 
             return base.GetNextBestSlot(user, slots);
         }

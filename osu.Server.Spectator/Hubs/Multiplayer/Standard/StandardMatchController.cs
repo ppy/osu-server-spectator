@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -167,24 +168,29 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
 
         private bool updateSlotsFromSettings()
         {
-            // participant limit has been unset, no slots in state => nothing to do
-            if (room.Settings.MaxParticipants == null && State.Slots == null)
-                return false;
-
-            // participant limit has been unset, slots in state => discard slots
-            if (room.Settings.MaxParticipants == null && State.Slots != null)
+            // participant limit has been unset
+            if (room.Settings.MaxParticipants == null)
             {
-                State.Slots = null;
-                return true;
+                // no slots in state => nothing to do
+                if (State.Slots == null)
+                    return false;
+
+                // slots in state => discard slots
+                if (State.Slots != null)
+                {
+                    State.Slots = null;
+                    return true;
+                }
             }
 
-            // at this point max participants are guaranteed to be not null
+            // by this point it is guaranteed that a participant limit has been set
+            Debug.Assert(room.Settings.MaxParticipants != null);
 
             if (room.Settings.MaxParticipants < room.Users.Count)
                 throw new InvalidStateException("There are more players currently in the room than your new requested max participant limit. Please kick some players first.");
 
-            // participant limit has been set, no slots in state => initialise slots
-            if (room.Settings.MaxParticipants != null && State.Slots == null)
+            // no slots in state => initialise slots
+            if (State.Slots == null)
             {
                 State.Slots = new int?[room.Settings.MaxParticipants.Value];
 
@@ -198,8 +204,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 return true;
             }
 
-            // participant limit has been set, slots in state
-            if (room.Settings.MaxParticipants != null && State.Slots != null)
+            // slots in state
+            if (State.Slots != null)
             {
                 // no change in slot count => nothing to do
                 if (room.Settings.MaxParticipants.Value == State.Slots.Length)
@@ -216,27 +222,28 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                 }
 
                 // slot count decreased => move users around from removed slots into previously-empty slots
-                for (int i = 0; i < State.Slots.Length; i++)
+                int i;
+
+                for (i = 0; i < State.Slots.Length; ++i)
                 {
                     if (oldSlots[i] != null)
-                    {
                         State.Slots[i] = oldSlots[i];
-                        oldSlots[i] = null;
-                    }
-                    else
-                    {
-                        int removedSlotWithUser = Array.FindIndex(oldSlots, State.Slots.Length, j => j != null);
-
-                        if (removedSlotWithUser > 0)
-                        {
-                            State.Slots[i] = oldSlots[removedSlotWithUser];
-                            oldSlots[removedSlotWithUser] = null;
-                        }
-                    }
                 }
 
-                if (oldSlots.Any(j => j != null))
-                    throw new InvalidOperationException("Dropped a user when attempting to update slots!");
+                for (i = State.Slots.Length; i < oldSlots.Length; ++i)
+                {
+                    int? userId = oldSlots[i];
+
+                    if (userId == null)
+                        continue;
+
+                    var user = room.Users.SingleOrDefault(u => u.UserID == userId.Value);
+                    if (user == null)
+                        continue;
+
+                    int newSlot = GetNextBestSlot(user, State.Slots);
+                    State.Slots[newSlot] = user.UserID;
+                }
 
                 return true;
             }
