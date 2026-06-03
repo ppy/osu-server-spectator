@@ -149,14 +149,15 @@ namespace osu.Server.Spectator.Database
         {
             var connection = await getConnectionAsync();
 
-            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name, password = @Password, type = @MatchType, queue_mode = @QueueMode WHERE id = @RoomID", new
+            await connection.ExecuteAsync("UPDATE multiplayer_rooms SET name = @Name, password = @Password, type = @MatchType, queue_mode = @QueueMode, max_participants = @MaxParticipants WHERE id = @RoomID", new
             {
                 RoomID = room.RoomID,
                 Name = room.Settings.Name,
                 Password = room.Settings.Password,
                 // needs ToString() to store as enums correctly, see https://github.com/DapperLib/Dapper/issues/813.
                 MatchType = room.Settings.MatchType.ToDatabaseMatchType().ToString(),
-                QueueMode = room.Settings.QueueMode.ToDatabaseQueueMode().ToString()
+                QueueMode = room.Settings.QueueMode.ToDatabaseQueueMode().ToString(),
+                MaxParticipants = room.Settings.MaxParticipants
             });
         }
 

@@ -19,6 +19,9 @@ namespace osu.Server.Spectator.Database.Models
 
         [JsonProperty("teams")]
         public Dictionary<int, room_team>? teams { get; set; }
+
+        [JsonProperty("slots")]
+        public Dictionary<int, byte>? slots { get; set; }
     }
 
     /// <remarks>

@@ -16,33 +16,29 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
     {
         private readonly ServerMultiplayerRoom room;
         private readonly MultiplayerEventDispatcher eventDispatcher;
-        private readonly TeamVersusRoomState state;
+
+        protected new TeamVersusRoomState State => (TeamVersusRoomState)base.State;
 
         public TeamVersusMatchController(ServerMultiplayerRoom room, IDatabaseFactory dbFactory, MultiplayerEventDispatcher eventDispatcher)
             : base(room, dbFactory, eventDispatcher)
         {
             this.room = room;
             this.eventDispatcher = eventDispatcher;
-
-            room.MatchState = state = TeamVersusRoomState.CreateDefault();
         }
 
-        public override async Task Initialise()
-        {
-            await base.Initialise();
-
-            await eventDispatcher.PostMatchRoomStateChangedAsync(room);
-        }
+        protected override StandardMatchRoomState CreateRoomState() => TeamVersusRoomState.CreateDefault();
 
         public override async Task HandleUserJoined(MultiplayerRoomUser user)
         {
+            if (user.Role != MultiplayerRoomUserRole.Referee)
+            {
+                user.MatchState = new TeamVersusUserState { TeamID = getBestAvailableTeam() };
+                await eventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
+            }
+
+            // ordering is important here - we want to have the user in a team already
+            // so that `GetNextBestSlot()` can work as expected
             await base.HandleUserJoined(user);
-
-            if (user.Role == MultiplayerRoomUserRole.Referee)
-                return;
-
-            user.MatchState = new TeamVersusUserState { TeamID = getBestAvailableTeam() };
-            await eventDispatcher.PostMatchUserStateChangedAsync(room.RoomID, user.UserID, user.MatchState);
         }
 
         public override async Task HandleUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
@@ -52,18 +48,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             switch (request)
             {
                 case ChangeTeamRequest changeTeam:
-                    if (state.Locked)
+                    if (State.Locked)
                         throw new InvalidStateException("Teams are currently locked.");
 
                     await ChangeUserTeam(user, changeTeam.TeamID);
-                    break;
-
-                case SetLockStateRequest setRoomLock:
-                    if (state.Locked == setRoomLock.Locked)
-                        break;
-
-                    state.Locked = setRoomLock.Locked;
-                    await eventDispatcher.PostMatchRoomStateChangedAsync(room);
                     break;
             }
         }
@@ -74,7 +62,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         /// </summary>
         public async Task ChangeUserTeam(MultiplayerRoomUser user, int newTeamId)
         {
-            if (state.Teams.All(t => t.ID != newTeamId))
+            if (State.Teams.All(t => t.ID != newTeamId))
                 throw new InvalidStateException("Attempted to set team out of valid range");
 
             if (user.Role == MultiplayerRoomUserRole.Referee)
@@ -92,7 +80,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         private int getBestAvailableTeam()
         {
             // initially check for any teams which don't yet have players, but are lower than TeamCount.
-            foreach (var team in state.Teams)
+            foreach (var team in State.Teams)
             {
                 if (room.Users.All(u => (u.MatchState as TeamVersusUserState)?.TeamID != team.ID))
                     return team.ID;
@@ -106,8 +94,25 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
             return countsByTeams.First().Key ?? 0;
         }
 
+        protected override int GetNextBestSlot(MultiplayerRoomUser user, int?[] slots)
+        {
+            if (user.MatchState is TeamVersusUserState userState)
+            {
+                int teamSize = slots.Length / State.Teams.Count;
+                int teamStartIndex = userState.TeamID * teamSize;
+
+                int nextEmptySlotInTeam = Array.FindIndex(slots, teamStartIndex, teamSize, item => item == null);
+                if (nextEmptySlotInTeam > 0)
+                    return nextEmptySlotInTeam;
+            }
+
+            return base.GetNextBestSlot(user, slots);
+        }
+
         public override MatchStartedEventDetail GetMatchDetails()
         {
+            var details = base.GetMatchDetails();
+
             var teams = new Dictionary<int, room_team>();
 
             foreach (var user in room.Users)
@@ -116,11 +121,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
                     teams[user.UserID] = (room_team)userState.TeamID;
             }
 
-            return new MatchStartedEventDetail
-            {
-                room_type = database_match_type.team_versus,
-                teams = teams
-            };
+            details.teams = teams;
+            return details;
         }
     }
 }

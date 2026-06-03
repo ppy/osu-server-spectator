@@ -99,7 +99,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     MatchType = databaseRoom.type.ToMatchType(),
                     QueueMode = databaseRoom.queue_mode.ToQueueMode(),
                     AutoStartDuration = TimeSpan.FromSeconds(databaseRoom.auto_start_duration),
-                    AutoSkip = databaseRoom.auto_skip
+                    AutoSkip = databaseRoom.auto_skip,
+                    MaxParticipants = databaseRoom.max_participants,
                 };
 
                 foreach (var item in await db.GetAllPlaylistItemsAsync(roomId))
@@ -277,6 +278,15 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             if (newSettings.MatchType == MatchType.Playlists)
                 throw new InvalidStateException("Invalid match type selected.");
+
+            if (newSettings.MaxParticipants != null)
+            {
+                if (newSettings.MaxParticipants < 2 || newSettings.MaxParticipants > 16)
+                    throw new InvalidStateException("Max participants must be between 2 and 16.");
+
+                if (newSettings.MaxParticipants < Users.Count)
+                    throw new InvalidStateException("There are more players currently in the room than your new requested max participant limit. Please kick some players first.");
+            }
 
             try
             {
