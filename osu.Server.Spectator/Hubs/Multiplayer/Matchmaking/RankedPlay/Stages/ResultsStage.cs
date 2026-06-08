@@ -70,8 +70,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 info.DamageInfo = Controller.Damage(userId);
             }
 
-            int winningTotalScore = (int)scores.Select(s => s.total_score).Max();
-            SoloScore[] winningScores = scores.Where(u => u.total_score == winningTotalScore).ToArray();
+            int winningTotalScore = (int)scores.Select(s => s.TotalScoreWithoutMods).Max();
+            SoloScore[] winningScores = scores.Where(u => u.TotalScoreWithoutMods == winningTotalScore).ToArray();
             winningUserId = winningScores.Length == 1 ? (int)winningScores.Single().user_id : null;
 
             if (winningUserId != null)
@@ -79,7 +79,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 // Winner: losing player takes damage.
                 SoloScore losingScore = scores.Single(u => u.user_id != winningUserId);
 
-                int attackDamage = winningTotalScore - (int)losingScore.total_score;
+                int attackDamage = winningTotalScore - (int)losingScore.TotalScoreWithoutMods;
                 double attackMultiplier = State.DamageMultiplier + State.Users[winningUserId.Value].DamageMultiplier;
 
                 State.Users[(int)losingScore.user_id].DamageInfo = Controller.Damage((int)losingScore.user_id, attackDamage, attackMultiplier, BaseDamage);
@@ -92,7 +92,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                     Controller.Pool.id,
                     Room.CurrentPlaylistItem.BeatmapID,
                     Room.CurrentPlaylistItem.RequiredMods.ToArray(),
-                    scores.Select(s => (int)s.total_score).ToArray(),
+                    scores.Select(s => (int)s.TotalScoreWithoutMods).ToArray(),
                     scores.Select(s => Controller.RatingByUser[(int)s.user_id]).ToArray());
             }
 

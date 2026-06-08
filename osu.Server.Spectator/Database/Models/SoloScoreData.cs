@@ -20,5 +20,8 @@ namespace osu.Server.Spectator.Database.Models
 
         [JsonProperty("maximum_statistics")]
         public Dictionary<HitResult, int> MaximumStatistics { get; set; } = new Dictionary<HitResult, int>();
+
+        [JsonProperty("total_score_without_mods")]
+        public long? TotalScoreWithoutMods { get; set; }
     }
 }

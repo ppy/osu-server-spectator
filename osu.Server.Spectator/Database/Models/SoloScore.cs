@@ -69,6 +69,7 @@ namespace osu.Server.Spectator.Database.Models
             BuildID = build_id,
             Passed = passed,
             TotalScore = total_score,
+            TotalScoreWithoutMods = ScoreData.TotalScoreWithoutMods ?? 0,
             Accuracy = accuracy,
             UserID = (int)user_id,
             MaxCombo = (int)max_combo,
@@ -84,5 +85,7 @@ namespace osu.Server.Spectator.Database.Models
             PP = pp,
             HasReplay = has_replay
         };
+
+        public long TotalScoreWithoutMods => ScoreData.TotalScoreWithoutMods ?? total_score;
     }
 }
