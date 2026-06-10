@@ -159,12 +159,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             const double rating_sig = 100;
             HashSet<matchmaking_pool_beatmap> maps = [];
 
-            foreach (double[] sample in randomNumberSamples(count, userRatingMu, rating_sig))
+            foreach (double rating in randomNumberSamples(count, userRatingMu, rating_sig))
             {
                 // Could optimize with binary search?
                 var map = beatmaps.Values
                                   .Where(b => !maps.Contains(b))
-                                  .MaxBy(b => getBeatmapFitnessScore(b, sample, userRatingMu));
+                                  .MinBy(b => getBeatmapFitnessScore(b, rating, userRatingMu));
 
                 if (map == null)
                     break; // happens when more maps are requested than are available
@@ -175,20 +175,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             return maps.ToArray();
         }
 
-        private static double getBeatmapFitnessScore(matchmaking_pool_beatmap b, double[] target, double poolrating)
+        private static double getBeatmapFitnessScore(matchmaking_pool_beatmap b, double target, double poolrating)
         {
-            double dynamic_part = Math.Abs(b.rating - target[0]);
-            // a small random offset is added to reduce the problem of maps getting picked more due to relatively bigger map gaps in SR 
-            double static_part = Math.Abs(getInitialRating(b.difficultyrating+0.01*Random.Shared.NextDouble()-0.005) - target[1]);
-            double static_weight = 1/(1+Math.Exp((poolrating-1500)/200));
-            return 1/Math.Sqrt(Math.Pow(dynamic_part,2)+Math.Pow(static_part*static_weight,2));
+            double dynamic_weight = 1 / (1 + Math.Exp( -(poolrating - 1500) / 100));
+            double adjusted_target = dynamic_weight * target + (1-dynamic_weight) * getInitialRating(b.difficultyrating);
+            return Math.Abs(b.rating - adjusted_target);
         }
 
-        private static IEnumerable<double[]> randomNumberSamples(int n, double mu, double sigma)
+        private static IEnumerable<double> randomNumberSamples(int n, double mu, double sigma)
         {
-            return Enumerable.Range(0, (int)Math.Ceiling((double)n))
-                             .Select(_ => boxMuller())
-                             .Select(p => (double[])[mu + sigma * p[0], mu + sigma * p[1]]);
+            return Enumerable.Range(0, (int)Math.Ceiling((double)n / 2))
+                             .SelectMany(_ => boxMuller())
+                             .Select(x => mu + sigma * x);
         }
 
         // The Box–Muller transform [..] is a random number sampling method for generating pairs of
