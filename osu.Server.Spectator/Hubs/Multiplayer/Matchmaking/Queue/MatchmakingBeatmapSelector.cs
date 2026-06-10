@@ -175,8 +175,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private static double getBeatmapFitnessScore(matchmaking_pool_beatmap b, double target, double poolrating)
         {
             double dynamic_weight = 1 / (1 + Math.Exp( -(poolrating - 1500) / 100));
-            double adjusted_target = dynamic_weight * target + (1-dynamic_weight) * getInitialRating(b.difficultyrating);
-            return Math.Abs(b.rating - adjusted_target);
+            double adjusted_rating = dynamic_weight * b.rating + (1-dynamic_weight) * getInitialRating(b.difficultyrating);
+            return Math.Abs(target - adjusted_rating);
         }
 
         private static IEnumerable<double> randomNumberSamples(int n, double mu, double sigma)
