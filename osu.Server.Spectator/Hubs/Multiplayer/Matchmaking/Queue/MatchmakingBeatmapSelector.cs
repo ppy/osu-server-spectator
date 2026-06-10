@@ -41,7 +41,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private static double getInitialRating(double difficultyrating)
         {
-            return Math.Round(800 + 500 * (Math.Exp(0.16 * difficultyrating) - 1));
+            return 800 + 500 * (Math.Exp(0.16 * difficultyrating) - 1);
         }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         playmode = b.playmode,
                         checksum = b.checksum,
                         difficultyrating = b.difficultyrating,
-                        rating = (int) getInitialRating(b.difficultyrating),
+                        rating = (int) Math.Round(getInitialRating(b.difficultyrating)),
                     })
                     .ToDictionary(b => b.beatmap_id, b => b);
 

@@ -67,16 +67,14 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     beatmap_id = i,
-                    rating = 1000 + i,
-                    difficultyrating = Math.Log((1000 + i - 800) / 500 + 1) / 0.16
+                    difficultyrating = Math.Log((1000 + i - 800) / 500 + 1) / 0.16,
                 }).ToArray(), new Mock<IDatabaseFactory>().Object);
 
             matchmaking_pool_beatmap[] result = beatmapSelector.GetAppropriateBeatmaps(50, [new EloRating(1500, 80)]);
             int countEasy = result.Count(b => b.rating < 1500);
             int countHard = result.Count(b => b.rating > 1500);
             Assert.Equal(50, result.Length);
-            Assert.True((double)countEasy / result.Length >= 0.25);
-            Assert.True((double)countHard / result.Length >= 0.25);
+            Assert.InRange(result.Average(b => b.rating), 1450, 1550);
         }
 
         [Fact]
