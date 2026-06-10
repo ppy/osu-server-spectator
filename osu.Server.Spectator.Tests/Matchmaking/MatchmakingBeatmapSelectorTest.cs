@@ -23,6 +23,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 {
                     beatmap_id = i,
                     rating = 1000,
+                    difficultyrating = 3
                 }).ToArray(), new Mock<IDatabaseFactory>().Object);
 
             matchmaking_pool_beatmap[] result = beatmapSelector.GetAppropriateBeatmaps(50, [new EloRating(1500, 80)]);
@@ -37,6 +38,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 {
                     beatmap_id = i,
                     rating = 1500,
+                    difficultyrating = 5
                 }).ToArray(), new Mock<IDatabaseFactory>().Object);
 
             matchmaking_pool_beatmap[] result = beatmapSelector.GetAppropriateBeatmaps(50, [new EloRating(1500, 80)]);
@@ -51,6 +53,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 {
                     beatmap_id = i,
                     rating = 2000,
+                    difficultyrating = 7
                 }).ToArray(), new Mock<IDatabaseFactory>().Object);
 
             matchmaking_pool_beatmap[] result = beatmapSelector.GetAppropriateBeatmaps(50, [new EloRating(1500, 80)]);
@@ -65,6 +68,7 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 {
                     beatmap_id = i,
                     rating = 1000 + i,
+                    difficultyrating = Math.Log(1000 + i - 800 / 500 +1) / 0.16
                 }).ToArray(), new Mock<IDatabaseFactory>().Object);
 
             matchmaking_pool_beatmap[] result = beatmapSelector.GetAppropriateBeatmaps(50, [new EloRating(1500, 80)]);

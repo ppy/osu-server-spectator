@@ -63,7 +63,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         playmode = b.playmode,
                         checksum = b.checksum,
                         difficultyrating = b.difficultyrating,
-                        rating = (int)getInitialRating(b.difficultyrating),
+                        rating = (int) getInitialRating(b.difficultyrating),
                     })
                     .ToDictionary(b => b.beatmap_id, b => b);
 
