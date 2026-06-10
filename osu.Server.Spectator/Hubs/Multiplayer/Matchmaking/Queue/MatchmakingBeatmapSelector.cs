@@ -186,6 +186,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
             return Enumerable.Range(0, (int)Math.Ceiling((double)n / 2))
                              .SelectMany(_ => boxMuller())
+                             .Take(n)
                              .Select(x => mu + sigma * x);
         }
 
