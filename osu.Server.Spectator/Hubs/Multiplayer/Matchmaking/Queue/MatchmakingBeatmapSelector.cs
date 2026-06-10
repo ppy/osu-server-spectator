@@ -6,8 +6,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Markdig.Extensions.Yaml;
 using OpenSkillSharp.Models;
 using OpenSkillSharp.Rating;
+using Org.BouncyCastle.Asn1.X509;
+using osu.Game.Users.Drawables;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
@@ -39,6 +42,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
         }
 
+        private static double getInitialRating(double difficultyrating)
+        {
+            return Math.Round(800 + 500 * (Math.Exp(0.16 * difficultyrating) - 1));
+        }
+
         /// <summary>
         /// Creates a new <see cref="MatchmakingBeatmapSelector"/>.
         /// </summary>
@@ -58,7 +66,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         playmode = b.playmode,
                         checksum = b.checksum,
                         difficultyrating = b.difficultyrating,
-                        rating = (int)Math.Round(800 + 500 * (Math.Exp(0.16 * b.difficultyrating) - 1)),
+                        rating = (int)getInitialRating(b.difficultyrating),
                     })
                     .ToDictionary(b => b.beatmap_id, b => b);
 
@@ -149,15 +157,14 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             double userRatingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
 
             const double rating_sig = 100;
-
             HashSet<matchmaking_pool_beatmap> maps = [];
 
-            foreach (double rating in randomNumberSamples(count, userRatingMu, rating_sig))
+            foreach (double[] sample in randomNumberSamples(count, userRatingMu, rating_sig))
             {
                 // Could optimize with binary search?
                 var map = beatmaps.Values
                                   .Where(b => !maps.Contains(b))
-                                  .MinBy(b => Math.Abs(b.rating - rating));
+                                  .MaxBy(b => getBeatmapFitnessScore(b, sample, userRatingMu));
 
                 if (map == null)
                     break; // happens when more maps are requested than are available
@@ -168,12 +175,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             return maps.ToArray();
         }
 
-        private static IEnumerable<double> randomNumberSamples(int n, double mu, double sigma)
+        private static double getBeatmapFitnessScore(matchmaking_pool_beatmap b, double[] target, double poolrating)
         {
-            return Enumerable.Range(0, (int)Math.Ceiling((double)n / 2))
-                             .SelectMany(_ => boxMuller())
-                             .Take(n) // Box-Muller returns pairs of numbers, only take as many as we need
-                             .Select(x => mu + sigma * x);
+            double dynamic_part = Math.Abs(b.rating - target[0]);
+            // a small random offset is added to reduce the problem of maps getting picked more due to relatively bigger map gaps in SR 
+            double static_part = Math.Abs(getInitialRating(b.difficultyrating+0.01*Random.Shared.NextDouble()-0.005) - target[1]);
+            double static_weight = 1/(1+Math.Exp((poolrating-1500)/200));
+            return 1/Math.Sqrt(Math.Pow(dynamic_part,2)+Math.Pow(static_part*static_weight,2));
+        }
+
+        private static IEnumerable<double[]> randomNumberSamples(int n, double mu, double sigma)
+        {
+            return Enumerable.Range(0, (int)Math.Ceiling((double)n))
+                             .Select(_ => boxMuller())
+                             .Select(p => (double[])[mu + sigma * p[0], mu + sigma * p[1]]);
         }
 
         // The Box–Muller transform [..] is a random number sampling method for generating pairs of
