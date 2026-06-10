@@ -22,7 +22,6 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     beatmap_id = i,
-                    rating = 1000,
                     difficultyrating = 3
                 }).ToArray(), new Mock<IDatabaseFactory>().Object);
 
@@ -37,7 +36,6 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     beatmap_id = i,
-                    rating = 1500,
                     difficultyrating = 5
                 }).ToArray(), new Mock<IDatabaseFactory>().Object);
 
@@ -52,7 +50,6 @@ namespace osu.Server.Spectator.Tests.Matchmaking
                 Enumerable.Range(1, 1000).Select(i => new matchmaking_pool_beatmap
                 {
                     beatmap_id = i,
-                    rating = 2000,
                     difficultyrating = 7
                 }).ToArray(), new Mock<IDatabaseFactory>().Object);
 
