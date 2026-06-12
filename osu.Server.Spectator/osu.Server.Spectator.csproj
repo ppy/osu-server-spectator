@@ -6,15 +6,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AWSSDK.S3" Version="4.0.19" />
+        <PackageReference Include="AWSSDK.S3" Version="4.0.24.3" />
         <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
-        <PackageReference Include="Dapper" Version="2.1.72" />
-        <PackageReference Include="DogStatsD-CSharp-Client" Version="9.0.0" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.5" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.5" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="10.0.5" />
+        <PackageReference Include="Dapper" Version="2.1.79" />
+        <PackageReference Include="DogStatsD-CSharp-Client" Version="9.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.9" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.9" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="10.0.9" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
         <PackageReference Include="OpenSkillSharp" Version="1.1.0" />
         <PackageReference Include="ppy.osu.Game" Version="2026.527.0" />
         <PackageReference Include="ppy.osu.Game.Rulesets.Catch" Version="2026.527.0" />
@@ -22,7 +22,7 @@
         <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.527.0" />
         <PackageReference Include="ppy.osu.Game.Rulesets.Taiko" Version="2026.527.0" />
         <PackageReference Include="ppy.osu.Server.OsuQueueProcessor" Version="2026.317.0" />
-        <PackageReference Include="Sentry.AspNetCore" Version="6.2.0" />
+        <PackageReference Include="Sentry.AspNetCore" Version="6.6.0" />
     </ItemGroup>
 
     <ItemGroup>
