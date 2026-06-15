@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using osu.Game.Extensions;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
 using osu.Server.Spectator.Entities;
@@ -71,11 +72,18 @@ namespace osu.Server.Spectator.Hubs
                 buffered.Score.ScoreInfo.MaxCombo = data.Header.MaxCombo;
                 buffered.Score.ScoreInfo.Combo = data.Header.Combo;
                 buffered.Score.ScoreInfo.TotalScore = data.Header.TotalScore;
+                buffered.Score.ScoreInfo.APIMods = data.Header.Mods;
 
-                // null here means the frame bundle is from an old client that can't send mod data
-                // can be removed (along with making property non-nullable on `FrameDataBundle`) 20250407
-                if (data.Header.Mods != null)
-                    buffered.Score.ScoreInfo.APIMods = data.Header.Mods;
+                // handle frame bundles from old clients that don't send both of these properties
+                // null checks can be elided when property is made non-nullable on `FrameDataBundle` 20261126
+                if (data.Header.TotalScoreWithoutMods != null)
+                    buffered.Score.ScoreInfo.TotalScoreWithoutMods = data.Header.TotalScoreWithoutMods.Value;
+
+                if (data.Header.Pauses != null)
+                {
+                    buffered.Score.ScoreInfo.Pauses.Clear();
+                    buffered.Score.ScoreInfo.Pauses.AddRange(data.Header.Pauses);
+                }
 
                 buffered.Score.Replay.Frames.AddRange(data.Frames);
 

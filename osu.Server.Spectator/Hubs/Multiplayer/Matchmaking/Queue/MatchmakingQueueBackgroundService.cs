@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -16,6 +17,7 @@ using osu.Game.Online.Matchmaking;
 using osu.Game.Online.Matchmaking.Requests;
 using osu.Game.Online.Matchmaking.Responses;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
@@ -38,8 +40,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         private static readonly TimeSpan lobby_update_rate = AppSettings.MatchmakingLobbyUpdateRate;
 
         private const string statsd_prefix = "matchmaking";
-        private static string queue_ban_end_time(int userId) => $"matchmaking-ban-end-time:{userId}";
-        private static string last_duel_issue_time(int userId) => $"matchmaking-duel-issue-time:{userId}";
+        private static string queue_ban_expiry(int userId) => $"matchmaking-ban-expiry:{userId}";
+        private static string recent_duel_expiry(int userId) => $"matchmaking-recent-duel-expiry:{userId}";
 
         private readonly ConcurrentDictionary<int, MatchmakingLobby> poolLobbies = new ConcurrentDictionary<int, MatchmakingLobby>();
         private readonly ConcurrentDictionary<int, MatchmakingQueue> poolQueues = new ConcurrentDictionary<int, MatchmakingQueue>();
@@ -82,7 +84,22 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             if (!poolLobbies.TryGetValue(poolId, out MatchmakingLobby? lobby))
                 return Task.CompletedTask;
 
+            if (!poolQueues.TryGetValue(poolId, out MatchmakingQueue? queue))
+                return Task.CompletedTask;
+
             lobby.RecordMatch(status);
+
+            if (status is RankedPlayRoomState rpState)
+            {
+                int[] users = rpState.Users.Keys.ToArray();
+
+                for (int i = 0; i < users.Length; i++)
+                {
+                    for (int j = i + 1; j < users.Length; j++)
+                        queue.MarkRecentMatchup(users[i], users[j]);
+                }
+            }
+
             return Task.CompletedTask;
         }
 
@@ -163,12 +180,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public async Task<MatchmakingIssueDuelResponse> IssueDuelAsync(MultiplayerClientState state, MatchmakingIssueDuelRequest request)
         {
-            DateTimeOffset lastIssueTime = memoryCache.Get<DateTimeOffset?>(last_duel_issue_time(state.UserId)) ?? DateTimeOffset.MinValue;
-
-            if (DateTimeOffset.Now - lastIssueTime < TimeSpan.FromSeconds(30))
+            DateTimeOffset recentDuelExpiry = memoryCache.Get<DateTimeOffset?>(recent_duel_expiry(state.UserId)) ?? DateTimeOffset.MinValue;
+            if (DateTimeOffset.Now < recentDuelExpiry)
                 throw new InvalidStateException("You are requesting too many duels. Slow down.");
 
-            memoryCache.Set(last_duel_issue_time(state.UserId), DateTimeOffset.Now);
+            DateTimeOffset duelExpiry = DateTimeOffset.Now + TimeSpan.FromSeconds(30);
+            memoryCache.Set(recent_duel_expiry(state.UserId), duelExpiry, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpiration = duelExpiry,
+                Priority = CacheItemPriority.NeverRemove
+            });
 
             // Users should only ever be in one queue at a time.
             await RemoveFromQueueAsync(state);
@@ -184,11 +205,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 if (!pool.active)
                     throw new InvalidStateException("The selected matchmaking pool is no longer active.");
 
-                // The user is added to the queue before the queue is added to the dictionary
-                // so that the periodic update doesn't discard the queue due to a lack of users.
-                MatchmakingQueue queue = new MatchmakingQueue(pool) { SearchTimeout = TimeSpan.FromMinutes(5) };
+                MatchmakingQueue queue = new MatchmakingQueue(pool)
+                {
+                    SearchTimeout = TimeSpan.FromMinutes(5),
+                    RequeueOnDecline = false
+                };
+
                 MatchmakingQueueUser user = await createUserAsync(state, pool);
                 user.BanEndTime = DateTimeOffset.MinValue;
+
+                // The user is added to the queue before the queue is added to the dictionary
+                // so that the periodic update doesn't discard the queue due to a lack of users.
                 MatchmakingQueueUpdateBundle updateBundle = queue.Add(user);
 
                 Guid duelGuid = Guid.NewGuid();
@@ -256,8 +283,17 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public void BanUser(int userId, TimeSpan duration)
         {
+            if (!AppSettings.MatchmakingQueueAllowBans)
+                return;
+
             // TODO: we should probably let the players know that they have been penalised.
-            memoryCache.Set(queue_ban_end_time(userId), DateTimeOffset.Now + duration);
+
+            DateTimeOffset expireTime = DateTimeOffset.Now + duration;
+            memoryCache.Set(queue_ban_expiry(userId), expireTime, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpiration = expireTime,
+                Priority = CacheItemPriority.NeverRemove
+            });
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -339,14 +375,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             using (var db = databaseFactory.GetInstance())
             {
                 foreach ((_, MatchmakingQueue queue) in poolQueues)
-                {
-                    matchmaking_pool? newPool = await db.GetMatchmakingPoolAsync(queue.Pool.id);
-
-                    if (newPool?.active != true)
-                        await processBundle(queue.Clear());
-                    else
-                        queue.Refresh(newPool);
-                }
+                    await processBundle(await queue.Refresh(db));
             }
 
             lastQueueRefreshTime = DateTimeOffset.Now;
@@ -375,8 +404,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private async Task processBundle(MatchmakingQueueUpdateBundle bundle)
         {
-            foreach (var user in bundle.DeclinedUsers)
-                BanUser(user.UserId, TimeSpan.FromMinutes(1));
+            if (bundle.Queue.Pool.ranked)
+            {
+                foreach (var user in bundle.DeclinedUsers)
+                    BanUser(user.UserId, TimeSpan.FromMinutes(1));
+            }
 
             foreach (var user in bundle.RemovedUsers)
                 await hub.Clients.Client(user.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingQueueLeft));
@@ -464,8 +496,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 // Initialise the room and users
                 using (var roomUsage = await rooms.GetForUse(roomId, true))
                 {
-                    roomUsage.Item = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, databaseFactory, eventDispatcher, loggerFactory, bundle.Queue.Pool,
+                    ServerMultiplayerRoom room = await ServerMultiplayerRoom.InitialiseMatchmakingRoomAsync(roomId, roomController, databaseFactory, eventDispatcher, loggerFactory, bundle.Queue.Pool,
                         group.Users, beatmapSelector, this);
+
+                    await room.SetEndDateAsync(DateTimeOffset.Now + TimeSpan.FromMinutes(5));
+
+                    roomUsage.Item = room;
                 }
 
                 await hub.Clients.Group(group.Identifier).SendAsync(nameof(IMatchmakingClient.MatchmakingRoomReady), roomId, roomPassword);
@@ -508,7 +544,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     UserId = state.UserId,
                     Rating = stats.EloData.Rating,
-                    BanEndTime = memoryCache.Get<DateTimeOffset?>(queue_ban_end_time(state.UserId)) ?? DateTimeOffset.MinValue
+                    BanEndTime = memoryCache.Get<DateTimeOffset?>(queue_ban_expiry(state.UserId)) ?? DateTimeOffset.MinValue
                 };
             }
         }

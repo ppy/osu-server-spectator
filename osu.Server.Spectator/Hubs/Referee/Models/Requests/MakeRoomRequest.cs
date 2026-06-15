@@ -29,5 +29,15 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Requests
         /// </summary>
         [JsonPropertyName("name")]
         public string RoomName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The maximum number of players in the room.
+        /// <list type="bullet">
+        /// <item>If 0 or missing, the room will allow an unlimited number of participants, but will not have enabled player slots.</item>
+        /// <item>If in the range [2, 256] inclusive, the room will have the given number of slots to be occupied by participants.</item>
+        /// </list>
+        /// </summary>
+        [JsonPropertyName("max_participants")]
+        public byte MaxParticipants { get; set; }
     }
 }

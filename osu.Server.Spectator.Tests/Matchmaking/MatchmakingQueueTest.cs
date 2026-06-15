@@ -217,6 +217,82 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Empty(bundle.DeclinedUsers);
         }
 
+        [Fact]
+        public void CorrectNumberOfUsersMatched()
+        {
+            queue.Pool.lobby_size = 2;
+
+            queue.Add(new MatchmakingQueueUser("1"));
+            queue.Add(new MatchmakingQueueUser("2"));
+            queue.Add(new MatchmakingQueueUser("3"));
+
+            var bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+            Assert.Equal(2, bundle.FormedGroups[0].Users.Length);
+        }
+
+        [Fact]
+        public void Top100MatchesWithTop1()
+        {
+            CustomSystemClock clock = new CustomSystemClock();
+
+            queue.Pool.lobby_size = 2;
+            queue.Pool.rating_search_radius = 20;
+            queue.Pool.rating_search_radius_max = 200;
+            queue.Clock = clock;
+            queue.Top100Rating = 2000;
+
+            queue.Add(new MatchmakingQueueUser("1")
+            {
+                Rating = new EloRating(2600)
+            });
+
+            queue.Add(new MatchmakingQueueUser("2")
+            {
+                Rating = new EloRating(2000)
+            });
+
+            // Maximise search bonus.
+            clock.UtcNow += TimeSpan.FromMinutes(10);
+
+            var bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+        }
+
+        [Fact]
+        public void RecentMatchupsAvoided()
+        {
+            CustomSystemClock clock = new CustomSystemClock();
+
+            queue.Pool.lobby_size = 2;
+            queue.Pool.rating_search_radius = 9999;
+            queue.Clock = clock;
+            queue.RecentMatchupTimeout = TimeSpan.FromMinutes(10);
+
+            queue.Add(new MatchmakingQueueUser("1") { UserId = 1, Rating = new EloRating(1500) });
+            queue.Add(new MatchmakingQueueUser("2") { UserId = 2, Rating = new EloRating(1400) });
+            queue.Add(new MatchmakingQueueUser("3") { UserId = 3, Rating = new EloRating(1300) });
+
+            // Expires at +10m
+            queue.MarkRecentMatchup(1, 2);
+
+            // Expires at +15m
+            clock.UtcNow += TimeSpan.FromMinutes(5);
+            queue.MarkRecentMatchup(1, 3);
+            queue.MarkRecentMatchup(2, 3);
+
+            var bundle = queue.Update();
+            Assert.Empty(bundle.FormedGroups);
+
+            // Expire the first recent matchup.
+            clock.UtcNow += TimeSpan.FromMinutes(6);
+
+            bundle = queue.Update();
+            Assert.Single(bundle.FormedGroups);
+            Assert.NotEqual("3", bundle.FormedGroups[0].Users[0].Identifier);
+            Assert.NotEqual("3", bundle.FormedGroups[0].Users[1].Identifier);
+        }
+
         private class CustomSystemClock : ISystemClock
         {
             public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;

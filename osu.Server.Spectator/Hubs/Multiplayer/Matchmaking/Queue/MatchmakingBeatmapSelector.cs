@@ -98,8 +98,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             {
                 Mu = 1500,
                 Sigma = 150,
-                Beta = 75,
-                Tau = 1.5
+                Beta = 0,
+                Tau = 15.0,
+                Gamma = (_, _, _, _, _, _, _) => 1.0
             };
 
             double clearThreshold = pool.ruleset_id switch
@@ -147,18 +148,45 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             // Pick from maps around the minimum rating.
             double userRatingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
 
-            // Logistic curve that is narrow (50pts) at lower ratings where there are many beatmaps,
-            // and broader (100pts) at higher ratings where there are fewer beatmaps.
-            double ratingSig = 50 + 50 / (1 + Math.Exp(-0.01 * (userRatingMu - 1800)));
+            const double rating_sig = 100;
 
-            return beatmaps.Values.OrderByDescending(b =>
-                           {
-                               // The clamp attempts to ensure all beatmaps are given some chance of being selected.
-                               double weight = Math.Clamp(Math.Exp(-Math.Pow(b.rating - userRatingMu, 2) / (2 * ratingSig * ratingSig)), 1e-6, 1);
-                               return Math.Pow(Random.Shared.NextDouble(), 1.0 / weight);
-                           })
-                           .Take(count)
-                           .ToArray();
+            HashSet<matchmaking_pool_beatmap> maps = [];
+
+            foreach (double rating in randomNumberSamples(count, userRatingMu, rating_sig))
+            {
+                // Could optimize with binary search?
+                var map = beatmaps.Values
+                                  .Where(b => !maps.Contains(b))
+                                  .MinBy(b => Math.Abs(b.rating - rating));
+
+                if (map == null)
+                    break; // happens when more maps are requested than are available
+
+                maps.Add(map);
+            }
+
+            return maps.ToArray();
+        }
+
+        private static IEnumerable<double> randomNumberSamples(int n, double mu, double sigma)
+        {
+            return Enumerable.Range(0, (int)Math.Ceiling((double)n / 2))
+                             .SelectMany(_ => boxMuller())
+                             .Take(n) // Box-Muller returns pairs of numbers, only take as many as we need
+                             .Select(x => mu + sigma * x);
+        }
+
+        // The Box–Muller transform [..] is a random number sampling method for generating pairs of
+        // independent, standard, normally distributed (zero expectation, unit variance) random numbers,
+        // given a source of uniformly distributed random numbers.
+        // https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+        private static double[] boxMuller()
+        {
+            double theta = 2 * Math.PI * Random.Shared.NextDouble();
+            double r = Math.Sqrt(-2 * Math.Log(Random.Shared.NextDouble()));
+            double x = r * Math.Cos(theta);
+            double y = r * Math.Sin(theta);
+            return [x, y];
         }
 
         public readonly record struct BeatmapLookupKey(int BeatmapId, string Mods);

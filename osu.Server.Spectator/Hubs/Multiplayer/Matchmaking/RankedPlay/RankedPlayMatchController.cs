@@ -334,28 +334,30 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         /// Causes a player to take damage.
         /// </summary>
         /// <param name="userId">The user ID of the player taking damage.</param>
-        /// <param name="amount">The amount of damage (before any multipliers are added) to take.</param>
+        /// <param name="directDamage">Direct amount of damage before any multipliers are added.</param>
+        /// <param name="multiplier">A multiplier of <paramref name="directDamage"/>.</param>
+        /// <param name="bonusDamage">Damage dealt for winning a round. Does not scale with <paramref name="multiplier"/>.</param>
         /// <returns>A descriptor for the damage taken.</returns>
-        public RankedPlayDamageInfo Damage(int userId, int amount)
+        public RankedPlayDamageInfo Damage(int userId, int directDamage = 0, double multiplier = 1, int bonusDamage = 0)
         {
             RankedPlayUserInfo userInfo = State.Users[userId];
 
-            int rawDamage = amount;
-            int damage = (int)Math.Ceiling(rawDamage * State.DamageMultiplier);
+            int totalDamage = (int)Math.Ceiling(directDamage * multiplier) + bonusDamage;
 
-            int oldLife = userInfo.Life;
-            // Last-stand mechanic: fatal attacks bring players 1HP first before killing them.
-            int newLife = Math.Max(oldLife <= 1 ? 0 : 1, oldLife - damage);
-
-            userInfo.Life = newLife;
-
-            return new RankedPlayDamageInfo
+            RankedPlayDamageInfo damageInfo = new RankedPlayDamageInfo
             {
-                RawDamage = rawDamage,
-                Damage = damage,
-                OldLife = oldLife,
-                NewLife = newLife,
+                RawDamage = directDamage + bonusDamage,
+                Damage = totalDamage,
+                OldLife = userInfo.Life,
+                NewLife = Math.Max(userInfo.Life == 1_000_000 ? 1 : 0, userInfo.Life - totalDamage),
+                DirectDamage = directDamage,
+                Multiplier = multiplier,
+                BonusDamage = bonusDamage,
             };
+
+            userInfo.Life = damageInfo.NewLife;
+
+            return damageInfo;
         }
 
         public async Task HandleMatchCompleted()
@@ -386,8 +388,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
                     {
                         Mu = 1500,
                         Sigma = 150,
-                        Beta = 75,
-                        Tau = 1.5
+                        Beta = 0,
+                        Tau = 15.0,
+                        Gamma = (_, _, _, _, _, _, _) => 1.0
                     };
 
                     List<matchmaking_user_stats> stats = [];

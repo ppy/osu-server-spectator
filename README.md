@@ -4,7 +4,9 @@ A server that handles incoming and outgoing spectator data, for active players l
 
 # Testing
 
-To deploy this as part of a full osu! server stack deployment, [this wiki page](https://github.com/ppy/osu/wiki/Testing-web-server-full-stack-with-osu!) will serve as a good reference.
+To deploy this as part of a full osu! server stack
+deployment, [this wiki page](https://github.com/ppy/osu/wiki/Testing-web-server-full-stack-with-osu!) will serve as a
+good reference.
 
 ## Environment variables
 
@@ -36,4 +38,6 @@ For advanced testing purposes.
 | `MATCHMAKING_ALLOW_SKIP`             | Whether users are allowed to skip matchmaking stages.                                                                                                                                                                                          | false                           | 
 | `MATCHMAKING_LOBBY_UPDATE_RATE`      | The rate (in seconds) at which to update the matchmaking lobby                                                                                                                                                                                 | 5                               |
 | `MATCHMAKING_QUEUE_UPDATE_RATE`      | The rate (in seconds) at which to update the matchmaking queues                                                                                                                                                                                | 1                               |
+| `MATCHMAKING_RECENT_MATCHUP_TIMEOUT` | The timeout (in seconds) between pairings between two users.                                                                                                                                                                                   | 600                             |
 | `MATCHMAKING_POOL_SIZE`              | The number of beatmaps per matchmaking room.                                                                                                                                                                                                   | 50                              |
+| `MATCHMAKING_QUEUE_ALLOW_BANS`       | Whether to issue bans from the matchmaking queue for various abuse.                                                                                                                                                                            | true                            |

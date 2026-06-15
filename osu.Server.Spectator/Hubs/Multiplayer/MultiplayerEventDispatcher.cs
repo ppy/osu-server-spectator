@@ -526,6 +526,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 PlaylistItemId = playlistItemId,
                 MatchType = (MatchType)details.room_type.ToMatchType(),
                 Teams = details.teams?.ToDictionary(kv => kv.Key, kv => (MatchTeam)kv.Value),
+                Slots = details.slots,
             });
             await logToDatabase(new multiplayer_realtime_room_event
             {

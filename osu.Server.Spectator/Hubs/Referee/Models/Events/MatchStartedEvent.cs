@@ -38,5 +38,14 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
         /// </summary>
         [JsonPropertyName("teams")]
         public Dictionary<int, MatchTeam>? Teams { get; init; }
+
+        /// <summary>
+        /// The current state of slots in the room.
+        /// Keys are user IDs, values are the indices of the slots taken by those users.
+        /// Only applicable if a participant count limit is active.
+        /// </summary>
+        /// <seealso cref="MatchState.Slots"/>
+        [JsonPropertyName("slots")]
+        public Dictionary<int, byte>? Slots { get; init; }
     }
 }

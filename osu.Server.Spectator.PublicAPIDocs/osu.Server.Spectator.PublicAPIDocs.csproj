@@ -15,7 +15,7 @@
       <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
       <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.0.0" PrivateAssets="analyzers;build" />
       <!-- end of pin block -->
-      <PackageReference Include="System.Text.Json" Version="10.0.5" />
+      <PackageReference Include="System.Text.Json" Version="10.0.9" />
     </ItemGroup>
 
     <ItemGroup>

@@ -51,11 +51,17 @@ namespace osu.Server.Spectator
 
         public static TimeSpan MatchmakingLobbyUpdateRate { get; } = TimeSpan.FromSeconds(5);
         public static TimeSpan MatchmakingQueueUpdateRate { get; } = TimeSpan.FromSeconds(1);
+        public static TimeSpan MatchmakingRecentMatchupTimeout { get; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         /// The total number of beatmaps per matchmaking room.
         /// </summary>
         public static int MatchmakingPoolSize { get; } = 50;
+
+        /// <summary>
+        /// Whether to issue bans from the matchmaking queue for various abuse.
+        /// </summary>
+        public static bool MatchmakingQueueAllowBans { get; } = true;
 
         static AppSettings()
         {
@@ -115,9 +121,17 @@ namespace osu.Server.Spectator
                 ? TimeSpan.FromSeconds(mmQueueUpdateRate)
                 : MatchmakingQueueUpdateRate;
 
+            MatchmakingRecentMatchupTimeout = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_RECENT_MATCHUP_TIMEOUT"), out int mmRecentMatchupTimeout)
+                ? TimeSpan.FromSeconds(mmRecentMatchupTimeout)
+                : MatchmakingRecentMatchupTimeout;
+
             MatchmakingPoolSize = int.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_POOL_SIZE"), out int mmPoolSize)
                 ? mmPoolSize
                 : MatchmakingPoolSize;
+
+            MatchmakingQueueAllowBans = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_ALLOW_BANS"), out bool mmQueueAllowBans)
+                ? mmQueueAllowBans
+                : MatchmakingQueueAllowBans;
         }
     }
 }

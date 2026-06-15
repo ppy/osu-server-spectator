@@ -29,7 +29,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
             }
 
             State.CurrentRound++;
-            State.DamageMultiplier = computeDamageMultiplier(State.CurrentRound);
+
+            // Increase tension by increasing the global multiplier.
+            if (State.CurrentRound > 1)
+                State.DamageMultiplier += 0.5;
 
             // Activate the next player.
             // For the first round, this is set during room initialisation.
@@ -47,30 +50,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay.Stages
                 await Controller.GotoStage(RankedPlayStage.CardDiscard);
             else
                 await Controller.GotoStage(RankedPlayStage.CardPlay);
-        }
-
-        /// <summary>
-        /// Retrieves the damage multiplier for a given round.
-        /// </summary>
-        /// <param name="round">The round.</param>
-        private double computeDamageMultiplier(int round)
-        {
-            switch (Controller.Pool.ruleset_id)
-            {
-                // [ 1, 1, 2, 2.5, 3, 3.5, ... ]
-                case 0:
-                    if (round <= 2)
-                        return 1;
-
-                    return 2 + (round - 3) * 0.5;
-
-                // [ 1, 1, 2.5, 3.5, 4.5, 5.5, ... ]
-                default:
-                    if (round <= 2)
-                        return 1;
-
-                    return 2.5 + (round - 3) * 1.0;
-            }
         }
     }
 }

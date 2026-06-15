@@ -4,13 +4,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Internal;
+using osu.Game.Extensions;
+using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
     public class MatchmakingQueue
     {
+        private static string recent_matchup_expiry(int userId, int opponentId) => $"matchmaking-recent-matchup-expiry:{Math.Min(userId, opponentId)}-{Math.Max(userId, opponentId)}";
+
         /// <summary>
         /// The pool for this queue.
         /// </summary>
@@ -27,9 +33,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         public TimeSpan SearchTimeout { get; set; } = TimeSpan.MaxValue;
 
         /// <summary>
-        /// The system clock.
+        /// Controls how often two players may be matched together.
         /// </summary>
-        public ISystemClock Clock { get; set; } = new SystemClock();
+        public TimeSpan RecentMatchupTimeout { get; set; } = AppSettings.MatchmakingRecentMatchupTimeout;
+
+        /// <summary>
+        /// The top-100 player's rating from the pool. This is populated upon the first <see cref="Refresh"/>.
+        /// </summary>
+        public int Top100Rating { get; set; } = 99999;
+
+        /// <summary>
+        /// Whether to requeue users when a player declines the queue invitation.
+        /// </summary>
+        public bool RequeueOnDecline { get; set; } = true;
 
         /// <summary>
         /// All users active in the matchmaking queue.
@@ -40,6 +56,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// Lock for <see cref="matchmakingUsers"/>.
         /// </summary>
         private readonly object queueLock = new object();
+
+        private ISystemClock clock = new SystemClock();
+        private IMemoryCache cache = new MemoryCache(new MemoryCacheOptions());
 
         /// <summary>
         /// A running counter for the next group ID.
@@ -64,13 +83,37 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
+        /// The system clock.
+        /// </summary>
+        public ISystemClock Clock
+        {
+            get => clock;
+            set
+            {
+                clock = value;
+                cache = new MemoryCache(new MemoryCacheOptions { Clock = clock });
+            }
+        }
+
+        /// <summary>
         /// Refreshes this <see cref="MatchmakingQueue"/> with a new pool.
         /// </summary>
-        /// <param name="pool">The new pool.</param>
-        public void Refresh(matchmaking_pool pool)
+        public async Task<MatchmakingQueueUpdateBundle> Refresh(IDatabaseAccess db)
         {
-            lock (queueLock)
-                Pool = pool;
+            matchmaking_pool? newPool = await db.GetMatchmakingPoolAsync(Pool.id);
+
+            if (newPool == null)
+                return Clear();
+
+            Pool = newPool;
+
+            if (!newPool.active)
+                return Clear();
+
+            int[] topRatings = await db.GetMatchmakingPoolTop100RatingsAsync(Pool.id);
+            Top100Rating = topRatings.LastOrDefault();
+
+            return new MatchmakingQueueUpdateBundle(this);
         }
 
         /// <summary>
@@ -204,6 +247,32 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         }
 
         /// <summary>
+        /// Marks a recent matchup between two users.
+        /// </summary>
+        /// <param name="userId">The first user.</param>
+        /// <param name="opponentId">The second user.</param>
+        public void MarkRecentMatchup(int userId, int opponentId)
+        {
+            DateTimeOffset expireTime = Clock.UtcNow + RecentMatchupTimeout;
+            cache.Set(recent_matchup_expiry(userId, opponentId), expireTime, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpiration = expireTime,
+                Priority = CacheItemPriority.NeverRemove
+            });
+        }
+
+        /// <summary>
+        /// Whether there is a recent matchup between two users.
+        /// </summary>
+        /// <param name="userId">The first user.</param>
+        /// <param name="opponentId">The second user.</param>
+        public bool IsRecentMatchup(int userId, int opponentId)
+        {
+            DateTimeOffset expireTime = cache.Get<DateTimeOffset?>(recent_matchup_expiry(userId, opponentId)) ?? DateTimeOffset.MinValue;
+            return expireTime >= Clock.UtcNow;
+        }
+
+        /// <summary>
         /// Performs a single update of the matchmaking queue.
         /// </summary>
         public MatchmakingQueueUpdateBundle Update()
@@ -277,15 +346,28 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 {
                     bundle.RecycledGroups.Add(group.Key!);
 
-                    foreach (var user in group.Key!.Users)
+                    if (RequeueOnDecline)
                     {
-                        if (!matchmakingUsers.Contains(user))
-                            continue;
+                        foreach (var user in group.Key!.Users)
+                        {
+                            if (!matchmakingUsers.Contains(user))
+                                continue;
 
-                        user.Group = null;
-                        user.InviteAccepted = false;
+                            user.Group = null;
+                            user.InviteAccepted = false;
 
-                        bundle.AddedUsers.Add(user);
+                            bundle.AddedUsers.Add(user);
+                        }
+                    }
+                    else
+                    {
+                        foreach (var user in group.Key!.Users)
+                        {
+                            if (!matchmakingUsers.Remove(user))
+                                continue;
+
+                            bundle.RemovedUsers.Add(user);
+                        }
                     }
                 }
             }
@@ -330,45 +412,34 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <returns></returns>
         private HashSet<MatchmakingQueueUser> findMatchesForUser(IReadOnlyList<MatchmakingQueueUser> users, int pivotIndex)
         {
-            const double uncertainty = 0;
-
             // Gradually expand a search from the pivot user until the rating search radius is exhausted.
-
             MatchmakingQueueUser pivotUser = users[pivotIndex];
+
+            // Search bonus based on the user's rating to cover gaps in the rating distribution.
+            double ratingBonus = Math.Exp(Math.Pow((pivotUser.Rating.Mu - 1500) / 750, 2));
+
+            // Search bonus based on how much time the user spent in the queue.
+            TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
+            double searchTimeBonus = Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp);
+
+            // Distance bonus such that top-100 players can always match against each other.
+            double top100Bonus = Math.Max(1, (pivotUser.Rating.Mu - Top100Rating) / Pool.rating_search_radius_max);
+
+            double searchRadius = Math.Min(
+                Pool.rating_search_radius_max * top100Bonus,
+                Pool.rating_search_radius * ratingBonus * searchTimeBonus);
+
+            IEnumerable<MatchmakingQueueUser> allMatches = users.Where(u =>
+                !u.Equals(pivotUser)
+                && !IsRecentMatchup(pivotUser.UserId, u.UserId)
+                && Math.Abs(pivotUser.Rating.Mu - u.Rating.Mu) <= searchRadius);
+
             HashSet<MatchmakingQueueUser> result = [pivotUser];
-
-            int leftIndex = pivotIndex - 1;
-            int rightIndex = pivotIndex + 1;
-
-            while (result.Count < Pool.lobby_size)
-            {
-                MatchmakingQueueUser? leftUser = leftIndex < 0 ? null : users[leftIndex];
-                MatchmakingQueueUser? rightUser = rightIndex >= users.Count ? null : users[rightIndex];
-
-                if (leftUser == null && rightUser == null)
-                    break;
-
-                double leftDistance = leftUser != null
-                    ? Math.Abs(Math.Abs(pivotUser.Rating.Mu - leftUser.Rating.Mu) - (pivotUser.Rating.Sig - leftUser.Rating.Sig) * uncertainty)
-                    : double.MaxValue;
-
-                double rightDistance = rightUser != null
-                    ? Math.Abs(Math.Abs(pivotUser.Rating.Mu - rightUser.Rating.Mu) - (pivotUser.Rating.Sig - rightUser.Rating.Sig) * uncertainty)
-                    : double.MaxValue;
-
-                double distance = Math.Min(leftDistance, rightDistance);
-
-                // Speedup user pairing by a coefficient based on rating
-                double ratingBonus = Math.Exp(Math.Pow((pivotUser.Rating.Mu - 1500) / 750, 2));
-
-                TimeSpan searchTime = Clock.UtcNow - pivotUser.SearchStartTime;
-                double searchRadius = Math.Min(Pool.rating_search_radius_max, Pool.rating_search_radius * ratingBonus * Math.Pow(2, searchTime.TotalSeconds / Pool.rating_search_radius_exp));
-
-                if (distance > searchRadius)
-                    break;
-
-                result.Add(leftDistance < rightDistance ? users[leftIndex--] : users[rightIndex++]);
-            }
+            result.AddRange(
+                allMatches
+                    .OrderBy(_ => Random.Shared.Next())
+                    .Take(Pool.lobby_size - 1) // pivotUser is already in collection, so we need the number of opponents
+            );
 
             return result;
         }

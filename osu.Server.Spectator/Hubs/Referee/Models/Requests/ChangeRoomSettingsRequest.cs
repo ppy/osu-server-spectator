@@ -33,5 +33,15 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Requests
         /// </summary>
         [JsonPropertyName("type")]
         public MatchType? MatchType { get; set; }
+
+        /// <summary>
+        /// The new maximum number of participants.
+        /// Pass <see langword="null"/> to keep the previous one.
+        /// Pass 0 to remove the limit.
+        /// Pass a number in [2, 128] range to set that as the new limit.
+        /// </summary>
+        /// <seealso cref="MakeRoomRequest.MaxParticipants"/>
+        [JsonPropertyName("max_participants")]
+        public byte? MaxParticipants { get; set; }
     }
 }

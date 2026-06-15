@@ -37,7 +37,7 @@ namespace osu.Server.Spectator.Database.Models
         /// <summary>
         /// The amount of time (in seconds) before each doubling of the <see cref="rating_search_radius">rating search radius</see>.
         /// </summary>
-        public int rating_search_radius_exp { get; set; }
+        public int rating_search_radius_exp { get; set; } = 300;
 
         public MatchmakingPool ToMatchmakingPool() => new MatchmakingPool
         {

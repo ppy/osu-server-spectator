@@ -57,67 +57,13 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
-        public async Task RoundMultiplierAdjustmentOsu()
+        public async Task GlobalMultiplierIncreases()
         {
             RoomState.CurrentRound = 0;
             MatchController.Pool.ruleset_id = 0;
             await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
 
-            double[] expectedMultipliers = [1, 1, 2, 2.5, 3, 3.5, 4, 4.5, 5];
-
-            for (int i = 0; i < expectedMultipliers.Length; i++)
-            {
-                Assert.Equal(expectedMultipliers[i], RoomState.DamageMultiplier);
-
-                // Go to the next round, for the next iteration.
-                await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
-            }
-        }
-
-        [Fact]
-        public async Task RoundMultiplierAdjustmentTaiko()
-        {
-            RoomState.CurrentRound = 0;
-            MatchController.Pool.ruleset_id = 1;
-            await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
-
-            double[] expectedMultipliers = [1, 1, 2.5, 3.5, 4.5, 5.5, 6.5];
-
-            for (int i = 0; i < expectedMultipliers.Length; i++)
-            {
-                Assert.Equal(expectedMultipliers[i], RoomState.DamageMultiplier);
-
-                // Go to the next round, for the next iteration.
-                await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
-            }
-        }
-
-        [Fact]
-        public async Task RoundMultiplierAdjustmentCatch()
-        {
-            RoomState.CurrentRound = 0;
-            MatchController.Pool.ruleset_id = 2;
-            await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
-
-            double[] expectedMultipliers = [1, 1, 2.5, 3.5, 4.5, 5.5, 6.5];
-
-            for (int i = 0; i < expectedMultipliers.Length; i++)
-            {
-                Assert.Equal(expectedMultipliers[i], RoomState.DamageMultiplier);
-
-                // Go to the next round, for the next iteration.
-                await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
-            }
-        }
-
-        [Fact]
-        public async Task RoundMultiplierAdjustmentMania()
-        {
-            RoomState.CurrentRound = 0;
-            MatchController.Pool.ruleset_id = 3;
-            await MatchController.GotoStage(RankedPlayStage.RoundWarmup);
-
-            double[] expectedMultipliers = [1, 1, 2.5, 3.5, 4.5, 5.5, 6.5];
+            double[] expectedMultipliers = [0.5, 1, 1.5, 2];
 
             for (int i = 0; i < expectedMultipliers.Length; i++)
             {
