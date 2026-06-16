@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,13 +60,11 @@ namespace osu.Server.Spectator.Hubs
         {
             using (var usage = await store.TryGetForUse(scoreTokenId))
             {
-                var buffered = usage?.Item;
-
-                if (buffered == null)
-                {
-                    usage?.Destroy();
+                if (usage == null)
                     return;
-                }
+
+                var buffered = usage.Item;
+                Debug.Assert(buffered != null);
 
                 buffered.Score.ScoreInfo.Accuracy = data.Header.Accuracy;
                 buffered.Score.ScoreInfo.Statistics = data.Header.Statistics;
@@ -95,10 +94,15 @@ namespace osu.Server.Spectator.Hubs
         {
             using (var usage = await store.TryGetForUse(scoreTokenId))
             {
-                var buffered = usage?.Item;
-                usage?.Destroy();
+                if (usage == null)
+                    return null;
+
+                var buffered = usage.Item;
+                Debug.Assert(buffered != null);
+
+                usage.Destroy();
                 DogStatsd.Increment($@"{statsd_prefix}.dequeued");
-                return buffered?.Score;
+                return buffered.Score;
             }
         }
 
