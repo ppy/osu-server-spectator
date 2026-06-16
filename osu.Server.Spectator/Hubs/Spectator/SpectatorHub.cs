@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Database;
-using osu.Game.Extensions;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Scoring;
@@ -38,6 +37,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
         private const BeatmapOnlineStatus max_beatmap_status_for_replays = BeatmapOnlineStatus.Loved;
 
         private readonly IDatabaseFactory databaseFactory;
+        private readonly ScoreBuffer scoreBuffer;
         private readonly ScoreUploader scoreUploader;
         private readonly IScoreProcessedSubscriber scoreProcessedSubscriber;
 
@@ -45,11 +45,13 @@ namespace osu.Server.Spectator.Hubs.Spectator
             ILoggerFactory loggerFactory,
             EntityStore<SpectatorClientState> users,
             IDatabaseFactory databaseFactory,
+            ScoreBuffer scoreBuffer,
             ScoreUploader scoreUploader,
             IScoreProcessedSubscriber scoreProcessedSubscriber)
             : base(loggerFactory, users)
         {
             this.databaseFactory = databaseFactory;
+            this.scoreBuffer = scoreBuffer;
             this.scoreUploader = scoreUploader;
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
         }
@@ -89,7 +91,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                         return;
 
                     clientState.Beatmap = beatmap;
-                    clientState.Score = new Score
+                    var score = new Score
                     {
                         ScoreInfo =
                         {
@@ -109,6 +111,9 @@ namespace osu.Server.Spectator.Hubs.Spectator
                             MaximumStatistics = state.MaximumStatistics
                         }
                     };
+
+                    if (scoreToken != null)
+                        await scoreBuffer.TryAddAsync(scoreToken.Value, score);
                 }
             }
 
@@ -119,32 +124,8 @@ namespace osu.Server.Spectator.Hubs.Spectator
         {
             using (var usage = await GetOrCreateLocalUserState())
             {
-                var score = usage.Item?.Score;
-
-                // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
-                // For now it's safe to drop these frames.
-                if (score == null)
-                    return;
-
-                score.ScoreInfo.Accuracy = data.Header.Accuracy;
-                score.ScoreInfo.Statistics = data.Header.Statistics;
-                score.ScoreInfo.MaxCombo = data.Header.MaxCombo;
-                score.ScoreInfo.Combo = data.Header.Combo;
-                score.ScoreInfo.TotalScore = data.Header.TotalScore;
-                score.ScoreInfo.APIMods = data.Header.Mods;
-
-                // handle frame bundles from old clients that don't send both of these properties
-                // null checks can be elided when property is made non-nullable on `FrameDataBundle` 20261126
-                if (data.Header.TotalScoreWithoutMods != null)
-                    score.ScoreInfo.TotalScoreWithoutMods = data.Header.TotalScoreWithoutMods.Value;
-
-                if (data.Header.Pauses != null)
-                {
-                    score.ScoreInfo.Pauses.Clear();
-                    score.ScoreInfo.Pauses.AddRange(data.Header.Pauses);
-                }
-
-                score.Replay.Frames.AddRange(data.Frames);
+                if (usage.Item?.ScoreToken != null)
+                    await scoreBuffer.UpdateAsync(usage.Item.ScoreToken.Value, data);
 
                 await Clients.Group(GetGroupId(Context.GetUserId())).UserSentFrames(Context.GetUserId(), data);
             }
@@ -156,16 +137,19 @@ namespace osu.Server.Spectator.Hubs.Spectator
             {
                 try
                 {
-                    Score? score = usage.Item?.Score;
                     long? scoreToken = usage.Item?.ScoreToken;
 
                     // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
                     // For now it's safe to drop these frames.
                     // Note that this *intentionally* skips the `endPlaySession()` call at the end of method.
-                    if (score == null || scoreToken == null || usage.Item?.Beatmap == null)
+                    if (scoreToken == null || usage.Item?.Beatmap == null)
                         return;
 
-                    await processScore(usage.Item!);
+                    var score = await scoreBuffer.DequeueAsync(scoreToken.Value);
+                    if (score == null)
+                        return;
+
+                    await processScore(usage.Item!, score);
                 }
                 finally
                 {
@@ -173,7 +157,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     {
                         usage.Item.State = null;
                         usage.Item.Beatmap = null;
-                        usage.Item.Score = null;
                         usage.Item.ScoreToken = null;
                     }
                 }
@@ -182,11 +165,10 @@ namespace osu.Server.Spectator.Hubs.Spectator
             await endPlaySession(Context.GetUserId(), state);
         }
 
-        private async Task processScore(SpectatorClientState item)
+        private async Task processScore(SpectatorClientState item, Score score)
         {
-            Debug.Assert(item.Score != null && item.ScoreToken != null && item.Beatmap != null);
+            Debug.Assert(score != null && item.ScoreToken != null && item.Beatmap != null);
 
-            Score score = item.Score;
             long scoreToken = item.ScoreToken.Value;
 
             // Do nothing with scores on unranked beatmaps.
