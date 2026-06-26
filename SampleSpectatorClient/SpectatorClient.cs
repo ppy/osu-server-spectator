@@ -77,6 +77,8 @@ namespace SampleSpectatorClient
             return Task.CompletedTask;
         }
 
+        Task<CompleteReplayResponse> ISpectatorClient.CompleteReplay(CompleteReplayRequest request) => Task.FromResult(new CompleteReplayResponse([]));
+
         public Task BeginPlaying(long? scoreToken, SpectatorState state) => connection.SendAsync(nameof(ISpectatorServer.BeginPlaySession), scoreToken, state);
 
         public Task SendFrames(FrameDataBundle data) => connection.SendAsync(nameof(ISpectatorServer.SendFrameData), data);

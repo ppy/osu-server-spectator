@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -66,31 +67,38 @@ namespace osu.Server.Spectator.Hubs
                 var buffered = usage.Item;
                 Debug.Assert(buffered != null);
 
-                buffered.Score.ScoreInfo.Accuracy = data.Header.Accuracy;
-                buffered.Score.ScoreInfo.Statistics = data.Header.Statistics;
-                buffered.Score.ScoreInfo.MaxCombo = data.Header.MaxCombo;
-                buffered.Score.ScoreInfo.Combo = data.Header.Combo;
-                buffered.Score.ScoreInfo.TotalScore = data.Header.TotalScore;
-                buffered.Score.ScoreInfo.APIMods = data.Header.Mods;
-
-                // handle frame bundles from old clients that don't send both of these properties
-                // null checks can be elided when property is made non-nullable on `FrameDataBundle` 20261126
-                if (data.Header.TotalScoreWithoutMods != null)
-                    buffered.Score.ScoreInfo.TotalScoreWithoutMods = data.Header.TotalScoreWithoutMods.Value;
-
-                if (data.Header.Pauses != null)
-                {
-                    buffered.Score.ScoreInfo.Pauses.Clear();
-                    buffered.Score.ScoreInfo.Pauses.AddRange(data.Header.Pauses);
-                }
-
+                UpdateScoreInfoFromBundle(buffered.Score.ScoreInfo, data);
                 buffered.Score.Replay.Frames.AddRange(data.Frames);
 
                 buffered.LastUpdated = DateTimeOffset.Now;
+
+                if (data.SequenceNumber != null)
+                    buffered.FrameBundlesReceived.Add(data.SequenceNumber.Value);
             }
         }
 
-        public async Task<Score?> DequeueAsync(long scoreTokenId)
+        public static void UpdateScoreInfoFromBundle(ScoreInfo scoreInfo, FrameDataBundle data)
+        {
+            scoreInfo.Accuracy = data.Header.Accuracy;
+            scoreInfo.Statistics = data.Header.Statistics;
+            scoreInfo.MaxCombo = data.Header.MaxCombo;
+            scoreInfo.Combo = data.Header.Combo;
+            scoreInfo.TotalScore = data.Header.TotalScore;
+            scoreInfo.APIMods = data.Header.Mods;
+
+            // handle frame bundles from old clients that don't send both of these properties
+            // null checks can be elided when property is made non-nullable on `FrameDataBundle` 20261126
+            if (data.Header.TotalScoreWithoutMods != null)
+                scoreInfo.TotalScoreWithoutMods = data.Header.TotalScoreWithoutMods.Value;
+
+            if (data.Header.Pauses != null)
+            {
+                scoreInfo.Pauses.Clear();
+                scoreInfo.Pauses.AddRange(data.Header.Pauses);
+            }
+        }
+
+        public async Task<BufferedScore?> DequeueAsync(long scoreTokenId)
         {
             using (var usage = await store.TryGetForUse(scoreTokenId))
             {
@@ -102,7 +110,7 @@ namespace osu.Server.Spectator.Hubs
 
                 usage.Destroy();
                 DogStatsd.Increment($@"{statsd_prefix}.dequeued");
-                return buffered.Score;
+                return buffered;
             }
         }
 
@@ -137,6 +145,7 @@ namespace osu.Server.Spectator.Hubs
         {
             public Score Score { get; }
             public DateTimeOffset LastUpdated { get; set; }
+            public HashSet<long> FrameBundlesReceived { get; } = [];
 
             public BufferedScore(Score score)
             {
