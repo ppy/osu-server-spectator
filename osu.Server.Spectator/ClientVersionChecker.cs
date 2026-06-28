@@ -68,7 +68,7 @@ namespace osu.Server.Spectator
 
             HashSet<int> exemptUsers = await memoryCache.GetOrCreateAsync<HashSet<int>>(cache_key_for_exempt_users, async entry =>
             {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1);
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
                 using (var db = databaseFactory.GetInstance())
                     return new HashSet<int>(await db.GetUsersInGroupsAsync(AppSettings.ClientCheckVersionExemptGroups));
