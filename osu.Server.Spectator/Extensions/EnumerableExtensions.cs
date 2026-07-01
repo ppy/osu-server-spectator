@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace osu.Server.Spectator.Extensions
 {
@@ -55,10 +56,10 @@ namespace osu.Server.Spectator.Extensions
             }
         }
 
-        public static void ThrowIfInvalid<T>(this T val) where T : struct, Enum
+        public static void ThrowIfInvalid<T>(this T val, [CallerArgumentExpression(nameof(val))] string expression = "") where T : struct, Enum
         {
             if (!Enum.IsDefined(val))
-                throw new ArgumentException();
+                throw new ArgumentOutOfRangeException(expression, val, null);
         }
     }
 }
