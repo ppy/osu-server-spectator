@@ -61,6 +61,9 @@ namespace osu.Server.Spectator.Hubs.Spectator
             ArgumentNullException.ThrowIfNull(state.MaximumStatistics);
             ArgumentNullException.ThrowIfNull(state.Mods);
 
+            foreach (var val in state.MaximumStatistics.Keys)
+                val.ThrowIfInvalid();
+
             state.State.ThrowIfInvalid();
 
             int userId = Context.GetUserId();
