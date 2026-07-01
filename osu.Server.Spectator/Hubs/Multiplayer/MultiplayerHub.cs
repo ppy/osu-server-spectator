@@ -234,8 +234,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeBeatmapAvailability(BeatmapAvailability newBeatmapAvailability)
         {
-            if (newBeatmapAvailability.IsNull())
-                throw new ArgumentException();
+            ArgumentNullException.ThrowIfNull(newBeatmapAvailability);
 
             newBeatmapAvailability.State.ThrowIfInvalid();
 
@@ -461,6 +460,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeSettings(MultiplayerRoomSettings settings)
         {
+            settings.MatchType.ThrowIfInvalid();
+            settings.QueueMode.ThrowIfInvalid();
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);

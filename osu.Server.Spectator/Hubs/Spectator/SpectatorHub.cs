@@ -8,10 +8,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
-using osu.Framework.Extensions.ObjectExtensions;
 using osu.Game.Beatmaps;
-using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Database;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Scoring;
@@ -59,10 +58,8 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
         {
-            if (state.MaximumStatistics.IsNull())
-                throw new ArgumentException();
-            if (state.Mods.IsNull())
-                throw new ArgumentException();
+            ArgumentNullException.ThrowIfNull(state.MaximumStatistics);
+            ArgumentNullException.ThrowIfNull(state.Mods);
 
             state.State.ThrowIfInvalid();
 
@@ -130,16 +127,11 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         public async Task SendFrameData(FrameDataBundle data)
         {
-            if (data.Header.IsNull())
-                throw new ArgumentException();
-            if (data.Header.ScoreProcessorStatistics.IsNull())
-                throw new ArgumentException();
-            if (data.Header.Statistics.IsNull())
-                throw new ArgumentException();
-            if (data.Header.Mods.IsNull())
-                throw new ArgumentException();
-            if (data.Frames.IsNull())
-                throw new ArgumentException();
+            ArgumentNullException.ThrowIfNull(data.Header);
+            ArgumentNullException.ThrowIfNull(data.Header.ScoreProcessorStatistics);
+            ArgumentNullException.ThrowIfNull(data.Header.Statistics);
+            ArgumentNullException.ThrowIfNull(data.Header.Mods);
+            ArgumentNullException.ThrowIfNull(data.Frames);
 
             using (var usage = await GetOrCreateLocalUserState())
             {
@@ -152,11 +144,8 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         public async Task EndPlaySession(SpectatorState state)
         {
-            if (state.MaximumStatistics.IsNull())
-                throw new ArgumentException();
-            if (state.Mods.IsNull())
-                throw new ArgumentException();
-
+            ArgumentNullException.ThrowIfNull(state.MaximumStatistics);
+            ArgumentNullException.ThrowIfNull(state.Mods);
             state.State.ThrowIfInvalid();
 
             using (var usage = await GetOrCreateLocalUserState())
