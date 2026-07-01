@@ -63,6 +63,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task<MultiplayerRoom> CreateRoom(MultiplayerRoom room)
         {
+            ArgumentNullException.ThrowIfNull(room);
+
             Log("Attempting to create room");
 
             using (var db = databaseFactory.GetInstance())
@@ -213,6 +215,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeState(MultiplayerUserState newState)
         {
+            newState.ThrowIfInvalid();
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
@@ -231,6 +235,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeBeatmapAvailability(BeatmapAvailability newBeatmapAvailability)
         {
+            ArgumentNullException.ThrowIfNull(newBeatmapAvailability);
+
+            newBeatmapAvailability.State.ThrowIfInvalid();
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
@@ -267,6 +275,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeUserMods(IEnumerable<APIMod> newMods)
         {
+            ArgumentNullException.ThrowIfNull(newMods);
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
@@ -285,6 +295,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task SendMatchRequest(MatchUserRequest request)
         {
+            ArgumentNullException.ThrowIfNull(request);
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
@@ -402,6 +414,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task AddPlaylistItem(MultiplayerPlaylistItem item)
         {
+            ArgumentNullException.ThrowIfNull(item);
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
@@ -419,6 +433,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task EditPlaylistItem(MultiplayerPlaylistItem item)
         {
+            ArgumentNullException.ThrowIfNull(item);
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
@@ -453,6 +469,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeSettings(MultiplayerRoomSettings settings)
         {
+            ArgumentNullException.ThrowIfNull(settings);
+
+            settings.MatchType.ThrowIfInvalid();
+            settings.QueueMode.ThrowIfInvalid();
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
