@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Game.Beatmaps;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Database;
@@ -58,6 +59,13 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
         {
+            if (state.MaximumStatistics.IsNull())
+                throw new ArgumentException();
+            if (state.Mods.IsNull())
+                throw new ArgumentException();
+
+            state.State.ThrowIfInvalid();
+
             int userId = Context.GetUserId();
 
             using (var usage = await GetOrCreateLocalUserState())
@@ -122,6 +130,17 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         public async Task SendFrameData(FrameDataBundle data)
         {
+            if (data.Header.IsNull())
+                throw new ArgumentException();
+            if (data.Header.ScoreProcessorStatistics.IsNull())
+                throw new ArgumentException();
+            if (data.Header.Statistics.IsNull())
+                throw new ArgumentException();
+            if (data.Header.Mods.IsNull())
+                throw new ArgumentException();
+            if (data.Frames.IsNull())
+                throw new ArgumentException();
+
             using (var usage = await GetOrCreateLocalUserState())
             {
                 if (usage.Item?.ScoreToken != null)
@@ -133,6 +152,13 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         public async Task EndPlaySession(SpectatorState state)
         {
+            if (state.MaximumStatistics.IsNull())
+                throw new ArgumentException();
+            if (state.Mods.IsNull())
+                throw new ArgumentException();
+
+            state.State.ThrowIfInvalid();
+
             using (var usage = await GetOrCreateLocalUserState())
             {
                 try

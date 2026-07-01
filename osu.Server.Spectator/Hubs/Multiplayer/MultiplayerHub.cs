@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
@@ -213,6 +214,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeState(MultiplayerUserState newState)
         {
+            newState.ThrowIfInvalid();
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);
@@ -231,6 +234,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
         public async Task ChangeBeatmapAvailability(BeatmapAvailability newBeatmapAvailability)
         {
+            if (newBeatmapAvailability.IsNull())
+                throw new ArgumentException();
+
+            newBeatmapAvailability.State.ThrowIfInvalid();
+
             using (var userUsage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(userUsage.Item != null);

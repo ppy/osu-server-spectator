@@ -122,6 +122,8 @@ namespace osu.Server.Spectator.Hubs.Metadata
 
         public async Task UpdateStatus(UserStatus? status)
         {
+            status?.ThrowIfInvalid();
+
             using (var usage = await GetOrCreateLocalUserState())
             {
                 Debug.Assert(usage.Item != null);

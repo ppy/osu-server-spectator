@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -52,6 +53,12 @@ namespace osu.Server.Spectator.Extensions
                 foreach (var it in enumerators)
                     it.Dispose();
             }
+        }
+
+        public static void ThrowIfInvalid<T>(this T val) where T : struct, Enum
+        {
+            if (!Enum.IsDefined(val))
+                throw new ArgumentException();
         }
     }
 }
