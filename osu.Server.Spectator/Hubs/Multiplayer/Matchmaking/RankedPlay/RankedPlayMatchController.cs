@@ -462,13 +462,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             var item = beatmap?.ToPlaylistItem() ?? new MultiplayerPlaylistItem();
 
             Ruleset ruleset = LegacyHelper.GetRulesetFromLegacyID(Pool.ruleset_id);
-            item.AllowedMods = ruleset.AllMods.OfType<ModHidden>().Select(m => new APIMod(m)).ToArray();
+            item.AllowedMods = ruleset.AllMods.OfType<Mod>().Where(isUserModAllowed).Select(m => new APIMod(m)).ToArray();
 
             return item;
         }
 
-        private bool isUserModAllowed(Mod mod)
-            => mod is ModHidden;
+        private bool isUserModAllowed(IMod mod)
+        {
+            // Synchronise with client.
+            switch (mod)
+            {
+                case ModHidden:
+                case ModTraceable:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
 
         public MatchStartedEventDetail GetMatchDetails() => new MatchStartedEventDetail
         {
