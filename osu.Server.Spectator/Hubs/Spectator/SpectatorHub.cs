@@ -56,6 +56,9 @@ namespace osu.Server.Spectator.Hubs.Spectator
             this.scoreProcessedSubscriber = scoreProcessedSubscriber;
         }
 
+        #region V1 (obsoleted)
+
+        [Obsolete("New clients should use BeginPlaySessionV2.")] // can remove method 20270102
         public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
         {
             ArgumentNullException.ThrowIfNull(state.MaximumStatistics);
@@ -121,13 +124,14 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     };
 
                     if (scoreToken != null)
-                        await scoreBuffer.TryAddAsync(scoreToken.Value, score);
+                        await scoreBuffer.TryAddAsync(scoreToken.Value, score, beatmap);
                 }
             }
 
             await Clients.Group(GetGroupId(userId)).UserBeganPlaying(userId, state);
         }
 
+        [Obsolete("New clients should use SendFrameDataV2.")] // can remove method 20270102
         public async Task SendFrameData(FrameDataBundle data)
         {
             ArgumentNullException.ThrowIfNull(data.Header);
@@ -145,6 +149,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
         }
 
+        [Obsolete("New clients should use EndPlaySessionV2.")] // can remove method 20270102
         public async Task EndPlaySession(SpectatorState state)
         {
             ArgumentNullException.ThrowIfNull(state.MaximumStatistics);
@@ -167,7 +172,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     if (score == null)
                         return;
 
-                    await processScore(usage.Item!, score);
+                    await processScore(scoreToken.Value, score);
                 }
                 finally
                 {
@@ -183,28 +188,166 @@ namespace osu.Server.Spectator.Hubs.Spectator
             await endPlaySession(Context.GetUserId(), state);
         }
 
-        private async Task processScore(SpectatorClientState item, Score score)
-        {
-            Debug.Assert(score != null && item.ScoreToken != null && item.Beatmap != null);
+        #endregion
 
-            long scoreToken = item.ScoreToken.Value;
+        #region V2
+
+        public async Task BeginPlaySessionV2(long? scoreToken, SpectatorState state)
+        {
+            ArgumentNullException.ThrowIfNull(state.MaximumStatistics);
+            ArgumentNullException.ThrowIfNull(state.Mods);
+
+            foreach (var val in state.MaximumStatistics.Keys)
+                val.ThrowIfInvalid();
+
+            state.State.ThrowIfInvalid();
+
+            int userId = Context.GetUserId();
+
+            using (var usage = await GetOrCreateLocalUserState())
+            {
+                var clientState = (usage.Item ??= new SpectatorClientState(Context.ConnectionId, userId));
+
+                clientState.State = state;
+
+                if (state.RulesetID == null)
+                    return;
+
+                if (state.BeatmapID == null)
+                    return;
+
+                using (var db = databaseFactory.GetInstance())
+                {
+                    database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
+                    string? username = await db.GetUsernameAsync(userId);
+
+                    if (string.IsNullOrEmpty(username))
+                        throw new ArgumentException(nameof(username));
+
+                    if (string.IsNullOrEmpty(beatmap?.checksum))
+                        return;
+
+                    clientState.Beatmap = beatmap;
+                    var score = new Score
+                    {
+                        ScoreInfo =
+                        {
+                            APIMods = state.Mods.ToArray(),
+                            User = new APIUser
+                            {
+                                Id = userId,
+                                Username = username,
+                            },
+                            Ruleset = LegacyHelper.GetRulesetFromLegacyID(state.RulesetID.Value).RulesetInfo,
+                            BeatmapInfo = new BeatmapInfo
+                            {
+                                OnlineID = state.BeatmapID.Value,
+                                MD5Hash = beatmap.checksum,
+                                Status = beatmap.approved
+                            },
+                            MaximumStatistics = state.MaximumStatistics
+                        }
+                    };
+
+                    if (scoreToken != null)
+                    {
+                        while (usage.Item.ScoreTokens.Count >= SpectatorClientState.MAX_STARTED_SCORES)
+                        {
+                            long expiredToken = usage.Item.ScoreTokens[0];
+                            usage.Item.ScoreTokens.RemoveAt(0);
+                            var expiredScore = await scoreBuffer.DequeueAsync(expiredToken);
+                            if (expiredScore != null)
+                                await processScore(expiredToken, expiredScore);
+                        }
+
+                        usage.Item.ScoreTokens.Add(scoreToken.Value);
+                        await scoreBuffer.TryAddAsync(scoreToken.Value, score, beatmap);
+                    }
+                }
+            }
+
+            await Clients.Group(GetGroupId(userId)).UserBeganPlaying(userId, state);
+        }
+
+        public async Task SendFrameDataV2(long? scoreToken, FrameDataBundle data)
+        {
+            ArgumentNullException.ThrowIfNull(data.Header);
+            ArgumentNullException.ThrowIfNull(data.Header.ScoreProcessorStatistics);
+            ArgumentNullException.ThrowIfNull(data.Header.Statistics);
+            ArgumentNullException.ThrowIfNull(data.Header.Mods);
+            ArgumentNullException.ThrowIfNull(data.Frames);
+
+            using (var usage = await GetOrCreateLocalUserState())
+            {
+                if (scoreToken != null)
+                {
+                    if (usage.Item?.ScoreTokens.Contains(scoreToken.Value) == false)
+                        throw new InvalidOperationException("Incorrect score token supplied.");
+
+                    await scoreBuffer.UpdateAsync(scoreToken.Value, data);
+                }
+
+                await Clients.Group(GetGroupId(Context.GetUserId())).UserSentFrames(Context.GetUserId(), data);
+            }
+        }
+
+        public async Task EndPlaySessionV2(long? scoreToken, SpectatorState state)
+        {
+            ArgumentNullException.ThrowIfNull(state.MaximumStatistics);
+            ArgumentNullException.ThrowIfNull(state.Mods);
+            state.State.ThrowIfInvalid();
+
+            using (var usage = await GetOrCreateLocalUserState())
+            {
+                try
+                {
+                    if (scoreToken != null)
+                    {
+                        if (usage.Item?.ScoreTokens.Remove(scoreToken.Value) == false)
+                            throw new InvalidOperationException("Incorrect score token supplied.");
+
+                        var score = await scoreBuffer.DequeueAsync(scoreToken.Value);
+                        if (score == null)
+                            return;
+
+                        await processScore(scoreToken.Value, score);
+                    }
+                }
+                finally
+                {
+                    if (usage.Item != null)
+                    {
+                        usage.Item.State = null;
+                        usage.Item.Beatmap = null;
+                    }
+                }
+            }
+
+            await endPlaySession(Context.GetUserId(), state);
+        }
+
+        #endregion
+
+        private async Task processScore(long scoreToken, ScoreBuffer.BufferedScore buffered)
+        {
+            Debug.Assert(buffered != null);
 
             // Do nothing with scores on unranked beatmaps.
-            var status = score.ScoreInfo.BeatmapInfo!.Status;
+            var status = buffered.Score.ScoreInfo.BeatmapInfo!.Status;
             if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
                 return;
 
             // if the user never hit anything, further processing that depends on the score existing can be waived because the client won't have submitted the score anyway.
             // see: https://github.com/ppy/osu/blob/a47ccb8edd2392258b6b7e176b222a9ecd511fc0/osu.Game/Screens/Play/SubmittingPlayer.cs#L281
-            if (!score.ScoreInfo.Statistics.Any(s => s.Key.IsHit() && s.Value > 0))
+            if (!buffered.Score.ScoreInfo.Statistics.Any(s => s.Key.IsHit() && s.Value > 0))
                 return;
 
-            score.ScoreInfo.Date = DateTimeOffset.UtcNow;
+            buffered.Score.ScoreInfo.Date = DateTimeOffset.UtcNow;
             // this call is a little expensive due to reflection usage, so only run it at the end of score processing
             // even though in theory the rank could be recomputed after every replay frame.
-            score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(score.ScoreInfo);
+            buffered.Score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(buffered.Score.ScoreInfo);
 
-            await scoreUploader.EnqueueAsync(scoreToken, score, item.Beatmap);
+            await scoreUploader.EnqueueAsync(scoreToken, buffered);
             await scoreProcessedSubscriber.RegisterForSingleScoreAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
         }
 

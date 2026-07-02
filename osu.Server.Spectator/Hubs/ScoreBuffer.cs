@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using osu.Game.Extensions;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
+using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
 using StatsdClient;
 
@@ -44,14 +45,14 @@ namespace osu.Server.Spectator.Hubs
             Task.Factory.StartNew(expiryLoop, TaskCreationOptions.LongRunning);
         }
 
-        public async Task<bool> TryAddAsync(long scoreTokenId, Score score)
+        public async Task<bool> TryAddAsync(long scoreTokenId, Score score, database_beatmap beatmap)
         {
             using (var usage = await store.GetForUse(scoreTokenId, createOnMissing: true))
             {
                 if (usage.Item != null)
                     return false;
 
-                usage.Item = new BufferedScore(score);
+                usage.Item = new BufferedScore(score, beatmap);
                 return true;
             }
         }
@@ -90,7 +91,7 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public async Task<Score?> DequeueAsync(long scoreTokenId)
+        public async Task<BufferedScore?> DequeueAsync(long scoreTokenId)
         {
             using (var usage = await store.TryGetForUse(scoreTokenId))
             {
@@ -102,7 +103,7 @@ namespace osu.Server.Spectator.Hubs
 
                 usage.Destroy();
                 DogStatsd.Increment($@"{statsd_prefix}.dequeued");
-                return buffered.Score;
+                return buffered;
             }
         }
 
@@ -136,11 +137,13 @@ namespace osu.Server.Spectator.Hubs
         public class BufferedScore
         {
             public Score Score { get; }
+            public database_beatmap Beatmap { get; }
             public DateTimeOffset LastUpdated { get; set; }
 
-            public BufferedScore(Score score)
+            public BufferedScore(Score score, database_beatmap beatmap)
             {
                 Score = score;
+                Beatmap = beatmap;
                 LastUpdated = DateTimeOffset.Now;
             }
         }
