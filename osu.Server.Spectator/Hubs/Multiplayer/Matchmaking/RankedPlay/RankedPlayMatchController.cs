@@ -30,6 +30,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
         public const int PLAYER_HAND_SIZE = 5;
         public const int DECK_SIZE = 50;
 
+        public bool AllowUserModChanges => false;
+
         public MultiplayerPlaylistItem CurrentItem => Room.Playlist.Single(item => item.ID == Room.Settings.PlaylistItemId);
 
         public IMatchmakingQueueBackgroundService MatchmakingService { get; private set; } = null!;
