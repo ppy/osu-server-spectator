@@ -159,7 +159,7 @@ namespace osu.Server.Spectator.Tests
             await uploadsCompleteAsync();
 
             if (savingEnabled)
-                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Once);
+                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 456)), Times.Once);
             else
                 mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()), Times.Never);
 
@@ -258,7 +258,7 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.Mods.Any(m => m is OsuModTouchDevice))), Times.Once);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.Mods.Any(m => m is OsuModTouchDevice))), Times.Once);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Quit)), Times.Once());
         }
 
@@ -311,7 +311,7 @@ namespace osu.Server.Spectator.Tests
             await uploadsCompleteAsync();
 
             mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item =>
-                item.Score.ScoreInfo.TotalScoreWithoutMods == 123_321 && item.Score.ScoreInfo.Pauses.Count == 2)), Times.Once);
+                item.Score.Score.ScoreInfo.TotalScoreWithoutMods == 123_321 && item.Score.Score.ScoreInfo.Pauses.Count == 2)), Times.Once);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Quit)), Times.Once());
         }
 
@@ -550,9 +550,9 @@ namespace osu.Server.Spectator.Tests
             await uploadsCompleteAsync();
 
             if (saved)
-                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Once);
+                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 456)), Times.Once);
             else
-                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Never);
+                mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 456)), Times.Never);
 
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }
@@ -635,11 +635,11 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.UserID == streamer_id
-                                                                                              && item.Score.ScoreInfo.User.OnlineID == streamer_id
-                                                                                              && item.Score.ScoreInfo.User.Username == streamer_username
-                                                                                              && item.Score.ScoreInfo.RealmUser.OnlineID == streamer_id
-                                                                                              && item.Score.ScoreInfo.RealmUser.Username == streamer_username)), Times.Once);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.UserID == streamer_id
+                                                                                              && item.Score.Score.ScoreInfo.User.OnlineID == streamer_id
+                                                                                              && item.Score.Score.ScoreInfo.User.Username == streamer_username
+                                                                                              && item.Score.Score.ScoreInfo.RealmUser.OnlineID == streamer_id
+                                                                                              && item.Score.Score.ScoreInfo.RealmUser.Username == streamer_username)), Times.Once);
 
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }
@@ -686,7 +686,7 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Never);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 456)), Times.Never);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Failed)), Times.Once());
         }
 
@@ -740,7 +740,7 @@ namespace osu.Server.Spectator.Tests
 
             await uploadsCompleteAsync();
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.Rank == ScoreRank.A)), Times.Once);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.Rank == ScoreRank.A)), Times.Once);
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }
 
@@ -813,7 +813,7 @@ namespace osu.Server.Spectator.Tests
             await uploadsCompleteAsync();
 
             mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item =>
-                item.Score.ScoreInfo.OnlineID == 456 && item.Score.Replay.Frames.Count == 2)), Times.Once);
+                item.Score.Score.ScoreInfo.OnlineID == 456 && item.Score.Score.Replay.Frames.Count == 2)), Times.Once);
 
             mockReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }
@@ -862,7 +862,7 @@ namespace osu.Server.Spectator.Tests
 
             await Task.Delay(10_000);
 
-            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Never);
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 456)), Times.Never);
             Assert.Equal(0, scoreBuffer.RemainingUsages);
         }
 
