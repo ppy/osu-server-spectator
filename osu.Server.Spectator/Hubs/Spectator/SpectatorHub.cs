@@ -291,6 +291,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
         }
 
+        // TODO: `state` is probably overkill, consider passing just `SpectatedUserState`
         public async Task EndPlaySessionV2(long? scoreToken, SpectatorState state)
         {
             ArgumentNullException.ThrowIfNull(state.MaximumStatistics);

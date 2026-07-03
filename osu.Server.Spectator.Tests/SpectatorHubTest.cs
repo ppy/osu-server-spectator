@@ -866,6 +866,120 @@ namespace osu.Server.Spectator.Tests
             Assert.Equal(0, scoreBuffer.RemainingUsages);
         }
 
+        [Fact]
+        public async Task MultipleInFlightScores()
+        {
+            scoreUploader.SaveReplays = true;
+            scoreBuffer.TimeoutInterval = 1000;
+
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockReceiver.Object);
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(It.IsAny<long>())).Returns<long>(token => Task.FromResult<SoloScore?>(new SoloScore
+            {
+                id = (ulong)token,
+                passed = true
+            }));
+
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Playing,
+            });
+
+            mockReceiver.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Playing,
+            }))), Times.Once());
+
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
+                new FrameHeader(new ScoreInfo
+                {
+                    Statistics =
+                    {
+                        [HitResult.Great] = 1
+                    }
+                }, new ScoreProcessorStatistics()),
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+
+            mockReceiver.Invocations.Clear();
+
+            await hub.BeginPlaySessionV2(5678, new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 3,
+                State = SpectatedUserState.Playing,
+            });
+
+            mockReceiver.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 3,
+                State = SpectatedUserState.Playing,
+            }))), Times.Once());
+
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
+                new FrameHeader(new ScoreInfo
+                {
+                    Statistics =
+                    {
+                        [HitResult.Great] = 5
+                    }
+                }, new ScoreProcessorStatistics()),
+                new[] { new LegacyReplayFrame(5678, 0, 0, ReplayButtonState.None) }));
+
+            await hub.SendFrameDataV2(5678, new FrameDataBundle(
+                new FrameHeader(new ScoreInfo
+                {
+                    Statistics =
+                    {
+                        [HitResult.Great] = 10
+                    }
+                }, new ScoreProcessorStatistics()),
+                new[] { new LegacyReplayFrame(9999, 0, 0, ReplayButtonState.None) }));
+
+            mockScoreStorage.Verify(s => s.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()), Times.Never);
+
+            await hub.EndPlaySessionV2(5678, new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 3,
+                State = SpectatedUserState.Passed,
+            });
+
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => 
+                item.Score.Score.ScoreInfo.OnlineID == 5678
+                && item.Score.Score.ScoreInfo.Statistics[HitResult.Great] == 10
+                && item.Score.Score.Replay.Frames.Count == 1)), Times.Once);
+            mockScoreStorage.VerifyNoOtherCalls();
+
+            await hub.EndPlaySessionV2(1234, new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 3,
+                State = SpectatedUserState.Passed,
+            });
+
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => 
+                item.Score.Score.ScoreInfo.OnlineID == 1234
+                && item.Score.Score.ScoreInfo.Statistics[HitResult.Great] == 5
+                && item.Score.Score.Replay.Frames.Count == 2)), Times.Once);
+            mockScoreStorage.VerifyNoOtherCalls();
+
+            Assert.Equal(0, scoreBuffer.RemainingUsages);
+        }
+
         private async Task uploadsCompleteAsync(int attempts = 5)
         {
             while (scoreUploader.RemainingUsages > 0)
