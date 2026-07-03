@@ -291,17 +291,18 @@ namespace osu.Server.Spectator.Hubs.Spectator
             }
         }
 
-        // TODO: `state` is probably overkill, consider passing just `SpectatedUserState`
-        public async Task EndPlaySessionV2(long? scoreToken, SpectatorState state)
+        public async Task EndPlaySessionV2(long? scoreToken, SpectatedUserState finalState)
         {
-            ArgumentNullException.ThrowIfNull(state.MaximumStatistics);
-            ArgumentNullException.ThrowIfNull(state.Mods);
-            state.State.ThrowIfInvalid();
+            finalState.ThrowIfInvalid();
+
+            bool shouldBroadcastEnd = false;
 
             using (var usage = await GetOrCreateLocalUserState())
             {
                 try
                 {
+                    shouldBroadcastEnd = scoreToken == null || (scoreToken == usage.Item?.ScoreTokens.LastOrDefault());
+
                     if (scoreToken != null)
                     {
                         if (usage.Item?.ScoreTokens.Remove(scoreToken.Value) == false)
@@ -313,18 +314,22 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                         await processScore(scoreToken.Value, score);
                     }
+
+                    if (usage.Item?.State != null && shouldBroadcastEnd)
+                    {
+                        usage.Item.State.State = finalState;
+                        await endPlaySession(Context.GetUserId(), usage.Item.State);
+                    }
                 }
                 finally
                 {
-                    if (usage.Item != null)
+                    if (usage.Item != null && shouldBroadcastEnd)
                     {
                         usage.Item.State = null;
                         usage.Item.Beatmap = null;
                     }
                 }
             }
-
-            await endPlaySession(Context.GetUserId(), state);
         }
 
         #endregion
