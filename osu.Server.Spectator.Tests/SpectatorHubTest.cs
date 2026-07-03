@@ -83,7 +83,7 @@ namespace osu.Server.Spectator.Tests
             hub.Context = mockContext.Object;
             hub.Clients = mockClients.Object;
 
-            await hub.BeginPlaySession(0, new SpectatorState
+            await hub.BeginPlaySessionV2(0, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -104,7 +104,7 @@ namespace osu.Server.Spectator.Tests
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) });
 
             // check streaming data is propagating to watchers
-            await hub.SendFrameData(data);
+            await hub.SendFrameDataV2(0, data);
             mockReceiver.Verify(clients => clients.UserSentFrames(streamer_id, data));
         }
 
@@ -132,14 +132,14 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Statistics =
@@ -149,7 +149,7 @@ namespace osu.Server.Spectator.Tests
                 }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -188,18 +188,18 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -234,14 +234,14 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Mods = [new OsuModTouchDevice()],
@@ -249,7 +249,7 @@ namespace osu.Server.Spectator.Tests
                 }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -284,14 +284,14 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Statistics = new Dictionary<HitResult, int> { [HitResult.Great] = 1 },
@@ -301,7 +301,7 @@ namespace osu.Server.Spectator.Tests
                 }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -337,14 +337,14 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Statistics = new Dictionary<HitResult, int> { [HitResult.Great] = 1 }
@@ -355,7 +355,7 @@ namespace osu.Server.Spectator.Tests
                 },
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -405,7 +405,7 @@ namespace osu.Server.Spectator.Tests
             if (ongoing)
             {
                 hub.Context = streamerContext.Object;
-                await hub.BeginPlaySession(0, state);
+                await hub.BeginPlaySessionV2(0, state);
 
                 mockCaller.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(state))), Times.Once);
             }
@@ -440,7 +440,7 @@ namespace osu.Server.Spectator.Tests
             hub.Clients = mockClients.Object;
 
             // Begin play.
-            await hub.BeginPlaySession(0, new SpectatorState
+            await hub.BeginPlaySessionV2(0, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -448,7 +448,7 @@ namespace osu.Server.Spectator.Tests
             });
 
             // End play, but set a playing state.
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(0, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -473,7 +473,7 @@ namespace osu.Server.Spectator.Tests
             hub.Clients = mockClients.Object;
 
             // Begin play.
-            await hub.BeginPlaySession(0, new SpectatorState
+            await hub.BeginPlaySessionV2(0, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -523,14 +523,14 @@ namespace osu.Server.Spectator.Tests
                 checksum = "checksum"
             })!);
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Statistics =
@@ -540,7 +540,7 @@ namespace osu.Server.Spectator.Tests
                 }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -609,14 +609,14 @@ namespace osu.Server.Spectator.Tests
                 checksum = "checksum"
             })!);
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Statistics =
@@ -626,7 +626,7 @@ namespace osu.Server.Spectator.Tests
                 }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -666,18 +666,18 @@ namespace osu.Server.Spectator.Tests
                 passed = false
             }));
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -712,14 +712,14 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Accuracy = 0.95,
@@ -731,7 +731,7 @@ namespace osu.Server.Spectator.Tests
                 }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -766,14 +766,14 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Statistics =
@@ -786,14 +786,14 @@ namespace osu.Server.Spectator.Tests
             await hub.OnDisconnectedAsync(null);
             await hub.OnConnectedAsync();
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Statistics =
@@ -803,7 +803,7 @@ namespace osu.Server.Spectator.Tests
                 }, new ScoreProcessorStatistics()),
                 new[] { new LegacyReplayFrame(5678, 0, 0, ReplayButtonState.None) }));
 
-            await hub.EndPlaySession(new SpectatorState
+            await hub.EndPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
@@ -841,14 +841,14 @@ namespace osu.Server.Spectator.Tests
                 passed = true
             }));
 
-            await hub.BeginPlaySession(1234, new SpectatorState
+            await hub.BeginPlaySessionV2(1234, new SpectatorState
             {
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
             });
 
-            await hub.SendFrameData(new FrameDataBundle(
+            await hub.SendFrameDataV2(1234, new FrameDataBundle(
                 new FrameHeader(new ScoreInfo
                 {
                     Statistics =
