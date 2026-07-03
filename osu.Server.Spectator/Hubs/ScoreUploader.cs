@@ -61,7 +61,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="token">The score's token.</param>
         /// <param name="score">The score.</param>
-        public async Task EnqueueAsync(long token, ScoreBuffer.BufferedScore score)
+        public async Task EnqueueAsync(long token, BufferedScore score)
         {
             if (!SaveReplays)
                 return;
@@ -184,7 +184,7 @@ namespace osu.Server.Spectator.Hubs
             cancellationSource.Dispose();
         }
 
-        public record UploadItem(long Token, ScoreBuffer.BufferedScore Score, CancellationTokenSource Cancellation) : IDisposable
+        public record UploadItem(long Token, BufferedScore Score, CancellationTokenSource Cancellation) : IDisposable
         {
             public void Dispose()
             {

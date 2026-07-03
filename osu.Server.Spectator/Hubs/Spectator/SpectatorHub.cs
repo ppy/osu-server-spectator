@@ -328,7 +328,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
         #endregion
 
-        private async Task processScore(long scoreToken, ScoreBuffer.BufferedScore buffered)
+        private async Task processScore(long scoreToken, BufferedScore buffered)
         {
             Debug.Assert(buffered != null);
 

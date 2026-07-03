@@ -60,7 +60,7 @@ namespace osu.Server.Spectator.Tests
             loggerFactory.Setup(factory => factory.CreateLogger(It.IsAny<string>()))
                          .Returns(new Mock<ILogger>().Object);
 
-            scoreBuffer = new ScoreBuffer(new EntityStore<ScoreBuffer.BufferedScore>());
+            scoreBuffer = new ScoreBuffer(new EntityStore<BufferedScore>());
 
             mockScoreStorage = new Mock<IScoreStorage>();
             scoreUploader = new ScoreUploader(loggerFactory.Object, databaseFactory.Object, mockScoreStorage.Object, new MemoryCache(new MemoryCacheOptions()));

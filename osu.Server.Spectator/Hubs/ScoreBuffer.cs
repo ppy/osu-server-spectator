@@ -134,20 +134,6 @@ namespace osu.Server.Spectator.Hubs
             }
         }
 
-        public class BufferedScore
-        {
-            public Score Score { get; }
-            public database_beatmap Beatmap { get; }
-            public DateTimeOffset LastUpdated { get; set; }
-
-            public BufferedScore(Score score, database_beatmap beatmap)
-            {
-                Score = score;
-                Beatmap = beatmap;
-                LastUpdated = DateTimeOffset.Now;
-            }
-        }
-
         public void Dispose()
         {
             expiryLoopCancellation.Cancel();
@@ -157,5 +143,19 @@ namespace osu.Server.Spectator.Hubs
         public int RemainingUsages => store.RemainingUsages;
         public string EntityName => "Buffered partial scores";
         public void StopAcceptingEntities() => store.StopAcceptingEntities();
+    }
+
+    public class BufferedScore
+    {
+        public Score Score { get; }
+        public database_beatmap Beatmap { get; }
+        public DateTimeOffset LastUpdated { get; set; }
+
+        public BufferedScore(Score score, database_beatmap beatmap)
+        {
+            Score = score;
+            Beatmap = beatmap;
+            LastUpdated = DateTimeOffset.Now;
+        }
     }
 }
