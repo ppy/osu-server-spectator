@@ -925,6 +925,54 @@ namespace osu.Server.Spectator.Tests
             Assert.Equal(0, scoreBuffer.RemainingUsages);
         }
 
+        [Fact]
+        public async Task TooManyScoresStarted()
+        {
+            scoreUploader.SaveReplays = true;
+            scoreBuffer.TimeoutInterval = 1000;
+
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockReceiver.Object);
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(It.IsAny<long>())).Returns<long>(token => Task.FromResult<SoloScore?>(new SoloScore
+            {
+                id = (ulong)token,
+                passed = true
+            }));
+
+            for (int i = 0; i < SpectatorClientState.MAX_STARTED_SCORES + 1; ++i)
+            {
+                await hub.BeginPlaySessionV2(1234 + i, new SpectatorState
+                {
+                    BeatmapID = beatmap_id,
+                    RulesetID = 0,
+                    State = SpectatedUserState.Playing,
+                });
+            }
+
+            mockReceiver.Verify(clients => clients.UserBeganPlaying(streamer_id, It.Is<SpectatorState>(m => m.Equals(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Playing,
+            }))), Times.Exactly(6));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => hub.EndPlaySessionV2(1234, SpectatedUserState.Passed));
+
+            for (int i = 1; i < SpectatorClientState.MAX_STARTED_SCORES + 1; ++i)
+                await hub.EndPlaySessionV2(1234 + i, SpectatedUserState.Quit);
+
+            Assert.Equal(0, scoreBuffer.RemainingUsages);
+        }
+
         private async Task uploadsCompleteAsync(int attempts = 5)
         {
             while (scoreUploader.RemainingUsages > 0)
