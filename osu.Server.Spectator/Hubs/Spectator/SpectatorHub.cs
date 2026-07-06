@@ -251,16 +251,20 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                     if (scoreToken != null)
                     {
-                        while (usage.Item.ScoreTokens.Count >= SpectatorClientState.MAX_STARTED_SCORES)
+                        if (!usage.Item.ScoreTokens.Contains(scoreToken.Value))
                         {
-                            long expiredToken = usage.Item.ScoreTokens[0];
-                            usage.Item.ScoreTokens.RemoveAt(0);
-                            var expiredScore = await scoreBuffer.DequeueAsync(expiredToken);
-                            if (expiredScore != null)
-                                await processScore(expiredToken, expiredScore);
+                            while (usage.Item.ScoreTokens.Count >= SpectatorClientState.MAX_STARTED_SCORES)
+                            {
+                                long expiredToken = usage.Item.ScoreTokens[0];
+                                usage.Item.ScoreTokens.RemoveAt(0);
+                                var expiredScore = await scoreBuffer.DequeueAsync(expiredToken);
+                                if (expiredScore != null)
+                                    await processScore(expiredToken, expiredScore);
+                            }
+
+                            usage.Item.ScoreTokens.Add(scoreToken.Value);
                         }
 
-                        usage.Item.ScoreTokens.Add(scoreToken.Value);
                         await scoreBuffer.TryAddAsync(scoreToken.Value, score, beatmap);
                     }
                 }
