@@ -38,10 +38,11 @@ namespace osu.Server.Spectator.Tests
         private readonly ScoreUploader scoreUploader;
         private readonly Mock<IScoreStorage> mockScoreStorage;
         private readonly Mock<IDatabaseAccess> mockDatabase;
+        private readonly EntityStore<SpectatorClientState> clientStates;
 
         public SpectatorHubTest()
         {
-            var clientStates = new EntityStore<SpectatorClientState>();
+            clientStates = new EntityStore<SpectatorClientState>();
 
             mockDatabase = new Mock<IDatabaseAccess>();
             mockDatabase.Setup(db => db.GetUsernameAsync(streamer_id)).ReturnsAsync(() => streamer_username);
@@ -969,6 +970,47 @@ namespace osu.Server.Spectator.Tests
 
             for (int i = 1; i < SpectatorClientState.MAX_STARTED_SCORES + 1; ++i)
                 await hub.EndPlaySessionV2(1234 + i, SpectatedUserState.Quit);
+
+            Assert.Equal(0, scoreBuffer.RemainingUsages);
+        }
+
+        [Fact]
+        public async Task StartingSameScoreMultipleTimes()
+        {
+            scoreUploader.SaveReplays = true;
+            scoreBuffer.TimeoutInterval = 1000;
+
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.All).Returns(mockReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockReceiver.Object);
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(It.IsAny<long>())).Returns<long>(token => Task.FromResult<SoloScore?>(new SoloScore
+            {
+                id = (ulong)token,
+                passed = true
+            }));
+
+            for (int i = 0; i < 3; ++i)
+            {
+                await hub.BeginPlaySessionV2(1234, new SpectatorState
+                {
+                    BeatmapID = beatmap_id,
+                    RulesetID = 0,
+                    State = SpectatedUserState.Playing,
+                });
+            }
+
+            using (var usage = await clientStates.GetForUse(streamer_id))
+                Assert.Equal(1, usage.Item?.ScoreTokens.Count);
+
+            await hub.EndPlaySessionV2(1234, SpectatedUserState.Quit);
 
             Assert.Equal(0, scoreBuffer.RemainingUsages);
         }
