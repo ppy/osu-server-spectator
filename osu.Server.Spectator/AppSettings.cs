@@ -63,6 +63,11 @@ namespace osu.Server.Spectator
         /// </summary>
         public static bool MatchmakingQueueAllowBans { get; } = true;
 
+        /// <summary>
+        /// Replaces matchmaking pool beatmaps with a debug set.
+        /// </summary>
+        public static bool MatchmakingDebugBeatmaps { get; }
+
         static AppSettings()
         {
             SaveReplays = bool.TryParse(Environment.GetEnvironmentVariable("SAVE_REPLAYS"), out bool saveReplays) ? saveReplays : SaveReplays;
@@ -132,6 +137,10 @@ namespace osu.Server.Spectator
             MatchmakingQueueAllowBans = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_ALLOW_BANS"), out bool mmQueueAllowBans)
                 ? mmQueueAllowBans
                 : MatchmakingQueueAllowBans;
+
+            MatchmakingDebugBeatmaps = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_DEBUG_BEATMAPS"), out bool mmDebugBeatmaps)
+                ? mmDebugBeatmaps
+                : MatchmakingDebugBeatmaps;
         }
     }
 }
