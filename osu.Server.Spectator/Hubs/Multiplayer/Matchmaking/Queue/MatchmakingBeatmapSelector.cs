@@ -62,10 +62,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     })
                     .ToDictionary(b => b.beatmap_id, b => b);
 
-                // Get all beatmaps from the pool.
-                Dictionary<BeatmapLookupKey, matchmaking_pool_beatmap> poolBeatmaps =
-                    (await db.GetMatchmakingPoolBeatmapsAsync(pool.id))
-                    .ToDictionary(b => new BeatmapLookupKey(b.beatmap_id, b.mods), b => b);
+                Dictionary<BeatmapLookupKey, matchmaking_pool_beatmap> poolBeatmaps = [];
+
+                if (AppSettings.MatchmakingUseDynamicBeatmapRatings)
+                    poolBeatmaps = (await db.GetMatchmakingPoolBeatmapsAsync(pool.id)).ToDictionary(b => new BeatmapLookupKey(b.beatmap_id, b.mods), b => b);
 
                 // The pool may not contain all ranked beatmaps, so back-fill it.
                 foreach ((int beatmapId, matchmaking_pool_beatmap beatmap) in globalBeatmaps)
@@ -134,8 +134,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 rating_sig = ratings[0].Sigma
             };
 
-            // Store the beatmap back so that it can be used for subsequent lookups.
-            beatmaps[key] = beatmap;
+            if (AppSettings.MatchmakingUseDynamicBeatmapRatings)
+            {
+                // Store the beatmap back so that it can be used for subsequent lookups.
+                beatmaps[key] = beatmap;
+            }
 
             // Write the beatmap to the database in the next update cycle.
             pendingUpdates.Enqueue(newBeatmap);
