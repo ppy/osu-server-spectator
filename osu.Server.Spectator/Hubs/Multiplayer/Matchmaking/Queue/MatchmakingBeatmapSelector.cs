@@ -89,6 +89,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public async Task AdjustRating(BeatmapLookupKey key, int[] playerScores, EloRating[] playerRatings)
         {
+            if (AppSettings.MatchmakingDebugBeatmaps)
+                return;
+
             // Always use the most-recent databased rating values.
             matchmaking_pool_beatmap? beatmap;
             using (var db = dbFactory.GetInstance())
@@ -145,6 +148,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="ratings">The lobby user ratings.</param>
         public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(int count, EloRating[] ratings)
         {
+            if (AppSettings.MatchmakingDebugBeatmaps)
+            {
+                return Enumerable.Range(1, count).Select(i => new matchmaking_pool_beatmap
+                {
+                    id = (uint)i,
+                    pool_id = pool.id,
+                    beatmap_id = 259,
+                    checksum = "ea0df9f890e7e9e7ad4d3862a7823359",
+                    difficultyrating = 4.18904,
+                    rating = 1277
+                }).ToArray();
+            }
+
             // Pick from maps around the minimum rating.
             double userRatingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
 
