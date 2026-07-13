@@ -59,7 +59,7 @@ namespace osu.Server.Spectator
         public static int MatchmakingPoolSize { get; } = 50;
 
         /// <summary>
-        /// Whether to issue bans from the matchmaking queue for various abuse.
+        /// Whether to issue bans from the matchmaking queue for abuse or recent matchups.
         /// </summary>
         public static bool MatchmakingQueueAllowBans { get; } = true;
 
