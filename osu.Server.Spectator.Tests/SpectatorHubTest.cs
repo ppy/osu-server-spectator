@@ -101,7 +101,8 @@ namespace osu.Server.Spectator.Tests
 
             var data = new FrameDataBundle(
                 new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) });
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null);
 
             // check streaming data is propagating to watchers
             await hub.SendFrameData(data);
@@ -147,7 +148,8 @@ namespace osu.Server.Spectator.Tests
                         [HitResult.Great] = 1
                     }
                 }, new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -197,7 +199,8 @@ namespace osu.Server.Spectator.Tests
 
             await hub.SendFrameData(new FrameDataBundle(
                 new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -247,7 +250,8 @@ namespace osu.Server.Spectator.Tests
                     Mods = [new OsuModTouchDevice()],
                     Statistics = new Dictionary<HitResult, int> { [HitResult.Great] = 1 }
                 }, new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -299,7 +303,8 @@ namespace osu.Server.Spectator.Tests
                     TotalScore = 246_642,
                     Pauses = { 1000, 2000 },
                 }, new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -353,7 +358,8 @@ namespace osu.Server.Spectator.Tests
                     TotalScoreWithoutMods = null,
                     Pauses = null,
                 },
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -538,7 +544,8 @@ namespace osu.Server.Spectator.Tests
                         [HitResult.Great] = 10
                     }
                 }, new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -624,7 +631,8 @@ namespace osu.Server.Spectator.Tests
                         [HitResult.Great] = 10
                     }
                 }, new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -675,7 +683,8 @@ namespace osu.Server.Spectator.Tests
 
             await hub.SendFrameData(new FrameDataBundle(
                 new FrameHeader(new ScoreInfo(), new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -729,7 +738,8 @@ namespace osu.Server.Spectator.Tests
                         [HitResult.Miss] = 1,
                     }
                 }, new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -781,7 +791,8 @@ namespace osu.Server.Spectator.Tests
                         [HitResult.Great] = 1
                     }
                 }, new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.OnDisconnectedAsync(null);
             await hub.OnConnectedAsync();
@@ -801,7 +812,8 @@ namespace osu.Server.Spectator.Tests
                         [HitResult.Great] = 2
                     }
                 }, new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(5678, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(5678, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.EndPlaySession(new SpectatorState
             {
@@ -856,7 +868,8 @@ namespace osu.Server.Spectator.Tests
                         [HitResult.Great] = 1
                     }
                 }, new ScoreProcessorStatistics()),
-                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) }));
+                new[] { new LegacyReplayFrame(1234, 0, 0, ReplayButtonState.None) },
+                null));
 
             await hub.OnDisconnectedAsync(null);
 
@@ -864,6 +877,235 @@ namespace osu.Server.Spectator.Tests
 
             mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 456)), Times.Never);
             Assert.Equal(0, scoreBuffer.RemainingUsages);
+        }
+
+        [Fact]
+        public async Task ReplayCompletionFlow_ClientSentAllFrames()
+        {
+            scoreUploader.SaveReplays = true;
+
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockSpectatorsReceiver = new Mock<ISpectatorClient>();
+            Mock<ISpectatorClient> mockStreamerReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.Caller).Returns(mockStreamerReceiver.Object);
+            mockClients.Setup(clients => clients.All).Returns(mockSpectatorsReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockSpectatorsReceiver.Object);
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            {
+                id = 456,
+                passed = true
+            }));
+
+            await hub.BeginPlaySession(1234, new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Playing,
+            });
+
+            const long frame_bundle_count = 5;
+
+            for (int i = 1; i <= frame_bundle_count; ++i)
+            {
+                await hub.SendFrameData(new FrameDataBundle(
+                    new FrameHeader(new ScoreInfo
+                    {
+                        Statistics =
+                        {
+                            [HitResult.Great] = i
+                        }
+                    }, new ScoreProcessorStatistics()),
+                    new[] { new LegacyReplayFrame(1000 * i, 0, 0, ReplayButtonState.None) },
+                    i));
+            }
+
+            await hub.EndPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Passed,
+                LastFrameBundleSequenceNumber = frame_bundle_count,
+            });
+
+            await uploadsCompleteAsync();
+
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item =>
+                item.Score.ScoreInfo.OnlineID == 456 && item.Score.Replay.Frames.Count == frame_bundle_count)), Times.Once);
+
+            mockStreamerReceiver.Verify(streamer => streamer.CompleteReplay(It.Is<CompleteReplayRequest>(req => !req.FrameBundleSequenceNumbers.Any())), Times.Once());
+            mockSpectatorsReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
+        }
+
+        [Fact]
+        public async Task ReplayCompletionFlow_ClientResendsFramesFromTheMiddle()
+        {
+            scoreUploader.SaveReplays = true;
+
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockSpectatorsReceiver = new Mock<ISpectatorClient>();
+            Mock<ISpectatorClient> mockStreamerReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.Caller).Returns(mockStreamerReceiver.Object);
+            mockClients.Setup(clients => clients.All).Returns(mockSpectatorsReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockSpectatorsReceiver.Object);
+            mockStreamerReceiver.Setup(streamer => streamer.CompleteReplay(It.IsAny<CompleteReplayRequest>()))
+                                .Returns((CompleteReplayRequest req) =>
+                                {
+                                    var bundles = req.FrameBundleSequenceNumbers.Select(seq =>
+                                        new FrameDataBundle(
+                                            new FrameHeader(new ScoreInfo
+                                            {
+                                                Statistics =
+                                                {
+                                                    [HitResult.Great] = (int)seq
+                                                }
+                                            }, new ScoreProcessorStatistics()),
+                                            new[] { new LegacyReplayFrame(1000 * seq, 0, 0, ReplayButtonState.None) },
+                                            seq)
+                                    ).ToArray();
+                                    return Task.FromResult(new CompleteReplayResponse(bundles));
+                                });
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            {
+                id = 456,
+                passed = true
+            }));
+
+            await hub.BeginPlaySession(1234, new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Playing,
+            });
+
+            const long frame_bundle_count = 10;
+
+            for (int i = 1; i <= frame_bundle_count; ++i)
+            {
+                if (i > 3 && i < 7)
+                    continue;
+
+                await hub.SendFrameData(new FrameDataBundle(
+                    new FrameHeader(new ScoreInfo
+                    {
+                        Statistics =
+                        {
+                            [HitResult.Great] = i
+                        }
+                    }, new ScoreProcessorStatistics()),
+                    new[] { new LegacyReplayFrame(1000 * i, 0, 0, ReplayButtonState.None) },
+                    i));
+            }
+
+            await hub.EndPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Passed,
+                LastFrameBundleSequenceNumber = frame_bundle_count,
+            });
+
+            await uploadsCompleteAsync();
+
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item =>
+                item.Score.ScoreInfo.OnlineID == 456 && item.Score.Replay.Frames.Count == frame_bundle_count)), Times.Once);
+
+            mockStreamerReceiver.Verify(streamer => streamer.CompleteReplay(It.Is<CompleteReplayRequest>(req => req.FrameBundleSequenceNumbers.Count() == 3)), Times.Once());
+            mockSpectatorsReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
+        }
+
+        [Fact]
+        public async Task ReplayCompletionFlow_ClientResendsFramesFromTheEnd()
+        {
+            scoreUploader.SaveReplays = true;
+
+            Mock<IHubCallerClients<ISpectatorClient>> mockClients = new Mock<IHubCallerClients<ISpectatorClient>>();
+            Mock<ISpectatorClient> mockSpectatorsReceiver = new Mock<ISpectatorClient>();
+            Mock<ISpectatorClient> mockStreamerReceiver = new Mock<ISpectatorClient>();
+            mockClients.Setup(clients => clients.Caller).Returns(mockStreamerReceiver.Object);
+            mockClients.Setup(clients => clients.All).Returns(mockSpectatorsReceiver.Object);
+            mockClients.Setup(clients => clients.Group(SpectatorHub.GetGroupId(streamer_id))).Returns(mockSpectatorsReceiver.Object);
+            mockStreamerReceiver.Setup(streamer => streamer.CompleteReplay(It.IsAny<CompleteReplayRequest>()))
+                                .Returns((CompleteReplayRequest req) =>
+                                {
+                                    var bundles = req.FrameBundleSequenceNumbers.Select(seq =>
+                                        new FrameDataBundle(
+                                            new FrameHeader(new ScoreInfo
+                                            {
+                                                Statistics =
+                                                {
+                                                    [HitResult.Great] = (int)seq
+                                                }
+                                            }, new ScoreProcessorStatistics()),
+                                            new[] { new LegacyReplayFrame(1000 * seq, 0, 0, ReplayButtonState.None) },
+                                            seq)
+                                    ).ToArray();
+                                    return Task.FromResult(new CompleteReplayResponse(bundles));
+                                });
+
+            Mock<HubCallerContext> mockContext = new Mock<HubCallerContext>();
+
+            mockContext.Setup(context => context.UserIdentifier).Returns(streamer_id.ToString());
+            hub.Context = mockContext.Object;
+            hub.Clients = mockClients.Object;
+
+            mockDatabase.Setup(db => db.GetScoreFromTokenAsync(1234)).Returns(Task.FromResult<SoloScore?>(new SoloScore
+            {
+                id = 456,
+                passed = true
+            }));
+
+            await hub.BeginPlaySession(1234, new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Playing,
+            });
+
+            const long frame_bundle_count = 10;
+
+            for (int i = 1; i <= frame_bundle_count - 3; ++i)
+            {
+                await hub.SendFrameData(new FrameDataBundle(
+                    new FrameHeader(new ScoreInfo
+                    {
+                        Statistics =
+                        {
+                            [HitResult.Great] = i
+                        }
+                    }, new ScoreProcessorStatistics()),
+                    new[] { new LegacyReplayFrame(1000 * i, 0, 0, ReplayButtonState.None) },
+                    i));
+            }
+
+            await hub.EndPlaySession(new SpectatorState
+            {
+                BeatmapID = beatmap_id,
+                RulesetID = 0,
+                State = SpectatedUserState.Passed,
+                LastFrameBundleSequenceNumber = frame_bundle_count,
+            });
+
+            await uploadsCompleteAsync();
+
+            mockScoreStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item =>
+                item.Score.ScoreInfo.OnlineID == 456 && item.Score.Replay.Frames.Count == frame_bundle_count && item.Score.ScoreInfo.Statistics[HitResult.Great] == frame_bundle_count)), Times.Once);
+
+            mockStreamerReceiver.Verify(streamer => streamer.CompleteReplay(It.Is<CompleteReplayRequest>(req => req.FrameBundleSequenceNumbers.Count() == 3)), Times.Once());
+            mockSpectatorsReceiver.Verify(clients => clients.UserFinishedPlaying(streamer_id, It.Is<SpectatorState>(m => m.State == SpectatedUserState.Passed)), Times.Once());
         }
 
         private async Task uploadsCompleteAsync(int attempts = 5)

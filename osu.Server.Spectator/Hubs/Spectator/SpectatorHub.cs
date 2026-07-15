@@ -167,7 +167,9 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     if (score == null)
                         return;
 
-                    await processScore(usage.Item!, score);
+                    if (usage.Item.State != null)
+                        usage.Item.State.LastFrameBundleSequenceNumber = state.LastFrameBundleSequenceNumber;
+                    await processScore(usage.Item, score);
                 }
                 finally
                 {
@@ -183,29 +185,67 @@ namespace osu.Server.Spectator.Hubs.Spectator
             await endPlaySession(Context.GetUserId(), state);
         }
 
-        private async Task processScore(SpectatorClientState item, Score score)
+        private async Task processScore(SpectatorClientState item, ScoreBuffer.BufferedScore score)
         {
             Debug.Assert(score != null && item.ScoreToken != null && item.Beatmap != null);
 
             long scoreToken = item.ScoreToken.Value;
 
             // Do nothing with scores on unranked beatmaps.
-            var status = score.ScoreInfo.BeatmapInfo!.Status;
+            var status = score.Score.ScoreInfo.BeatmapInfo!.Status;
             if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
                 return;
 
+            if (item.State?.LastFrameBundleSequenceNumber != null)
+                await attemptToEnsureReplayCompletion(scoreToken, item.State.LastFrameBundleSequenceNumber.Value, score);
+
             // if the user never hit anything, further processing that depends on the score existing can be waived because the client won't have submitted the score anyway.
             // see: https://github.com/ppy/osu/blob/a47ccb8edd2392258b6b7e176b222a9ecd511fc0/osu.Game/Screens/Play/SubmittingPlayer.cs#L281
-            if (!score.ScoreInfo.Statistics.Any(s => s.Key.IsHit() && s.Value > 0))
+            if (!score.Score.ScoreInfo.Statistics.Any(s => s.Key.IsHit() && s.Value > 0))
                 return;
 
-            score.ScoreInfo.Date = DateTimeOffset.UtcNow;
+            score.Score.ScoreInfo.Date = DateTimeOffset.UtcNow;
             // this call is a little expensive due to reflection usage, so only run it at the end of score processing
             // even though in theory the rank could be recomputed after every replay frame.
-            score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(score.ScoreInfo);
+            score.Score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(score.Score.ScoreInfo);
 
-            await scoreUploader.EnqueueAsync(scoreToken, score, item.Beatmap);
+            await scoreUploader.EnqueueAsync(scoreToken, score.Score, item.Beatmap);
             await scoreProcessedSubscriber.RegisterForSingleScoreAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
+        }
+
+        private async Task attemptToEnsureReplayCompletion(long scoreToken, long lastFrameBundleSequenceNumber, ScoreBuffer.BufferedScore score)
+        {
+            try
+            {
+                HashSet<long> missingBundleIds = [];
+
+                if (lastFrameBundleSequenceNumber != score.FrameBundlesReceived.Count)
+                {
+                    for (long i = 1; i <= lastFrameBundleSequenceNumber; ++i)
+                    {
+                        if (!score.FrameBundlesReceived.Contains(i))
+                            missingBundleIds.Add(i);
+                    }
+                }
+
+                var response = await Clients.Caller.CompleteReplay(new CompleteReplayRequest(scoreToken, missingBundleIds));
+
+                if (!response.FrameBundles.Any())
+                    return;
+
+                foreach (var bundle in response.FrameBundles)
+                {
+                    score.Score.Replay.Frames.AddRange(bundle.Frames);
+                    if (bundle.SequenceNumber == lastFrameBundleSequenceNumber)
+                        ScoreBuffer.UpdateScoreInfoFromBundle(score.Score.ScoreInfo, bundle);
+                }
+
+                score.Score.Replay.Frames = score.Score.Replay.Frames.OrderBy(f => f.Time).ToList();
+            }
+            catch (Exception ex)
+            {
+                Error($"Attempt to ensure replay completion for score token {scoreToken} failed", ex);
+            }
         }
 
         public async Task StartWatchingUser(int userId)
