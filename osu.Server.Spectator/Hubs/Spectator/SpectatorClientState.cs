@@ -34,7 +34,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
         [Obsolete]
         public long? ScoreToken;
 
-        public const int MAX_STARTED_SCORES = 5;
+        public const int MAX_STARTED_SCORES = 2;
 
         /// <summary>
         /// Tokens of started scores as conveyed by the client at the beginning of a play session.
