@@ -964,7 +964,7 @@ namespace osu.Server.Spectator.Tests
                 BeatmapID = beatmap_id,
                 RulesetID = 0,
                 State = SpectatedUserState.Playing,
-            }))), Times.Exactly(6));
+            }))), Times.Exactly(SpectatorClientState.MAX_STARTED_SCORES + 1));
 
             await Assert.ThrowsAsync<InvalidOperationException>(() => hub.EndPlaySessionV2(1234, SpectatedUserState.Passed));
 
