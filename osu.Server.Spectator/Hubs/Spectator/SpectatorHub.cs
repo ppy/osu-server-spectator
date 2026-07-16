@@ -260,6 +260,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                                 var expiredScore = await scoreBuffer.DequeueAsync(expiredToken);
                                 if (expiredScore != null)
                                     await processScore(expiredToken, expiredScore);
+                                Log($"Score for token {expiredToken} was dropped from buffer due to exceeding limit", LogLevel.Warning);
                             }
 
                             usage.Item.ScoreTokens.Add(scoreToken.Value);
