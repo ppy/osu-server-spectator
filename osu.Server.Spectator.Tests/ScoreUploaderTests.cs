@@ -64,7 +64,7 @@ namespace osu.Server.Spectator.Tests
                 SaveReplays = true
             };
 
-            await uploader.EnqueueAsync(1, new Score
+            await uploader.EnqueueAsync(1, new BufferedScore(new Score
             {
                 ScoreInfo =
                 {
@@ -75,14 +75,14 @@ namespace osu.Server.Spectator.Tests
                     }
                     // note OnlineID and Passed not set.
                 }
-            }, new database_beatmap());
+            }, new database_beatmap()));
 
             await uploadsCompleteAsync(uploader);
 
             mockStorage.Verify(s => s.WriteAsync(
-                It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 2
-                                                        && item.Score.ScoreInfo.Passed
-                                                        && item.Score.ScoreInfo.User.Username == "some user")), Times.Once);
+                It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 2
+                                                        && item.Score.Score.ScoreInfo.Passed
+                                                        && item.Score.Score.ScoreInfo.User.Username == "some user")), Times.Once);
         }
 
         [Fact]
@@ -93,13 +93,13 @@ namespace osu.Server.Spectator.Tests
                 SaveReplays = true
             };
 
-            await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+            await uploader.EnqueueAsync(1, new BufferedScore(new Score(), new database_beatmap()));
             await uploadsCompleteAsync(uploader);
-            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 2)), Times.Once);
+            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 2)), Times.Once);
 
-            await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+            await uploader.EnqueueAsync(1, new BufferedScore(new Score(), new database_beatmap()));
             await uploadsCompleteAsync(uploader);
-            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 2)), Times.Exactly(2));
+            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 2)), Times.Exactly(2));
         }
 
         [Fact]
@@ -116,9 +116,9 @@ namespace osu.Server.Spectator.Tests
                 SaveReplays = true
             };
 
-            await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+            await uploader.EnqueueAsync(1, new BufferedScore(new Score(), new database_beatmap()));
             await uploadsCompleteAsync(uploader);
-            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 2)), Times.Never);
+            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 2)), Times.Never);
         }
 
         [Fact]
@@ -129,7 +129,7 @@ namespace osu.Server.Spectator.Tests
                 SaveReplays = false
             };
 
-            await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+            await uploader.EnqueueAsync(1, new BufferedScore(new Score(), new database_beatmap()));
             await Task.Delay(1000);
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()), Times.Never);
         }
@@ -143,7 +143,7 @@ namespace osu.Server.Spectator.Tests
             };
 
             // Score with no token.
-            await uploader.EnqueueAsync(2, new Score(), new database_beatmap());
+            await uploader.EnqueueAsync(2, new BufferedScore(new Score(), new database_beatmap()));
             await Task.Delay(1000);
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()), Times.Never);
 
@@ -155,7 +155,7 @@ namespace osu.Server.Spectator.Tests
             }));
 
             await uploadsCompleteAsync(uploader);
-            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 3)), Times.Once);
+            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 3)), Times.Once);
         }
 
         [Fact]
@@ -169,7 +169,7 @@ namespace osu.Server.Spectator.Tests
             uploader.TimeoutInterval = 100;
 
             // Score with no token.
-            await uploader.EnqueueAsync(2, new Score(), new database_beatmap());
+            await uploader.EnqueueAsync(2, new BufferedScore(new Score(), new database_beatmap()));
             Thread.Sleep(1000); // Wait for cancellation.
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()), Times.Never);
 
@@ -187,10 +187,10 @@ namespace osu.Server.Spectator.Tests
                 id = 4,
                 passed = true
             }));
-            await uploader.EnqueueAsync(3, new Score(), new database_beatmap());
+            await uploader.EnqueueAsync(3, new BufferedScore(new Score(), new database_beatmap()));
             await uploadsCompleteAsync(uploader);
             mockStorage.Verify(s => s.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()), Times.Once);
-            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 4)), Times.Once);
+            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 4)), Times.Once);
         }
 
         [Fact]
@@ -205,7 +205,7 @@ namespace osu.Server.Spectator.Tests
             mockStorage.Setup(storage => storage.WriteAsync(It.IsAny<ScoreUploader.UploadItem>()))
                        .Callback<ScoreUploader.UploadItem>(_ => throw new InvalidOperationException());
 
-            await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+            await uploader.EnqueueAsync(1, new BufferedScore(new Score(), new database_beatmap()));
 
             // Things are failing badly, exceptions that don't resolve.
             // We expect the upload to be dropped after the `TimeoutInterval` in such a case.
@@ -238,7 +238,7 @@ namespace osu.Server.Spectator.Tests
                        });
 
             // Throwing score.
-            await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+            await uploader.EnqueueAsync(1, new BufferedScore(new Score(), new database_beatmap()));
 
             failed.Wait();
             Assert.Equal(0, uploadCount);
@@ -259,10 +259,10 @@ namespace osu.Server.Spectator.Tests
             };
 
             for (int i = 0; i < 1000; ++i)
-                await uploader.EnqueueAsync(1, new Score(), new database_beatmap());
+                await uploader.EnqueueAsync(1, new BufferedScore(new Score(), new database_beatmap()));
 
             await uploadsCompleteAsync(uploader);
-            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.ScoreInfo.OnlineID == 2)), Times.Exactly(1000));
+            mockStorage.Verify(s => s.WriteAsync(It.Is<ScoreUploader.UploadItem>(item => item.Score.Score.ScoreInfo.OnlineID == 2)), Times.Exactly(1000));
             AppSettings.ReplayUploaderConcurrency = 1;
         }
 
