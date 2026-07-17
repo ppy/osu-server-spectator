@@ -459,6 +459,32 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
+        public async Task TotalScoreWithoutModsUsed()
+        {
+            Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
+                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    [
+                        new SoloScore
+                        {
+                            user_id = USER_ID,
+                            total_score = 1_000_000,
+                            ScoreData = { TotalScoreWithoutMods = 500_000 }
+                        },
+                        new SoloScore
+                        {
+                            user_id = USER_ID_2,
+                            total_score = 0
+                        },
+                    ]));
+
+            await MatchController.Stage.Enter();
+            await FinishCountdown();
+
+            Assert.Equal(1_000_000, UserState.Life);
+            Assert.Equal(450_000, User2State.Life);
+        }
+
+        [Fact]
         public async Task UserNotKilledIfQuitInFinalRound()
         {
             User2State.Life = 1_000_000;

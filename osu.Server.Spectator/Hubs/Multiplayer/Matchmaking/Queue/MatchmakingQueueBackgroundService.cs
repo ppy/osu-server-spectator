@@ -18,6 +18,7 @@ using osu.Game.Online.Matchmaking.Requests;
 using osu.Game.Online.Matchmaking.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
+using osu.Game.Utils;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
@@ -152,7 +153,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 await lobby.Remove(state);
         }
 
-        public async Task AddToQueueAsync(MultiplayerClientState state, int poolId)
+        public async Task AddToQueueAsync(MultiplayerClientState state, int poolId, APIMod[] mods)
         {
             // Users should only ever be in one queue at a time.
             await RemoveFromQueueAsync(state);
@@ -164,8 +165,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 if (!pool.active)
                     throw new InvalidStateException("The selected matchmaking pool is no longer active.");
 
+                if (!ModUtils.InstantiateValidModsForRuleset(LegacyHelper.GetRulesetFromLegacyID(pool.ruleset_id), mods, out _))
+                    throw new InvalidStateException("Invalid mods selected for ruleset.");
+
                 MatchmakingQueue queue = poolQueues.GetOrAdd(poolId, _ => new MatchmakingQueue(pool));
-                await processBundle(queue.Add(await createUserAsync(state, pool)));
+                await processBundle(queue.Add(await createUserAsync(state, pool, mods)));
             }
         }
 
@@ -211,7 +215,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     RequeueOnDecline = false
                 };
 
-                MatchmakingQueueUser user = await createUserAsync(state, pool);
+                MatchmakingQueueUser user = await createUserAsync(state, pool, []);
                 user.BanEndTime = DateTimeOffset.MinValue;
 
                 // The user is added to the queue before the queue is added to the dictionary
@@ -253,7 +257,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
 
             // Add the user to the duel queue.
-            MatchmakingQueueUser user = await createUserAsync(state, queue.Pool);
+            MatchmakingQueueUser user = await createUserAsync(state, queue.Pool, []);
             user.BanEndTime = DateTimeOffset.MinValue;
             await processBundle(queue.Add(user));
 
@@ -516,7 +520,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
         }
 
-        private async Task<MatchmakingQueueUser> createUserAsync(MultiplayerClientState state, matchmaking_pool pool)
+        private async Task<MatchmakingQueueUser> createUserAsync(MultiplayerClientState state, matchmaking_pool pool, APIMod[] mods)
         {
             using (var db = databaseFactory.GetInstance())
             {
@@ -540,7 +544,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     });
                 }
 
-                return new MatchmakingQueueUser(state.ConnectionId)
+                return new MatchmakingQueueUser(state.ConnectionId, mods)
                 {
                     UserId = state.UserId,
                     Rating = stats.EloData.Rating,
