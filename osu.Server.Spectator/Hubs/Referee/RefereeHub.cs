@@ -95,9 +95,18 @@ namespace osu.Server.Spectator.Hubs.Referee
                     ThrowHelper.ThrowUserRestricted();
             }
 
+            // the shared interop request applies chat filters to the name too,
+            // but we do this eagerly here to try and catch potential edge cases
+            // wherein application of filters would lengthen the room name enough to trip the character limit.
+            // note that this is predicated on the assumption that a *second* application of filters will not change the name more.
+            string roomName = await chatFilters.FilterAsync(request.RoomName);
+
+            if (roomName.Length > ServerMultiplayerRoom.MAX_NAME_LENGTH)
+                ThrowHelper.ThrowRoomNameTooLong();
+
             var room = new MultiplayerRoom(new Room
             {
-                Name = request.RoomName,
+                Name = roomName,
                 Password = Guid.NewGuid().ToString(),
                 Type = MatchType.HeadToHead,
                 QueueMode = QueueMode.HostOnly,
@@ -440,9 +449,13 @@ namespace osu.Server.Spectator.Hubs.Referee
                     if (request.MaxParticipants.HasValue)
                         maxParticipants = request.MaxParticipants.Value == 0 ? null : request.MaxParticipants.Value;
 
+                    string newName = await chatFilters.FilterAsync(request.Name ?? oldSettings.Name);
+                    if (newName.Length > ServerMultiplayerRoom.MAX_NAME_LENGTH)
+                        ThrowHelper.ThrowRoomNameTooLong();
+
                     var newSettings = new MultiplayerRoomSettings
                     {
-                        Name = await chatFilters.FilterAsync(request.Name ?? oldSettings.Name),
+                        Name = newName,
                         PlaylistItemId = oldSettings.PlaylistItemId,
                         Password = request.Password ?? oldSettings.Password,
                         MatchType = request.MatchType != null ? (MatchType)request.MatchType : oldSettings.MatchType,

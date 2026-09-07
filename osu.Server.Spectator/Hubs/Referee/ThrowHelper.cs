@@ -141,5 +141,12 @@ namespace osu.Server.Spectator.Hubs.Referee
         [DoesNotReturn]
         public static void ThrowUserNotConnected()
             => throw new RefereeHubException(19, "The specified user is not connected to multiplayer.");
+
+        /// <summary>
+        /// Error 20: The specified room name is too long.
+        /// </summary>
+        [DoesNotReturn]
+        public static void ThrowRoomNameTooLong()
+            => throw new RefereeHubException(20, "The specified room name is too long.");
     }
 }
