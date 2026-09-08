@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -23,12 +24,12 @@ namespace osu.Server.Spectator.Authentication
         public const string REFEREE_CLIENT_SCHEME = "referee";
 
         private readonly IDatabaseFactory databaseFactory;
-        private readonly ILoggerFactory loggerFactory;
+        private readonly ILogger logger;
 
         public ConfigureJwtBearerOptions(IDatabaseFactory databaseFactory, ILoggerFactory loggerFactory)
         {
             this.databaseFactory = databaseFactory;
-            this.loggerFactory = loggerFactory;
+            this.logger = loggerFactory.CreateLogger("JsonWebToken");
         }
 
         // this looks very scary, but ASP.NET never calls this and calls the named variant instead. don't ask why.
@@ -67,16 +68,17 @@ namespace osu.Server.Spectator.Authentication
                 OnTokenValidated = async context =>
                 {
                     var jwtToken = (JsonWebToken)context.SecurityToken;
-                    int tokenUserId = int.Parse(jwtToken.Subject);
 
                     using (var db = databaseFactory.GetInstance())
                     {
                         // check expiry/revocation against database
-                        var userId = await db.GetUserIdFromTokenAsync(jwtToken);
+                        int? userId = await db.GetUserIdFromTokenAsync(jwtToken);
 
-                        if (userId != tokenUserId)
+                        if (userId != null)
+                            addUserIdToPrincipal(context.Principal!, userId.Value);
+                        else
                         {
-                            loggerFactory.CreateLogger("JsonWebToken").LogInformation("Token revoked or expired");
+                            logger.LogInformation("Token revoked or expired");
                             context.Fail("Token has expired or been revoked");
                         }
                     }
@@ -116,41 +118,39 @@ namespace osu.Server.Spectator.Authentication
 
                     using var db = databaseFactory.GetInstance();
 
-                    if (int.TryParse(jwtToken.Subject, out int tokenUserId))
+                    // try getting the user ID from the token first.
+                    // compare: https://github.com/ppy/osu-web/blob/877ce7dd09467024447781f6b745064e3094cde0/app/Models/OAuth/Token.php#L110-L122
+                    int? userId = await db.GetUserIdFromTokenAsync(jwtToken);
+
+                    if (userId != null)
                     {
-                        // token has non-empty subject => issued via authorization code flow
-                        // check expiry/revocation against database
-                        var userId = await db.GetUserIdFromTokenAsync(jwtToken);
-
-                        if (userId != tokenUserId)
-                        {
-                            loggerFactory.CreateLogger("JsonWebToken").LogInformation("Token revoked or expired");
-                            context.Fail("Token has expired or been revoked");
-                        }
+                        // if the user ID is present, then the token is presumed to have been obtained via the `authorization_code` grant.
+                        addUserIdToPrincipal(context.Principal!, userId.Value);
+                        return;
                     }
-                    else
+
+                    // if the user ID was not retrieved from the token,
+                    // it could still be a valid token obtained via the `client_credentials` grant with `delegation` scope.
+                    int? resourceOwnerId = await db.GetDelegatedResourceOwnerIdFromTokenAsync(jwtToken);
+
+                    if (resourceOwnerId != null)
                     {
-                        // no subject => token issued via client_credentials flow with delegation
-                        // check expiry/revocation against database
-                        var resourceOwnerId = await db.GetDelegatedResourceOwnerIdFromTokenAsync(jwtToken);
-
-                        if (resourceOwnerId == null)
-                        {
-                            loggerFactory.CreateLogger("JsonWebToken").LogInformation("Token revoked or expired");
-                            context.Fail("Token has expired or been revoked");
-                            return;
-                        }
-
-                        // the token is issued with no user associated with it.
-                        // however we've checked above that the token has been issued with the `delegation` scope
-                        // which means it is permissible to delegate actions from this client to its owner.
-                        // therefore, append a relevant claim manually so that we can use it later to identify the user.
-                        var identity = new ClaimsIdentity();
-                        identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, resourceOwnerId.Value.ToString()));
-                        context.Principal!.AddIdentity(identity);
+                        addUserIdToPrincipal(context.Principal!, resourceOwnerId.Value);
+                        return;
                     }
+
+                    logger.LogInformation("Token revoked or expired");
+                    context.Fail("Token has expired or been revoked");
                 },
             };
+        }
+
+        /// <seealso cref="JwtUserIdProvider"/>
+        private void addUserIdToPrincipal(ClaimsPrincipal claimsPrincipal, int userId)
+        {
+            var identity = new ClaimsIdentity();
+            identity.AddClaim(new Claim(JwtUserIdProvider.USER_ID_CLAIM_TYPE, userId.ToString(CultureInfo.InvariantCulture)));
+            claimsPrincipal.AddIdentity(identity);
         }
 
         /// <summary>

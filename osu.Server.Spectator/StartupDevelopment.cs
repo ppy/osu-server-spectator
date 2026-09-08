@@ -64,7 +64,7 @@ namespace osu.Server.Spectator
 
             userIdString ??= Interlocked.Increment(ref userIDCounter).ToString();
 
-            var nameIdentifierClaim = new Claim(ClaimTypes.NameIdentifier, userIdString);
+            var nameIdentifierClaim = new Claim(JwtUserIdProvider.USER_ID_CLAIM_TYPE, userIdString);
             return nameIdentifierClaim;
         }
 
