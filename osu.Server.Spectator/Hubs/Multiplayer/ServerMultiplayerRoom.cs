@@ -41,6 +41,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public bool TournamentMode { get; private set; }
         public DateTimeOffset? EndDate { get; private set; }
 
+        public const int MAX_NAME_LENGTH = 100;
+
         private ServerMultiplayerRoom(
             long roomId,
             IMultiplayerRoomController roomController,
@@ -275,6 +277,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 return;
 
             var previousSettings = Settings;
+
+            if (newSettings.Name.Length > MAX_NAME_LENGTH)
+                throw new InvalidStateException("Room name too long.");
 
             if (newSettings.MatchType == MatchType.Playlists)
                 throw new InvalidStateException("Invalid match type selected.");
