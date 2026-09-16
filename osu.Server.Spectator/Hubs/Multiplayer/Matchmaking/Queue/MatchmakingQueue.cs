@@ -268,6 +268,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="opponentId">The second user.</param>
         public bool IsRecentMatchup(int userId, int opponentId)
         {
+            if (!AppSettings.MatchmakingQueueAllowBans)
+                return false;
+
             DateTimeOffset expireTime = cache.Get<DateTimeOffset?>(recent_matchup_expiry(userId, opponentId)) ?? DateTimeOffset.MinValue;
             return expireTime >= Clock.UtcNow;
         }

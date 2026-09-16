@@ -390,6 +390,17 @@ namespace osu.Server.Spectator.Database
             });
         }
 
+        public async Task<int?> GetUserIdFromScoreTokenAsync(long scoreToken)
+        {
+            var connection = await getConnectionAsync();
+
+            return await connection.QuerySingleOrDefaultAsync<int?>(
+                "SELECT `user_id` FROM `score_tokens` WHERE `id` = @Id", new
+                {
+                    Id = scoreToken
+                });
+        }
+
         public async Task<SoloScore?> GetScoreFromTokenAsync(long token)
         {
             var connection = await getConnectionAsync();

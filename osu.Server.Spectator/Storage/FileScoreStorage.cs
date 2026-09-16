@@ -24,12 +24,12 @@ namespace osu.Server.Spectator.Storage
             var score = item.Score;
             // beatmap version is required for correct encoding of replays for beatmaps with version <5
             // (see `LegacyBeatmapDecoder.EARLY_VERSION_TIMING_OFFSET`).
-            var legacyEncoder = new LegacyScoreEncoder(score, new Beatmap { BeatmapVersion = item.Beatmap.osu_file_version });
+            var legacyEncoder = new LegacyScoreEncoder(score.Score, new Beatmap { BeatmapVersion = item.Score.Beatmap.osu_file_version });
 
-            string filename = score.ScoreInfo.OnlineID.ToString();
+            string filename = score.Score.ScoreInfo.OnlineID.ToString();
 
             logger.LogInformation("Writing replay for score {scoreId} to {filename}",
-                score.ScoreInfo.OnlineID,
+                score.Score.ScoreInfo.OnlineID,
                 filename);
 
             using (var outStream = File.Create(Path.Combine(AppSettings.ReplaysPath, filename)))

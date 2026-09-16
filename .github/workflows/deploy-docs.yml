@@ -20,21 +20,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      
-      - name: Install .NET 8.0.x
+
+      - name: Install .NET 10.0.x
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "8.0.x"
-      
+          dotnet-version: "10.0.x"
+
       - name: Generate docs
         working-directory: osu.Server.Spectator.PublicAPIDocs
         run: dotnet run --build
-      
+
       - name: Upload generated docs as artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: osu.Server.Spectator.PublicAPIDocs/_site
-      
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

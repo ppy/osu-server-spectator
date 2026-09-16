@@ -35,6 +35,19 @@ namespace osu.Server.Spectator.Tests.Multiplayer
         }
 
         [Fact]
+        public async Task RoomNameLengthIsChecked()
+        {
+            MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings
+            {
+                Name = "12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901",
+                MatchType = MatchType.HeadToHead
+            };
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Assert.ThrowsAsync<InvalidStateException>(async () => await Hub.ChangeSettings(testSettings));
+        }
+
+        [Fact]
         public async Task ChangingSettingsMarksReadyUsersAsIdle()
         {
             MultiplayerRoomSettings testSettings = new MultiplayerRoomSettings

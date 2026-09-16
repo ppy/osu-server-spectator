@@ -39,6 +39,12 @@ namespace osu.Server.Spectator.Database.Models
         /// </summary>
         public int rating_search_radius_exp { get; set; } = 300;
 
+        /// <summary>
+        /// Enables/disables the use of dynamic beatmap ratings for this pool.
+        /// When disabled, ratings are still written to the database but not used for matches.
+        /// </summary>
+        public bool use_dmr { get; set; } = true;
+
         public MatchmakingPool ToMatchmakingPool() => new MatchmakingPool
         {
             Id = (int)id,

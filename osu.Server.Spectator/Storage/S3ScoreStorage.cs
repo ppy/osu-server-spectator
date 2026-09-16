@@ -27,13 +27,13 @@ namespace osu.Server.Spectator.Storage
                 var score = item.Score;
                 // beatmap version is required for correct encoding of replays for beatmaps with version <5
                 // (see `LegacyBeatmapDecoder.EARLY_VERSION_TIMING_OFFSET`).
-                new LegacyScoreEncoder(score, new Beatmap { BeatmapVersion = item.Beatmap.osu_file_version }).Encode(outStream, true);
+                new LegacyScoreEncoder(score.Score, new Beatmap { BeatmapVersion = item.Score.Beatmap.osu_file_version }).Encode(outStream, true);
 
                 outStream.Seek(0, SeekOrigin.Begin);
 
-                logger.LogInformation($"Uploading replay for score {score.ScoreInfo.OnlineID}");
+                logger.LogInformation($"Uploading replay for score {score.Score.ScoreInfo.OnlineID}");
 
-                await S3.Upload(AppSettings.ReplaysBucket, score.ScoreInfo.OnlineID.ToString(CultureInfo.InvariantCulture), outStream, outStream.Length);
+                await S3.Upload(AppSettings.ReplaysBucket, score.Score.ScoreInfo.OnlineID.ToString(CultureInfo.InvariantCulture), outStream, outStream.Length);
             }
         }
     }

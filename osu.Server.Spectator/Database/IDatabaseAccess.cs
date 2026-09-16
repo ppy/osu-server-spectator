@@ -15,7 +15,7 @@ namespace osu.Server.Spectator.Database
     {
         /// <summary>
         /// Returns the database ID of the user to whom the supplied <paramref name="jwtToken"/> belongs.
-        /// Will be <c>null</c> if the token does not exist, has expired or has been revoked.
+        /// Will be <c>null</c> if the token does not exist, has expired, has been revoked, or has been obtained via the <c>client_credentials</c> grant.
         /// </summary>
         Task<int?> GetUserIdFromTokenAsync(JsonWebToken jwtToken);
 
@@ -148,6 +148,12 @@ namespace osu.Server.Spectator.Database
         /// </summary>
         /// <param name="score">The score to mark.</param>
         Task MarkScoreHasReplay(Score score);
+
+        /// <summary>
+        /// Returns the ID of the user that owns the provided <paramref name="scoreToken"/>.
+        /// Will be <see langword="null"/> if the provided <paramref name="scoreToken"/> does not exist.
+        /// </summary>
+        Task<int?> GetUserIdFromScoreTokenAsync(long scoreToken);
 
         /// <summary>
         /// Retrieves the <see cref="SoloScore"/> for a given score token. Will return null while the score has not yet been submitted.

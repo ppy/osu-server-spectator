@@ -1,28 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AWSSDK.S3" Version="4.0.24.3" />
-        <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
-        <PackageReference Include="Dapper" Version="2.1.79" />
-        <PackageReference Include="DogStatsD-CSharp-Client" Version="9.2.0" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.9" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.9" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="10.0.9" />
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
+        <PackageReference Include="AWSSDK.S3" Version="4.0.103.3" />
+        <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
+        <PackageReference Include="Dapper" Version="2.1.86" />
+        <PackageReference Include="DogStatsD-CSharp-Client" Version="9.2.1" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.12" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.12" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="10.0.12" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.12" />
         <PackageReference Include="OpenSkillSharp" Version="1.1.0" />
-        <PackageReference Include="ppy.osu.Game" Version="2026.527.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Catch" Version="2026.527.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Mania" Version="2026.527.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.527.0" />
-        <PackageReference Include="ppy.osu.Game.Rulesets.Taiko" Version="2026.527.0" />
-        <PackageReference Include="ppy.osu.Server.OsuQueueProcessor" Version="2026.317.0" />
-        <PackageReference Include="Sentry.AspNetCore" Version="6.6.0" />
+        <PackageReference Include="ppy.osu.Game" Version="2026.916.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Catch" Version="2026.916.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Mania" Version="2026.916.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="2026.916.0" />
+        <PackageReference Include="ppy.osu.Game.Rulesets.Taiko" Version="2026.916.0" />
+        <PackageReference Include="ppy.osu.Server.OsuQueueProcessor" Version="2026.709.0" />
+        <PackageReference Include="Sentry.AspNetCore" Version="6.11.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -33,7 +33,7 @@
     </ItemGroup>
 
     <ItemGroup Label="Code Analysis">
-        <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="All" />
+        <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" PrivateAssets="All" />
         <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeAnalysis\BannedSymbols.txt" />
     </ItemGroup>
 

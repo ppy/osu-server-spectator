@@ -7,7 +7,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using osu.Game.Scoring;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Entities;
@@ -62,8 +61,7 @@ namespace osu.Server.Spectator.Hubs
         /// </summary>
         /// <param name="token">The score's token.</param>
         /// <param name="score">The score.</param>
-        /// <param name="beatmap">The beatmap on which the score was set.</param>
-        public async Task EnqueueAsync(long token, Score score, database_beatmap beatmap)
+        public async Task EnqueueAsync(long token, BufferedScore score)
         {
             if (!SaveReplays)
                 return;
@@ -73,7 +71,7 @@ namespace osu.Server.Spectator.Hubs
             var uploadCancellation = new CancellationTokenSource();
             uploadCancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
 
-            await channel.Writer.WriteAsync(new UploadItem(token, score, beatmap, uploadCancellation), cancellationToken);
+            await channel.Writer.WriteAsync(new UploadItem(token, score, uploadCancellation), cancellationToken);
         }
 
         private async Task readLoop()
@@ -127,14 +125,14 @@ namespace osu.Server.Spectator.Hubs
                                 using (var conn = databaseFactory.GetInstance())
                                     return await conn.GetBuildByIdAsync(dbScore.build_id.Value);
                             });
-                        item.Score.ScoreInfo.ClientVersion = build?.version ?? string.Empty;
+                        item.Score.Score.ScoreInfo.ClientVersion = build?.version ?? string.Empty;
                     }
 
-                    item.Score.ScoreInfo.OnlineID = (long)dbScore.id;
-                    item.Score.ScoreInfo.Passed = dbScore.passed;
+                    item.Score.Score.ScoreInfo.OnlineID = (long)dbScore.id;
+                    item.Score.Score.ScoreInfo.Passed = dbScore.passed;
 
                     await scoreStorage.WriteAsync(item);
-                    await db.MarkScoreHasReplay(item.Score);
+                    await db.MarkScoreHasReplay(item.Score.Score);
                     DogStatsd.Increment($"{statsd_prefix}.uploaded");
 
                     dropItem(item);
@@ -186,7 +184,7 @@ namespace osu.Server.Spectator.Hubs
             cancellationSource.Dispose();
         }
 
-        public record UploadItem(long Token, Score Score, database_beatmap Beatmap, CancellationTokenSource Cancellation) : IDisposable
+        public record UploadItem(long Token, BufferedScore Score, CancellationTokenSource Cancellation) : IDisposable
         {
             public void Dispose()
             {

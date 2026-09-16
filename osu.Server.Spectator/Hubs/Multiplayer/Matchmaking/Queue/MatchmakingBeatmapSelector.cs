@@ -62,10 +62,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     })
                     .ToDictionary(b => b.beatmap_id, b => b);
 
-                // Get all beatmaps from the pool.
-                Dictionary<BeatmapLookupKey, matchmaking_pool_beatmap> poolBeatmaps =
-                    (await db.GetMatchmakingPoolBeatmapsAsync(pool.id))
-                    .ToDictionary(b => new BeatmapLookupKey(b.beatmap_id, b.mods), b => b);
+                Dictionary<BeatmapLookupKey, matchmaking_pool_beatmap> poolBeatmaps = [];
+
+                if (pool.use_dmr)
+                    poolBeatmaps = (await db.GetMatchmakingPoolBeatmapsAsync(pool.id)).ToDictionary(b => new BeatmapLookupKey(b.beatmap_id, b.mods), b => b);
 
                 // The pool may not contain all ranked beatmaps, so back-fill it.
                 foreach ((int beatmapId, matchmaking_pool_beatmap beatmap) in globalBeatmaps)
@@ -89,6 +89,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         public async Task AdjustRating(BeatmapLookupKey key, int[] playerScores, EloRating[] playerRatings)
         {
+            if (AppSettings.MatchmakingDebugBeatmaps)
+                return;
+
             // Always use the most-recent databased rating values.
             matchmaking_pool_beatmap? beatmap;
             using (var db = dbFactory.GetInstance())
@@ -131,8 +134,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 rating_sig = ratings[0].Sigma
             };
 
-            // Store the beatmap back so that it can be used for subsequent lookups.
-            beatmaps[key] = beatmap;
+            if (pool.use_dmr)
+            {
+                // Store the beatmap back so that it can be used for subsequent lookups.
+                beatmaps[key] = beatmap;
+            }
 
             // Write the beatmap to the database in the next update cycle.
             pendingUpdates.Enqueue(newBeatmap);
@@ -145,6 +151,19 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// <param name="ratings">The lobby user ratings.</param>
         public matchmaking_pool_beatmap[] GetAppropriateBeatmaps(int count, EloRating[] ratings)
         {
+            if (AppSettings.MatchmakingDebugBeatmaps)
+            {
+                return Enumerable.Range(1, count).Select(i => new matchmaking_pool_beatmap
+                {
+                    id = (uint)i,
+                    pool_id = pool.id,
+                    beatmap_id = 259,
+                    checksum = "ea0df9f890e7e9e7ad4d3862a7823359",
+                    difficultyrating = 4.18904,
+                    rating = 1277
+                }).ToArray();
+            }
+
             // Pick from maps around the minimum rating.
             double userRatingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
 

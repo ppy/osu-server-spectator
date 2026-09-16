@@ -59,9 +59,14 @@ namespace osu.Server.Spectator
         public static int MatchmakingPoolSize { get; } = 50;
 
         /// <summary>
-        /// Whether to issue bans from the matchmaking queue for various abuse.
+        /// Whether to issue bans from the matchmaking queue for abuse or recent matchups.
         /// </summary>
         public static bool MatchmakingQueueAllowBans { get; } = true;
+
+        /// <summary>
+        /// Replaces matchmaking pool beatmaps with a debug set.
+        /// </summary>
+        public static bool MatchmakingDebugBeatmaps { get; }
 
         static AppSettings()
         {
@@ -132,6 +137,10 @@ namespace osu.Server.Spectator
             MatchmakingQueueAllowBans = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_QUEUE_ALLOW_BANS"), out bool mmQueueAllowBans)
                 ? mmQueueAllowBans
                 : MatchmakingQueueAllowBans;
+
+            MatchmakingDebugBeatmaps = bool.TryParse(Environment.GetEnvironmentVariable("MATCHMAKING_DEBUG_BEATMAPS"), out bool mmDebugBeatmaps)
+                ? mmDebugBeatmaps
+                : MatchmakingDebugBeatmaps;
         }
     }
 }
