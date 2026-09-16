@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
@@ -29,7 +28,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             ((ResultsStage)MatchController.Stage).ScoreRetrievalWaitTime = TimeSpan.FromSeconds(1);
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 }
                     ]));
@@ -66,7 +65,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             ((ResultsStage)MatchController.Stage).BaseDamage = 0;
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 }
                     ]));
@@ -76,7 +75,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             await Task.Delay(1000);
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
@@ -114,7 +113,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             ((ResultsStage)MatchController.Stage).BaseDamage = 0;
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
@@ -152,7 +151,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             ((ResultsStage)MatchController.Stage).BaseDamage = 0;
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
@@ -193,7 +192,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             ((ResultsStage)MatchController.Stage).BaseDamage = 0;
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
@@ -234,7 +233,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             ((ResultsStage)MatchController.Stage).BaseDamage = 0;
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 490_000 },
@@ -276,7 +275,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             ((ResultsStage)MatchController.Stage).BaseDamage = 0;
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 1_000_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 0 },
@@ -336,7 +335,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             ((ResultsStage)MatchController.Stage).BaseDamage = 0;
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 1_000_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 0 },
@@ -372,7 +371,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             User2State.Life = 1_000_000;
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
@@ -412,7 +411,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
             User2State.Life = 1_000_000;
 
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 500_000 },
@@ -429,7 +428,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         {
             // Definite winner.
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 250_000 },
@@ -444,7 +443,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
 
             // Tie.
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 500_000 },
                         new SoloScore { user_id = USER_ID_2, total_score = 500_000 },
@@ -474,7 +473,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         public async Task RoundsWonIncrementedForWinner()
         {
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 1 },
                         new SoloScore { user_id = USER_ID_2, total_score = 0 }
@@ -490,7 +489,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         public async Task RoundsWonNotIncrementedOnTie()
         {
             Database.Setup(db => db.GetAllScoresForPlaylistItem(It.IsAny<long>()))
-                    .Returns<long>(_ => Task.FromResult<IEnumerable<SoloScore>>(
+                    .Returns<long>(_ => Task.FromResult<SoloScore[]>(
                     [
                         new SoloScore { user_id = USER_ID, total_score = 1 },
                         new SoloScore { user_id = USER_ID_2, total_score = 1 }

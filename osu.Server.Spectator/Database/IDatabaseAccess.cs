@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.JsonWebTokens;
 using osu.Game.Online.Multiplayer;
@@ -180,7 +179,7 @@ namespace osu.Server.Spectator.Database
         /// <summary>
         /// Lists the specified user's friends.
         /// </summary>
-        Task<IEnumerable<int>> GetUserFriendsAsync(int userId);
+        Task<int[]> GetUserFriendsAsync(int userId);
 
         /// <summary>
         /// Returns <see langword="true"/> if the user with the supplied <paramref name="userId"/> allows private messages from people not on their friends list.
@@ -202,12 +201,12 @@ namespace osu.Server.Spectator.Database
         /// <summary>
         /// Returns all available main builds from the lazer and tachyon release streams which support online play (<c>allow_bancho</c>).
         /// </summary>
-        Task<IEnumerable<osu_build>> GetAllMainLazerBuildsAsync();
+        Task<osu_build[]> GetAllMainLazerBuildsAsync();
 
         /// <summary>
         /// Returns all known platform-specifc lazer and tachyon builds which support online play (<c>allow_bancho</c>).
         /// </summary>
-        Task<IEnumerable<osu_build>> GetAllPlatformSpecificLazerBuildsAsync();
+        Task<osu_build[]> GetAllPlatformSpecificLazerBuildsAsync();
 
         /// <summary>
         /// Updates the <see cref="osu_build.users"/> count of a given <paramref name="build"/>.
@@ -217,12 +216,12 @@ namespace osu.Server.Spectator.Database
         /// <summary>
         /// Retrieves all <see cref="chat_filter"/>s from the database.
         /// </summary>
-        Task<IEnumerable<chat_filter>> GetAllChatFiltersAsync();
+        Task<chat_filter[]> GetAllChatFiltersAsync();
 
         /// <summary>
         /// Retrieves all active rooms from the <see cref="room_category.daily_challenge"/> category.
         /// </summary>
-        Task<IEnumerable<multiplayer_room>> GetActiveDailyChallengeRoomsAsync();
+        Task<multiplayer_room[]> GetActiveDailyChallengeRoomsAsync();
 
         /// <summary>
         /// If <paramref name="scoreId"/> is associated with a multiplayer score, returns the room ID and playlist item ID which the score was set on.
@@ -239,14 +238,14 @@ namespace osu.Server.Spectator.Database
         /// Retrieve all scores for a specified playlist item.
         /// </summary>
         /// <param name="playlistItemId">The playlist item.</param>
-        Task<IEnumerable<SoloScore>> GetAllScoresForPlaylistItem(long playlistItemId);
+        Task<SoloScore[]> GetAllScoresForPlaylistItem(long playlistItemId);
 
         /// <summary>
         /// Retrieve all passing scores for a specified playlist item.
         /// </summary>
         /// <param name="playlistItemId">The playlist item.</param>
         /// <param name="afterScoreId">An optional score ID to only fetch newer scores.</param>
-        Task<IEnumerable<SoloScore>> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0);
+        Task<SoloScore[]> GetPassingScoresForPlaylistItem(long playlistItemId, ulong afterScoreId = 0);
 
         /// <summary>
         /// Returns the best score of user with <paramref name="userId"/> on the playlist item with <paramref name="playlistItemId"/>.
