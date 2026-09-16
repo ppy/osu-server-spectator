@@ -80,7 +80,8 @@ namespace osu.Server.Spectator.PublicAPISchemaExporter
 
                             // additionally mark no extra properties.
                             // technically we won't care, but we also don't want to *present* the appearance that we accept more in the schema, either.
-                            if (jsonObject["type"]?.GetValue<string>() == "object")
+                            var jsonObjectType = jsonObject["type"];
+                            if (jsonObjectType?.GetValueKind() == JsonValueKind.String && jsonObjectType.GetValue<string>() == "object")
                                 jsonObject.Add("additionalProperties", false);
                         }
 
