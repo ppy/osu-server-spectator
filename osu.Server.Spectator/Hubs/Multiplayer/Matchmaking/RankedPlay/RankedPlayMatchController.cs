@@ -202,7 +202,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             await Stage.HandleUserJoined(user);
 
             ModUtils.InstantiateValidModsForRuleset(LegacyHelper.GetRulesetFromLegacyID(Pool.ruleset_id), modsByUser[user.UserID], out List<Mod> validMods);
-            await Room.ChangeUserMods(user.UserID, validMods.Where(isUserModAllowed).Select(m => new APIMod(m)).ToArray());
+            await Room.ChangeUserMods(user.UserID, validMods.Where(IsUserModAllowed).Select(m => new APIMod(m)).ToArray());
         }
 
         async Task IMatchController.HandleUserLeft(MultiplayerRoomUser user)
@@ -464,12 +464,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             var item = beatmap?.ToPlaylistItem() ?? new MultiplayerPlaylistItem();
 
             Ruleset ruleset = LegacyHelper.GetRulesetFromLegacyID(Pool.ruleset_id);
-            item.AllowedMods = ruleset.AllMods.OfType<Mod>().Where(isUserModAllowed).Select(m => new APIMod(m)).ToArray();
+            item.AllowedMods = ruleset.AllMods.OfType<Mod>().Where(IsUserModAllowed).Select(m => new APIMod(m)).ToArray();
 
             return item;
         }
 
-        private bool isUserModAllowed(IMod mod)
+        public static bool IsUserModAllowed(IMod mod)
         {
             // Synchronise with client.
             switch (mod)

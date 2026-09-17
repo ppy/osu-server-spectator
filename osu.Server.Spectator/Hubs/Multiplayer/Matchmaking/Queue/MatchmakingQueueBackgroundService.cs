@@ -18,11 +18,13 @@ using osu.Game.Online.Matchmaking.Requests;
 using osu.Game.Online.Matchmaking.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Utils;
 using osu.Server.Spectator.Database;
 using osu.Server.Spectator.Database.Models;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 using osu.Server.Spectator.Entities;
+using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay;
 using osu.Server.Spectator.Services;
 using StatsdClient;
 
@@ -164,9 +166,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 if (!pool.active)
                     throw new InvalidStateException("The selected matchmaking pool is no longer active.");
-
-                if (!ModUtils.InstantiateValidModsForRuleset(LegacyHelper.GetRulesetFromLegacyID(pool.ruleset_id), mods, out _))
-                    throw new InvalidStateException("Invalid mods selected for ruleset.");
 
                 MatchmakingQueue queue = poolQueues.GetOrAdd(poolId, _ => new MatchmakingQueue(pool));
                 await processBundle(queue.Add(await createUserAsync(state, pool, mods)));
@@ -522,6 +521,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
         private async Task<MatchmakingQueueUser> createUserAsync(MultiplayerClientState state, matchmaking_pool pool, APIMod[] mods)
         {
+            if (!ModUtils.InstantiateValidModsForRuleset(LegacyHelper.GetRulesetFromLegacyID(pool.ruleset_id), mods, out List<Mod> validMods))
+                throw new InvalidStateException("Invalid mods selected for ruleset.");
+
+            if (pool.type == matchmaking_pool_type.ranked_play && validMods.Any(m => !RankedPlayMatchController.IsUserModAllowed(m)))
+                throw new InvalidStateException("Some mods are not allowed for ranked play.");
+
             using (var db = databaseFactory.GetInstance())
             {
                 matchmaking_user_stats? stats = await db.GetMatchmakingUserStatsAsync(state.UserId, pool.id);
