@@ -8,6 +8,7 @@ using JetBrains.Annotations;
 using osu.Framework.Extensions.TypeExtensions;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Hubs.Referee.Models.Events;
+using osu.Server.Spectator.Hubs.Referee.Models.Requests;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
 {
@@ -42,6 +43,16 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
         public string Password { get; set; } = string.Empty;
 
         /// <summary>
+        /// The maximum number of players in the room.
+        /// <list type="bullet">
+        /// <item>If 0 or missing, the room will allow an unlimited number of participants, but will not have enabled player slots.</item>
+        /// <item>If in the range [2, <see cref="MakeRoomRequest.MAX_PARTICIPANTS_LIMIT"/>] inclusive, the room will have the given number of slots to be occupied by participants.</item>
+        /// </list>
+        /// </summary>
+        [JsonPropertyName("max_participants")]
+        public byte MaxParticipants { get; set; }
+
+        /// <summary>
         /// The state of the room.
         /// Includes the <see cref="MatchType"/>, as well as any additional information specific to that match type.
         /// </summary>
@@ -67,6 +78,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
             ChatChannelId = room.ChannelID;
             Name = room.Settings.Name;
             Password = room.Settings.Password;
+            MaxParticipants = room.Settings.MaxParticipants ?? 0;
             State = MatchState.Create(room) ?? throw new InvalidOperationException($"Could not create room state (ID: {room.RoomID}, state type: {room.MatchState?.GetType().ReadableName()})");
             Playlist = room.Playlist.Select(item => new PlaylistItem(item)).ToArray();
             Players = room.Users.Where(u => u.Role == MultiplayerRoomUserRole.Player).Select(u => new Player(u)).ToArray();

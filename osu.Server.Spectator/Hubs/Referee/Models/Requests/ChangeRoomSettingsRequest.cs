@@ -38,7 +38,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Requests
         /// The new maximum number of participants.
         /// Pass <see langword="null"/> to keep the previous one.
         /// Pass 0 to remove the limit.
-        /// Pass a number in [2, 128] range to set that as the new limit.
+        /// Pass a number in [2, <see cref="MakeRoomRequest.MAX_PARTICIPANTS_LIMIT"/>] range to set that as the new limit.
         /// </summary>
         /// <seealso cref="MakeRoomRequest.MaxParticipants"/>
         [JsonPropertyName("max_participants")]

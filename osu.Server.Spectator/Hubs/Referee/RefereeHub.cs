@@ -104,6 +104,9 @@ namespace osu.Server.Spectator.Hubs.Referee
             if (roomName.Length > ServerMultiplayerRoom.MAX_NAME_LENGTH)
                 ThrowHelper.ThrowRoomNameTooLong();
 
+            if (request.MaxParticipants == 1 || request.MaxParticipants > ServerMultiplayerRoom.MAX_PARTICIPANTS_LIMIT)
+                ThrowHelper.ThrowInvalidMaxParticipantCount();
+
             var room = new MultiplayerRoom(new Room
             {
                 Name = roomName,
@@ -445,9 +448,15 @@ namespace osu.Server.Spectator.Hubs.Referee
 
                     var oldSettings = roomUsage.Item.Settings;
 
-                    var maxParticipants = oldSettings.MaxParticipants;
+                    byte? maxParticipants = oldSettings.MaxParticipants;
+
                     if (request.MaxParticipants.HasValue)
+                    {
+                        if (request.MaxParticipants == 1 || request.MaxParticipants > ServerMultiplayerRoom.MAX_PARTICIPANTS_LIMIT)
+                            ThrowHelper.ThrowInvalidMaxParticipantCount();
+
                         maxParticipants = request.MaxParticipants.Value == 0 ? null : request.MaxParticipants.Value;
+                    }
 
                     string newName = await chatFilters.FilterAsync(request.Name ?? oldSettings.Name);
                     if (newName.Length > ServerMultiplayerRoom.MAX_NAME_LENGTH)
@@ -829,8 +838,6 @@ namespace osu.Server.Spectator.Hubs.Referee
                         await tryKickRefereeFromMultiplayerHub(roomUsage, userUsage.Item.UserId, userUsage.Item.UserId);
                         await roomController.LeaveRoom(userUsage.Item, roomUsage);
                     }
-
-                    await eventDispatcher.PostRefereeRemovedAsync(roomId, userUsage.Item.UserId);
                 }
             }
 

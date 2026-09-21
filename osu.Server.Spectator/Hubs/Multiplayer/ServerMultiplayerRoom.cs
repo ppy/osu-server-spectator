@@ -42,6 +42,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
         public DateTimeOffset? EndDate { get; private set; }
 
         public const int MAX_NAME_LENGTH = 100;
+        public const int MAX_PARTICIPANTS_LIMIT = 16;
 
         private ServerMultiplayerRoom(
             long roomId,
@@ -286,8 +287,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 
             if (newSettings.MaxParticipants != null)
             {
-                if (newSettings.MaxParticipants < 2 || newSettings.MaxParticipants > 16)
-                    throw new InvalidStateException("Max participants must be between 2 and 16.");
+                if (newSettings.MaxParticipants < 2 || newSettings.MaxParticipants > MAX_PARTICIPANTS_LIMIT)
+                    throw new InvalidStateException($"Max participants must be between 2 and {MAX_PARTICIPANTS_LIMIT}.");
 
                 if (newSettings.MaxParticipants < Users.Count)
                     throw new InvalidStateException("There are more players currently in the room than your new requested max participant limit. Please kick some players first.");

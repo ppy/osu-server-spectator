@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using JetBrains.Annotations;
+using osu.Server.Spectator.Hubs.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs.Referee
 {
@@ -148,5 +149,12 @@ namespace osu.Server.Spectator.Hubs.Referee
         [DoesNotReturn]
         public static void ThrowRoomNameTooLong()
             => throw new RefereeHubException(20, "The specified room name is too long.");
+
+        /// <summary>
+        /// Error 21: The maximum participant count must be between 2 and <see cref="ServerMultiplayerRoom.MAX_PARTICIPANTS_LIMIT"/> inclusive.
+        /// </summary>
+        /// <exception cref="RefereeHubException"></exception>
+        public static void ThrowInvalidMaxParticipantCount()
+            => throw new RefereeHubException(21, $"The maximum participant count must be between 2 and {ServerMultiplayerRoom.MAX_PARTICIPANTS_LIMIT} inclusive.");
     }
 }
