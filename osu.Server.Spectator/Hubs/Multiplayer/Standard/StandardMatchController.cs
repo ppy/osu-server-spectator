@@ -25,6 +25,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Standard
         public const int HOST_PLAYLIST_LIMIT = 50;
         public const int GUEST_PLAYLIST_LIMIT = 3;
 
+        public bool AllowUserModChanges => true;
+
         public MultiplayerPlaylistItem CurrentItem => room.Playlist[currentPlaylistItemIndex];
 
         protected StandardMatchRoomState State { get; }

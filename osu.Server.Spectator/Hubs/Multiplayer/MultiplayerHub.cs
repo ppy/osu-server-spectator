@@ -288,6 +288,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     if (room == null)
                         throw new InvalidOperationException("Attempted to operate on a null room");
 
+                    if (!room.MatchController.AllowUserModChanges)
+                        throw new InvalidOperationException("User mod changes are not allowed.");
+
                     await room.ChangeUserMods(Context.GetUserId(), newMods);
                 }
             }

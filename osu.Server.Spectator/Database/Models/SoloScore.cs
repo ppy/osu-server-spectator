@@ -5,6 +5,8 @@ using System;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
+using osu.Game.Beatmaps;
+using osu.Game.Database;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Scoring;
 
@@ -69,6 +71,7 @@ namespace osu.Server.Spectator.Database.Models
             BuildID = build_id,
             Passed = passed,
             TotalScore = total_score,
+            TotalScoreWithoutMods = ScoreData.TotalScoreWithoutMods ?? 0,
             Accuracy = accuracy,
             UserID = (int)user_id,
             MaxCombo = (int)max_combo,
@@ -84,5 +87,17 @@ namespace osu.Server.Spectator.Database.Models
             PP = pp,
             HasReplay = has_replay
         };
+
+        /// <summary>
+        /// Retrieves the value of <c>total_score_without_mods</c> if set in the database entry, falling back to <c>total_score</c> if it is not present.
+        /// </summary>
+        /// <remarks>
+        /// Note that this is only valid to do when dealing with lazer-sourced scores.
+        /// <br />
+        /// When dealing with stable-sourced scores, the absence of <c>total_score_without_mods</c> does <i>not</i> indicate that it is equal to <c>total_score</c>,
+        /// but rather that it must be computed by other means (e.g.: <see cref="StandardisedScoreMigrationTools.UpdateFromLegacy(ScoreInfo, WorkingBeatmap)">UpdateFromLegacy</see>).
+        /// </remarks>
+        public long GetTotalScoreWithoutModsOrTotalScore()
+            => ScoreData.TotalScoreWithoutMods ?? total_score;
     }
 }

@@ -10,6 +10,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
 {
     public interface IMatchController
     {
+        /// <summary>
+        /// Whether users should be able to change their own mods within the match.
+        /// </summary>
+        bool AllowUserModChanges { get; }
+
         MultiplayerPlaylistItem CurrentItem { get; }
 
         Task Initialise();
