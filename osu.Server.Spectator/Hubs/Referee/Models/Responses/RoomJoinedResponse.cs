@@ -8,6 +8,7 @@ using JetBrains.Annotations;
 using osu.Framework.Extensions.TypeExtensions;
 using osu.Game.Online.Multiplayer;
 using osu.Server.Spectator.Hubs.Referee.Models.Events;
+using osu.Server.Spectator.Hubs.Referee.Models.Requests;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
 {
@@ -45,7 +46,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
         /// The maximum number of players in the room.
         /// <list type="bullet">
         /// <item>If 0 or missing, the room will allow an unlimited number of participants, but will not have enabled player slots.</item>
-        /// <item>If in the range [2, 16] inclusive, the room will have the given number of slots to be occupied by participants.</item>
+        /// <item>If in the range [2, <see cref="MakeRoomRequest.MAX_PARTICIPANTS_LIMIT"/>] inclusive, the room will have the given number of slots to be occupied by participants.</item>
         /// </list>
         /// </summary>
         [JsonPropertyName("max_participants")]

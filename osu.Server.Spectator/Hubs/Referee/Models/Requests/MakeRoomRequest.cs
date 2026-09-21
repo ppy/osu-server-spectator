@@ -3,6 +3,7 @@
 
 using System.Text.Json.Serialization;
 using JetBrains.Annotations;
+using osu.Server.Spectator.Hubs.Multiplayer;
 
 namespace osu.Server.Spectator.Hubs.Referee.Models.Requests
 {
@@ -12,6 +13,11 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Requests
     [PublicAPI]
     public class MakeRoomRequest
     {
+        /// <summary>
+        /// The maximum allowable value of <see cref="MaxParticipants"/>.
+        /// </summary>
+        public const int MAX_PARTICIPANTS_LIMIT = ServerMultiplayerRoom.MAX_PARTICIPANTS_LIMIT; // duplicated here only so that it shows in API docs as linkable number
+
         /// <summary>
         /// The ID of the ruleset to play.
         /// </summary>
@@ -34,7 +40,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Requests
         /// The maximum number of players in the room.
         /// <list type="bullet">
         /// <item>If 0 or missing, the room will allow an unlimited number of participants, but will not have enabled player slots.</item>
-        /// <item>If in the range [2, 256] inclusive, the room will have the given number of slots to be occupied by participants.</item>
+        /// <item>If in the range [2, <see cref="MAX_PARTICIPANTS_LIMIT"/>] inclusive, the room will have the given number of slots to be occupied by participants.</item>
         /// </list>
         /// </summary>
         [JsonPropertyName("max_participants")]
