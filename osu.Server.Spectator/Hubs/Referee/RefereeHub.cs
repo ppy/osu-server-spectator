@@ -829,8 +829,6 @@ namespace osu.Server.Spectator.Hubs.Referee
                         await tryKickRefereeFromMultiplayerHub(roomUsage, userUsage.Item.UserId, userUsage.Item.UserId);
                         await roomController.LeaveRoom(userUsage.Item, roomUsage);
                     }
-
-                    await eventDispatcher.PostRefereeRemovedAsync(roomId, userUsage.Item.UserId);
                 }
             }
 
