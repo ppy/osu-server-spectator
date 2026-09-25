@@ -39,6 +39,11 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         {
         }
 
+        private static double getInitialRating(double difficultyrating)
+        {
+            return 800 + 500 * (Math.Exp(0.16 * difficultyrating) - 1);
+        }
+
         /// <summary>
         /// Creates a new <see cref="MatchmakingBeatmapSelector"/>.
         /// </summary>
@@ -58,7 +63,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                         playmode = b.playmode,
                         checksum = b.checksum,
                         difficultyrating = b.difficultyrating,
-                        rating = (int)Math.Round(800 + 500 * (Math.Exp(0.16 * b.difficultyrating) - 1)),
+                        rating = (int) Math.Round(getInitialRating(b.difficultyrating)),
                     })
                     .ToDictionary(b => b.beatmap_id, b => b);
 
@@ -168,7 +173,6 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             double userRatingMu = ratings.Select(r => r.Mu).DefaultIfEmpty(1500).Min();
 
             const double rating_sig = 100;
-
             HashSet<matchmaking_pool_beatmap> maps = [];
 
             foreach (double rating in randomNumberSamples(count, userRatingMu, rating_sig))
@@ -176,7 +180,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 // Could optimize with binary search?
                 var map = beatmaps.Values
                                   .Where(b => !maps.Contains(b))
-                                  .MinBy(b => Math.Abs(b.rating - rating));
+                                  .MinBy(b => getBeatmapFitnessScore(b, rating, userRatingMu));
 
                 if (map == null)
                     break; // happens when more maps are requested than are available
@@ -187,11 +191,18 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             return maps.ToArray();
         }
 
+        private static double getBeatmapFitnessScore(matchmaking_pool_beatmap b, double target, double poolrating)
+        {
+            double dynamic_weight = 1 / (1 + Math.Exp( -(poolrating - 1450) / 75));
+            double adjusted_rating = dynamic_weight * b.rating + (1-dynamic_weight) * getInitialRating(b.difficultyrating);
+            return Math.Abs(target - adjusted_rating);
+        }
+
         private static IEnumerable<double> randomNumberSamples(int n, double mu, double sigma)
         {
             return Enumerable.Range(0, (int)Math.Ceiling((double)n / 2))
                              .SelectMany(_ => boxMuller())
-                             .Take(n) // Box-Muller returns pairs of numbers, only take as many as we need
+                             .Take(n)
                              .Select(x => mu + sigma * x);
         }
 
