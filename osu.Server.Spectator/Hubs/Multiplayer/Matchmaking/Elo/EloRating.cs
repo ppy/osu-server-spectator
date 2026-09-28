@@ -12,11 +12,16 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
     [Serializable]
     public struct EloRating
     {
+        /// <summary>
+        /// The minimum allowable rating mu, as required by rating tiers.
+        /// </summary>
+        private const double min_mu = 600;
+
         [JsonProperty("mu")]
-        public double Mu { get; set; } = 1500;
+        public double Mu { get; } = 1500;
 
         [JsonProperty("sig")]
-        public double Sig { get; set; } = 150;
+        public double Sig { get; } = 150;
 
         public EloRating()
         {
@@ -24,12 +29,13 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo
 
         public EloRating(double mu)
         {
-            Mu = mu;
+            Mu = Math.Max(min_mu, mu);
         }
 
+        [JsonConstructor]
         public EloRating(double mu, double sig)
+            : this(mu)
         {
-            Mu = mu;
             Sig = sig;
         }
     }
