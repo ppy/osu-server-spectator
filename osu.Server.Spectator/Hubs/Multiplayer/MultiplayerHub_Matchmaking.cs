@@ -34,6 +34,12 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
         }
 
+        // Provided for backwards compatibility. Can be removed 20261001.
+        public async Task MatchmakingJoinQueue(int poolId)
+        {
+            await MatchmakingJoinQueueWithParams(new MatchmakingJoinQueueRequest { PoolId = poolId });
+        }
+
         public async Task<MatchmakingPool[]> GetMatchmakingPoolsOfType(MatchmakingPoolType type)
         {
             using (var db = databaseFactory.GetInstance())
@@ -59,7 +65,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 await matchmakingQueueService.RemoveFromLobbyAsync(userUsage.Item!);
         }
 
-        public async Task MatchmakingJoinQueue(int poolId)
+        public async Task<MatchmakingJoinQueueResponse> MatchmakingJoinQueueWithParams(MatchmakingJoinQueueRequest request)
         {
             using (var db = databaseFactory.GetInstance())
             {
@@ -68,7 +74,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
             }
 
             using (var userUsage = await GetOrCreateLocalUserState())
-                await matchmakingQueueService.AddToQueueAsync(userUsage.Item!, poolId);
+                await matchmakingQueueService.AddToQueueAsync(userUsage.Item!, request.PoolId, request.Mods);
+
+            return new MatchmakingJoinQueueResponse();
         }
 
         public async Task MatchmakingLeaveQueue()

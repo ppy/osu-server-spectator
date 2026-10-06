@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using osu.Game.Online.API;
 using osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Elo;
 
 namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
@@ -51,9 +52,20 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
         /// </summary>
         public readonly string Identifier;
 
+        /// <summary>
+        /// The mods with which this user queued.
+        /// </summary>
+        public readonly APIMod[] Mods;
+
         public MatchmakingQueueUser(string identifier)
+            : this(identifier, [])
+        {
+        }
+
+        public MatchmakingQueueUser(string identifier, APIMod[] mods)
         {
             Identifier = identifier;
+            Mods = mods;
         }
 
         public bool Equals(MatchmakingQueueUser? other)
