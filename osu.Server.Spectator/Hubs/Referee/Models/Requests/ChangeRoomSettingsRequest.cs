@@ -35,6 +35,13 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Requests
         public MatchType? MatchType { get; set; }
 
         /// <summary>
+        /// The new queue mode.
+        /// Pass <see langword="null"/> to keep the previous one.
+        /// </summary>
+        [JsonPropertyName("queue_mode")]
+        public QueueMode? QueueMode { get; set; }
+
+        /// <summary>
         /// The new maximum number of participants.
         /// Pass <see langword="null"/> to keep the previous one.
         /// Pass 0 to remove the limit.

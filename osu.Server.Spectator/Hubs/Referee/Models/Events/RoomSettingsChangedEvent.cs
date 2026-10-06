@@ -38,6 +38,12 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
         public MatchType Type { get; set; }
 
         /// <summary>
+        /// The new queue mode of the room.
+        /// </summary>
+        [JsonPropertyName("queue_mode")]
+        public QueueMode QueueMode { get; set; }
+
+        /// <summary>
         /// The ID of the current playlist item in the room.
         /// </summary>
         [JsonPropertyName("playlist_item_id")]
@@ -58,6 +64,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Events
             Name = settings.Name;
             Password = settings.Password;
             Type = (MatchType)settings.MatchType;
+            QueueMode = (QueueMode)settings.QueueMode;
             PlaylistItemId = settings.PlaylistItemId;
             MaxParticipants = settings.MaxParticipants;
         }

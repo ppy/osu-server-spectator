@@ -468,7 +468,7 @@ namespace osu.Server.Spectator.Hubs.Referee
                         PlaylistItemId = oldSettings.PlaylistItemId,
                         Password = request.Password ?? oldSettings.Password,
                         MatchType = request.MatchType != null ? (MatchType)request.MatchType : oldSettings.MatchType,
-                        QueueMode = oldSettings.QueueMode,
+                        QueueMode = request.QueueMode != null ? (QueueMode)request.QueueMode : oldSettings.QueueMode,
                         AutoStartDuration = oldSettings.AutoStartDuration,
                         AutoSkip = oldSettings.AutoSkip,
                         MaxParticipants = maxParticipants,

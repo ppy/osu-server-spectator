@@ -58,6 +58,12 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
         /// </summary>
         public MatchState State { get; set; } = null!;
 
+        /// <summary>
+        /// The current queue mode of the room.
+        /// </summary>
+        [JsonPropertyName("queue_mode")]
+        public QueueMode QueueMode { get; set; }
+
         [JsonPropertyName("playlist")]
         public PlaylistItem[] Playlist { get; set; } = [];
 
@@ -80,6 +86,7 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Responses
             Password = room.Settings.Password;
             MaxParticipants = room.Settings.MaxParticipants ?? 0;
             State = MatchState.Create(room) ?? throw new InvalidOperationException($"Could not create room state (ID: {room.RoomID}, state type: {room.MatchState?.GetType().ReadableName()})");
+            QueueMode = (QueueMode)room.Settings.QueueMode;
             Playlist = room.Playlist.Select(item => new PlaylistItem(item)).ToArray();
             Players = room.Users.Where(u => u.Role == MultiplayerRoomUserRole.Player).Select(u => new Player(u)).ToArray();
             Referees = room.Users.Where(u => u.Role == MultiplayerRoomUserRole.Referee).Select(u => new Events.Referee(u)).ToArray();
