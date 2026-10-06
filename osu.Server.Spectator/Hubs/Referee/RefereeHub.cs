@@ -209,7 +209,24 @@ namespace osu.Server.Spectator.Hubs.Referee
                     }
 
                     await roomController.LeaveRoom(closingUserUsage.Item, roomUsage, forceCloseOnEmpty: true);
-                    closingUserUsage.Item.DisassociateFromRoom(roomId);
+                }
+            }
+
+            // disassociate all referees from the room being closed.
+            // note that a referee could have left without losing refereeing privileges *before* the room closed,
+            // and thus not be present in `room.Users` at the time of closing the room.
+            //
+            // the iterating over all connected referees is naive and/or excessive,
+            // but there is no easier way to retrieve all `RefereeClientState`s associated to a room,
+            // and currently usage of this hub is not high, so this should be enough in the short term.
+            long[] allRefereeIds = refereeStates.GetAllEntities().Select(kv => kv.Key).ToArray();
+
+            foreach (long refereeId in allRefereeIds)
+            {
+                using (var refereeUsage = await refereeStates.TryGetForUse(refereeId))
+                {
+                    if (refereeUsage?.Item is RefereeClientState refereeClientState)
+                        refereeClientState.DisassociateFromRoom(roomId);
                 }
             }
         }
