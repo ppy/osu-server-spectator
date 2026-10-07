@@ -81,8 +81,8 @@ namespace osu.Server.Spectator.Tests.Matchmaking
         {
             MatchmakingBeatmapSelector selector = new MatchmakingBeatmapSelector(new matchmaking_pool(),
             [
-                new matchmaking_pool_beatmap { beatmap_id = 0, rating = 1000 },
-                new matchmaking_pool_beatmap { beatmap_id = 1, rating = 1000 },
+                new matchmaking_pool_beatmap { beatmap_id = 0, rating = 1000, difficultyrating = 10.0 },
+                new matchmaking_pool_beatmap { beatmap_id = 1, rating = 1000, difficultyrating = 10.0 },
             ], new Mock<IDatabaseFactory>().Object);
 
             matchmaking_pool_beatmap[] result = selector.GetAppropriateBeatmaps(50, [new EloRating(1000, 350), new EloRating(1000, 350)]);
@@ -115,6 +115,41 @@ namespace osu.Server.Spectator.Tests.Matchmaking
             Assert.Single(result);
             Assert.Equal(1234, result.Single().beatmap_id);
             Assert.Equal(1, result.Single().playmode);
+        }
+
+        [Fact]
+        public void RatingDiffWeight()
+        {
+            var deflatedRatingBeatmap = new matchmaking_pool_beatmap
+            {
+                rating = 1200,
+                difficultyrating = 10.0,
+                playmode = 0
+            };
+
+            double deflateWeight = MatchmakingBeatmapSelector.RatingDiffWeight(deflatedRatingBeatmap, 1000);
+            Assert.Equal(1.0, deflateWeight);
+
+            var inflatedRatingBeatmap = new matchmaking_pool_beatmap
+            {
+                rating = 1200,
+                difficultyrating = 0.0,
+                playmode = 0
+            };
+
+            double inflateWeight = MatchmakingBeatmapSelector.RatingDiffWeight(inflatedRatingBeatmap, 1000);
+            Assert.InRange(inflateWeight, 0.25, 0.5);
+
+            double highTargetWeight = MatchmakingBeatmapSelector.RatingDiffWeight(inflatedRatingBeatmap, 1700);
+            Assert.InRange(highTargetWeight, 0.99, 1.0);
+
+            var inflatedNonStandardBeatmap = new matchmaking_pool_beatmap(inflatedRatingBeatmap)
+            {
+                playmode = 1
+            };
+
+            double nonStandardWeight = MatchmakingBeatmapSelector.RatingDiffWeight(inflatedNonStandardBeatmap, 1000);
+            Assert.Equal(1.0, nonStandardWeight);
         }
     }
 }
