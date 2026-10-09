@@ -16,6 +16,7 @@ namespace osu.Server.Spectator.Database.Models
         public uint pool_id { get; set; }
         public uint first_placements { get; set; }
         public uint total_points { get; set; }
+        public uint? rank { get; set; }
 
         public string elo_data
         {

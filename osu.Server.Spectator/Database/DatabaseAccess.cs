@@ -788,11 +788,16 @@ namespace osu.Server.Spectator.Database
                 })).ToArray();
         }
 
-        public async Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, uint poolId)
+        public async Task<matchmaking_user_stats?> GetMatchmakingUserStatsAsync(int userId, uint poolId, bool withRank = false)
         {
             var connection = await getConnectionAsync();
 
-            return await connection.QuerySingleOrDefaultAsync<matchmaking_user_stats>("SELECT * FROM `matchmaking_user_stats` WHERE `user_id` = @UserId AND `pool_id` = @PoolId", new
+            string variantString = string.Empty;
+
+            if (withRank)
+                variantString = ", (SELECT COUNT(*) FROM `matchmaking_user_stats` AS `mus` WHERE `plays` > 0 AND `sigma` < 100 AND `rating` > `matchmaking_user_stats`.`rating` AND `pool_id` = `matchmaking_user_stats`.`pool_id`) AS `rank`";
+
+            return await connection.QuerySingleOrDefaultAsync<matchmaking_user_stats>($"SELECT *{variantString} FROM `matchmaking_user_stats` WHERE `user_id` = @UserId AND `pool_id` = @PoolId", new
             {
                 UserId = userId,
                 PoolId = poolId
