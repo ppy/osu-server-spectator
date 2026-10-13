@@ -37,6 +37,20 @@ namespace osu.Server.Spectator.Hubs.Referee.Models.Requests
         public string RoomName { get; set; } = string.Empty;
 
         /// <summary>
+        /// The match type to use.
+        /// Defaults to <see cref="Models.MatchType.HeadToHead"/> if not supplied.
+        /// </summary>
+        [JsonPropertyName("type")]
+        public MatchType MatchType { get; set; } = MatchType.HeadToHead;
+
+        /// <summary>
+        /// The queue mode to use.
+        /// Defaults to <see cref="Models.QueueMode.HostOnly"/> if not supplied.
+        /// </summary>
+        [JsonPropertyName("queue_mode")]
+        public QueueMode QueueMode { get; set; } = QueueMode.HostOnly;
+
+        /// <summary>
         /// The maximum number of players in the room.
         /// <list type="bullet">
         /// <item>If 0 or missing, the room will allow an unlimited number of participants, but will not have enabled player slots.</item>
