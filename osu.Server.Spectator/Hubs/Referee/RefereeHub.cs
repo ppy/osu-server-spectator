@@ -107,12 +107,15 @@ namespace osu.Server.Spectator.Hubs.Referee
             if (request.MaxParticipants == 1 || request.MaxParticipants > ServerMultiplayerRoom.MAX_PARTICIPANTS_LIMIT)
                 ThrowHelper.ThrowInvalidMaxParticipantCount();
 
+            request.MatchType.ThrowIfInvalid();
+            request.QueueMode.ThrowIfInvalid();
+
             var room = new MultiplayerRoom(new Room
             {
                 Name = roomName,
                 Password = Guid.NewGuid().ToString(),
-                Type = MatchType.HeadToHead,
-                QueueMode = QueueMode.HostOnly,
+                Type = (MatchType)request.MatchType,
+                QueueMode = (QueueMode)request.QueueMode,
                 AutoSkip = true,
                 Playlist =
                 [
@@ -475,6 +478,9 @@ namespace osu.Server.Spectator.Hubs.Referee
                         maxParticipants = request.MaxParticipants.Value == 0 ? null : request.MaxParticipants.Value;
                     }
 
+                    request.MatchType?.ThrowIfInvalid();
+                    request.QueueMode?.ThrowIfInvalid();
+
                     string newName = await chatFilters.FilterAsync(request.Name ?? oldSettings.Name);
                     if (newName.Length > ServerMultiplayerRoom.MAX_NAME_LENGTH)
                         ThrowHelper.ThrowRoomNameTooLong();
@@ -732,6 +738,8 @@ namespace osu.Server.Spectator.Hubs.Referee
 
                         await standardMatchController.ChangeUserSlot(targetUser, request.Slot.Value);
                     }
+
+                    request.Team?.ThrowIfInvalid();
 
                     if (request.Team != null)
                     {
