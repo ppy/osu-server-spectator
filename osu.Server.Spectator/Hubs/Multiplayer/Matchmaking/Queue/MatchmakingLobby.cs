@@ -105,6 +105,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
             }
 
             int? userRating = null;
+            double? userSigma = null!;
+            int? userRank = null!;
 
             using (var db = dbFactory.GetInstance())
             {
@@ -124,8 +126,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 
                 if (targetUserId != null)
                 {
-                    var userStats = await db.GetMatchmakingUserStatsAsync(targetUserId.Value, (uint)poolId);
+                    var userStats = await db.GetMatchmakingUserStatsAsync(targetUserId.Value, (uint)poolId, true);
                     userRating = userStats == null ? null : (int)Math.Round(userStats.EloData.Rating.Mu);
+                    userSigma = userStats?.EloData.Rating.Sig;
+                    userRank = (int?)userStats?.rank;
                 }
             }
 
@@ -138,6 +142,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                 UsersInQueue = queuedUsers.Take(50).Select(u => u.UserId).ToArray(),
                 RatingDistribution = ratingDistribution,
                 UserRating = userRating,
+                UserSigma = userSigma,
+                UserRank = userRank,
                 RecentMatches = matches
             };
         }
