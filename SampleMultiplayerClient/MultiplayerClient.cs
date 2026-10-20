@@ -309,7 +309,8 @@ namespace SampleMultiplayerClient
 
         public Task MatchmakingLeaveLobby() => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingLeaveLobby));
 
-        public Task MatchmakingJoinQueue(int poolId) => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingJoinQueue), poolId);
+        public Task<MatchmakingJoinQueueResponse> MatchmakingJoinQueueWithParams(MatchmakingJoinQueueRequest request)
+            => connection.InvokeAsync<MatchmakingJoinQueueResponse>(nameof(IMatchmakingServer.MatchmakingJoinQueueWithParams), request);
 
         public Task MatchmakingLeaveQueue() => connection.InvokeAsync(nameof(IMatchmakingServer.MatchmakingLeaveQueue));
 
