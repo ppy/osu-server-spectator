@@ -66,7 +66,6 @@ namespace SampleSpectatorClient
                              .ConfigureLogging(logging =>
                              {
                                  logging.AddFilter("Microsoft.AspNetCore.SignalR", LogLevel.Debug);
-                                 logging.AddConsole();
                              })
                              .Build();
 
