@@ -49,8 +49,8 @@ namespace osu.Server.Spectator.Tests.RankedPlay
                         user_id = int.Parse(Hub.Context.UserIdentifier!),
                     });
 
-            Database.Setup(db => db.GetMatchmakingUserStatsAsync(It.IsAny<int>(), It.IsAny<uint>()))
-                    .Returns<int, uint>((userId, poolId) => Task.FromResult<matchmaking_user_stats?>(new matchmaking_user_stats
+            Database.Setup(db => db.GetMatchmakingUserStatsAsync(It.IsAny<int>(), It.IsAny<uint>(), It.IsAny<bool>()))
+                    .Returns<int, uint, bool>((userId, poolId, _) => Task.FromResult<matchmaking_user_stats?>(new matchmaking_user_stats
                     {
                         user_id = (uint)userId,
                         pool_id = poolId
