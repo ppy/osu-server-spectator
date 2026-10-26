@@ -22,9 +22,3 @@ dotnet remove $CSPROJ package ppy.osu.Game.Rulesets.Mania
 
 dotnet sln $SLN add $DEPENDENCIES
 dotnet add $CSPROJ reference $DEPENDENCIES
-
-dotnet remove "SampleMultiplayerClient\SampleMultiplayerClient.csproj" package ppy.osu.Game
-dotnet add "SampleMultiplayerClient\SampleMultiplayerClient.csproj" reference "..\osu\osu.Game\osu.Game.csproj"
-
-dotnet remove "SampleSpectatorClient\SampleSpectatorClient.csproj" package ppy.osu.Game
-dotnet add "SampleSpectatorClient\SampleSpectatorClient.csproj" reference "..\osu\osu.Game\osu.Game.csproj"
