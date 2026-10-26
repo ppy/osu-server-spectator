@@ -10,7 +10,7 @@
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.13" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.13" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="10.0.13" />
-        <PackageReference Include="ppy.osu.Game" Version="2026.916.0" />
+        <PackageReference Include="ppy.osu.Game" Version="2026.1026.0" />
     </ItemGroup>
 
 </Project>
