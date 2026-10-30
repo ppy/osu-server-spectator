@@ -116,12 +116,12 @@ jobs:
             ${{ env.PRODUCTION_TRACK == 'staging' && format('{{ "values": {{ "osu-server-spectator": {{ "image": {{ "tag": "{0}" }} }} }} }}', github.sha) || format('{{ "dockerTag": "{0}" }}', github.ref_name) }}
       -
         name: Create Sentry release
+        if: ${{ env.PRODUCTION_TRACK == 'production' }}
         uses: getsentry/action-release@v3
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ppy
           SENTRY_PROJECT: osu-server-spectator
-          SENTRY_URL: https://sentry.ppy.sh/
         with:
           environment: ${{ env.PRODUCTION_TRACK }}
           version: osu-server-spectator@${{ github.ref_type == 'branch' && github.sha || github.ref_type == 'tag' && github.ref_name }}
