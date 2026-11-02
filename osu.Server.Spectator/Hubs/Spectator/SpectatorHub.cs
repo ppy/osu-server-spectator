@@ -382,6 +382,8 @@ namespace osu.Server.Spectator.Hubs.Spectator
             {
                 if (await db.IsUserRestrictedAsync(Context.GetUserId()))
                     throw new InvalidStateException("Can't spectate a user when restricted.");
+
+                await checkUserToUserPermissionsAsync(userId);
             }
 
             Log($"Watching {userId}");
@@ -456,6 +458,27 @@ namespace osu.Server.Spectator.Hubs.Spectator
         }
 
         public static string GetGroupId(int userId) => $"watch:{userId}";
+
+        private async Task checkUserToUserPermissionsAsync(int targetUser)
+        {
+            using (var db = databaseFactory.GetInstance())
+            {
+                if (await db.IsUserRestrictedAsync(targetUser))
+                    throw new InvalidStateException("Can't perform that action on a restricted user.");
+
+                var relation = await db.GetUserRelation(Context.GetUserId(), targetUser);
+
+                // The local user has the player they are trying to invite blocked.
+                if (relation?.foe == true)
+                    throw new UserBlockedException();
+
+                var inverseRelation = await db.GetUserRelation(targetUser, Context.GetUserId());
+
+                // The player being invited has the local user blocked.
+                if (inverseRelation?.foe == true)
+                    throw new UserBlockedException();
+            }
+        }
 
         private async Task endPlaySession(int userId, SpectatorState state)
         {
