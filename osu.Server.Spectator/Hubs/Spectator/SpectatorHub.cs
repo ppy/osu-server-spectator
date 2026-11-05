@@ -300,7 +300,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
             {
                 if (scoreToken != null)
                 {
-                    if (usage.Item?.ScoreTokens.Contains(scoreToken.Value) == false)
+                    if (usage.Item?.ScoreTokens.Contains(scoreToken.Value) != true)
                         throw new InvalidOperationException("Incorrect score token supplied.");
 
                     await scoreBuffer.UpdateAsync(scoreToken.Value, data);
@@ -324,7 +324,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
 
                     if (scoreToken != null)
                     {
-                        if (usage.Item?.ScoreTokens.Remove(scoreToken.Value) == false)
+                        if (usage.Item?.ScoreTokens.Remove(scoreToken.Value) != true)
                             throw new InvalidOperationException("Incorrect score token supplied.");
 
                         var score = await scoreBuffer.DequeueAsync(scoreToken.Value);
