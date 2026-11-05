@@ -92,7 +92,7 @@ namespace osu.Server.Spectator.Hubs
                     {
                         if (dbScore == null)
                         {
-                            logger.LogError("Score upload timed out for token: {tokenId}", item.Token);
+                            logger.LogDebug("Score upload timed out for token: {tokenId}", item.Token);
                             DogStatsd.Increment($"{statsd_prefix}.timed_out");
                         }
                         else
