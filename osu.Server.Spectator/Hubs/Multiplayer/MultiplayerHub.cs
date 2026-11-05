@@ -195,7 +195,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                     var kickTarget = room.Users.FirstOrDefault(u => u.UserID == userId);
 
                     if (kickTarget == null)
-                        throw new InvalidOperationException("Target user is not in the current room");
+                    {
+                        Log($"Target user {userId} is not in the current room");
+                        return;
+                    }
 
                     if (kickTarget.Role == MultiplayerRoomUserRole.Referee)
                         throw new InvalidStateException("Can't kick a referee.");
