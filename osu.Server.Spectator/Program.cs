@@ -41,6 +41,7 @@ namespace osu.Server.Spectator
                            {
                                o.AddExceptionFilterForType<HubException>();
                                o.AddExceptionFilterForType<InvalidStateForConnectionException>();
+                               o.AddExceptionFilterForType<UnsupportedRulesetException>();
                                o.TracesSampleRate = 0;
                                o.Dsn = AppSettings.SentryDsn ?? throw new InvalidOperationException("SENTRY_DSN environment variable not set. "
                                                                                                     + "Please set the value of this variable to a valid Sentry DSN to use for logging events.");

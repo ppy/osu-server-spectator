@@ -17,7 +17,7 @@ namespace osu.Server.Spectator
             switch (id)
             {
                 default:
-                    throw new ArgumentException("Invalid ruleset ID provided.");
+                    throw new UnsupportedRulesetException();
 
                 case 0:
                     return new OsuRuleset();
@@ -31,6 +31,14 @@ namespace osu.Server.Spectator
                 case 3:
                     return new ManiaRuleset();
             }
+        }
+    }
+
+    public class UnsupportedRulesetException : ArgumentException
+    {
+        public UnsupportedRulesetException()
+            : base("This ruleset is not supported for online play.")
+        {
         }
     }
 }
