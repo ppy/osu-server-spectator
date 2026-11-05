@@ -115,7 +115,7 @@ namespace osu.Server.Spectator.Hubs
             if (usage.Item != null && usage.Item.ConnectionId != Context.ConnectionId)
             {
                 usage.Dispose();
-                throw new InvalidOperationException("State is not valid for this connection");
+                throw new InvalidStateForConnectionException();
             }
 
             return usage;

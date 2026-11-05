@@ -100,7 +100,7 @@ namespace osu.Server.Spectator
             using (var userState = await connectionStates.GetForUse(userId))
             {
                 if (userState.Item?.ExistingConnectionMatches(invocationContext) != true)
-                    throw new InvalidOperationException($"State is not valid for this connection, context: {LoggingHubFilter.GetMethodCallDisplayString(invocationContext)})");
+                    throw new InvalidStateForConnectionException(LoggingHubFilter.GetMethodCallDisplayString(invocationContext));
             }
 
             return await next(invocationContext);
