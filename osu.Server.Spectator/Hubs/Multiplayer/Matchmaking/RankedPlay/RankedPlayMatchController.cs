@@ -113,15 +113,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
 
             State.StarRating = beatmaps.Select(b => b.difficultyrating).DefaultIfEmpty(0).Average();
 
-            // Create an initial playlist item for the room. Clients require this to operate correctly.
-            using (var db = DbFactory.GetInstance())
-            {
-                MultiplayerPlaylistItem initialItem = new MultiplayerPlaylistItem();
-                initialItem.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, initialItem));
-
-                Room.Playlist.Add(initialItem);
-                Room.Settings.PlaylistItemId = initialItem.ID;
-            }
+            // Rooms currently require a playlist item because CurrentPlaylistItem is defined as non-null.
+            // It doesn't actually need to be present in the database or even fully formed - just enough to trick the client.
+            Room.Playlist.Add(new MultiplayerPlaylistItem());
 
             // Create the user states.
             foreach (var user in users)
@@ -305,27 +299,24 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.RankedPlay
             // Todo: If we ever have cards with non-"play beatmap" effects, then
             //       this is the first responder to perform any relevant actions.
 
+            // Create a playlist item corresponding to the effect, and register it with the room.
             using (var db = DbFactory.GetInstance())
             {
-                if (CurrentItem.Expired)
-                {
-                    effect.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, effect));
-
-                    Room.Playlist.Add(effect);
-                    await EventDispatcher.PostPlaylistItemAddedAsync(Room.RoomID, effect);
-                }
-                else
-                {
-                    effect.ID = CurrentItem.ID;
-
-                    Room.Playlist[Room.Playlist.IndexOf(CurrentItem)] = effect;
-                    await db.UpdatePlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, effect));
-                    await Room.HandlePlaylistItemChanged(CurrentItem, true);
-                }
+                effect.ID = await db.AddPlaylistItemAsync(new multiplayer_playlist_item(Room.RoomID, effect));
+                Room.Playlist.Add(effect);
+                await EventDispatcher.PostPlaylistItemAddedAsync(Room.RoomID, effect);
             }
 
+            long lastPlaylistItem = Room.Settings.PlaylistItemId;
             Room.Settings.PlaylistItemId = effect.ID;
             await Room.HandleSettingsChanged(true);
+
+            // When the room is in its initial state, it has a dummy playlist item (see: Initialise()). Remove it now.
+            if (lastPlaylistItem == 0)
+            {
+                Room.Playlist.Remove(Room.Playlist.Single(p => p.ID == 0));
+                await EventDispatcher.PostPlaylistItemRemovedAsync(Room.RoomID, 0);
+            }
 
             LastActivatedCard = card;
         }
