@@ -50,27 +50,27 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         [Fact]
         public async Task FirstCardPlayedRemovesDummyPlaylistItem()
         {
-            Assert.Equal(1, Room.Playlist.Count);
+            Assert.Single(Room.Playlist);
             Assert.Contains(Room.Playlist, p => p.ID == 0);
 
             // First round - removes dummy playlist item.
 
             RoomState.ActiveUserId = USER_ID;
 
-            var card = UserState.Hand.ElementAt(0);
-            await Hub.PlayCard(card);
-            Receiver.Verify(r => r.RankedPlayCardPlayed(card), Times.Once);
+            var firstCard = UserState.Hand.ElementAt(0);
+            await Hub.PlayCard(firstCard);
+            Receiver.Verify(r => r.RankedPlayCardPlayed(firstCard), Times.Once);
 
-            Assert.Equal(1, Room.Playlist.Count);
+            Assert.Single(Room.Playlist);
             Assert.DoesNotContain(Room.Playlist, p => p.ID == 0);
 
             // Second round - doesn't remove any playlist item.
 
             await MatchController.GotoStage(RankedPlayStage.CardPlay);
 
-            card = UserState.Hand.ElementAt(1);
-            await Hub.PlayCard(card);
-            Receiver.Verify(r => r.RankedPlayCardPlayed(card), Times.Once);
+            var secondCard = UserState.Hand.ElementAt(1);
+            await Hub.PlayCard(secondCard);
+            Receiver.Verify(r => r.RankedPlayCardPlayed(secondCard), Times.Once);
 
             Assert.Equal(2, Room.Playlist.Count);
             Assert.DoesNotContain(Room.Playlist, p => p.ID == 0);
