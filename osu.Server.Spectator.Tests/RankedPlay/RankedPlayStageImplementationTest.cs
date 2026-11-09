@@ -41,7 +41,7 @@ namespace osu.Server.Spectator.Tests.RankedPlay
             AppSettings.MatchmakingRoomAllowSkip = true;
 
             Database.Setup(db => db.GetRealtimeRoomAsync(ROOM_ID))
-                    .Callback<long>(roomId => InitialiseRoom(roomId, 20))
+                    .Callback<long>(roomId => InitialiseRoom(roomId, 0))
                     .ReturnsAsync(() => new multiplayer_room
                     {
                         type = database_match_type.ranked_play,
