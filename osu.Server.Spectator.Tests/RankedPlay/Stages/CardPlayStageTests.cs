@@ -48,6 +48,35 @@ namespace osu.Server.Spectator.Tests.RankedPlay.Stages
         }
 
         [Fact]
+        public async Task FirstCardPlayedRemovesDummyPlaylistItem()
+        {
+            Assert.Equal(1, Room.Playlist.Count);
+            Assert.Contains(Room.Playlist, p => p.ID == 0);
+
+            // First round - removes dummy playlist item.
+
+            RoomState.ActiveUserId = USER_ID;
+
+            var card = UserState.Hand.ElementAt(0);
+            await Hub.PlayCard(card);
+            Receiver.Verify(r => r.RankedPlayCardPlayed(card), Times.Once);
+
+            Assert.Equal(1, Room.Playlist.Count);
+            Assert.DoesNotContain(Room.Playlist, p => p.ID == 0);
+
+            // Second round - doesn't remove any playlist item.
+
+            await MatchController.GotoStage(RankedPlayStage.CardPlay);
+
+            card = UserState.Hand.ElementAt(1);
+            await Hub.PlayCard(card);
+            Receiver.Verify(r => r.RankedPlayCardPlayed(card), Times.Once);
+
+            Assert.Equal(2, Room.Playlist.Count);
+            Assert.DoesNotContain(Room.Playlist, p => p.ID == 0);
+        }
+
+        [Fact]
         public async Task CardAutomaticallyPlayedOnCountdownEnd()
         {
             RoomState.ActiveUserId = USER_ID;
