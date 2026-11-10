@@ -14,6 +14,9 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
 {
     public class MatchmakingLobby
     {
+        // Taken from https://github.com/ppy/osu-web/blob/8eb0994a64af8d68e365b487d35be24b2daff75a/app/Models/MatchmakingUserStats.php#L27.
+        public const int MIN_SIGMA_PROVISIONAL = 100;
+
         /// <summary>
         /// Retrieves the matchmaking queue for a given pool ID.
         /// </summary>
@@ -129,7 +132,10 @@ namespace osu.Server.Spectator.Hubs.Multiplayer.Matchmaking.Queue
                     var userStats = await db.GetMatchmakingUserStatsAsync(targetUserId.Value, (uint)poolId, true);
                     userRating = userStats == null ? null : (int)Math.Round(userStats.EloData.Rating.Mu);
                     userSigma = userStats?.EloData.Rating.Sig;
-                    userRank = (int?)userStats?.rank;
+
+                    // Don't include rank in response if sigma is above the provisional rating
+                    // threshold, as it would have been inaccurate anyway.
+                    userRank = userSigma >= MIN_SIGMA_PROVISIONAL ? null : (int?)userStats?.rank;
                 }
             }
 
