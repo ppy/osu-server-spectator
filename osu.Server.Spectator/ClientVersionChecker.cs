@@ -70,8 +70,16 @@ namespace osu.Server.Spectator
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
-                using (var db = databaseFactory.GetInstance())
-                    return new HashSet<int>(await db.GetUsersInGroupsAsync(AppSettings.ClientCheckVersionExemptGroups));
+                try
+                {
+                    using (var db = databaseFactory.GetInstance())
+                        return new HashSet<int>(await db.GetUsersInGroupsAsync(AppSettings.ClientCheckVersionExemptGroups));
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to retrieve users exempt from client version checks, falling back to no exempt users");
+                    return [];
+                }
             }) ?? [];
 
             if (exemptUsers.Contains(userId))

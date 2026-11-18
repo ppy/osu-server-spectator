@@ -228,17 +228,17 @@ namespace osu.Server.Spectator.Database
             if (string.IsNullOrEmpty(userIp))
                 return;
 
-            var connection = await getConnectionAsync();
-
             try
             {
+                var connection = await getConnectionAsync();
+
                 await connection.ExecuteAsync("INSERT INTO osu_logins (user_id, ip) VALUES (@UserID, @IP)", new
                 {
                     UserID = userId,
                     IP = userIp
                 });
             }
-            catch (MySqlException ex)
+            catch (Exception ex)
             {
                 logger.LogWarning(ex, "Could not log login for user {UserId}", userId);
             }
