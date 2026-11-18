@@ -100,39 +100,40 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     if (state.BeatmapID == null)
                         return;
 
-                    database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
-                    string? username = await db.GetUsernameAsync(userId);
-
-                    if (string.IsNullOrEmpty(username))
-                        throw new ArgumentException(nameof(username));
-
-                    if (string.IsNullOrEmpty(beatmap?.checksum))
-                        return;
-
-                    clientState.Beatmap = beatmap;
-                    var score = new Score
-                    {
-                        ScoreInfo =
-                        {
-                            APIMods = state.Mods.ToArray(),
-                            User = new APIUser
-                            {
-                                Id = userId,
-                                Username = username,
-                            },
-                            Ruleset = LegacyHelper.GetRulesetFromLegacyID(state.RulesetID.Value).RulesetInfo,
-                            BeatmapInfo = new BeatmapInfo
-                            {
-                                OnlineID = state.BeatmapID.Value,
-                                MD5Hash = beatmap.checksum,
-                                Status = beatmap.approved
-                            },
-                            MaximumStatistics = state.MaximumStatistics
-                        }
-                    };
-
                     if (scoreToken != null)
+                    {
+                        database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
+                        string? username = await db.GetUsernameAsync(userId);
+
+                        if (string.IsNullOrEmpty(username))
+                            throw new ArgumentException(nameof(username));
+
+                        if (string.IsNullOrEmpty(beatmap?.checksum))
+                            return;
+
+                        var score = new Score
+                        {
+                            ScoreInfo =
+                            {
+                                APIMods = state.Mods.ToArray(),
+                                User = new APIUser
+                                {
+                                    Id = userId,
+                                    Username = username,
+                                },
+                                Ruleset = LegacyHelper.GetRulesetFromLegacyID(state.RulesetID.Value).RulesetInfo,
+                                BeatmapInfo = new BeatmapInfo
+                                {
+                                    OnlineID = state.BeatmapID.Value,
+                                    MD5Hash = beatmap.checksum,
+                                    Status = beatmap.approved
+                                },
+                                MaximumStatistics = state.MaximumStatistics
+                            }
+                        };
+
                         await scoreBuffer.TryAddAsync(scoreToken.Value, score, beatmap);
+                    }
                 }
             }
 
@@ -173,7 +174,7 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     // Score may be null if the BeginPlaySession call failed but the client is still sending frame data.
                     // For now it's safe to drop these frames.
                     // Note that this *intentionally* skips the `endPlaySession()` call at the end of method.
-                    if (scoreToken == null || usage.Item?.Beatmap == null)
+                    if (scoreToken == null)
                         return;
 
                     var score = await scoreBuffer.DequeueAsync(scoreToken.Value);
@@ -187,7 +188,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     if (usage.Item != null)
                     {
                         usage.Item.State = null;
-                        usage.Item.Beatmap = null;
                         usage.Item.ScoreToken = null;
                     }
                 }
@@ -233,39 +233,38 @@ namespace osu.Server.Spectator.Hubs.Spectator
                 if (state.BeatmapID == null)
                     return;
 
-                database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
-                string? username = await db.GetUsernameAsync(userId);
-
-                if (string.IsNullOrEmpty(username))
-                    throw new ArgumentException(nameof(username));
-
-                if (string.IsNullOrEmpty(beatmap?.checksum))
-                    return;
-
-                clientState.Beatmap = beatmap;
-                var score = new Score
-                {
-                    ScoreInfo =
-                    {
-                        APIMods = state.Mods.ToArray(),
-                        User = new APIUser
-                        {
-                            Id = userId,
-                            Username = username,
-                        },
-                        Ruleset = LegacyHelper.GetRulesetFromLegacyID(state.RulesetID.Value).RulesetInfo,
-                        BeatmapInfo = new BeatmapInfo
-                        {
-                            OnlineID = state.BeatmapID.Value,
-                            MD5Hash = beatmap.checksum,
-                            Status = beatmap.approved
-                        },
-                        MaximumStatistics = state.MaximumStatistics
-                    }
-                };
-
                 if (scoreToken != null)
                 {
+                    database_beatmap? beatmap = await db.GetBeatmapAsync(state.BeatmapID.Value);
+                    string? username = await db.GetUsernameAsync(userId);
+
+                    if (string.IsNullOrEmpty(username))
+                        throw new ArgumentException(nameof(username));
+
+                    if (string.IsNullOrEmpty(beatmap?.checksum))
+                        return;
+
+                    var score = new Score
+                    {
+                        ScoreInfo =
+                        {
+                            APIMods = state.Mods.ToArray(),
+                            User = new APIUser
+                            {
+                                Id = userId,
+                                Username = username,
+                            },
+                            Ruleset = LegacyHelper.GetRulesetFromLegacyID(state.RulesetID.Value).RulesetInfo,
+                            BeatmapInfo = new BeatmapInfo
+                            {
+                                OnlineID = state.BeatmapID.Value,
+                                MD5Hash = beatmap.checksum,
+                                Status = beatmap.approved
+                            },
+                            MaximumStatistics = state.MaximumStatistics
+                        }
+                    };
+
                     if (!usage.Item.ScoreTokens.Contains(scoreToken.Value))
                     {
                         while (usage.Item.ScoreTokens.Count >= SpectatorClientState.MAX_STARTED_SCORES)
@@ -345,7 +344,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
                     if (usage.Item != null && shouldBroadcastEnd)
                     {
                         usage.Item.State = null;
-                        usage.Item.Beatmap = null;
                     }
                 }
             }

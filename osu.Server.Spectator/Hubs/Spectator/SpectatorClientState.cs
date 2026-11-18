@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using osu.Game.Online.Spectator;
-using osu.Server.Spectator.Database.Models;
 
 namespace osu.Server.Spectator.Hubs.Spectator
 {
@@ -19,14 +18,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
         /// If <see cref="ScoreTokens"/> contains multiple scores, this property always contains data correct for the most recently started score.
         /// </remarks>
         public SpectatorState? State;
-
-        /// <summary>
-        /// When a user is in gameplay, this contains information about the beatmap the user is playing retrieved from the database.
-        /// </summary>
-        /// <remarks>
-        /// If <see cref="ScoreTokens"/> contains multiple scores, this property always contains data correct for the most recently started score.
-        /// </remarks>
-        public database_beatmap? Beatmap;
 
         /// <summary>
         /// The score token as conveyed by the client at the beginning of a play session.
