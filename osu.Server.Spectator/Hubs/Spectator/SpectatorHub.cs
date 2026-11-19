@@ -355,14 +355,16 @@ namespace osu.Server.Spectator.Hubs.Spectator
         {
             Debug.Assert(buffered != null);
 
-            // Do nothing with scores on unranked beatmaps.
-            var status = buffered.Score.ScoreInfo.BeatmapInfo!.Status;
-            if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
-                return;
-
             // if the user never hit anything, further processing that depends on the score existing can be waived because the client won't have submitted the score anyway.
             // see: https://github.com/ppy/osu/blob/a47ccb8edd2392258b6b7e176b222a9ecd511fc0/osu.Game/Screens/Play/SubmittingPlayer.cs#L281
             if (!buffered.Score.ScoreInfo.Statistics.Any(s => s.Key.IsHit() && s.Value > 0))
+                return;
+
+            await scoreProcessedSubscriber.RegisterForSingleScoreAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
+
+            // Skip replay processing on unranked beatmaps.
+            var status = buffered.Score.ScoreInfo.BeatmapInfo!.Status;
+            if (status < min_beatmap_status_for_replays || status > max_beatmap_status_for_replays)
                 return;
 
             buffered.Score.ScoreInfo.Date = DateTimeOffset.UtcNow;
@@ -371,7 +373,6 @@ namespace osu.Server.Spectator.Hubs.Spectator
             buffered.Score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(buffered.Score.ScoreInfo);
 
             await scoreUploader.EnqueueAsync(scoreToken, buffered);
-            await scoreProcessedSubscriber.RegisterForSingleScoreAsync(Context.ConnectionId, Context.GetUserId(), scoreToken);
         }
 
         public async Task StartWatchingUser(int userId)
