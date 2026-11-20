@@ -69,5 +69,10 @@ namespace osu.Server.Spectator.Database.Models
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
             => HashCode.Combine(id, pool_id, beatmap_id, mods);
+
+        public static double DifficultyRatingToEloRating(double difficultyRating)
+        {
+            return (int)Math.Round(800 + 500 * (Math.Exp(0.16 * difficultyRating) - 1));
+        }
     }
 }
