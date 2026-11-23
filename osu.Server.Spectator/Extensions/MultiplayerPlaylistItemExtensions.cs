@@ -102,11 +102,14 @@ namespace osu.Server.Spectator.Extensions
             if (!ModUtils.CheckValidAllowedModsForMultiplayer(allowedMods, item.Freestyle, out invalid))
                 throw new InvalidStateException($"Invalid free mods were selected: {string.Join(',', invalid.Select(m => m.Acronym))}");
 
-            // check aggregate combinations with each allowed mod individually.
             foreach (var allowedMod in allowedMods)
             {
+                // check aggregate combinations with each allowed mod individually.
                 if (!ModUtils.CheckCompatibleSet(requiredMods.Concat(new[] { allowedMod }), out invalid))
                     throw new InvalidStateException($"Invalid combination of required and allowed mods: {string.Join(',', invalid.Select(m => m.Acronym))}");
+
+                if (!allowedMod.UsesDefaultConfiguration)
+                    throw new InvalidStateException($"Cannot specify mod settings on free mods");
             }
         }
     }
