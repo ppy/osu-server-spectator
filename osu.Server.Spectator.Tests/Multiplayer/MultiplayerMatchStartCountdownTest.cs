@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Moq;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
+using osu.Game.Online.Rooms;
+using osu.Server.Spectator.Database.Models;
 using Xunit;
 
 namespace osu.Server.Spectator.Tests.Multiplayer
@@ -311,6 +313,53 @@ namespace osu.Server.Spectator.Tests.Multiplayer
 
                 Assert.Single(room.Playlist, p => p.Expired);
                 Receiver.Verify(r => r.LoadRequested(), Times.Never);
+            }
+        }
+
+        [Fact(Timeout = test_timeout)]
+        public async Task PlaylistItemIsNotSkippedWhenStartGameplayCountdownElapsesInTournamentMode()
+        {
+            Database.Setup(db => db.GetRealtimeRoomAsync(ROOM_ID))
+                    .Callback<long>(InitialiseRoom)
+                    .ReturnsAsync(() => new multiplayer_room
+                    {
+                        type = database_match_type.head_to_head,
+                        ends_at = DateTimeOffset.Now.AddMinutes(5),
+                        user_id = int.Parse(Hub.Context.UserIdentifier!),
+                        tournament_mode = true,
+                    });
+
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+
+            SetUserContext(ContextUser2);
+            await Hub.JoinRoom(ROOM_ID);
+            await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
+
+            SetUserContext(ContextUser);
+            await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromSeconds(10) });
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+                Assert.NotNull(usage.Item!.FindCountdownOfType<MatchStartCountdown>());
+
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.NotNull(room.FindCountdownOfType<MatchStartCountdown>());
+            }
+
+            await skipToEndOfCountdown();
+
+            // When the countdown ends, the playlist item should not be skipped and `LoadRequested()` should be triggered for all users.
+            using (var usage = await Hub.GetRoom(ROOM_ID))
+            {
+                var room = usage.Item;
+                Debug.Assert(room != null);
+
+                Assert.All(room.Playlist, p => Assert.False(p.Expired));
+                Receiver.Verify(r => r.LoadRequested(), Times.Once);
             }
         }
 
