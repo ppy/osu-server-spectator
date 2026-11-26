@@ -901,7 +901,8 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                 throw new InvalidStateException("Cannot start an expired playlist item.");
 
             // If no users are ready, skip the current item in the queue.
-            if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
+            // Tournament mode is an exception to this, as in those rooms gameplay start timers are set by room referees and represent hard time limits to start play.
+            if (!room.TournamentMode && room.Users.All(u => u.State != MultiplayerUserState.Ready))
             {
                 await room.MatchController.HandleGameplayCompleted();
                 return;
