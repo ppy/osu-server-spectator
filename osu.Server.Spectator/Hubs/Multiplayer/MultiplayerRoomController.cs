@@ -92,7 +92,7 @@ namespace osu.Server.Spectator.Hubs.Multiplayer
                         if (existingUser == null)
                             await room.AddUser(roomUser);
                         else if (!isRefereeSpectatingOwnMatch(userState, existingUser))
-                            throw new InvalidOperationException($"User {roomUser.UserID} attempted to join room {room.RoomID} they are already present in.");
+                            throw new UserAlreadyInRoomException(roomUser.UserID, room.RoomID);
 
                         await userState.SubscribeToEvents(eventDispatcher, roomId);
 
